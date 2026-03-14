@@ -6,13 +6,14 @@ const API_KEY = import.meta.env.VITE_YT_API_KEY || '';
 export default function TopBar({
     isPlaying, setIsPlaying,
     onPrev, onNext,
-    showFavourites, setShowFavourites,
+    showSupportList, setShowSupportList,
     onLoad,
 }) {
     const [urlValue, setUrlValue] = useState('');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const inputRef = useRef(null);
+    const activeRequestRef = useRef(0);
 
     async function handleSubmit(e) {
         e?.preventDefault();
@@ -21,28 +22,37 @@ export default function TopBar({
             setError('Could not recognise that URL or ID');
             return;
         }
+
+        const requestId = activeRequestRef.current + 1;
+        activeRequestRef.current = requestId;
+
         setError('');
         setLoading(true);
         try {
             if (parsed.type === 'video') {
-                onLoad([singleVideoEntry(parsed.videoId)]);
+                const item = await singleVideoEntry(parsed.videoId);
+                if (requestId !== activeRequestRef.current) return;
+                onLoad([item], { mode: 'append', autoplay: true });
             } else {
-                // playlist
                 const items = await fetchPlaylistItems(parsed.playlistId, API_KEY);
+                if (requestId !== activeRequestRef.current) return;
                 if (items.length === 0) {
                     setError('Playlist is empty or private.');
                 } else {
-                    onLoad(items, parsed.videoId || null);
+                    onLoad(items, { startVideoId: parsed.videoId || null });
                 }
             }
         } catch (err) {
+            if (requestId !== activeRequestRef.current) return;
             if (err.message === 'NO_API_KEY') {
                 setError('Add VITE_YT_API_KEY to .env to load playlists.');
             } else {
                 setError(err.message || 'Failed to load playlist.');
             }
         } finally {
-            setLoading(false);
+            if (requestId === activeRequestRef.current) {
+                setLoading(false);
+            }
         }
     }
 
@@ -106,13 +116,13 @@ export default function TopBar({
 
             <div className="controls-divider" />
 
-            {/* Favourites toggle */}
+            {/* Support list toggle */}
             <button
-                className={`star-btn${showFavourites ? ' active' : ''}`}
-                onClick={() => setShowFavourites(s => !s)}
-                title={showFavourites ? 'Hide Favourites' : 'Show Favourites'}
+                className={`star-btn${showSupportList ? ' active' : ''}`}
+                onClick={() => setShowSupportList(s => !s)}
+                title={showSupportList ? 'Hide Support List' : 'Show Support List'}
                 id="fav-toggle-btn"
-                aria-label="Toggle favourites"
+                aria-label="Toggle support list"
             >
                 ★
             </button>

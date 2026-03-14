@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
     DndContext,
     closestCenter,
@@ -16,41 +16,43 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 
-function SortableFavItem({ video, onPlay, onRemove }) {
-    const {
-        attributes,
-        listeners,
-        setNodeRef,
-        transform,
-        transition,
-        isDragging,
-    } = useSortable({ id: video.videoId });
+const CONTEXT_MENU_WIDTH = 220;
+const CONTEXT_MENU_HEIGHT = 140;
 
-    const style = {
-        transform: CSS.Transform.toString(transform),
-        transition,
-    };
-
+function SupportItem({
+    video,
+    onRemove,
+    onDoubleQueue,
+    onOpenContextMenu,
+    selectionMode,
+    isSelected,
+    onToggleSelected,
+}) {
     const [imgError, setImgError] = useState(false);
 
     return (
         <div
-            ref={setNodeRef}
-            style={style}
-            className={`fav-item${isDragging ? ' dragging' : ''}`}
+            className={`fav-item${isSelected ? ' selected' : ''}`}
+            onContextMenu={event => onOpenContextMenu(event, video)}
+            onDoubleClick={() => {
+                if (!selectionMode) {
+                    onDoubleQueue(video);
+                }
+            }}
         >
-            {/* Drag handle */}
-            <span
-                className="drag-handle"
-                {...attributes}
-                {...listeners}
-                aria-label="Drag to reorder"
-                title="Drag to reorder"
-            >
-                ⠿
-            </span>
+            {selectionMode && (
+                <button
+                    className={`support-select-toggle${isSelected ? ' active' : ''}`}
+                    type="button"
+                    aria-label={isSelected ? `Deselect ${video.title}` : `Select ${video.title}`}
+                    aria-pressed={isSelected}
+                    onClick={event => {
+                        event.stopPropagation();
+                        onToggleSelected(video.videoId);
+                    }}
+                />
+            )}
 
-            {/* Thumbnail */}
             {video.thumbnail && !imgError ? (
                 <img
                     className="playlist-thumb"
@@ -68,14 +70,25 @@ function SortableFavItem({ video, onPlay, onRemove }) {
                 </div>
             )}
 
-            {/* Info — click to play */}
             <div
                 className="playlist-item-info"
-                style={{ cursor: 'pointer' }}
-                onClick={() => onPlay(video)}
+                style={{ cursor: selectionMode ? 'pointer' : 'default' }}
                 role="button"
                 tabIndex={0}
-                onKeyDown={e => e.key === 'Enter' && onPlay(video)}
+                aria-label={`Support ${video.title}`}
+                onClick={() => {
+                    if (selectionMode) {
+                        onToggleSelected(video.videoId);
+                    }
+                }}
+                onKeyDown={event => {
+                    if (event.key !== 'Enter') return;
+                    if (selectionMode) {
+                        onToggleSelected(video.videoId);
+                    } else {
+                        onDoubleQueue(video);
+                    }
+                }}
             >
                 <div className="playlist-item-title" style={{ fontSize: 12 }}>
                     {video.title || video.videoId}
@@ -85,45 +98,226 @@ function SortableFavItem({ video, onPlay, onRemove }) {
                 )}
             </div>
 
-            {/* Remove */}
-            <button
-                className="fav-remove-btn"
-                onClick={() => onRemove(video.videoId)}
-                title="Remove from favourites"
-                aria-label="Remove from favourites"
-            >
-                ✕
-            </button>
+            {!selectionMode && (
+                <button
+                    className="fav-remove-btn"
+                    onClick={event => {
+                        event.stopPropagation();
+                        onRemove(video.videoId);
+                    }}
+                    title="Remove from support list"
+                    aria-label="Remove from support list"
+                >
+                    ✕
+                </button>
+            )}
         </div>
     );
 }
 
-export default function FavouritesPanel({ favourites, onReorder, onClose, onPlay, onRemove }) {
+function SortableSupportItem({
+    video,
+    onRemove,
+    onDoubleQueue,
+    onOpenContextMenu,
+}) {
+    const {
+        attributes,
+        listeners,
+        setNodeRef,
+        transform,
+        transition,
+        isDragging,
+    } = useSortable({ id: video.videoId });
+
+    const style = {
+        transform: CSS.Transform.toString(transform),
+        transition,
+    };
+
+    return (
+        <div
+            ref={setNodeRef}
+            style={style}
+            className={`fav-sortable-wrap${isDragging ? ' dragging' : ''}`}
+        >
+            <div
+                className="drag-handle"
+                {...attributes}
+                {...listeners}
+                aria-label="Drag to reorder"
+                title="Drag to reorder"
+            >
+                ⠿
+            </div>
+            <SupportItem
+                video={video}
+                onRemove={onRemove}
+                onDoubleQueue={onDoubleQueue}
+                onOpenContextMenu={onOpenContextMenu}
+                selectionMode={false}
+                isSelected={false}
+                onToggleSelected={() => {}}
+            />
+        </div>
+    );
+}
+
+export default function FavouritesPanel({
+    supportList,
+    onReorder,
+    onClose,
+    onPlayNow,
+    onAddToPlaylist,
+    onRemove,
+}) {
     const sensors = useSensors(
         useSensor(PointerSensor),
         useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
     );
+    const [selectionMode, setSelectionMode] = useState(false);
+    const [selectedIds, setSelectedIds] = useState([]);
+    const [contextMenu, setContextMenu] = useState(null);
+    const contextMenuRef = useRef(null);
+
+    const selectedIdSet = useMemo(() => new Set(selectedIds), [selectedIds]);
+
+    useEffect(() => {
+        if (!contextMenu) return undefined;
+
+        function closeContextMenu() {
+            setContextMenu(null);
+        }
+
+        function handlePointerDown(event) {
+            if (contextMenuRef.current?.contains(event.target)) return;
+            closeContextMenu();
+        }
+
+        function handleKeyDown(event) {
+            if (event.key === 'Escape') {
+                closeContextMenu();
+            }
+        }
+
+        window.addEventListener('pointerdown', handlePointerDown);
+        window.addEventListener('keydown', handleKeyDown);
+        window.addEventListener('scroll', closeContextMenu, true);
+
+        return () => {
+            window.removeEventListener('pointerdown', handlePointerDown);
+            window.removeEventListener('keydown', handleKeyDown);
+            window.removeEventListener('scroll', closeContextMenu, true);
+        };
+    }, [contextMenu]);
 
     function handleDragEnd(event) {
         const { active, over } = event;
         if (over && active.id !== over.id) {
-            const oldIdx = favourites.findIndex(f => f.videoId === active.id);
-            const newIdx = favourites.findIndex(f => f.videoId === over.id);
-            onReorder(arrayMove(favourites, oldIdx, newIdx));
+            const oldIdx = supportList.findIndex(entry => entry.videoId === active.id);
+            const newIdx = supportList.findIndex(entry => entry.videoId === over.id);
+            onReorder(arrayMove(supportList, oldIdx, newIdx));
         }
     }
 
+    function handleToggleSelected(videoId) {
+        setSelectedIds(prev => (
+            prev.includes(videoId)
+                ? prev.filter(id => id !== videoId)
+                : [...prev, videoId]
+        ));
+    }
+
+    function handleToggleSelectionMode() {
+        setSelectionMode(prev => {
+            const nextValue = !prev;
+            if (!nextValue) {
+                setSelectedIds([]);
+                setContextMenu(null);
+            }
+            return nextValue;
+        });
+    }
+
+    function handleSelectAll() {
+        setSelectedIds(supportList.map(video => video.videoId));
+    }
+
+    function openContextMenu(event, videos, mode) {
+        const left = Math.min(
+            event.clientX,
+            window.innerWidth - CONTEXT_MENU_WIDTH - 8
+        );
+        const top = Math.min(
+            event.clientY,
+            window.innerHeight - CONTEXT_MENU_HEIGHT - 8
+        );
+
+        setContextMenu({
+            left: Math.max(8, left),
+            top: Math.max(8, top),
+            videos,
+            mode,
+        });
+    }
+
+    function handleOpenContextMenu(event, video) {
+        event.preventDefault();
+        event.stopPropagation();
+
+        if (selectionMode) {
+            const nextSelectedIds = selectedIdSet.has(video.videoId)
+                ? selectedIds
+                : [video.videoId];
+
+            if (!selectedIdSet.has(video.videoId)) {
+                setSelectedIds(nextSelectedIds);
+            }
+
+            const selectedLookup = new Set(nextSelectedIds);
+            const selectedVideos = supportList.filter(entry => selectedLookup.has(entry.videoId));
+            openContextMenu(event, selectedVideos, 'multi');
+            return;
+        }
+
+        openContextMenu(event, [video], 'single');
+    }
+
+    function handleDoubleQueue(video) {
+        onAddToPlaylist([video]);
+    }
+
+    function handlePlayNow() {
+        if (!contextMenu?.videos[0]) return;
+        onPlayNow(contextMenu.videos[0]);
+        setContextMenu(null);
+    }
+
+    function handleAddToCurrentPlaylist() {
+        if (!contextMenu?.videos.length) return;
+        onAddToPlaylist(contextMenu.videos);
+        setContextMenu(null);
+    }
+
+    function handleRemoveSupport() {
+        if (!contextMenu?.videos.length) return;
+        const removedIds = contextMenu.videos.map(video => video.videoId);
+        setSelectedIds(prev => prev.filter(id => !removedIds.includes(id)));
+        onRemove(removedIds);
+        setContextMenu(null);
+    }
+
+    const showSelectAll = selectionMode && supportList.length > 0;
+
     return (
         <>
-            {/* Backdrop */}
             <div className="fav-panel-backdrop" onClick={onClose} aria-hidden="true" />
 
-            {/* Panel */}
-            <div className="fav-panel" role="dialog" aria-label="Favourites" aria-modal="true">
+            <div className="fav-panel" role="dialog" aria-label="Support list" aria-modal="true">
                 <div className="fav-panel-header">
                     <div className="fav-panel-title">
                         <span>★</span>
-                        Favourites
+                        Support list
                         <span
                             style={{
                                 fontSize: 12,
@@ -134,24 +328,57 @@ export default function FavouritesPanel({ favourites, onReorder, onClose, onPlay
                                 border: '1px solid var(--border)',
                             }}
                         >
-                            {favourites.length}
+                            {supportList.length}
                         </span>
                     </div>
-                    <button className="btn-close" onClick={onClose} aria-label="Close favourites">✕</button>
+                    <div className="fav-panel-actions">
+                        {showSelectAll && (
+                            <button
+                                className="fav-panel-action-btn"
+                                type="button"
+                                onClick={handleSelectAll}
+                            >
+                                Select all
+                            </button>
+                        )}
+                        {supportList.length > 0 && (
+                            <button
+                                className={`fav-panel-action-btn${selectionMode ? ' active' : ''}`}
+                                type="button"
+                                onClick={handleToggleSelectionMode}
+                            >
+                                {selectionMode ? 'Done' : 'Select'}
+                            </button>
+                        )}
+                        <button className="btn-close" onClick={onClose} aria-label="Close support list">✕</button>
+                    </div>
                 </div>
 
                 <div className="fav-panel-body">
-                    {favourites.length === 0 ? (
+                    {supportList.length === 0 ? (
                         <div className="fav-empty">
                             <div className="fav-empty-icon">☆</div>
                             <div style={{ fontSize: 14, color: 'var(--text-secondary)', fontWeight: 500 }}>
-                                No favourites yet
+                                No support items yet
                             </div>
                             <div className="fav-hint">
-                                Click the ☆ icon on any video in the playlist to save it here.
-                                You can drag items to reorder them.
+                                Double-click an item to queue it, or right-click for Play Now, Add to Current Playlist,
+                                and Remove Support.
                             </div>
                         </div>
+                    ) : selectionMode ? (
+                        supportList.map(video => (
+                            <SupportItem
+                                key={video.videoId}
+                                video={video}
+                                onRemove={onRemove}
+                                onDoubleQueue={handleDoubleQueue}
+                                onOpenContextMenu={handleOpenContextMenu}
+                                selectionMode={true}
+                                isSelected={selectedIdSet.has(video.videoId)}
+                                onToggleSelected={handleToggleSelected}
+                            />
+                        ))
                     ) : (
                         <DndContext
                             sensors={sensors}
@@ -159,21 +386,59 @@ export default function FavouritesPanel({ favourites, onReorder, onClose, onPlay
                             onDragEnd={handleDragEnd}
                         >
                             <SortableContext
-                                items={favourites.map(f => f.videoId)}
+                                items={supportList.map(entry => entry.videoId)}
                                 strategy={verticalListSortingStrategy}
                             >
-                                {favourites.map(video => (
-                                    <SortableFavItem
+                                {supportList.map(video => (
+                                    <SortableSupportItem
                                         key={video.videoId}
                                         video={video}
-                                        onPlay={onPlay}
                                         onRemove={onRemove}
+                                        onDoubleQueue={handleDoubleQueue}
+                                        onOpenContextMenu={handleOpenContextMenu}
                                     />
                                 ))}
                             </SortableContext>
                         </DndContext>
                     )}
                 </div>
+
+                {contextMenu && (
+                    <div
+                        ref={contextMenuRef}
+                        className="support-context-menu"
+                        role="menu"
+                        style={{ top: contextMenu.top, left: contextMenu.left }}
+                        onClick={event => event.stopPropagation()}
+                    >
+                        {contextMenu.mode === 'single' && (
+                            <button
+                                className="support-context-menu-item"
+                                type="button"
+                                role="menuitem"
+                                onClick={handlePlayNow}
+                            >
+                                Play Now
+                            </button>
+                        )}
+                        <button
+                            className="support-context-menu-item"
+                            type="button"
+                            role="menuitem"
+                            onClick={handleAddToCurrentPlaylist}
+                        >
+                            Add to Current Playlist
+                        </button>
+                        <button
+                            className="support-context-menu-item danger"
+                            type="button"
+                            role="menuitem"
+                            onClick={handleRemoveSupport}
+                        >
+                            Remove Support
+                        </button>
+                    </div>
+                )}
             </div>
         </>
     );

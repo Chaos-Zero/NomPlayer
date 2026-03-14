@@ -447,11 +447,17 @@ body {
   align-items: center;
   justify-content: center;
   transition: all var(--transition);
-  opacity: 0;
+  opacity: 0.65;
 }
 
 .playlist-item:hover .item-fav-btn {
   opacity: 1;
+  color: var(--gold);
+}
+
+.playlist-item.active .item-fav-btn {
+  opacity: 1;
+  color: var(--gold);
 }
 
 .item-fav-btn:hover {
@@ -463,7 +469,50 @@ body {
   color: var(--gold);
 }
 
-/* ─── Favourites Panel ─── */
+.playlist-context-menu {
+  position: fixed;
+  min-width: 180px;
+  padding: 6px;
+  background: rgba(18, 18, 26, 0.96);
+  border: 1px solid var(--border-hover);
+  border-radius: var(--radius-md);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(18px);
+  z-index: 250;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.playlist-context-menu-item {
+  width: 100%;
+  padding: 10px 12px;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-size: 12px;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--transition), color var(--transition);
+}
+
+.playlist-context-menu-item:hover:not(:disabled) {
+  background: var(--bg-glass-hover);
+}
+
+.playlist-context-menu-item:disabled {
+  color: var(--text-muted);
+  cursor: default;
+}
+
+.playlist-context-menu-item.danger:hover {
+  background: rgba(239, 68, 68, 0.14);
+  color: #fff;
+}
+
+/* ─── Support List Panel ─── */
 .fav-panel-backdrop {
   position: fixed;
   inset: 0;
@@ -530,6 +579,37 @@ body {
   font-size: 20px;
 }
 
+.fav-panel-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.fav-panel-action-btn {
+  height: 32px;
+  padding: 0 12px;
+  background: var(--bg-glass);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition);
+}
+
+.fav-panel-action-btn:hover {
+  background: var(--bg-glass-hover);
+  border-color: var(--border-hover);
+  color: var(--text-primary);
+}
+
+.fav-panel-action-btn.active {
+  background: var(--accent-dim);
+  border-color: var(--accent);
+  color: var(--accent-light);
+}
+
 .btn-close {
   width: 32px;
   height: 32px;
@@ -583,7 +663,14 @@ body {
   line-height: 1.5;
 }
 
-/* ─── Draggable Favourite Item ─── */
+/* ─── Draggable Support Item ─── */
+.fav-sortable-wrap {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+  width: 100%;
+}
+
 .fav-item {
   display: flex;
   align-items: center;
@@ -592,10 +679,11 @@ body {
   background: var(--bg-glass);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  cursor: pointer;
+  cursor: default;
   transition: background var(--transition), border-color var(--transition), box-shadow var(--transition);
-  touch-action: none;
-  /* needed for dnd-kit */
+  min-width: 0;
+  width: 100%;
+  flex: 1;
 }
 
 .fav-item:hover {
@@ -603,22 +691,35 @@ body {
   border-color: var(--border-hover);
 }
 
-.fav-item.dragging {
+.fav-item.selected {
+  border-color: var(--gold);
+  background: rgba(245, 158, 11, 0.1);
+  box-shadow: 0 0 0 1px var(--gold-glow);
+}
+
+.fav-sortable-wrap.dragging .fav-item {
   opacity: 0.5;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
 }
 
 .drag-handle {
+  width: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-glass);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
   color: var(--text-muted);
   font-size: 14px;
   cursor: grab;
-  padding: 4px;
   flex-shrink: 0;
   transition: color var(--transition);
 }
 
-.fav-item:hover .drag-handle {
+.fav-sortable-wrap:hover .drag-handle {
   color: var(--text-secondary);
+  border-color: var(--border-hover);
 }
 
 .fav-remove-btn {
@@ -641,6 +742,80 @@ body {
 .fav-remove-btn:hover {
   color: var(--danger);
   background: rgba(239, 68, 68, 0.1);
+}
+
+.support-select-toggle {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 2px solid var(--border-hover);
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all var(--transition);
+}
+
+.support-select-toggle::after {
+  content: '';
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: transparent;
+  transition: background var(--transition);
+}
+
+.support-select-toggle:hover {
+  border-color: var(--gold);
+}
+
+.support-select-toggle.active {
+  border-color: var(--gold);
+  background: var(--gold-glow);
+}
+
+.support-select-toggle.active::after {
+  background: var(--gold);
+}
+
+.support-context-menu {
+  position: fixed;
+  min-width: 220px;
+  padding: 6px;
+  background: rgba(18, 18, 26, 0.96);
+  border: 1px solid var(--border-hover);
+  border-radius: var(--radius-md);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(18px);
+  z-index: 250;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.support-context-menu-item {
+  width: 100%;
+  padding: 10px 12px;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-size: 12px;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--transition), color var(--transition);
+}
+
+.support-context-menu-item:hover {
+  background: var(--bg-glass-hover);
+}
+
+.support-context-menu-item.danger:hover {
+  background: rgba(239, 68, 68, 0.14);
+  color: #fff;
 }
 
 /* ─── API Key prompt ─── */

@@ -1,34 +1,46 @@
 import { useEffect, useRef, useCallback } from 'react';
 import YouTube from 'react-youtube';
 
+function safelyControlPlayer(player, methodName) {
+    try {
+        player?.[methodName]?.();
+    } catch {
+        // The YouTube iframe API can throw while the old iframe is being replaced.
+    }
+}
+
 export default function VideoPlayer({ video, isPlaying, onVideoEnd, onReady }) {
     const playerRef = useRef(null);
+    const videoId = video?.videoId ?? null;
+
+    useEffect(() => {
+        return () => {
+            playerRef.current = null;
+        };
+    }, [videoId]);
 
     // Sync play/pause state with the YouTube player
     useEffect(() => {
         const player = playerRef.current;
         if (!player) return;
         if (isPlaying) {
-            player.playVideo?.();
+            safelyControlPlayer(player, 'playVideo');
         } else {
-            player.pauseVideo?.();
+            safelyControlPlayer(player, 'pauseVideo');
         }
-    }, [isPlaying]);
+    }, [isPlaying, videoId]);
 
     const handleReady = useCallback((event) => {
         playerRef.current = event.target;
         onReady?.(event.target);
-        if (isPlaying) event.target.playVideo();
+        if (isPlaying) {
+            safelyControlPlayer(event.target, 'playVideo');
+        }
     }, [isPlaying, onReady]);
 
     const handleEnd = useCallback(() => {
         onVideoEnd?.();
     }, [onVideoEnd]);
-
-    const handleStateChange = useCallback((event) => {
-        // YT.PlayerState: -1 unstarted, 0 ended, 1 playing, 2 paused, 3 buffering, 5 cued
-        // We don't need to do anything here; isPlaying drives us.
-    }, []);
 
     if (!video) {
         return (
@@ -61,7 +73,6 @@ export default function VideoPlayer({ video, isPlaying, onVideoEnd, onReady }) {
                     opts={opts}
                     onReady={handleReady}
                     onEnd={handleEnd}
-                    onStateChange={handleStateChange}
                     style={{ width: '100%', height: '100%' }}
                 />
             </div>

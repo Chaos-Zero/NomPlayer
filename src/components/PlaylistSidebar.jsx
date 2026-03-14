@@ -1,12 +1,23 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
-function PlaylistItem({ video, isActive, onSelect, isFavourite, onToggleFavourite }) {
+const CONTEXT_MENU_WIDTH = 180;
+const CONTEXT_MENU_HEIGHT = 96;
+
+function PlaylistItem({
+    video,
+    isActive,
+    onSelect,
+    isSupported,
+    onToggleSupport,
+    onOpenContextMenu,
+}) {
     const [imgError, setImgError] = useState(false);
 
     return (
         <div
             className={`playlist-item${isActive ? ' active' : ''}`}
             onClick={() => onSelect(video)}
+            onContextMenu={event => onOpenContextMenu(event, video)}
             role="button"
             tabIndex={0}
             onKeyDown={e => e.key === 'Enter' && onSelect(video)}
@@ -31,18 +42,62 @@ function PlaylistItem({ video, isActive, onSelect, isFavourite, onToggleFavourit
             </div>
 
             <button
-                className={`item-fav-btn${isFavourite ? ' starred' : ''}`}
-                onClick={e => { e.stopPropagation(); onToggleFavourite(video); }}
-                title={isFavourite ? 'Remove from favourites' : 'Add to favourites'}
-                aria-label={isFavourite ? 'Remove from favourites' : 'Add to favourites'}
+                className={`item-fav-btn${isSupported ? ' starred' : ''}`}
+                onClick={e => { e.stopPropagation(); onToggleSupport(video); }}
+                title={isSupported ? 'Remove from support list' : 'Add to support list'}
+                aria-label={isSupported ? 'Remove from support list' : 'Add to support list'}
             >
-                {isFavourite ? '★' : '☆'}
+                {isSupported ? '★' : '☆'}
             </button>
         </div>
     );
 }
 
-export default function PlaylistSidebar({ playlist, currentIndex, onSelect, favourites, onToggleFavourite }) {
+export default function PlaylistSidebar({
+    playlist,
+    currentIndex,
+    onSelect,
+    supportList,
+    onToggleSupport,
+    onAddToSupportList,
+    onRemoveFromPlaylist,
+}) {
+    const [contextMenu, setContextMenu] = useState(null);
+    const contextMenuRef = useRef(null);
+    const supportIds = useMemo(
+        () => new Set(supportList.map(entry => entry.videoId)),
+        [supportList]
+    );
+
+    useEffect(() => {
+        if (!contextMenu) return undefined;
+
+        function closeContextMenu() {
+            setContextMenu(null);
+        }
+
+        function handlePointerDown(event) {
+            if (contextMenuRef.current?.contains(event.target)) return;
+            closeContextMenu();
+        }
+
+        function handleKeyDown(event) {
+            if (event.key === 'Escape') {
+                closeContextMenu();
+            }
+        }
+
+        window.addEventListener('pointerdown', handlePointerDown);
+        window.addEventListener('keydown', handleKeyDown);
+        window.addEventListener('scroll', closeContextMenu, true);
+
+        return () => {
+            window.removeEventListener('pointerdown', handlePointerDown);
+            window.removeEventListener('keydown', handleKeyDown);
+            window.removeEventListener('scroll', closeContextMenu, true);
+        };
+    }, [contextMenu]);
+
     if (!playlist.length) {
         return (
             <div className="sidebar">
@@ -70,7 +125,30 @@ export default function PlaylistSidebar({ playlist, currentIndex, onSelect, favo
         );
     }
 
-    const favIds = new Set(favourites.map(f => f.videoId));
+    function handleOpenContextMenu(event, video) {
+        event.preventDefault();
+
+        const left = Math.min(
+            event.clientX,
+            window.innerWidth - CONTEXT_MENU_WIDTH - 8
+        );
+        const top = Math.min(
+            event.clientY,
+            window.innerHeight - CONTEXT_MENU_HEIGHT - 8
+        );
+
+        setContextMenu({ left: Math.max(8, left), top: Math.max(8, top), video });
+    }
+
+    function handleSupport(video) {
+        onAddToSupportList(video);
+        setContextMenu(null);
+    }
+
+    function handleRemove(videoId) {
+        onRemoveFromPlaylist(videoId);
+        setContextMenu(null);
+    }
 
     return (
         <div className="sidebar">
@@ -85,11 +163,39 @@ export default function PlaylistSidebar({ playlist, currentIndex, onSelect, favo
                         video={video}
                         isActive={i === currentIndex}
                         onSelect={() => onSelect(i)}
-                        isFavourite={favIds.has(video.videoId)}
-                        onToggleFavourite={onToggleFavourite}
+                        isSupported={supportIds.has(video.videoId)}
+                        onToggleSupport={onToggleSupport}
+                        onOpenContextMenu={handleOpenContextMenu}
                     />
                 ))}
             </div>
+            {contextMenu && (
+                <div
+                    ref={contextMenuRef}
+                    className="playlist-context-menu"
+                    role="menu"
+                    style={{ top: contextMenu.top, left: contextMenu.left }}
+                    onClick={event => event.stopPropagation()}
+                >
+                    <button
+                        className="playlist-context-menu-item"
+                        type="button"
+                        role="menuitem"
+                        onClick={() => handleSupport(contextMenu.video)}
+                        disabled={supportIds.has(contextMenu.video.videoId)}
+                    >
+                        Support
+                    </button>
+                    <button
+                        className="playlist-context-menu-item danger"
+                        type="button"
+                        role="menuitem"
+                        onClick={() => handleRemove(contextMenu.video.videoId)}
+                    >
+                        Remove from Playlist
+                    </button>
+                </div>
+            )}
         </div>
     );
 }
