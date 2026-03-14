@@ -15,8 +15,13 @@ describe('PlaylistSidebar', () => {
             playlist: [video],
             currentIndex: 0,
             flashVideoIds: [],
+            isShuffleEnabled: false,
+            showOriginalOrder: false,
+            onShuffle: vi.fn(),
+            onToggleOrderView: vi.fn(),
             onSelect: vi.fn(),
             supportList: [],
+            listenedStatusById: {},
             onToggleSupport: vi.fn(),
             onAddToSupportList: vi.fn(),
             onRemoveFromPlaylist: vi.fn(),
@@ -80,10 +85,64 @@ describe('PlaylistSidebar', () => {
             thumbnail: 'b.jpg',
             channelTitle: 'Channel B',
         };
-        const { container } = renderSidebar({ playlist: [video, beta] });
+        const { container } = renderSidebar({
+            playlist: [
+                { ...video, loadIndex: 1 },
+                { ...beta, loadIndex: 0 },
+            ],
+        });
 
         const numbers = [...container.querySelectorAll('.list-entry-number')].map(node => node.textContent);
 
-        expect(numbers).toEqual(['1', '2']);
+        expect(numbers).toEqual(['2', '1']);
+    });
+
+    it('shows shuffle controls and toggles the playlist view mode', () => {
+        const { container, props } = renderSidebar({
+            isShuffleEnabled: true,
+            playlist: [
+                { ...video, loadIndex: 0 },
+                { videoId: 'beta12345678', title: 'Beta', thumbnail: 'b.jpg', channelTitle: 'Channel B', loadIndex: 1 },
+            ],
+        });
+
+        fireEvent.click(screen.getByRole('button', { name: 'Shuffle playlist' }));
+        expect(props.onShuffle).toHaveBeenCalledTimes(1);
+
+        fireEvent.click(screen.getByRole('button', { name: 'Show original order' }));
+        expect(props.onToggleOrderView).toHaveBeenCalledTimes(1);
+
+        expect(container.querySelector('.playlist-order-toggle')).toHaveClass('visible');
+    });
+
+    it('renders the shuffle toggle before the video count in the header', () => {
+        const { container } = renderSidebar({ isShuffleEnabled: true });
+        const headerActions = container.querySelector('.sidebar-header-actions');
+
+        expect(headerActions?.firstElementChild).toHaveAttribute('aria-label', 'Shuffle playlist');
+    });
+
+    it('keeps the order toggle mounted but hidden while shuffle is off', () => {
+        const { container } = renderSidebar();
+
+        expect(screen.getByRole('button', { name: 'Show original order' })).toBeDisabled();
+        expect(container.querySelector('.playlist-order-toggle')).not.toHaveClass('visible');
+    });
+
+    it('renders outlined and filled listened ticks beside the support star', () => {
+        renderSidebar({
+            playlist: [
+                { ...video, loadIndex: 0 },
+                { videoId: 'beta12345678', title: 'Beta', thumbnail: 'b.jpg', channelTitle: 'Channel B', loadIndex: 1 },
+            ],
+            currentIndex: null,
+            listenedStatusById: {
+                alpha1234567: 'partial',
+                beta12345678: 'complete',
+            },
+        });
+
+        expect(screen.getByLabelText('Started')).toHaveClass('partial');
+        expect(screen.getByLabelText('Completed')).toHaveClass('complete');
     });
 });

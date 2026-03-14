@@ -1,5 +1,5 @@
-import { act, render, screen } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { act, render, screen, waitFor } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import App from '../App.jsx';
 
 const appTestState = vi.hoisted(() => ({
@@ -57,6 +57,10 @@ describe('App', () => {
         appTestState.videoPlayerProps = null;
         appTestState.playlistSidebarProps = null;
         appTestState.supportPanelProps = null;
+    });
+
+    afterEach(() => {
+        vi.restoreAllMocks();
     });
 
     it('autoplays a loaded single video when the playlist is empty', () => {
@@ -248,5 +252,90 @@ describe('App', () => {
         expect(appTestState.playlistSidebarProps.currentIndex).toBe(0);
         expect(appTestState.videoPlayerProps.video.title).toBe('Alpha');
         expect(appTestState.videoPlayerProps.isPlaying).toBe(true);
+    });
+
+    it('creates a shuffled play order while preserving the original order for viewing', () => {
+        vi.spyOn(Math, 'random').mockReturnValue(0);
+
+        render(<App />);
+
+        act(() => {
+            appTestState.topBarProps.onLoad(
+                [
+                    { videoId: 'alpha1234567', title: 'Alpha', thumbnail: 'a.jpg', channelTitle: '' },
+                    { videoId: 'beta12345678', title: 'Beta', thumbnail: 'b.jpg', channelTitle: '' },
+                    { videoId: 'gamma1234567', title: 'Gamma', thumbnail: 'g.jpg', channelTitle: '' },
+                ],
+                { mode: 'append', autoplay: true }
+            );
+        });
+
+        act(() => {
+            appTestState.playlistSidebarProps.onShuffle();
+        });
+
+        expect(appTestState.playlistSidebarProps.isShuffleEnabled).toBe(true);
+        expect(appTestState.playlistSidebarProps.playlist.map(video => video.title)).toEqual(['Alpha', 'Gamma', 'Beta']);
+
+        act(() => {
+            appTestState.playlistSidebarProps.onToggleOrderView();
+        });
+
+        expect(appTestState.playlistSidebarProps.showOriginalOrder).toBe(true);
+        expect(appTestState.playlistSidebarProps.playlist.map(video => video.title)).toEqual(['Alpha', 'Beta', 'Gamma']);
+
+        act(() => {
+            appTestState.playlistSidebarProps.onShuffle();
+        });
+
+        expect(appTestState.playlistSidebarProps.isShuffleEnabled).toBe(false);
+        expect(appTestState.playlistSidebarProps.showOriginalOrder).toBe(false);
+        expect(appTestState.playlistSidebarProps.playlist.map(video => video.title)).toEqual(['Alpha', 'Beta', 'Gamma']);
+    });
+
+    it('marks playlist songs as started and then completed once playback finishes', async () => {
+        render(<App />);
+
+        act(() => {
+            appTestState.topBarProps.onLoad(
+                [{ videoId: 'alpha1234567', title: 'Alpha', thumbnail: 'a.jpg', channelTitle: '' }],
+                { mode: 'append', autoplay: true }
+            );
+        });
+
+        await waitFor(() => {
+            expect(appTestState.playlistSidebarProps.listenedStatusById.alpha1234567).toBe('partial');
+        });
+
+        act(() => {
+            appTestState.videoPlayerProps.onVideoEnd();
+        });
+
+        expect(appTestState.playlistSidebarProps.listenedStatusById.alpha1234567).toBe('complete');
+    });
+
+    it('leaves a started song as partial when playback is skipped before completion', async () => {
+        render(<App />);
+
+        act(() => {
+            appTestState.topBarProps.onLoad(
+                [
+                    { videoId: 'alpha1234567', title: 'Alpha', thumbnail: 'a.jpg', channelTitle: '' },
+                    { videoId: 'beta12345678', title: 'Beta', thumbnail: 'b.jpg', channelTitle: '' },
+                ],
+                { mode: 'append', autoplay: true }
+            );
+        });
+
+        await waitFor(() => {
+            expect(appTestState.playlistSidebarProps.listenedStatusById.alpha1234567).toBe('partial');
+        });
+
+        act(() => {
+            appTestState.topBarProps.onNext();
+        });
+
+        expect(appTestState.playlistSidebarProps.listenedStatusById.alpha1234567).toBe('partial');
+        expect(appTestState.videoPlayerProps.video.title).toBe('Beta');
     });
 });

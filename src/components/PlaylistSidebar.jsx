@@ -4,29 +4,35 @@ const CONTEXT_MENU_WIDTH = 180;
 const CONTEXT_MENU_HEIGHT = 96;
 
 function PlaylistItem({
-    index,
+    orderNumber,
     video,
     isActive,
     isFlashing,
+    listenedStatus,
     onSelect,
     isSupported,
     onToggleSupport,
     onOpenContextMenu,
 }) {
     const [imgError, setImgError] = useState(false);
+    const tickLabel = listenedStatus === 'complete'
+        ? 'Completed'
+        : listenedStatus === 'partial'
+            ? 'Started'
+            : null;
 
     return (
         <div
             className={`playlist-item${isActive ? ' active' : ''}${isFlashing ? ' flash' : ''}`}
-            onClick={() => onSelect(video)}
+            onClick={() => onSelect(video.videoId)}
             onContextMenu={event => onOpenContextMenu(event, video)}
             role="button"
             tabIndex={0}
-            onKeyDown={e => e.key === 'Enter' && onSelect(video)}
+            onKeyDown={event => event.key === 'Enter' && onSelect(video.videoId)}
             aria-label={`Play ${video.title}`}
         >
             <div className="list-entry-number" aria-hidden="true">
-                {index + 1}
+                {orderNumber}
             </div>
 
             {video.thumbnail && !imgError ? (
@@ -47,14 +53,29 @@ function PlaylistItem({
                 )}
             </div>
 
-            <button
-                className={`item-fav-btn${isSupported ? ' starred' : ''}`}
-                onClick={e => { e.stopPropagation(); onToggleSupport(video); }}
-                title={isSupported ? 'Remove from support list' : 'Add to support list'}
-                aria-label={isSupported ? 'Remove from support list' : 'Add to support list'}
-            >
-                {isSupported ? '★' : '☆'}
-            </button>
+            <div className="playlist-item-actions">
+                <span
+                    className={`item-status-tick${listenedStatus ? ` ${listenedStatus}` : ' empty'}`}
+                    aria-hidden={!tickLabel}
+                    aria-label={tickLabel || undefined}
+                    title={tickLabel || undefined}
+                >
+                    <svg viewBox="0 0 16 16" aria-hidden="true">
+                        <path d="M3.5 8.5 6.6 11.6 12.5 4.9" />
+                    </svg>
+                </span>
+                <button
+                    className={`item-fav-btn${isSupported ? ' starred' : ''}`}
+                    onClick={event => {
+                        event.stopPropagation();
+                        onToggleSupport(video);
+                    }}
+                    title={isSupported ? 'Remove from support list' : 'Add to support list'}
+                    aria-label={isSupported ? 'Remove from support list' : 'Add to support list'}
+                >
+                    {isSupported ? '★' : '☆'}
+                </button>
+            </div>
         </div>
     );
 }
@@ -63,8 +84,13 @@ export default function PlaylistSidebar({
     playlist,
     currentIndex,
     flashVideoIds = [],
+    isShuffleEnabled = false,
+    showOriginalOrder = false,
+    onShuffle,
+    onToggleOrderView,
     onSelect,
     supportList,
+    listenedStatusById = {},
     onToggleSupport,
     onAddToSupportList,
     onRemoveFromPlaylist,
@@ -161,21 +187,48 @@ export default function PlaylistSidebar({
         setContextMenu(null);
     }
 
+    const showOrderToggle = isShuffleEnabled && playlist.length > 1;
+
     return (
         <div className="sidebar">
             <div className="sidebar-header">
                 <span className="sidebar-title">Playlist</span>
-                <span className="sidebar-count">{playlist.length} videos</span>
+                <div className="sidebar-header-actions">
+                    <button
+                        className={`sidebar-icon-btn${isShuffleEnabled ? ' active' : ''}`}
+                        type="button"
+                        onClick={onShuffle}
+                        disabled={playlist.length < 2}
+                        aria-label="Shuffle playlist"
+                        title="Shuffle playlist"
+                    >
+                        🔀
+                    </button>
+                    <span className="sidebar-count">{playlist.length} videos</span>
+                </div>
+            </div>
+            <div className={`playlist-order-toggle${showOrderToggle ? ' visible' : ''}`}>
+                <div className="playlist-order-toggle-inner">
+                    <button
+                        className="sidebar-toolbar-btn"
+                        type="button"
+                        onClick={onToggleOrderView}
+                        disabled={!showOrderToggle}
+                    >
+                        {showOriginalOrder ? 'Show play order' : 'Show original order'}
+                    </button>
+                </div>
             </div>
             <div className="playlist-list" role="list">
-                {playlist.map((video, i) => (
+                {playlist.map((video, index) => (
                     <PlaylistItem
-                        key={video.videoId + i}
-                        index={i}
+                        key={video.videoId}
+                        orderNumber={(video.loadIndex ?? index) + 1}
                         video={video}
-                        isActive={i === currentIndex}
+                        isActive={index === currentIndex}
                         isFlashing={flashIds.has(video.videoId)}
-                        onSelect={() => onSelect(i)}
+                        listenedStatus={listenedStatusById[video.videoId] || null}
+                        onSelect={onSelect}
                         isSupported={supportIds.has(video.videoId)}
                         onToggleSupport={onToggleSupport}
                         onOpenContextMenu={handleOpenContextMenu}
