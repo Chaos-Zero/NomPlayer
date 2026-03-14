@@ -4,8 +4,10 @@ const CONTEXT_MENU_WIDTH = 180;
 const CONTEXT_MENU_HEIGHT = 96;
 
 function PlaylistItem({
+    index,
     video,
     isActive,
+    isFlashing,
     onSelect,
     isSupported,
     onToggleSupport,
@@ -15,7 +17,7 @@ function PlaylistItem({
 
     return (
         <div
-            className={`playlist-item${isActive ? ' active' : ''}`}
+            className={`playlist-item${isActive ? ' active' : ''}${isFlashing ? ' flash' : ''}`}
             onClick={() => onSelect(video)}
             onContextMenu={event => onOpenContextMenu(event, video)}
             role="button"
@@ -23,6 +25,10 @@ function PlaylistItem({
             onKeyDown={e => e.key === 'Enter' && onSelect(video)}
             aria-label={`Play ${video.title}`}
         >
+            <div className="list-entry-number" aria-hidden="true">
+                {index + 1}
+            </div>
+
             {video.thumbnail && !imgError ? (
                 <img
                     className="playlist-thumb"
@@ -56,6 +62,7 @@ function PlaylistItem({
 export default function PlaylistSidebar({
     playlist,
     currentIndex,
+    flashVideoIds = [],
     onSelect,
     supportList,
     onToggleSupport,
@@ -67,6 +74,10 @@ export default function PlaylistSidebar({
     const supportIds = useMemo(
         () => new Set(supportList.map(entry => entry.videoId)),
         [supportList]
+    );
+    const flashIds = useMemo(
+        () => new Set(flashVideoIds),
+        [flashVideoIds]
     );
 
     useEffect(() => {
@@ -160,8 +171,10 @@ export default function PlaylistSidebar({
                 {playlist.map((video, i) => (
                     <PlaylistItem
                         key={video.videoId + i}
+                        index={i}
                         video={video}
                         isActive={i === currentIndex}
+                        isFlashing={flashIds.has(video.videoId)}
                         onSelect={() => onSelect(i)}
                         isSupported={supportIds.has(video.videoId)}
                         onToggleSupport={onToggleSupport}

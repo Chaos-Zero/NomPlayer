@@ -1,5 +1,5 @@
-import { fireEvent, render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { act, fireEvent, render, screen } from '@testing-library/react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import FavouritesPanel from '../../components/FavouritesPanel.jsx';
 
 vi.mock('@dnd-kit/core', () => ({
@@ -70,6 +70,10 @@ describe('FavouritesPanel', () => {
         };
     }
 
+    afterEach(() => {
+        vi.useRealTimers();
+    });
+
     it('queues a support item on double click without playing it immediately', () => {
         const { props } = renderPanel();
 
@@ -117,5 +121,52 @@ describe('FavouritesPanel', () => {
         fireEvent.pointerDown(screen.getByRole('menuitem', { name: 'Remove Support' }));
         fireEvent.click(screen.getByRole('menuitem', { name: 'Remove Support' }));
         expect(props.onRemove).toHaveBeenCalledWith([alpha.videoId, beta.videoId]);
+    });
+
+    it('shows numeric positions for support-list entries', () => {
+        const { container } = renderPanel();
+
+        const numbers = [...container.querySelectorAll('.list-entry-number')].map(node => node.textContent);
+
+        expect(numbers).toEqual(['1', '2']);
+    });
+
+    it('keeps the panel mounted while closing and notifies when the exit animation completes', () => {
+        vi.useFakeTimers();
+
+        const onExited = vi.fn();
+        const { rerender } = render(
+            <FavouritesPanel
+                supportList={[alpha, beta]}
+                onReorder={vi.fn()}
+                onClose={vi.fn()}
+                onPlayNow={vi.fn()}
+                onAddToPlaylist={vi.fn()}
+                onRemove={vi.fn()}
+                isOpen={true}
+                onExited={onExited}
+            />
+        );
+
+        rerender(
+            <FavouritesPanel
+                supportList={[alpha, beta]}
+                onReorder={vi.fn()}
+                onClose={vi.fn()}
+                onPlayNow={vi.fn()}
+                onAddToPlaylist={vi.fn()}
+                onRemove={vi.fn()}
+                isOpen={false}
+                onExited={onExited}
+            />
+        );
+
+        expect(screen.getByRole('dialog', { name: 'Support list' })).toHaveClass('closing');
+
+        act(() => {
+            vi.advanceTimersByTime(240);
+        });
+
+        expect(onExited).toHaveBeenCalledTimes(1);
     });
 });

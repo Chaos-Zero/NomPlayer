@@ -25,10 +25,10 @@ export default function App() {
   // Playlist state
   const [playlist, setPlaylist] = useState([]);
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [highlightedIndex, setHighlightedIndex] = useState(0);
   const playlistRef = useRef([]);
   const [transientVideo, setTransientVideo] = useState(null);
   const transientResumeIndexRef = useRef(null);
+  const [flashVideoIds, setFlashVideoIds] = useState([]);
 
   // Playback
   const [isPlaying, setIsPlaying] = useState(false);
@@ -36,6 +36,7 @@ export default function App() {
   // Support list
   const [supportList, setSupportList] = useState(loadSupportList);
   const [showSupportList, setShowSupportList] = useState(false);
+  const [renderSupportList, setRenderSupportList] = useState(false);
 
   // Persist support list
   useEffect(() => {
@@ -47,10 +48,23 @@ export default function App() {
     playlistRef.current = playlist;
   }, [playlist]);
 
+  useEffect(() => {
+    if (flashVideoIds.length === 0) return undefined;
+
+    const timeoutId = window.setTimeout(() => {
+      setFlashVideoIds([]);
+    }, 1400);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [flashVideoIds]);
+
   const appendVideosToPlaylist = useCallback((videos, options = {}) => {
     const {
-      highlightLast = false,
       autoplayIfFirst = false,
+      startVideoId = null,
+      flashResolved = false,
     } = options;
 
     if (!videos.length) return;
@@ -60,24 +74,33 @@ export default function App() {
     const nextPlaylist = [...previousPlaylist];
     const indexById = new Map(previousPlaylist.map((video, index) => [video.videoId, index]));
 
-    let lastResolvedIndex = previousLength > 0 ? previousLength - 1 : 0;
+    const resolvedVideoIds = [];
+    let startVideoIndex = startVideoId
+      ? indexById.get(startVideoId) ?? null
+      : null;
 
     for (const video of videos) {
       const existingIndex = indexById.get(video.videoId);
       if (existingIndex !== undefined) {
-        lastResolvedIndex = existingIndex;
+        resolvedVideoIds.push(video.videoId);
+        if (video.videoId === startVideoId) {
+          startVideoIndex = existingIndex;
+        }
         continue;
       }
 
       const nextIndex = nextPlaylist.length;
       nextPlaylist.push(video);
       indexById.set(video.videoId, nextIndex);
-      lastResolvedIndex = nextIndex;
+      resolvedVideoIds.push(video.videoId);
+      if (video.videoId === startVideoId) {
+        startVideoIndex = nextIndex;
+      }
     }
 
     if (nextPlaylist.length === previousLength) {
-      if (highlightLast) {
-        setHighlightedIndex(lastResolvedIndex);
+      if (flashResolved && resolvedVideoIds.length > 0) {
+        setFlashVideoIds(resolvedVideoIds);
       }
       return;
     }
@@ -86,16 +109,19 @@ export default function App() {
     setPlaylist(nextPlaylist);
 
     if (previousLength === 0) {
-      setCurrentIndex(0);
-      setHighlightedIndex(highlightLast ? lastResolvedIndex : 0);
+      const initialIndex = startVideoIndex ?? 0;
+      setCurrentIndex(initialIndex);
+      if (flashResolved && resolvedVideoIds.length > 0) {
+        setFlashVideoIds(resolvedVideoIds);
+      }
       if (!transientVideo) {
         setIsPlaying(autoplayIfFirst);
       }
       return;
     }
 
-    if (highlightLast) {
-      setHighlightedIndex(lastResolvedIndex);
+    if (flashResolved && resolvedVideoIds.length > 0) {
+      setFlashVideoIds(resolvedVideoIds);
     }
   }, [transientVideo]);
 
@@ -108,7 +134,7 @@ export default function App() {
     } = options;
 
     if (mode === 'append') {
-      appendVideosToPlaylist(items, { autoplayIfFirst: autoplay });
+      appendVideosToPlaylist(items, { autoplayIfFirst: autoplay, startVideoId });
       return;
     }
 
@@ -122,7 +148,6 @@ export default function App() {
       : 0;
 
     setCurrentIndex(startIdx);
-    setHighlightedIndex(startIdx);
     setIsPlaying(autoplay);
   }, [appendVideosToPlaylist]);
 
@@ -131,7 +156,6 @@ export default function App() {
     transientResumeIndexRef.current = null;
     setTransientVideo(null);
     setCurrentIndex(idx);
-    setHighlightedIndex(idx);
   }, []);
 
   const handlePrev = useCallback(() => {
@@ -140,7 +164,6 @@ export default function App() {
     transientResumeIndexRef.current = null;
     setTransientVideo(null);
     setCurrentIndex(i => Math.max(0, i - 1));
-    setHighlightedIndex(i => Math.max(0, i - 1));
   }, []);
 
   const handleNext = useCallback(() => {
@@ -151,10 +174,6 @@ export default function App() {
     setCurrentIndex(i => {
       if (i < playlist.length - 1) return i + 1;
       return i; // stop at end
-    });
-    setHighlightedIndex(i => {
-      if (i < playlist.length - 1) return i + 1;
-      return i;
     });
   }, [playlist.length]);
 
@@ -167,7 +186,6 @@ export default function App() {
       setTransientVideo(null);
       if (resumeIndex !== null && playlistRef.current[resumeIndex]) {
         setCurrentIndex(resumeIndex);
-        setHighlightedIndex(resumeIndex);
         setIsPlaying(true);
       } else {
         setIsPlaying(false);
@@ -180,13 +198,22 @@ export default function App() {
       setIsPlaying(false);
       return i;
     });
-    setHighlightedIndex(i => {
-      if (i < playlist.length - 1) return i + 1;
-      return i;
-    });
   }, [isPlaying, playlist.length, transientVideo]);
 
   // ── Support list ─────────────────────────────────────────────────
+  const handleOpenSupportList = useCallback(() => {
+    setRenderSupportList(true);
+    setShowSupportList(true);
+  }, []);
+
+  const handleRequestCloseSupportList = useCallback(() => {
+    setShowSupportList(false);
+  }, []);
+
+  const handleSupportListExited = useCallback(() => {
+    setRenderSupportList(false);
+  }, []);
+
   const handleToggleSupport = useCallback((video) => {
     setSupportList(prev => {
       const exists = prev.some(entry => entry.videoId === video.videoId);
@@ -232,7 +259,6 @@ export default function App() {
 
     if (nextPlaylist.length === 0) {
       setCurrentIndex(0);
-      setHighlightedIndex(0);
       if (!transientVideo) {
         setIsPlaying(false);
       }
@@ -244,15 +270,10 @@ export default function App() {
       if (index > removeIndex) return index - 1;
       return Math.min(index, nextPlaylist.length - 1);
     });
-    setHighlightedIndex(index => {
-      if (index < removeIndex) return index;
-      if (index > removeIndex) return index - 1;
-      return Math.min(index, nextPlaylist.length - 1);
-    });
   }, [transientVideo]);
 
   const handleQueueFromSupportList = useCallback((videos) => {
-    appendVideosToPlaylist(videos, { highlightLast: true });
+    appendVideosToPlaylist(videos, { flashResolved: true });
   }, [appendVideosToPlaylist]);
 
   const handlePlayNowFromSupportList = useCallback((video) => {
@@ -264,12 +285,12 @@ export default function App() {
           ? currentIndex + 1
           : null;
       } else {
-        transientResumeIndexRef.current = Math.min(highlightedIndex, playlistRef.current.length - 1);
+        transientResumeIndexRef.current = Math.min(currentIndex, playlistRef.current.length - 1);
       }
     }
     setTransientVideo(video);
     setIsPlaying(true);
-  }, [currentIndex, highlightedIndex, isPlaying, transientVideo]);
+  }, [currentIndex, isPlaying, transientVideo]);
 
   const currentVideo = transientVideo || playlist[currentIndex] || null;
   const apiKeyMissing = !import.meta.env.VITE_YT_API_KEY;
@@ -283,7 +304,23 @@ export default function App() {
         onPrev={handlePrev}
         onNext={handleNext}
         showSupportList={showSupportList}
-        setShowSupportList={setShowSupportList}
+        setShowSupportList={value => {
+          if (typeof value === 'function') {
+            const nextValue = value(showSupportList);
+            if (nextValue) {
+              handleOpenSupportList();
+            } else {
+              handleRequestCloseSupportList();
+            }
+            return;
+          }
+
+          if (value) {
+            handleOpenSupportList();
+          } else {
+            handleRequestCloseSupportList();
+          }
+        }}
         onLoad={handleLoad}
       />
 
@@ -300,7 +337,8 @@ export default function App() {
       <aside className="sidebar">
         <PlaylistSidebar
           playlist={playlist}
-          currentIndex={highlightedIndex}
+          currentIndex={transientVideo ? null : currentIndex}
+          flashVideoIds={flashVideoIds}
           onSelect={goToIndex}
           supportList={supportList}
           onToggleSupport={handleToggleSupport}
@@ -325,11 +363,13 @@ export default function App() {
       </aside>
 
       {/* Support list slide-in panel */}
-      {showSupportList && (
+      {renderSupportList && (
         <FavouritesPanel
           supportList={supportList}
           onReorder={handleReorderSupportList}
-          onClose={() => setShowSupportList(false)}
+          isOpen={showSupportList}
+          onClose={handleRequestCloseSupportList}
+          onExited={handleSupportListExited}
           onPlayNow={handlePlayNowFromSupportList}
           onAddToPlaylist={handleQueueFromSupportList}
           onRemove={handleRemoveFromSupportList}

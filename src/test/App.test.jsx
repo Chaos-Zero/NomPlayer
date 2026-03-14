@@ -158,7 +158,8 @@ describe('App', () => {
         });
 
         expect(appTestState.playlistSidebarProps.playlist.map(video => video.title)).toEqual(['Alpha', 'Beta']);
-        expect(appTestState.playlistSidebarProps.currentIndex).toBe(1);
+        expect(appTestState.playlistSidebarProps.currentIndex).toBe(0);
+        expect(appTestState.playlistSidebarProps.flashVideoIds).toEqual(['beta12345678']);
         expect(appTestState.videoPlayerProps.video.title).toBe('Alpha');
         expect(appTestState.videoPlayerProps.isPlaying).toBe(true);
     });
@@ -183,6 +184,7 @@ describe('App', () => {
             );
         });
 
+        expect(appTestState.playlistSidebarProps.currentIndex).toBeNull();
         expect(appTestState.playlistSidebarProps.playlist.map(video => video.title)).toEqual(['Alpha']);
         expect(appTestState.videoPlayerProps.video.title).toBe('Beta');
         expect(appTestState.videoPlayerProps.isPlaying).toBe(true);
@@ -218,5 +220,33 @@ describe('App', () => {
         expect(appTestState.videoPlayerProps.video.title).toBe('Gamma');
         expect(appTestState.videoPlayerProps.isPlaying).toBe(true);
         expect(appTestState.playlistSidebarProps.currentIndex).toBe(1);
+    });
+
+    it('appends loaded playlists to the current queue without interrupting playback', () => {
+        render(<App />);
+
+        act(() => {
+            appTestState.topBarProps.onLoad(
+                [
+                    { videoId: 'alpha1234567', title: 'Alpha', thumbnail: 'a.jpg', channelTitle: '' },
+                ],
+                { mode: 'append', autoplay: true }
+            );
+        });
+
+        act(() => {
+            appTestState.topBarProps.onLoad(
+                [
+                    { videoId: 'beta12345678', title: 'Beta', thumbnail: 'b.jpg', channelTitle: '' },
+                    { videoId: 'gamma1234567', title: 'Gamma', thumbnail: 'g.jpg', channelTitle: '' },
+                ],
+                { mode: 'append', startVideoId: 'gamma1234567' }
+            );
+        });
+
+        expect(appTestState.playlistSidebarProps.playlist.map(video => video.title)).toEqual(['Alpha', 'Beta', 'Gamma']);
+        expect(appTestState.playlistSidebarProps.currentIndex).toBe(0);
+        expect(appTestState.videoPlayerProps.video.title).toBe('Alpha');
+        expect(appTestState.videoPlayerProps.isPlaying).toBe(true);
     });
 });

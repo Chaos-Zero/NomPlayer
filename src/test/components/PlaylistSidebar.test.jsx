@@ -14,6 +14,7 @@ describe('PlaylistSidebar', () => {
         const props = {
             playlist: [video],
             currentIndex: 0,
+            flashVideoIds: [],
             onSelect: vi.fn(),
             supportList: [],
             onToggleSupport: vi.fn(),
@@ -63,5 +64,26 @@ describe('PlaylistSidebar', () => {
         fireEvent.contextMenu(screen.getByLabelText('Play Alpha'));
 
         expect(screen.getByRole('menuitem', { name: 'Support' })).toBeDisabled();
+    });
+
+    it('applies a transient flash class separately from the active class', () => {
+        renderSidebar({ currentIndex: null, flashVideoIds: ['alpha1234567'] });
+
+        expect(screen.getByLabelText('Play Alpha')).toHaveClass('flash');
+        expect(screen.getByLabelText('Play Alpha')).not.toHaveClass('active');
+    });
+
+    it('shows a numeric position for each playlist entry', () => {
+        const beta = {
+            videoId: 'beta12345678',
+            title: 'Beta',
+            thumbnail: 'b.jpg',
+            channelTitle: 'Channel B',
+        };
+        const { container } = renderSidebar({ playlist: [video, beta] });
+
+        const numbers = [...container.querySelectorAll('.list-entry-number')].map(node => node.textContent);
+
+        expect(numbers).toEqual(['1', '2']);
     });
 });

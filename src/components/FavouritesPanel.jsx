@@ -18,8 +18,10 @@ import { CSS } from '@dnd-kit/utilities';
 
 const CONTEXT_MENU_WIDTH = 220;
 const CONTEXT_MENU_HEIGHT = 140;
+const PANEL_CLOSE_MS = 240;
 
 function SupportItem({
+    index,
     video,
     onRemove,
     onDoubleQueue,
@@ -52,6 +54,10 @@ function SupportItem({
                     }}
                 />
             )}
+
+            <div className="list-entry-number support-list-number" aria-hidden="true">
+                {index + 1}
+            </div>
 
             {video.thumbnail && !imgError ? (
                 <img
@@ -116,6 +122,7 @@ function SupportItem({
 }
 
 function SortableSupportItem({
+    index,
     video,
     onRemove,
     onDoubleQueue,
@@ -151,6 +158,7 @@ function SortableSupportItem({
                 ⠿
             </div>
             <SupportItem
+                index={index}
                 video={video}
                 onRemove={onRemove}
                 onDoubleQueue={onDoubleQueue}
@@ -170,6 +178,8 @@ export default function FavouritesPanel({
     onPlayNow,
     onAddToPlaylist,
     onRemove,
+    isOpen = true,
+    onExited,
 }) {
     const sensors = useSensors(
         useSensor(PointerSensor),
@@ -210,6 +220,18 @@ export default function FavouritesPanel({
             window.removeEventListener('scroll', closeContextMenu, true);
         };
     }, [contextMenu]);
+
+    useEffect(() => {
+        if (isOpen) return undefined;
+
+        const timeoutId = window.setTimeout(() => {
+            onExited?.();
+        }, PANEL_CLOSE_MS);
+
+        return () => {
+            window.clearTimeout(timeoutId);
+        };
+    }, [isOpen, onExited]);
 
     function handleDragEnd(event) {
         const { active, over } = event;
@@ -311,9 +333,18 @@ export default function FavouritesPanel({
 
     return (
         <>
-            <div className="fav-panel-backdrop" onClick={onClose} aria-hidden="true" />
+            <div
+                className={`fav-panel-backdrop${isOpen ? '' : ' closing'}`}
+                onClick={onClose}
+                aria-hidden="true"
+            />
 
-            <div className="fav-panel" role="dialog" aria-label="Support list" aria-modal="true">
+            <div
+                className={`fav-panel${isOpen ? '' : ' closing'}`}
+                role="dialog"
+                aria-label="Support list"
+                aria-modal="true"
+            >
                 <div className="fav-panel-header">
                     <div className="fav-panel-title">
                         <span>★</span>
@@ -367,9 +398,10 @@ export default function FavouritesPanel({
                             </div>
                         </div>
                     ) : selectionMode ? (
-                        supportList.map(video => (
+                        supportList.map((video, index) => (
                             <SupportItem
                                 key={video.videoId}
+                                index={index}
                                 video={video}
                                 onRemove={onRemove}
                                 onDoubleQueue={handleDoubleQueue}
@@ -389,9 +421,10 @@ export default function FavouritesPanel({
                                 items={supportList.map(entry => entry.videoId)}
                                 strategy={verticalListSortingStrategy}
                             >
-                                {supportList.map(video => (
+                                {supportList.map((video, index) => (
                                     <SortableSupportItem
                                         key={video.videoId}
+                                        index={index}
                                         video={video}
                                         onRemove={onRemove}
                                         onDoubleQueue={handleDoubleQueue}
@@ -403,7 +436,7 @@ export default function FavouritesPanel({
                     )}
                 </div>
 
-                {contextMenu && (
+                {contextMenu && isOpen && (
                     <div
                         ref={contextMenuRef}
                         className="support-context-menu"
