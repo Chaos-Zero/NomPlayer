@@ -1,6 +1,6 @@
 import { act, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import App from './App.jsx';
+import App from '../App.jsx';
 
 const appTestState = vi.hoisted(() => ({
     topBarProps: null,
@@ -9,14 +9,14 @@ const appTestState = vi.hoisted(() => ({
     supportPanelProps: null,
 }));
 
-vi.mock('./components/TopBar.jsx', () => ({
+vi.mock('../components/TopBar.jsx', () => ({
     default: function MockTopBar(props) {
         appTestState.topBarProps = props;
         return <div data-testid="topbar-mock" />;
     },
 }));
 
-vi.mock('./components/VideoPlayer.jsx', () => ({
+vi.mock('../components/VideoPlayer.jsx', () => ({
     default: function MockVideoPlayer(props) {
         appTestState.videoPlayerProps = props;
         return (
@@ -28,7 +28,7 @@ vi.mock('./components/VideoPlayer.jsx', () => ({
     },
 }));
 
-vi.mock('./components/PlaylistSidebar.jsx', () => ({
+vi.mock('../components/PlaylistSidebar.jsx', () => ({
     default: function MockPlaylistSidebar(props) {
         appTestState.playlistSidebarProps = props;
         return (
@@ -39,7 +39,7 @@ vi.mock('./components/PlaylistSidebar.jsx', () => ({
     },
 }));
 
-vi.mock('./components/FavouritesPanel.jsx', () => ({
+vi.mock('../components/FavouritesPanel.jsx', () => ({
     default: function MockSupportListPanel(props) {
         appTestState.supportPanelProps = props;
         return (

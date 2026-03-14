@@ -1,6 +1,6 @@
 import { render } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import VideoPlayer from './VideoPlayer.jsx';
+import VideoPlayer from '../../components/VideoPlayer.jsx';
 
 const youtubeMockState = vi.hoisted(() => ({
     players: new Map(),

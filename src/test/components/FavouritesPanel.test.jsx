@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
-import FavouritesPanel from './FavouritesPanel.jsx';
+import FavouritesPanel from '../../components/FavouritesPanel.jsx';
 
 vi.mock('@dnd-kit/core', () => ({
     DndContext: ({ children }) => <div>{children}</div>,

@@ -1,9 +1,9 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import TopBar from './TopBar.jsx';
-import { parseYouTubeInput, singleVideoEntry } from '../utils/youtube.js';
+import TopBar from '../../components/TopBar.jsx';
+import { parseYouTubeInput, singleVideoEntry } from '../../utils/youtube.js';
 
-vi.mock('../utils/youtube.js', () => ({
+vi.mock('../../utils/youtube.js', () => ({
     parseYouTubeInput: vi.fn(),
     fetchPlaylistItems: vi.fn(),
     singleVideoEntry: vi.fn(),
