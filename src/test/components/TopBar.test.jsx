@@ -1,225 +1,276 @@
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import TopBar from '../../components/TopBar.jsx';
-import { fetchPlaylistItems, parseYouTubeInput, singleVideoEntry } from '../../utils/youtube.js';
+import {
+  fetchPlaylistItems,
+  parseYouTubeInput,
+  singleVideoEntry,
+} from '../../utils/youtube.js';
 
 vi.mock('../../utils/youtube.js', () => ({
-    parseYouTubeInput: vi.fn(),
-    fetchPlaylistItems: vi.fn(),
-    singleVideoEntry: vi.fn(),
+  parseYouTubeInput: vi.fn(),
+  fetchPlaylistItems: vi.fn(),
+  singleVideoEntry: vi.fn(),
 }));
 
 const originalMatchMedia = window.matchMedia;
 
 function mockMatchMedia(matches) {
-    window.matchMedia = vi.fn().mockImplementation(query => ({
-        matches,
-        media: query,
-        addEventListener: vi.fn(),
-        removeEventListener: vi.fn(),
-        addListener: vi.fn(),
-        removeListener: vi.fn(),
-        dispatchEvent: vi.fn(),
-    }));
+  window.matchMedia = vi.fn().mockImplementation((query) => ({
+    matches,
+    media: query,
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+    addListener: vi.fn(),
+    removeListener: vi.fn(),
+    dispatchEvent: vi.fn(),
+  }));
 }
 
 function createDeferred() {
-    let resolve;
-    let reject;
+  let resolve;
+  let reject;
 
-    const promise = new Promise((res, rej) => {
-        resolve = res;
-        reject = rej;
-    });
+  const promise = new Promise((res, rej) => {
+    resolve = res;
+    reject = rej;
+  });
 
-    return { promise, resolve, reject };
+  return { promise, resolve, reject };
 }
 
 function renderTopBar(overrides = {}) {
-    const props = {
-        isPlaying: false,
-        setIsPlaying: vi.fn(),
-        onPrev: vi.fn(),
-        onNext: vi.fn(),
-        showSupportList: false,
-        setShowSupportList: vi.fn(),
-        showNominationsList: false,
-        setShowNominationsList: vi.fn(),
-        onLoad: vi.fn(),
-        ...overrides,
-    };
+  const props = {
+    isPlaying: false,
+    setIsPlaying: vi.fn(),
+    onPrev: vi.fn(),
+    onNext: vi.fn(),
+    showSupportList: false,
+    setShowSupportList: vi.fn(),
+    showNominationsList: false,
+    setShowNominationsList: vi.fn(),
+    onLoad: vi.fn(),
+    ...overrides,
+  };
 
-    return {
-        ...render(<TopBar {...props} />),
-        props,
-    };
+  return {
+    ...render(<TopBar {...props} />),
+    props,
+  };
 }
 
 describe('TopBar', () => {
-    beforeEach(() => {
-        vi.clearAllMocks();
-    });
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
 
-    afterEach(() => {
-        vi.useRealTimers();
-        if (originalMatchMedia) {
-            window.matchMedia = originalMatchMedia;
-        } else {
-            delete window.matchMedia;
-        }
-    });
-
-    function openLoader() {
-        fireEvent.click(screen.getByRole('button', { name: 'Add to playlist' }));
-        return screen.getByRole('textbox');
+  afterEach(() => {
+    vi.useRealTimers();
+    if (originalMatchMedia) {
+      window.matchMedia = originalMatchMedia;
+    } else {
+      delete window.matchMedia;
     }
+  });
 
-    it('opens and closes the add-to-playlist input shell', () => {
-        renderTopBar();
+  function openLoader() {
+    fireEvent.click(screen.getByRole('button', { name: 'Add to playlist' }));
+    return screen.getByRole('textbox');
+  }
 
-        fireEvent.click(screen.getByRole('button', { name: 'Add to playlist' }));
-        expect(screen.getByRole('button', { name: 'Load' })).toBeInTheDocument();
+  it('opens and closes the add-to-playlist input shell', () => {
+    renderTopBar();
 
-        fireEvent.click(screen.getByRole('button', { name: 'Close add to playlist' }));
-        expect(screen.getByRole('button', { name: 'Add to playlist' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Add to playlist' }));
+    expect(screen.getByRole('button', { name: 'Load' })).toBeInTheDocument();
+
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Close add to playlist' }),
+    );
+    expect(
+      screen.getByRole('button', { name: 'Add to playlist' }),
+    ).toBeInTheDocument();
+  });
+
+  it('renders separate support and nominations toggles', () => {
+    renderTopBar();
+
+    expect(
+      screen.getByRole('button', { name: 'Toggle support list' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Toggle nominations list' }),
+    ).toBeInTheDocument();
+  });
+
+  it('shows the current song title in the mobile playback bar', () => {
+    mockMatchMedia(true);
+
+    renderTopBar({
+      isPlaying: true,
+      currentVideo: {
+        videoId: 'alpha1234567',
+        title: 'Alpha',
+      },
     });
 
-    it('renders separate support and nominations toggles', () => {
-        renderTopBar();
+    expect(screen.getByText('Alpha')).toBeInTheDocument();
+  });
 
-        expect(screen.getByRole('button', { name: 'Toggle support list' })).toBeInTheDocument();
-        expect(screen.getByRole('button', { name: 'Toggle nominations list' })).toBeInTheDocument();
+  it('awaits single video metadata before loading it', async () => {
+    const item = {
+      videoId: 'dQw4w9WgXcQ',
+      title: 'Never Gonna Give You Up',
+      thumbnail: 'thumb.jpg',
+      channelTitle: 'Rick Astley',
+    };
+    parseYouTubeInput.mockReturnValue({ type: 'video', videoId: item.videoId });
+    singleVideoEntry.mockResolvedValue(item);
+
+    const { props } = renderTopBar();
+    fireEvent.change(openLoader(), {
+      target: { value: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Load' }));
+
+    await waitFor(() => {
+      expect(props.onLoad).toHaveBeenCalledWith([item], {
+        mode: 'append',
+        autoplay: true,
+      });
+    });
+  });
+
+  it('flashes a success tick after a valid load completes', async () => {
+    vi.useFakeTimers();
+
+    const item = {
+      videoId: 'dQw4w9WgXcQ',
+      title: 'Never Gonna Give You Up',
+      thumbnail: 'thumb.jpg',
+      channelTitle: 'Rick Astley',
+    };
+    parseYouTubeInput.mockReturnValue({ type: 'video', videoId: item.videoId });
+    singleVideoEntry.mockResolvedValue(item);
+
+    const { props } = renderTopBar();
+    fireEvent.change(openLoader(), {
+      target: { value: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Load' }));
+
+    await act(async () => {
+      await Promise.resolve();
     });
 
-    it('shows the current song title in the mobile playback bar', () => {
-        mockMatchMedia(true);
+    expect(props.onLoad).toHaveBeenCalledWith([item], {
+      mode: 'append',
+      autoplay: true,
+    });
+    expect(
+      screen.getByRole('button', { name: 'Load successful' }),
+    ).toHaveTextContent('✓');
 
-        renderTopBar({
-            isPlaying: true,
-            currentVideo: {
-                videoId: 'alpha1234567',
-                title: 'Alpha',
-            },
-        });
-
-        expect(screen.getByText('Alpha')).toBeInTheDocument();
+    await act(async () => {
+      vi.advanceTimersByTime(1000);
     });
 
-    it('awaits single video metadata before loading it', async () => {
-        const item = {
-            videoId: 'dQw4w9WgXcQ',
-            title: 'Never Gonna Give You Up',
-            thumbnail: 'thumb.jpg',
-            channelTitle: 'Rick Astley',
-        };
-        parseYouTubeInput.mockReturnValue({ type: 'video', videoId: item.videoId });
-        singleVideoEntry.mockResolvedValue(item);
+    expect(screen.getByRole('button', { name: 'Load' })).toBeInTheDocument();
+  });
 
-        const { props } = renderTopBar();
-        fireEvent.change(openLoader(), {
-            target: { value: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ' },
-        });
-        fireEvent.click(screen.getByRole('button', { name: 'Load' }));
+  it('ignores stale single-video responses when a newer request finishes later', async () => {
+    const first = createDeferred();
+    const second = createDeferred();
+    const firstItem = {
+      videoId: 'first-video',
+      title: 'First',
+      thumbnail: 'a.jpg',
+      channelTitle: '',
+    };
+    const secondItem = {
+      videoId: 'second-video',
+      title: 'Second',
+      thumbnail: 'b.jpg',
+      channelTitle: '',
+    };
 
-        await waitFor(() => {
-            expect(props.onLoad).toHaveBeenCalledWith([item], { mode: 'append', autoplay: true });
-        });
+    parseYouTubeInput
+      .mockReturnValueOnce({ type: 'video', videoId: firstItem.videoId })
+      .mockReturnValueOnce({ type: 'video', videoId: secondItem.videoId });
+    singleVideoEntry
+      .mockImplementationOnce(() => first.promise)
+      .mockImplementationOnce(() => second.promise);
+
+    const { container, props } = renderTopBar();
+    const input = openLoader();
+    const form = container.querySelector('form');
+
+    fireEvent.change(input, { target: { value: 'first url' } });
+    fireEvent.submit(form);
+
+    fireEvent.change(input, { target: { value: 'second url' } });
+    fireEvent.submit(form);
+
+    await act(async () => {
+      second.resolve(secondItem);
     });
 
-    it('flashes a success tick after a valid load completes', async () => {
-        vi.useFakeTimers();
-
-        const item = {
-            videoId: 'dQw4w9WgXcQ',
-            title: 'Never Gonna Give You Up',
-            thumbnail: 'thumb.jpg',
-            channelTitle: 'Rick Astley',
-        };
-        parseYouTubeInput.mockReturnValue({ type: 'video', videoId: item.videoId });
-        singleVideoEntry.mockResolvedValue(item);
-
-        const { props } = renderTopBar();
-        fireEvent.change(openLoader(), {
-            target: { value: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ' },
-        });
-        fireEvent.click(screen.getByRole('button', { name: 'Load' }));
-
-        await act(async () => {
-            await Promise.resolve();
-        });
-
-        expect(props.onLoad).toHaveBeenCalledWith([item], { mode: 'append', autoplay: true });
-        expect(screen.getByRole('button', { name: 'Load successful' })).toHaveTextContent('✓');
-
-        await act(async () => {
-            vi.advanceTimersByTime(1000);
-        });
-
-        expect(screen.getByRole('button', { name: 'Load' })).toBeInTheDocument();
+    await waitFor(() => {
+      expect(props.onLoad).toHaveBeenCalledWith([secondItem], {
+        mode: 'append',
+        autoplay: true,
+      });
     });
 
-    it('ignores stale single-video responses when a newer request finishes later', async () => {
-        const first = createDeferred();
-        const second = createDeferred();
-        const firstItem = { videoId: 'first-video', title: 'First', thumbnail: 'a.jpg', channelTitle: '' };
-        const secondItem = { videoId: 'second-video', title: 'Second', thumbnail: 'b.jpg', channelTitle: '' };
-
-        parseYouTubeInput
-            .mockReturnValueOnce({ type: 'video', videoId: firstItem.videoId })
-            .mockReturnValueOnce({ type: 'video', videoId: secondItem.videoId });
-        singleVideoEntry
-            .mockImplementationOnce(() => first.promise)
-            .mockImplementationOnce(() => second.promise);
-
-        const { container, props } = renderTopBar();
-        const input = openLoader();
-        const form = container.querySelector('form');
-
-        fireEvent.change(input, { target: { value: 'first url' } });
-        fireEvent.submit(form);
-
-        fireEvent.change(input, { target: { value: 'second url' } });
-        fireEvent.submit(form);
-
-        await act(async () => {
-            second.resolve(secondItem);
-        });
-
-        await waitFor(() => {
-            expect(props.onLoad).toHaveBeenCalledWith([secondItem], { mode: 'append', autoplay: true });
-        });
-
-        await act(async () => {
-            first.resolve(firstItem);
-        });
-
-        expect(props.onLoad).toHaveBeenCalledTimes(1);
+    await act(async () => {
+      first.resolve(firstItem);
     });
 
-    it('appends playlist loads instead of replacing the current queue', async () => {
-        const items = [
-            { videoId: 'alpha1234567', title: 'Alpha', thumbnail: 'a.jpg', channelTitle: '' },
-            { videoId: 'beta12345678', title: 'Beta', thumbnail: 'b.jpg', channelTitle: '' },
-        ];
+    expect(props.onLoad).toHaveBeenCalledTimes(1);
+  });
 
-        parseYouTubeInput.mockReturnValue({
-            type: 'playlist',
-            playlistId: 'PL123',
-            videoId: 'beta12345678',
-        });
-        fetchPlaylistItems.mockResolvedValue(items);
+  it('appends playlist loads instead of replacing the current queue', async () => {
+    const items = [
+      {
+        videoId: 'alpha1234567',
+        title: 'Alpha',
+        thumbnail: 'a.jpg',
+        channelTitle: '',
+      },
+      {
+        videoId: 'beta12345678',
+        title: 'Beta',
+        thumbnail: 'b.jpg',
+        channelTitle: '',
+      },
+    ];
 
-        const { props } = renderTopBar();
-        fireEvent.change(openLoader(), {
-            target: { value: 'https://www.youtube.com/playlist?list=PL123&v=beta12345678' },
-        });
-        fireEvent.click(screen.getByRole('button', { name: 'Load' }));
-
-        await waitFor(() => {
-            expect(props.onLoad).toHaveBeenCalledWith(items, {
-                mode: 'append',
-                startVideoId: 'beta12345678',
-            });
-        });
+    parseYouTubeInput.mockReturnValue({
+      type: 'playlist',
+      playlistId: 'PL123',
+      videoId: 'beta12345678',
     });
+    fetchPlaylistItems.mockResolvedValue(items);
+
+    const { props } = renderTopBar();
+    fireEvent.change(openLoader(), {
+      target: {
+        value: 'https://www.youtube.com/playlist?list=PL123&v=beta12345678',
+      },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Load' }));
+
+    await waitFor(() => {
+      expect(props.onLoad).toHaveBeenCalledWith(items, {
+        mode: 'append',
+        startVideoId: 'beta12345678',
+      });
+    });
+  });
 });

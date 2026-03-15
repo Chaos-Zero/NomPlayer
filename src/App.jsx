@@ -35,7 +35,7 @@ function loadNominationList() {
 }
 
 function appendUniqueVideos(list, videos, blockedIds = new Set()) {
-  const existingIds = new Set(list.map(entry => entry.videoId));
+  const existingIds = new Set(list.map((entry) => entry.videoId));
   const nextList = [...list];
   let addedCount = 0;
   const blockedVideoIds = new Set();
@@ -66,23 +66,26 @@ function appendUniqueVideos(list, videos, blockedIds = new Set()) {
 }
 
 function resolvePlayOrderIds(playlist, shuffleOrderIds) {
-  const originalIds = playlist.map(video => video.videoId);
+  const originalIds = playlist.map((video) => video.videoId);
   if (shuffleOrderIds.length !== originalIds.length) return originalIds;
 
   const originalIdSet = new Set(originalIds);
-  if (shuffleOrderIds.some(id => !originalIdSet.has(id))) return originalIds;
+  if (shuffleOrderIds.some((id) => !originalIdSet.has(id))) return originalIds;
 
   return shuffleOrderIds;
 }
 
 function shuffleVideoIds(videoIds, pinnedVideoId = null) {
   const remainingIds = pinnedVideoId
-    ? videoIds.filter(id => id !== pinnedVideoId)
+    ? videoIds.filter((id) => id !== pinnedVideoId)
     : [...videoIds];
 
   for (let index = remainingIds.length - 1; index > 0; index -= 1) {
     const swapIndex = Math.floor(Math.random() * (index + 1));
-    [remainingIds[index], remainingIds[swapIndex]] = [remainingIds[swapIndex], remainingIds[index]];
+    [remainingIds[index], remainingIds[swapIndex]] = [
+      remainingIds[swapIndex],
+      remainingIds[index],
+    ];
   }
 
   return pinnedVideoId ? [pinnedVideoId, ...remainingIds] : remainingIds;
@@ -112,7 +115,7 @@ export default function App() {
   const transientResumeVideoIdRef = useRef(null);
   const [flashVideoIds, setFlashVideoIds] = useState([]);
   const [isPlaylistCollapsed, setIsPlaylistCollapsed] = useState(
-    () => window.matchMedia?.('(max-width: 960px)')?.matches ?? false
+    () => window.matchMedia?.('(max-width: 960px)')?.matches ?? false,
   );
   const [isPreviewModeEnabled, setIsPreviewModeEnabled] = useState(false);
 
@@ -136,14 +139,20 @@ export default function App() {
   }, [supportList]);
 
   useEffect(() => {
-    localStorage.setItem(NOMINATIONS_STORAGE_KEY, JSON.stringify(nominationList));
+    localStorage.setItem(
+      NOMINATIONS_STORAGE_KEY,
+      JSON.stringify(nominationList),
+    );
   }, [nominationList]);
 
-  useEffect(() => () => {
-    if (supportToastTimeoutRef.current) {
-      window.clearTimeout(supportToastTimeoutRef.current);
-    }
-  }, []);
+  useEffect(
+    () => () => {
+      if (supportToastTimeoutRef.current) {
+        window.clearTimeout(supportToastTimeoutRef.current);
+      }
+    },
+    [],
+  );
 
   useEffect(() => {
     playlistRef.current = playlist;
@@ -171,24 +180,28 @@ export default function App() {
 
   const playOrderIds = useMemo(
     () => resolvePlayOrderIds(playlist, shuffleOrderIds),
-    [playlist, shuffleOrderIds]
+    [playlist, shuffleOrderIds],
   );
 
-  const isShuffleEnabled = useMemo(() => (
-    shuffleOrderIds.length > 0 && playOrderIds === shuffleOrderIds
-  ), [playOrderIds, shuffleOrderIds]);
+  const isShuffleEnabled = useMemo(
+    () => shuffleOrderIds.length > 0 && playOrderIds === shuffleOrderIds,
+    [playOrderIds, shuffleOrderIds],
+  );
 
   const displayPlaylist = useMemo(() => {
     const loadIndexById = new Map(
-      playlist.map((video, index) => [video.videoId, index])
+      playlist.map((video, index) => [video.videoId, index]),
     );
-    const orderIds = isShuffleEnabled && !showOriginalOrder
-      ? playOrderIds
-      : playlist.map(video => video.videoId);
-    const playlistById = new Map(playlist.map(video => [video.videoId, video]));
+    const orderIds =
+      isShuffleEnabled && !showOriginalOrder
+        ? playOrderIds
+        : playlist.map((video) => video.videoId);
+    const playlistById = new Map(
+      playlist.map((video) => [video.videoId, video]),
+    );
 
     return orderIds
-      .map(videoId => {
+      .map((videoId) => {
         const video = playlistById.get(videoId);
         if (!video) return null;
         return {
@@ -201,28 +214,28 @@ export default function App() {
 
   const currentDisplayIndex = transientVideo
     ? null
-    : displayPlaylist.findIndex(video => video.videoId === currentVideoId);
+    : displayPlaylist.findIndex((video) => video.videoId === currentVideoId);
 
-  const currentPlaylistVideo = playlist.find(video => video.videoId === currentVideoId) || null;
+  const currentPlaylistVideo =
+    playlist.find((video) => video.videoId === currentVideoId) || null;
   const currentVideo = transientVideo || currentPlaylistVideo;
   const isCurrentVideoSupported = currentVideo
-    ? supportList.some(entry => entry.videoId === currentVideo.videoId)
+    ? supportList.some((entry) => entry.videoId === currentVideo.videoId)
     : false;
   const isCurrentVideoNominated = currentVideo
-    ? nominationList.some(entry => entry.videoId === currentVideo.videoId)
+    ? nominationList.some((entry) => entry.videoId === currentVideo.videoId)
     : false;
   const apiKeyMissing = !import.meta.env.VITE_YT_API_KEY;
-  const showFloatingPreviewIndicator = (
-    isMobileLayout
-    && isPlaylistCollapsed
-    && isPreviewModeEnabled
-    && playlist.length > 0
-  );
+  const showFloatingPreviewIndicator =
+    isMobileLayout &&
+    isPlaylistCollapsed &&
+    isPreviewModeEnabled &&
+    playlist.length > 0;
 
   const markVideoCompleted = useCallback((videoId) => {
     if (!videoId) return;
 
-    setListenedStatusById(previousStatus => {
+    setListenedStatusById((previousStatus) => {
       if (previousStatus[videoId] === 'complete') return previousStatus;
       return {
         ...previousStatus,
@@ -234,7 +247,7 @@ export default function App() {
   const markVideoStarted = useCallback((videoId) => {
     if (!videoId) return;
 
-    setListenedStatusById(previousStatus => {
+    setListenedStatusById((previousStatus) => {
       if (previousStatus[videoId]) return previousStatus;
       return {
         ...previousStatus,
@@ -244,7 +257,10 @@ export default function App() {
   }, []);
 
   const handleAdvancePreview = useCallback(() => {
-    const resolvedPlayOrderIds = resolvePlayOrderIds(playlistRef.current, shuffleOrderIdsRef.current);
+    const resolvedPlayOrderIds = resolvePlayOrderIds(
+      playlistRef.current,
+      shuffleOrderIdsRef.current,
+    );
 
     if (transientVideo) {
       transientResumeVideoIdRef.current = null;
@@ -257,7 +273,10 @@ export default function App() {
     }
 
     const activeVideoId = currentVideoIdRef.current ?? resolvedPlayOrderIds[0];
-    const currentPlayIndex = Math.max(0, resolvedPlayOrderIds.indexOf(activeVideoId));
+    const currentPlayIndex = Math.max(
+      0,
+      resolvedPlayOrderIds.indexOf(activeVideoId),
+    );
 
     if (currentPlayIndex >= resolvedPlayOrderIds.length - 1) {
       setIsPlaying(false);
@@ -271,7 +290,8 @@ export default function App() {
   }, [markVideoStarted, transientVideo]);
 
   useEffect(() => {
-    if (!isPreviewModeEnabled || !isPlaying || !currentVideo?.videoId) return undefined;
+    if (!isPreviewModeEnabled || !isPlaying || !currentVideo?.videoId)
+      return undefined;
 
     const timeoutId = window.setTimeout(() => {
       handleAdvancePreview();
@@ -280,164 +300,194 @@ export default function App() {
     return () => {
       window.clearTimeout(timeoutId);
     };
-  }, [currentVideo?.videoId, handleAdvancePreview, isPlaying, isPreviewModeEnabled]);
+  }, [
+    currentVideo?.videoId,
+    handleAdvancePreview,
+    isPlaying,
+    isPreviewModeEnabled,
+  ]);
 
-  const appendVideosToPlaylist = useCallback((videos, options = {}) => {
-    const {
-      autoplayIfFirst = false,
-      startVideoId = null,
-      flashResolved = false,
-    } = options;
+  const appendVideosToPlaylist = useCallback(
+    (videos, options = {}) => {
+      const {
+        autoplayIfFirst = false,
+        startVideoId = null,
+        flashResolved = false,
+      } = options;
 
-    if (!videos.length) {
-      return {
-        addedCount: 0,
-        resolvedVideoIds: [],
-      };
-    }
+      if (!videos.length) {
+        return {
+          addedCount: 0,
+          resolvedVideoIds: [],
+        };
+      }
 
-    const previousPlaylist = playlistRef.current;
-    const previousLength = previousPlaylist.length;
-    const nextPlaylist = [...previousPlaylist];
-    const indexById = new Map(previousPlaylist.map((video, index) => [video.videoId, index]));
+      const previousPlaylist = playlistRef.current;
+      const previousLength = previousPlaylist.length;
+      const nextPlaylist = [...previousPlaylist];
+      const indexById = new Map(
+        previousPlaylist.map((video, index) => [video.videoId, index]),
+      );
 
-    const resolvedVideoIds = [];
-    const newVideoIds = [];
-    let resolvedStartVideoId = startVideoId && indexById.has(startVideoId)
-      ? startVideoId
-      : null;
+      const resolvedVideoIds = [];
+      const newVideoIds = [];
+      let resolvedStartVideoId =
+        startVideoId && indexById.has(startVideoId) ? startVideoId : null;
 
-    for (const video of videos) {
-      const existingIndex = indexById.get(video.videoId);
-      if (existingIndex !== undefined) {
+      for (const video of videos) {
+        const existingIndex = indexById.get(video.videoId);
+        if (existingIndex !== undefined) {
+          resolvedVideoIds.push(video.videoId);
+          if (video.videoId === startVideoId) {
+            resolvedStartVideoId = video.videoId;
+          }
+          continue;
+        }
+
+        nextPlaylist.push(video);
+        indexById.set(video.videoId, nextPlaylist.length - 1);
+        newVideoIds.push(video.videoId);
         resolvedVideoIds.push(video.videoId);
+
         if (video.videoId === startVideoId) {
           resolvedStartVideoId = video.videoId;
         }
-        continue;
       }
 
-      nextPlaylist.push(video);
-      indexById.set(video.videoId, nextPlaylist.length - 1);
-      newVideoIds.push(video.videoId);
-      resolvedVideoIds.push(video.videoId);
-
-      if (video.videoId === startVideoId) {
-        resolvedStartVideoId = video.videoId;
+      if (nextPlaylist.length === previousLength) {
+        if (flashResolved && resolvedVideoIds.length > 0) {
+          setFlashVideoIds(resolvedVideoIds);
+        }
+        return {
+          addedCount: 0,
+          resolvedVideoIds,
+        };
       }
-    }
 
-    if (nextPlaylist.length === previousLength) {
+      playlistRef.current = nextPlaylist;
+      setPlaylist(nextPlaylist);
+      if (isMobileLayout) {
+        setIsPlaylistCollapsed(false);
+      }
+
+      if (shuffleOrderIdsRef.current.length > 0) {
+        const nextIdSet = new Set(nextPlaylist.map((video) => video.videoId));
+        const nextShuffleOrderIds = shuffleOrderIdsRef.current.filter((id) =>
+          nextIdSet.has(id),
+        );
+        nextShuffleOrderIds.push(
+          ...newVideoIds.filter((id) => !nextShuffleOrderIds.includes(id)),
+        );
+        shuffleOrderIdsRef.current = nextShuffleOrderIds;
+        setShuffleOrderIds(nextShuffleOrderIds);
+      }
+
+      if (previousLength === 0) {
+        const initialVideoId =
+          resolvedStartVideoId ?? nextPlaylist[0]?.videoId ?? null;
+        if (autoplayIfFirst) {
+          markVideoStarted(initialVideoId);
+        }
+        setCurrentVideoId(initialVideoId);
+        if (flashResolved && resolvedVideoIds.length > 0) {
+          setFlashVideoIds(resolvedVideoIds);
+        }
+        if (!transientVideo) {
+          setIsPlaying(autoplayIfFirst);
+        }
+        return {
+          addedCount: newVideoIds.length,
+          resolvedVideoIds,
+        };
+      }
+
       if (flashResolved && resolvedVideoIds.length > 0) {
         setFlashVideoIds(resolvedVideoIds);
-      }
-      return {
-        addedCount: 0,
-        resolvedVideoIds,
-      };
-    }
-
-    playlistRef.current = nextPlaylist;
-    setPlaylist(nextPlaylist);
-    if (isMobileLayout) {
-      setIsPlaylistCollapsed(false);
-    }
-
-    if (shuffleOrderIdsRef.current.length > 0) {
-      const nextIdSet = new Set(nextPlaylist.map(video => video.videoId));
-      const nextShuffleOrderIds = shuffleOrderIdsRef.current.filter(id => nextIdSet.has(id));
-      nextShuffleOrderIds.push(...newVideoIds.filter(id => !nextShuffleOrderIds.includes(id)));
-      shuffleOrderIdsRef.current = nextShuffleOrderIds;
-      setShuffleOrderIds(nextShuffleOrderIds);
-    }
-
-    if (previousLength === 0) {
-      const initialVideoId = resolvedStartVideoId ?? nextPlaylist[0]?.videoId ?? null;
-      if (autoplayIfFirst) {
-        markVideoStarted(initialVideoId);
-      }
-      setCurrentVideoId(initialVideoId);
-      if (flashResolved && resolvedVideoIds.length > 0) {
-        setFlashVideoIds(resolvedVideoIds);
-      }
-      if (!transientVideo) {
-        setIsPlaying(autoplayIfFirst);
       }
       return {
         addedCount: newVideoIds.length,
         resolvedVideoIds,
       };
-    }
-
-    if (flashResolved && resolvedVideoIds.length > 0) {
-      setFlashVideoIds(resolvedVideoIds);
-    }
-    return {
-      addedCount: newVideoIds.length,
-      resolvedVideoIds,
-    };
-  }, [isMobileLayout, markVideoStarted, transientVideo]);
+    },
+    [isMobileLayout, markVideoStarted, transientVideo],
+  );
 
   // ── Load a new playlist / single video ──────────────────────────
-  const handleLoad = useCallback((items, options = {}) => {
-    const {
-      startVideoId = null,
-      mode = 'replace',
-      autoplay = false,
-    } = options;
+  const handleLoad = useCallback(
+    (items, options = {}) => {
+      const {
+        startVideoId = null,
+        mode = 'replace',
+        autoplay = false,
+      } = options;
 
-    if (mode === 'append') {
-      appendVideosToPlaylist(items, { autoplayIfFirst: autoplay, startVideoId });
-      return;
-    }
+      if (mode === 'append') {
+        appendVideosToPlaylist(items, {
+          autoplayIfFirst: autoplay,
+          startVideoId,
+        });
+        return;
+      }
 
-    transientResumeVideoIdRef.current = null;
-    setTransientVideo(null);
-    playlistRef.current = items;
-    setPlaylist(items);
-    if (isMobileLayout) {
-      setIsPlaylistCollapsed(false);
-    }
-    shuffleOrderIdsRef.current = [];
-    setShuffleOrderIds([]);
-    setShowOriginalOrder(false);
-    setListenedStatusById({});
+      transientResumeVideoIdRef.current = null;
+      setTransientVideo(null);
+      playlistRef.current = items;
+      setPlaylist(items);
+      if (isMobileLayout) {
+        setIsPlaylistCollapsed(false);
+      }
+      shuffleOrderIdsRef.current = [];
+      setShuffleOrderIds([]);
+      setShowOriginalOrder(false);
+      setListenedStatusById({});
 
-    const resolvedStartVideoId = (
-      startVideoId && items.some(video => video.videoId === startVideoId)
-    )
-      ? startVideoId
-      : items[0]?.videoId ?? null;
+      const resolvedStartVideoId =
+        startVideoId && items.some((video) => video.videoId === startVideoId)
+          ? startVideoId
+          : (items[0]?.videoId ?? null);
 
-    if (autoplay) {
-      markVideoStarted(resolvedStartVideoId);
-    }
-    setCurrentVideoId(resolvedStartVideoId);
-    setIsPlaying(autoplay);
-  }, [appendVideosToPlaylist, isMobileLayout, markVideoStarted]);
+      if (autoplay) {
+        markVideoStarted(resolvedStartVideoId);
+      }
+      setCurrentVideoId(resolvedStartVideoId);
+      setIsPlaying(autoplay);
+    },
+    [appendVideosToPlaylist, isMobileLayout, markVideoStarted],
+  );
 
   // ── Navigation ──────────────────────────────────────────────────
-  const goToVideo = useCallback((videoId) => {
-    if (!playlistRef.current.some(video => video.videoId === videoId)) return;
+  const goToVideo = useCallback(
+    (videoId) => {
+      if (!playlistRef.current.some((video) => video.videoId === videoId))
+        return;
 
-    transientResumeVideoIdRef.current = null;
-    setTransientVideo(null);
-    if (isPlaying) {
-      markVideoStarted(videoId);
-    }
-    setCurrentVideoId(videoId);
-  }, [isPlaying, markVideoStarted]);
+      transientResumeVideoIdRef.current = null;
+      setTransientVideo(null);
+      if (isPlaying) {
+        markVideoStarted(videoId);
+      }
+      setCurrentVideoId(videoId);
+    },
+    [isPlaying, markVideoStarted],
+  );
 
   const handlePrev = useCallback(() => {
-    const resolvedPlayOrderIds = resolvePlayOrderIds(playlistRef.current, shuffleOrderIdsRef.current);
+    const resolvedPlayOrderIds = resolvePlayOrderIds(
+      playlistRef.current,
+      shuffleOrderIdsRef.current,
+    );
     if (resolvedPlayOrderIds.length === 0) return;
 
     transientResumeVideoIdRef.current = null;
     setTransientVideo(null);
 
     const activeVideoId = currentVideoIdRef.current ?? resolvedPlayOrderIds[0];
-    const currentPlayIndex = Math.max(0, resolvedPlayOrderIds.indexOf(activeVideoId));
-    const previousVideoId = resolvedPlayOrderIds[Math.max(0, currentPlayIndex - 1)];
+    const currentPlayIndex = Math.max(
+      0,
+      resolvedPlayOrderIds.indexOf(activeVideoId),
+    );
+    const previousVideoId =
+      resolvedPlayOrderIds[Math.max(0, currentPlayIndex - 1)];
 
     if (isPlaying) {
       markVideoStarted(previousVideoId);
@@ -446,18 +496,24 @@ export default function App() {
   }, [isPlaying, markVideoStarted]);
 
   const handleNext = useCallback(() => {
-    const resolvedPlayOrderIds = resolvePlayOrderIds(playlistRef.current, shuffleOrderIdsRef.current);
+    const resolvedPlayOrderIds = resolvePlayOrderIds(
+      playlistRef.current,
+      shuffleOrderIdsRef.current,
+    );
     if (resolvedPlayOrderIds.length === 0) return;
 
     transientResumeVideoIdRef.current = null;
     setTransientVideo(null);
 
     const activeVideoId = currentVideoIdRef.current ?? resolvedPlayOrderIds[0];
-    const currentPlayIndex = Math.max(0, resolvedPlayOrderIds.indexOf(activeVideoId));
-    const nextVideoId = resolvedPlayOrderIds[Math.min(
-      currentPlayIndex + 1,
-      resolvedPlayOrderIds.length - 1
-    )];
+    const currentPlayIndex = Math.max(
+      0,
+      resolvedPlayOrderIds.indexOf(activeVideoId),
+    );
+    const nextVideoId =
+      resolvedPlayOrderIds[
+        Math.min(currentPlayIndex + 1, resolvedPlayOrderIds.length - 1)
+      ];
 
     if (isPlaying) {
       markVideoStarted(nextVideoId);
@@ -473,7 +529,10 @@ export default function App() {
       transientResumeVideoIdRef.current = null;
       setTransientVideo(null);
 
-      if (resumeVideoId && playlistRef.current.some(video => video.videoId === resumeVideoId)) {
+      if (
+        resumeVideoId &&
+        playlistRef.current.some((video) => video.videoId === resumeVideoId)
+      ) {
         markVideoStarted(resumeVideoId);
         setCurrentVideoId(resumeVideoId);
         setIsPlaying(true);
@@ -484,7 +543,10 @@ export default function App() {
     }
 
     const finishedVideoId = currentVideoIdRef.current;
-    const resolvedPlayOrderIds = resolvePlayOrderIds(playlistRef.current, shuffleOrderIdsRef.current);
+    const resolvedPlayOrderIds = resolvePlayOrderIds(
+      playlistRef.current,
+      shuffleOrderIdsRef.current,
+    );
     const currentPlayIndex = finishedVideoId
       ? resolvedPlayOrderIds.indexOf(finishedVideoId)
       : -1;
@@ -493,7 +555,10 @@ export default function App() {
       markVideoCompleted(finishedVideoId);
     }
 
-    if (currentPlayIndex >= 0 && currentPlayIndex < resolvedPlayOrderIds.length - 1) {
+    if (
+      currentPlayIndex >= 0 &&
+      currentPlayIndex < resolvedPlayOrderIds.length - 1
+    ) {
       const nextVideoId = resolvedPlayOrderIds[currentPlayIndex + 1];
       markVideoStarted(nextVideoId);
       setCurrentVideoId(nextVideoId);
@@ -501,7 +566,13 @@ export default function App() {
     }
 
     setIsPlaying(false);
-  }, [isPlaying, isPreviewModeEnabled, markVideoCompleted, markVideoStarted, transientVideo]);
+  }, [
+    isPlaying,
+    isPreviewModeEnabled,
+    markVideoCompleted,
+    markVideoStarted,
+    transientVideo,
+  ]);
 
   // ── Shuffle ─────────────────────────────────────────────────────
   const handleShufflePlaylist = useCallback(() => {
@@ -512,14 +583,14 @@ export default function App() {
       return;
     }
 
-    const originalIds = playlistRef.current.map(video => video.videoId);
+    const originalIds = playlistRef.current.map((video) => video.videoId);
     if (originalIds.length < 2) return;
 
-    const pinnedVideoId = (
-      currentVideoIdRef.current && originalIds.includes(currentVideoIdRef.current)
-    )
-      ? currentVideoIdRef.current
-      : originalIds[0];
+    const pinnedVideoId =
+      currentVideoIdRef.current &&
+      originalIds.includes(currentVideoIdRef.current)
+        ? currentVideoIdRef.current
+        : originalIds[0];
 
     const nextShuffleOrderIds = shuffleVideoIds(originalIds, pinnedVideoId);
     shuffleOrderIdsRef.current = nextShuffleOrderIds;
@@ -529,11 +600,11 @@ export default function App() {
 
   const handleTogglePlaylistOrderView = useCallback(() => {
     if (shuffleOrderIdsRef.current.length === 0) return;
-    setShowOriginalOrder(previousValue => !previousValue);
+    setShowOriginalOrder((previousValue) => !previousValue);
   }, []);
 
   const handleTogglePreviewMode = useCallback(() => {
-    setIsPreviewModeEnabled(previousValue => !previousValue);
+    setIsPreviewModeEnabled((previousValue) => !previousValue);
   }, []);
 
   // ── Support list ─────────────────────────────────────────────────
@@ -581,84 +652,103 @@ export default function App() {
     }, 1800);
   }, []);
 
-  const handleToggleSupportFromPlaylist = useCallback((video) => {
-    if (!video) return;
-    if (nominationList.some(entry => entry.videoId === video.videoId)) return;
+  const handleToggleSupportFromPlaylist = useCallback(
+    (video) => {
+      if (!video) return;
+      if (nominationList.some((entry) => entry.videoId === video.videoId))
+        return;
 
-    const exists = supportList.some(entry => entry.videoId === video.videoId);
+      const exists = supportList.some(
+        (entry) => entry.videoId === video.videoId,
+      );
 
-    setSupportList(previousList => {
-      if (exists) {
-        return previousList.filter(entry => entry.videoId !== video.videoId);
+      setSupportList((previousList) => {
+        if (exists) {
+          return previousList.filter(
+            (entry) => entry.videoId !== video.videoId,
+          );
+        }
+
+        return [...previousList, video];
+      });
+
+      if (!exists) {
+        showSupportToast('Added to Support list');
+      }
+    },
+    [nominationList, showSupportToast, supportList],
+  );
+
+  const handleAddToSupportList = useCallback(
+    (video) => {
+      if (!video) return 0;
+      if (nominationList.some((entry) => entry.videoId === video.videoId))
+        return 0;
+
+      let addedCount = 0;
+      setSupportList((previousList) => {
+        const result = appendUniqueVideos(
+          previousList,
+          [video],
+          new Set(nominationList.map((entry) => entry.videoId)),
+        );
+        addedCount = result.addedCount;
+        return result.nextList;
+      });
+
+      if (addedCount > 0) {
+        showSupportToast('Added to Support list');
       }
 
-      return [...previousList, video];
-    });
+      return addedCount;
+    },
+    [nominationList, showSupportToast],
+  );
 
-    if (!exists) {
-      showSupportToast('Added to Support list');
-    }
-  }, [nominationList, showSupportToast, supportList]);
+  const handleAddManyToSupportList = useCallback(
+    (videos) => {
+      if (!videos.length) {
+        return { addedCount: 0, blockedNominationCount: 0 };
+      }
 
-  const handleAddToSupportList = useCallback((video) => {
-    if (!video) return 0;
-    if (nominationList.some(entry => entry.videoId === video.videoId)) return 0;
-
-    let addedCount = 0;
-    setSupportList(previousList => {
-      const result = appendUniqueVideos(
-        previousList,
-        [video],
-        new Set(nominationList.map(entry => entry.videoId))
-      );
-      addedCount = result.addedCount;
-      return result.nextList;
-    });
-
-    if (addedCount > 0) {
-      showSupportToast('Added to Support list');
-    }
-
-    return addedCount;
-  }, [nominationList, showSupportToast]);
-
-  const handleAddManyToSupportList = useCallback((videos) => {
-    if (!videos.length) {
-      return { addedCount: 0, blockedNominationCount: 0 };
-    }
-
-    let resultSummary = {
-      addedCount: 0,
-      blockedNominationCount: 0,
-    };
-    setSupportList(previousList => {
-      const result = appendUniqueVideos(
-        previousList,
-        videos,
-        new Set(nominationList.map(entry => entry.videoId))
-      );
-      resultSummary = {
-        addedCount: result.addedCount,
-        blockedNominationCount: result.blockedCount,
+      let resultSummary = {
+        addedCount: 0,
+        blockedNominationCount: 0,
       };
-      return result.nextList;
-    });
+      setSupportList((previousList) => {
+        const result = appendUniqueVideos(
+          previousList,
+          videos,
+          new Set(nominationList.map((entry) => entry.videoId)),
+        );
+        resultSummary = {
+          addedCount: result.addedCount,
+          blockedNominationCount: result.blockedCount,
+        };
+        return result.nextList;
+      });
 
-    if (resultSummary.addedCount > 0) {
-      showSupportToast(
-        resultSummary.addedCount === 1
-          ? 'Added 1 song to Support list'
-          : `Added ${resultSummary.addedCount} songs to Support list`
-      );
-    }
+      if (resultSummary.addedCount > 0) {
+        showSupportToast(
+          resultSummary.addedCount === 1
+            ? 'Added 1 song to Support list'
+            : `Added ${resultSummary.addedCount} songs to Support list`,
+        );
+      }
 
-    return resultSummary;
-  }, [nominationList, showSupportToast]);
+      return resultSummary;
+    },
+    [nominationList, showSupportToast],
+  );
 
   const handleRemoveFromNominationList = useCallback((videoIdsOrId) => {
-    const videoIds = Array.isArray(videoIdsOrId) ? videoIdsOrId : [videoIdsOrId];
+    const videoIds = Array.isArray(videoIdsOrId)
+      ? videoIdsOrId
+      : [videoIdsOrId];
     const idSet = new Set(videoIds);
-    setNominationList(previousList => previousList.filter(entry => !idSet.has(entry.videoId)));
+    setNominationList((previousList) =>
+      previousList.filter((entry) => !idSet.has(entry.videoId)),
+    );
   }, []);
 
   const handleAddManyToNominationList = useCallback((videos) => {
@@ -666,14 +756,16 @@ export default function App() {
       return { addedCount: 0, blockedNominationCount: 0 };
     }
 
-    const incomingIds = new Set(videos.map(video => video.videoId));
-    setSupportList(previousList => previousList.filter(entry => !incomingIds.has(entry.videoId)));
+    const incomingIds = new Set(videos.map((video) => video.videoId));
+    setSupportList((previousList) =>
+      previousList.filter((entry) => !incomingIds.has(entry.videoId)),
+    );
 
     let resultSummary = {
       addedCount: 0,
       blockedNominationCount: 0,
     };
-    setNominationList(previousList => {
+    setNominationList((previousList) => {
       const result = appendUniqueVideos(previousList, videos);
       resultSummary = {
         addedCount: result.addedCount,
@@ -690,131 +782,164 @@ export default function App() {
   }, []);
 
   const handleRemoveFromSupportList = useCallback((videoIdsOrId) => {
-    const videoIds = Array.isArray(videoIdsOrId) ? videoIdsOrId : [videoIdsOrId];
+    const videoIds = Array.isArray(videoIdsOrId)
+      ? videoIdsOrId
+      : [videoIdsOrId];
     const idSet = new Set(videoIds);
-    setSupportList(previousList => previousList.filter(entry => !idSet.has(entry.videoId)));
+    setSupportList((previousList) =>
+      previousList.filter((entry) => !idSet.has(entry.videoId)),
+    );
   }, []);
 
   const handleReorderSupportList = useCallback((newOrder) => {
     setSupportList(newOrder);
   }, []);
 
-  const handleRemoveFromPlaylist = useCallback((videoId) => {
-    const previousPlaylist = playlistRef.current;
-    const removeIndex = previousPlaylist.findIndex(video => video.videoId === videoId);
-    if (removeIndex < 0) return;
+  const handleRemoveFromPlaylist = useCallback(
+    (videoId) => {
+      const previousPlaylist = playlistRef.current;
+      const removeIndex = previousPlaylist.findIndex(
+        (video) => video.videoId === videoId,
+      );
+      if (removeIndex < 0) return;
 
-    const previousPlayOrderIds = resolvePlayOrderIds(previousPlaylist, shuffleOrderIdsRef.current);
-    const removedPlayIndex = previousPlayOrderIds.indexOf(videoId);
-    const nextPlaylist = previousPlaylist.filter(video => video.videoId !== videoId);
-    const nextIdSet = new Set(nextPlaylist.map(video => video.videoId));
-    const nextShuffleOrderIds = shuffleOrderIdsRef.current.length > 0
-      ? shuffleOrderIdsRef.current.filter(id => nextIdSet.has(id))
-      : [];
+      const previousPlayOrderIds = resolvePlayOrderIds(
+        previousPlaylist,
+        shuffleOrderIdsRef.current,
+      );
+      const removedPlayIndex = previousPlayOrderIds.indexOf(videoId);
+      const nextPlaylist = previousPlaylist.filter(
+        (video) => video.videoId !== videoId,
+      );
+      const nextIdSet = new Set(nextPlaylist.map((video) => video.videoId));
+      const nextShuffleOrderIds =
+        shuffleOrderIdsRef.current.length > 0
+          ? shuffleOrderIdsRef.current.filter((id) => nextIdSet.has(id))
+          : [];
 
-    playlistRef.current = nextPlaylist;
-    setPlaylist(nextPlaylist);
-    shuffleOrderIdsRef.current = nextShuffleOrderIds;
-    setShuffleOrderIds(nextShuffleOrderIds);
-    if (nextShuffleOrderIds.length === 0) {
-      setShowOriginalOrder(false);
-    }
+      playlistRef.current = nextPlaylist;
+      setPlaylist(nextPlaylist);
+      shuffleOrderIdsRef.current = nextShuffleOrderIds;
+      setShuffleOrderIds(nextShuffleOrderIds);
+      if (nextShuffleOrderIds.length === 0) {
+        setShowOriginalOrder(false);
+      }
 
-    setListenedStatusById(previousStatus => {
-      if (!(videoId in previousStatus)) return previousStatus;
+      setListenedStatusById((previousStatus) => {
+        if (!(videoId in previousStatus)) return previousStatus;
 
-      const nextStatus = { ...previousStatus };
-      delete nextStatus[videoId];
-      return nextStatus;
-    });
+        const nextStatus = { ...previousStatus };
+        delete nextStatus[videoId];
+        return nextStatus;
+      });
 
-    if (transientResumeVideoIdRef.current === videoId) {
-      const remainingResumeIds = previousPlayOrderIds
-        .slice(removedPlayIndex + 1)
-        .filter(id => nextIdSet.has(id));
-      transientResumeVideoIdRef.current = remainingResumeIds[0] ?? null;
-    }
+      if (transientResumeVideoIdRef.current === videoId) {
+        const remainingResumeIds = previousPlayOrderIds
+          .slice(removedPlayIndex + 1)
+          .filter((id) => nextIdSet.has(id));
+        transientResumeVideoIdRef.current = remainingResumeIds[0] ?? null;
+      }
 
-    if (nextPlaylist.length === 0) {
-      setCurrentVideoId(null);
+      if (nextPlaylist.length === 0) {
+        setCurrentVideoId(null);
+        if (!transientVideo) {
+          setIsPlaying(false);
+        }
+        return;
+      }
+
+      if (!transientVideo && currentVideoIdRef.current === videoId) {
+        const nextPlayOrderIds = resolvePlayOrderIds(
+          nextPlaylist,
+          nextShuffleOrderIds,
+        );
+        const replacementVideoId =
+          nextPlayOrderIds[
+            Math.min(removedPlayIndex, nextPlayOrderIds.length - 1)
+          ] ?? nextPlaylist[0].videoId;
+        if (isPlaying) {
+          markVideoStarted(replacementVideoId);
+        }
+        setCurrentVideoId(replacementVideoId);
+        return;
+      }
+
+      if (
+        currentVideoIdRef.current &&
+        !nextIdSet.has(currentVideoIdRef.current)
+      ) {
+        setCurrentVideoId(nextPlaylist[0].videoId);
+      }
+    },
+    [isPlaying, markVideoStarted, transientVideo],
+  );
+
+  const handleQueueFromSupportList = useCallback(
+    (videos) => {
+      return appendVideosToPlaylist(videos, { flashResolved: true });
+    },
+    [appendVideosToPlaylist],
+  );
+
+  const handlePlayNowFromSupportList = useCallback(
+    (video) => {
+      const resolvedPlayOrderIds = resolvePlayOrderIds(
+        playlistRef.current,
+        shuffleOrderIdsRef.current,
+      );
+      const activeVideoId = currentVideoIdRef.current;
+
       if (!transientVideo) {
-        setIsPlaying(false);
-      }
-      return;
-    }
-
-    if (!transientVideo && currentVideoIdRef.current === videoId) {
-      const nextPlayOrderIds = resolvePlayOrderIds(nextPlaylist, nextShuffleOrderIds);
-      const replacementVideoId = nextPlayOrderIds[Math.min(
-        removedPlayIndex,
-        nextPlayOrderIds.length - 1
-      )] ?? nextPlaylist[0].videoId;
-      if (isPlaying) {
-        markVideoStarted(replacementVideoId);
-      }
-      setCurrentVideoId(replacementVideoId);
-      return;
-    }
-
-    if (currentVideoIdRef.current && !nextIdSet.has(currentVideoIdRef.current)) {
-      setCurrentVideoId(nextPlaylist[0].videoId);
-    }
-  }, [isPlaying, markVideoStarted, transientVideo]);
-
-  const handleQueueFromSupportList = useCallback((videos) => {
-    return appendVideosToPlaylist(videos, { flashResolved: true });
-  }, [appendVideosToPlaylist]);
-
-  const handlePlayNowFromSupportList = useCallback((video) => {
-    const resolvedPlayOrderIds = resolvePlayOrderIds(playlistRef.current, shuffleOrderIdsRef.current);
-    const activeVideoId = currentVideoIdRef.current;
-
-    if (!transientVideo) {
-      if (resolvedPlayOrderIds.length === 0) {
-        transientResumeVideoIdRef.current = null;
-      } else if (isPlaying && activeVideoId) {
-        const activePlayIndex = resolvedPlayOrderIds.indexOf(activeVideoId);
-        transientResumeVideoIdRef.current = (
-          activePlayIndex >= 0 && activePlayIndex < resolvedPlayOrderIds.length - 1
-        )
-          ? resolvedPlayOrderIds[activePlayIndex + 1]
-          : null;
-      } else {
-        transientResumeVideoIdRef.current = (
-          activeVideoId && resolvedPlayOrderIds.includes(activeVideoId)
-        )
-          ? activeVideoId
-          : resolvedPlayOrderIds[0] ?? null;
-      }
-    }
-
-    setTransientVideo(video);
-    setIsPlaying(true);
-  }, [isPlaying, transientVideo]);
-
-  const handleSetIsPlaying = useCallback((value) => {
-    setIsPlaying(previousValue => {
-      const nextValue = typeof value === 'function'
-        ? value(previousValue)
-        : value;
-
-      if (!previousValue && nextValue && !transientVideo) {
-        markVideoStarted(currentVideoIdRef.current);
+        if (resolvedPlayOrderIds.length === 0) {
+          transientResumeVideoIdRef.current = null;
+        } else if (isPlaying && activeVideoId) {
+          const activePlayIndex = resolvedPlayOrderIds.indexOf(activeVideoId);
+          transientResumeVideoIdRef.current =
+            activePlayIndex >= 0 &&
+            activePlayIndex < resolvedPlayOrderIds.length - 1
+              ? resolvedPlayOrderIds[activePlayIndex + 1]
+              : null;
+        } else {
+          transientResumeVideoIdRef.current =
+            activeVideoId && resolvedPlayOrderIds.includes(activeVideoId)
+              ? activeVideoId
+              : (resolvedPlayOrderIds[0] ?? null);
+        }
       }
 
-      return nextValue;
-    });
-  }, [markVideoStarted, transientVideo]);
+      setTransientVideo(video);
+      setIsPlaying(true);
+    },
+    [isPlaying, transientVideo],
+  );
+
+  const handleSetIsPlaying = useCallback(
+    (value) => {
+      setIsPlaying((previousValue) => {
+        const nextValue =
+          typeof value === 'function' ? value(previousValue) : value;
+
+        if (!previousValue && nextValue && !transientVideo) {
+          markVideoStarted(currentVideoIdRef.current);
+        }
+
+        return nextValue;
+      });
+    },
+    [markVideoStarted, transientVideo],
+  );
 
   return (
-    <div className={`app-shell${isPlaylistCollapsed ? ' playlist-collapsed' : ''}`}>
+    <div
+      className={`app-shell${isPlaylistCollapsed ? ' playlist-collapsed' : ''}`}
+    >
       <TopBar
         isPlaying={isPlaying}
         setIsPlaying={handleSetIsPlaying}
         onPrev={handlePrev}
         onNext={handleNext}
         showSupportList={showSupportList}
-        setShowSupportList={value => {
+        setShowSupportList={(value) => {
           if (typeof value === 'function') {
             const nextValue = value(showSupportList);
             if (nextValue) {
@@ -832,7 +957,7 @@ export default function App() {
           }
         }}
         showNominationsList={showNominationsList}
-        setShowNominationsList={value => {
+        setShowNominationsList={(value) => {
           if (typeof value === 'function') {
             const nextValue = value(showNominationsList);
             if (nextValue) {
@@ -863,7 +988,9 @@ export default function App() {
           onVideoEnd={handleVideoEnd}
           onPrev={handlePrev}
           onNext={handleNext}
-          onTogglePlay={() => handleSetIsPlaying(previousValue => !previousValue)}
+          onTogglePlay={() =>
+            handleSetIsPlaying((previousValue) => !previousValue)
+          }
           isShuffleEnabled={isShuffleEnabled}
           onShuffle={handleShufflePlaylist}
           isPreviewModeEnabled={isPreviewModeEnabled}
@@ -874,7 +1001,9 @@ export default function App() {
         />
       </main>
 
-      <aside className={`sidebar app-sidebar${isPlaylistCollapsed ? ' collapsed' : ''}`}>
+      <aside
+        className={`sidebar app-sidebar${isPlaylistCollapsed ? ' collapsed' : ''}`}
+      >
         <PlaylistSidebar
           playlist={displayPlaylist}
           currentIndex={currentDisplayIndex < 0 ? null : currentDisplayIndex}
@@ -885,7 +1014,9 @@ export default function App() {
           showOriginalOrder={showOriginalOrder}
           onShuffle={handleShufflePlaylist}
           onTogglePreview={handleTogglePreviewMode}
-          onToggleCollapse={() => setIsPlaylistCollapsed(previousValue => !previousValue)}
+          onToggleCollapse={() =>
+            setIsPlaylistCollapsed((previousValue) => !previousValue)
+          }
           onToggleOrderView={handleTogglePlaylistOrderView}
           onSelect={goToVideo}
           supportList={supportList}
@@ -899,7 +1030,8 @@ export default function App() {
           <div className="api-key-notice">
             <span>🔑</span>
             <span>
-              Add <code>VITE_YT_API_KEY</code> to <code>.env</code> to enable playlist loading.{' '}
+              Add <code>VITE_YT_API_KEY</code> to <code>.env</code> to enable
+              playlist loading.{' '}
               <a
                 href="https://console.cloud.google.com/apis/library/youtube.googleapis.com"
                 target="_blank"
@@ -923,7 +1055,11 @@ export default function App() {
       )}
 
       {supportToastMessage && (
-        <div className="app-toast support-toast" role="status" aria-live="polite">
+        <div
+          className="app-toast support-toast"
+          role="status"
+          aria-live="polite"
+        >
           {supportToastMessage}
         </div>
       )}

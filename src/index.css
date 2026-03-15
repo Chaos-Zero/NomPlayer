@@ -124,7 +124,9 @@ body {
   flex: 1;
   min-height: 0;
   overflow: visible;
-  transition: background var(--transition), border-color var(--transition);
+  transition:
+    background var(--transition),
+    border-color var(--transition);
 }
 
 .playlist-sidebar.collapsed {
@@ -152,7 +154,12 @@ body {
   box-shadow: 0 14px 28px rgba(0, 0, 0, 0.3);
   cursor: pointer;
   z-index: 5;
-  transition: color var(--transition), background var(--transition), border-color var(--transition), left 0.28s cubic-bezier(0.16, 1, 0.3, 1), box-shadow var(--transition);
+  transition:
+    color var(--transition),
+    background var(--transition),
+    border-color var(--transition),
+    left 0.28s cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow var(--transition);
 }
 
 .playlist-collapse-tab:hover {
@@ -233,7 +240,8 @@ body {
   border-radius: var(--radius-md);
   background: transparent;
   overflow: hidden;
-  transition: width 0.32s cubic-bezier(0.16, 1, 0.3, 1),
+  transition:
+    width 0.32s cubic-bezier(0.16, 1, 0.3, 1),
     background var(--transition),
     border-color var(--transition),
     box-shadow var(--transition);
@@ -258,7 +266,8 @@ body {
   overflow: hidden;
   pointer-events: none;
   transform: translateX(-10px);
-  transition: max-width 0.32s cubic-bezier(0.16, 1, 0.3, 1),
+  transition:
+    max-width 0.32s cubic-bezier(0.16, 1, 0.3, 1),
     opacity 0.18s ease,
     transform 0.32s cubic-bezier(0.16, 1, 0.3, 1);
 }
@@ -281,7 +290,9 @@ body {
   font-size: 13px;
   font-family: 'Inter', sans-serif;
   outline: none;
-  transition: border-color var(--transition), box-shadow var(--transition);
+  transition:
+    border-color var(--transition),
+    box-shadow var(--transition);
 }
 
 .url-input::placeholder {
@@ -503,7 +514,9 @@ body {
   transform: translate(-50%, 16px);
   opacity: 0;
   pointer-events: none;
-  transition: transform 0.32s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.18s ease;
+  transition:
+    transform 0.32s cubic-bezier(0.16, 1, 0.3, 1),
+    opacity 0.18s ease;
   z-index: 4;
 }
 
@@ -540,7 +553,9 @@ body {
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
   border-radius: 20px;
-  transition: opacity 0.18s ease, visibility 0.18s ease;
+  transition:
+    opacity 0.18s ease,
+    visibility 0.18s ease;
 }
 
 .mobile-topbar-front {
@@ -687,7 +702,10 @@ body {
   font-weight: 700;
   letter-spacing: 0.01em;
   cursor: pointer;
-  transition: background var(--transition), box-shadow var(--transition), transform var(--transition);
+  transition:
+    background var(--transition),
+    box-shadow var(--transition),
+    transform var(--transition);
 }
 
 .mobile-add-btn:hover {
@@ -752,7 +770,13 @@ body {
   line-height: 0;
   cursor: pointer;
   box-shadow: 0 10px 24px rgba(0, 0, 0, 0.22);
-  transition: color var(--transition), transform var(--transition), opacity var(--transition), border-color var(--transition), background var(--transition), box-shadow var(--transition);
+  transition:
+    color var(--transition),
+    transform var(--transition),
+    opacity var(--transition),
+    border-color var(--transition),
+    background var(--transition),
+    box-shadow var(--transition);
   opacity: 1;
 }
 
@@ -800,7 +824,9 @@ body {
   font-family: 'Inter', sans-serif;
   padding: 0 14px;
   outline: none;
-  transition: border-color var(--transition), box-shadow var(--transition);
+  transition:
+    border-color var(--transition),
+    box-shadow var(--transition);
 }
 
 .mobile-topbar-input::placeholder {
@@ -915,7 +941,9 @@ body {
     background: transparent;
     border-left: none;
     overflow: visible;
-    transition: transform 0.32s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+    transition:
+      transform 0.32s cubic-bezier(0.16, 1, 0.3, 1),
+      border-color 0.28s cubic-bezier(0.16, 1, 0.3, 1);
   }
 
   .app-sidebar.collapsed {
@@ -1021,7 +1049,9 @@ body {
   overflow: hidden;
   background: #000;
   aspect-ratio: 16/9;
-  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.6), 0 0 0 1px var(--border);
+  box-shadow:
+    0 8px 40px rgba(0, 0, 0, 0.6),
+    0 0 0 1px var(--border);
   position: relative;
 }
 
@@ -1129,7 +1159,12 @@ body {
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: color var(--transition), background var(--transition), border-color var(--transition), box-shadow var(--transition), transform var(--transition);
+  transition:
+    color var(--transition),
+    background var(--transition),
+    border-color var(--transition),
+    box-shadow var(--transition),
+    transform var(--transition);
   pointer-events: auto;
   line-height: 1;
   font-size: 15px;
@@ -1251,7 +1286,6 @@ body {
 }
 
 @keyframes pulse {
-
   0%,
   100% {
     opacity: 1;
@@ -1304,7 +1338,11 @@ body {
   letter-spacing: 0.03em;
   cursor: pointer;
   flex: 0 0 auto;
-  transition: color var(--transition), background var(--transition), border-color var(--transition), box-shadow var(--transition);
+  transition:
+    color var(--transition),
+    background var(--transition),
+    border-color var(--transition),
+    box-shadow var(--transition);
 }
 
 .overlay-toggle-btn:hover {
@@ -1421,7 +1459,8 @@ body {
   opacity: 0;
   overflow: hidden;
   transform: translateY(-10px);
-  transition: max-height 0.28s cubic-bezier(0.16, 1, 0.3, 1),
+  transition:
+    max-height 0.28s cubic-bezier(0.16, 1, 0.3, 1),
     opacity 0.18s ease,
     transform 0.28s cubic-bezier(0.16, 1, 0.3, 1);
   flex-shrink: 0;
@@ -1556,7 +1595,9 @@ body {
   0% {
     background: rgba(124, 58, 237, 0.3);
     border-color: rgba(124, 58, 237, 0.8);
-    box-shadow: 0 0 0 1px rgba(124, 58, 237, 0.28), 0 0 18px rgba(124, 58, 237, 0.2);
+    box-shadow:
+      0 0 0 1px rgba(124, 58, 237, 0.28),
+      0 0 18px rgba(124, 58, 237, 0.2);
   }
 
   100% {
@@ -1641,7 +1682,10 @@ body {
   stroke-width: 2;
   stroke-linecap: round;
   stroke-linejoin: round;
-  transition: stroke var(--transition), filter var(--transition), opacity var(--transition);
+  transition:
+    stroke var(--transition),
+    filter var(--transition),
+    opacity var(--transition);
 }
 
 .item-status-tick.partial {
@@ -1789,7 +1833,9 @@ body {
   font-weight: 500;
   text-align: left;
   cursor: pointer;
-  transition: background var(--transition), color var(--transition);
+  transition:
+    background var(--transition),
+    color var(--transition);
 }
 
 .playlist-context-menu-item:hover:not(:disabled) {
@@ -2009,7 +2055,11 @@ body {
 .fav-panel-footer {
   padding: 12px;
   border-top: 1px solid var(--border);
-  background: linear-gradient(180deg, rgba(10, 10, 15, 0), rgba(10, 10, 15, 0.5));
+  background: linear-gradient(
+    180deg,
+    rgba(10, 10, 15, 0),
+    rgba(10, 10, 15, 0.5)
+  );
   flex-shrink: 0;
 }
 
@@ -2056,7 +2106,9 @@ body {
 
 .app-toast.support-toast {
   border: 1px solid rgba(245, 158, 11, 0.36);
-  box-shadow: 0 16px 28px rgba(0, 0, 0, 0.34), 0 0 18px rgba(245, 158, 11, 0.12);
+  box-shadow:
+    0 16px 28px rgba(0, 0, 0, 0.34),
+    0 0 18px rgba(245, 158, 11, 0.12);
 }
 
 @keyframes collection-toast-in {
@@ -2110,7 +2162,10 @@ body {
   font-weight: 700;
   letter-spacing: 0.01em;
   cursor: pointer;
-  transition: transform var(--transition), box-shadow var(--transition), filter var(--transition);
+  transition:
+    transform var(--transition),
+    box-shadow var(--transition),
+    filter var(--transition);
 }
 
 .collection-adder-front:hover {
@@ -2150,7 +2205,9 @@ body {
   font-family: 'Inter', sans-serif;
   padding: 0 14px;
   outline: none;
-  transition: border-color var(--transition), box-shadow var(--transition);
+  transition:
+    border-color var(--transition),
+    box-shadow var(--transition);
 }
 
 .collection-adder-input::placeholder {
@@ -2286,7 +2343,10 @@ body {
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   cursor: default;
-  transition: background var(--transition), border-color var(--transition), box-shadow var(--transition);
+  transition:
+    background var(--transition),
+    border-color var(--transition),
+    box-shadow var(--transition);
   min-width: 0;
   width: 100%;
   flex: 1;
@@ -2442,7 +2502,9 @@ body {
   font-weight: 500;
   text-align: left;
   cursor: pointer;
-  transition: background var(--transition), color var(--transition);
+  transition:
+    background var(--transition),
+    color var(--transition);
 }
 
 .support-context-menu-item:hover {
@@ -2474,7 +2536,9 @@ body {
 
 @media (max-width: 960px) {
   .player-wrap {
-    min-height: calc(100dvh - 202px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+    min-height: calc(
+      100dvh - 202px - env(safe-area-inset-top) - env(safe-area-inset-bottom)
+    );
     align-items: center;
     justify-content: center;
   }
