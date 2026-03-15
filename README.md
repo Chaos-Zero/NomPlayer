@@ -42,6 +42,24 @@ npm run test
 npm run test:watch
 npm run build
 npm run preview
+npm run hooks:install
+npm run secrets:scan
+```
+
+## Git Hooks
+
+This repo uses a native Git `pre-commit` hook to run `gitleaks` against staged changes.
+
+Install the repo hooks once per clone:
+
+```bash
+npm run hooks:install
+```
+
+You also need `gitleaks` installed on your machine. After that, the hook will run automatically on commit, and you can run it manually with:
+
+```bash
+npm run secrets:scan
 ```
 
 ## Manual Test Checklist
