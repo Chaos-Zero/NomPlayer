@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback, useState } from 'react';
+import { useEffect, useRef, useCallback } from 'react';
 import YouTube from 'react-youtube';
 
 function safelyControlPlayer(player, methodName) {
@@ -74,7 +74,7 @@ export default function VideoPlayer({
   onToggleSupport,
 }) {
   const playerRef = useRef(null);
-  const [isOverlayEnabled, setIsOverlayEnabled] = useState(true);
+  const isOverlayEnabled = false;
   const videoId = video?.videoId ?? null;
   const videoUrl = videoId
     ? `https://www.youtube.com/watch?v=${videoId}`
@@ -164,70 +164,70 @@ export default function VideoPlayer({
             onEnd={handleEnd}
             style={{ width: '100%', height: '100%' }}
           />
-          <div
-            className={`player-overlay${isOverlayEnabled ? ' enabled' : ' disabled'}`}
-          >
-            <div className="player-overlay-main-controls">
-              <button
-                className="btn btn-icon player-overlay-btn"
-                type="button"
-                onClick={onPrev}
-                title="Previous"
-                aria-label="Previous video"
-              >
-                <PreviousIcon />
-              </button>
-              <button
-                className="btn btn-play player-overlay-btn player-overlay-btn-play"
-                type="button"
-                onClick={onTogglePlay}
-                title={isPlaying ? 'Pause' : 'Play'}
-                aria-label={isPlaying ? 'Pause' : 'Play'}
-              >
-                {isPlaying ? <PauseIcon /> : <PlayIcon />}
-              </button>
-              <button
-                className="btn btn-icon player-overlay-btn"
-                type="button"
-                onClick={onNext}
-                title="Next"
-                aria-label="Next video"
-              >
-                <NextIcon />
-              </button>
+          {isOverlayEnabled && (
+            <div className="player-overlay enabled">
+              <div className="player-overlay-main-controls">
+                <button
+                  className="btn btn-icon player-overlay-btn"
+                  type="button"
+                  onClick={onPrev}
+                  title="Previous"
+                  aria-label="Previous video"
+                >
+                  <PreviousIcon />
+                </button>
+                <button
+                  className="btn btn-play player-overlay-btn player-overlay-btn-play"
+                  type="button"
+                  onClick={onTogglePlay}
+                  title={isPlaying ? 'Pause' : 'Play'}
+                  aria-label={isPlaying ? 'Pause' : 'Play'}
+                >
+                  {isPlaying ? <PauseIcon /> : <PlayIcon />}
+                </button>
+                <button
+                  className="btn btn-icon player-overlay-btn"
+                  type="button"
+                  onClick={onNext}
+                  title="Next"
+                  aria-label="Next video"
+                >
+                  <NextIcon />
+                </button>
+              </div>
+              <div className="player-overlay-gap" aria-hidden="true" />
+              <div className="player-overlay-sub-controls">
+                <button
+                  className={`player-overlay-chip shuffle${isShuffleEnabled ? ' active' : ''}`}
+                  type="button"
+                  onClick={onShuffle}
+                  aria-label="Shuffle playlist"
+                  title="Shuffle playlist"
+                >
+                  <span aria-hidden="true">🔀</span>
+                </button>
+                <button
+                  className={`player-overlay-chip preview${isPreviewModeEnabled ? ' active' : ''}`}
+                  type="button"
+                  onClick={onTogglePreview}
+                  aria-label="Preview mode"
+                  title="Preview mode"
+                >
+                  <FastForwardIcon />
+                </button>
+                <button
+                  className={`player-overlay-chip support${supportClassName}`}
+                  type="button"
+                  onClick={() => onToggleSupport?.(video)}
+                  aria-label={supportLabel}
+                  title={supportTooltip}
+                  disabled={isNominated}
+                >
+                  {supportGlyph}
+                </button>
+              </div>
             </div>
-            <div className="player-overlay-gap" aria-hidden="true" />
-            <div className="player-overlay-sub-controls">
-              <button
-                className={`player-overlay-chip shuffle${isShuffleEnabled ? ' active' : ''}`}
-                type="button"
-                onClick={onShuffle}
-                aria-label="Shuffle playlist"
-                title="Shuffle playlist"
-              >
-                <span aria-hidden="true">🔀</span>
-              </button>
-              <button
-                className={`player-overlay-chip preview${isPreviewModeEnabled ? ' active' : ''}`}
-                type="button"
-                onClick={onTogglePreview}
-                aria-label="Preview mode"
-                title="Preview mode"
-              >
-                <FastForwardIcon />
-              </button>
-              <button
-                className={`player-overlay-chip support${supportClassName}`}
-                type="button"
-                onClick={() => onToggleSupport?.(video)}
-                aria-label={supportLabel}
-                title={supportTooltip}
-                disabled={isNominated}
-              >
-                {supportGlyph}
-              </button>
-            </div>
-          </div>
+          )}
         </div>
 
         {video.title && (
@@ -248,26 +248,6 @@ export default function VideoPlayer({
                 )}
               </div>
             </div>
-            <button
-              className={`overlay-toggle-btn${isOverlayEnabled ? ' active' : ''}`}
-              type="button"
-              onClick={() =>
-                setIsOverlayEnabled((previousValue) => !previousValue)
-              }
-              aria-pressed={isOverlayEnabled}
-              aria-label={
-                isOverlayEnabled
-                  ? 'Disable player overlay'
-                  : 'Enable player overlay'
-              }
-              title={
-                isOverlayEnabled
-                  ? 'Disable overlay controls'
-                  : 'Enable overlay controls'
-              }
-            >
-              Overlay
-            </button>
           </div>
         )}
       </div>

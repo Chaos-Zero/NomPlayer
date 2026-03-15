@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import VideoPlayer from '../../components/VideoPlayer.jsx';
 
@@ -96,85 +96,15 @@ describe('VideoPlayer', () => {
     ).toHaveAttribute('href', 'https://www.youtube.com/watch?v=alpha1234567');
   });
 
-  it('shows the overlay toggle enabled by default and disables the hover overlay when clicked', () => {
+  it('does not render the player overlay or toggle by default', () => {
     const video = { videoId: 'alpha1234567', title: 'Alpha' };
     const { container } = render(
       <VideoPlayer video={video} isPlaying={true} />,
     );
 
-    const toggle = screen.getByRole('button', {
-      name: 'Disable player overlay',
-    });
-    const overlay = container.querySelector('.player-overlay');
-
-    expect(toggle).toHaveAttribute('aria-pressed', 'true');
-    expect(overlay).toHaveClass('enabled');
-
-    fireEvent.click(toggle);
-
+    expect(container.querySelector('.player-overlay')).toBeNull();
     expect(
-      screen.getByRole('button', { name: 'Enable player overlay' }),
-    ).toHaveAttribute('aria-pressed', 'false');
-    expect(overlay).toHaveClass('disabled');
-  });
-
-  it('renders overlay controls that call the provided playback and list handlers', () => {
-    const video = { videoId: 'alpha1234567', title: 'Alpha' };
-    const onPrev = vi.fn();
-    const onNext = vi.fn();
-    const onTogglePlay = vi.fn();
-    const onShuffle = vi.fn();
-    const onTogglePreview = vi.fn();
-    const onToggleSupport = vi.fn();
-
-    render(
-      <VideoPlayer
-        video={video}
-        isPlaying={true}
-        onPrev={onPrev}
-        onNext={onNext}
-        onTogglePlay={onTogglePlay}
-        isShuffleEnabled={true}
-        onShuffle={onShuffle}
-        isPreviewModeEnabled={true}
-        onTogglePreview={onTogglePreview}
-        onToggleSupport={onToggleSupport}
-      />,
-    );
-
-    fireEvent.click(screen.getByRole('button', { name: 'Previous video' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Pause' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Next video' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Shuffle playlist' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Preview mode' }));
-    fireEvent.click(
-      screen.getByRole('button', { name: 'Add to support list' }),
-    );
-
-    expect(onPrev).toHaveBeenCalledTimes(1);
-    expect(onTogglePlay).toHaveBeenCalledTimes(1);
-    expect(onNext).toHaveBeenCalledTimes(1);
-    expect(onShuffle).toHaveBeenCalledTimes(1);
-    expect(onTogglePreview).toHaveBeenCalledTimes(1);
-    expect(onToggleSupport).toHaveBeenCalledWith(video);
-  });
-
-  it('shows nomination state on the overlay support button and disables changes', () => {
-    const video = { videoId: 'alpha1234567', title: 'Alpha' };
-
-    render(
-      <VideoPlayer
-        video={video}
-        isPlaying={false}
-        isNominated={true}
-        onToggleSupport={vi.fn()}
-      />,
-    );
-
-    expect(
-      screen.getByRole('button', {
-        name: 'Nomination tracks cannot be changed from the player',
-      }),
-    ).toBeDisabled();
+      screen.queryByRole('button', { name: /player overlay/i }),
+    ).not.toBeInTheDocument();
   });
 });
