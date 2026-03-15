@@ -38,6 +38,8 @@ VITE_YT_API_KEY=your_key_here
 ```bash
 npm run dev
 npm run lint
+npm run format
+npm run format:check
 npm run test
 npm run test:watch
 npm run build
@@ -45,11 +47,16 @@ npm run preview
 npm run hooks:install
 npm run gitleaks:install
 npm run secrets:scan
+npm run precommit:run
+npm run prepush:run
 ```
 
 ## Git Hooks
 
-This repo uses a native Git `pre-commit` hook to run `gitleaks` against staged changes.
+This repo uses native Git hooks:
+
+- `pre-commit`: `gitleaks`, staged `prettier`, staged `eslint --fix`, and basic file-hygiene checks
+- `pre-push`: `npm run test` and `npm run build`
 
 Install the repo hooks once per clone:
 
@@ -68,6 +75,8 @@ After that, the hook will run automatically on commit, and you can run it manual
 
 ```bash
 npm run secrets:scan
+npm run precommit:run
+npm run prepush:run
 ```
 
 ## Manual Test Checklist
