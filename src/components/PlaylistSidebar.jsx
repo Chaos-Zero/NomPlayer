@@ -12,6 +12,18 @@ function FastForwardIcon() {
     );
 }
 
+function ChevronIcon({ collapsed }) {
+    return (
+        <svg viewBox="0 0 20 20" aria-hidden="true">
+            {collapsed ? (
+                <path d="M12.75 4.75 7.5 10l5.25 5.25" />
+            ) : (
+                <path d="M7.25 4.75 12.5 10l-5.25 5.25" />
+            )}
+        </svg>
+    );
+}
+
 function PlaylistItem({
     orderNumber,
     video,
@@ -108,9 +120,11 @@ export default function PlaylistSidebar({
     flashVideoIds = [],
     isShuffleEnabled = false,
     isPreviewModeEnabled = false,
+    isCollapsed = false,
     showOriginalOrder = false,
     onShuffle,
     onTogglePreview,
+    onToggleCollapse,
     onToggleOrderView,
     onSelect,
     supportList,
@@ -166,27 +180,40 @@ export default function PlaylistSidebar({
 
     if (!playlist.length) {
         return (
-            <div className="sidebar playlist-sidebar">
-                <div className="sidebar-header">
-                    <span className="sidebar-title">Playlist</span>
-                </div>
-                <div
-                    style={{
-                        flex: 1,
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: 12,
-                        padding: 24,
-                        color: 'var(--text-muted)',
-                        textAlign: 'center',
-                    }}
+            <div className={`sidebar playlist-sidebar${isCollapsed ? ' collapsed' : ''}`}>
+                <button
+                    className={`playlist-collapse-tab${isCollapsed ? ' collapsed' : ''}`}
+                    type="button"
+                    onClick={onToggleCollapse}
+                    aria-label={isCollapsed ? 'Expand playlist' : 'Collapse playlist'}
+                    title={isCollapsed ? 'Expand playlist' : 'Collapse playlist'}
                 >
-                    <div style={{ fontSize: 32, opacity: 0.3 }}>🎵</div>
-                    <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>No playlist loaded</div>
-                    <div style={{ fontSize: 11 }}>Paste a YouTube URL above to get started</div>
-                </div>
+                    <ChevronIcon collapsed={isCollapsed} />
+                </button>
+                {!isCollapsed && (
+                    <div className="sidebar-header">
+                        <span className="sidebar-title">Playlist</span>
+                    </div>
+                )}
+                {!isCollapsed && (
+                    <div
+                        style={{
+                            flex: 1,
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: 12,
+                            padding: 24,
+                            color: 'var(--text-muted)',
+                            textAlign: 'center',
+                        }}
+                    >
+                        <div style={{ fontSize: 32, opacity: 0.3 }}>🎵</div>
+                        <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>No playlist loaded</div>
+                        <div style={{ fontSize: 11 }}>Paste a YouTube URL above to get started</div>
+                    </div>
+                )}
             </div>
         );
     }
@@ -219,64 +246,79 @@ export default function PlaylistSidebar({
     const showOrderToggle = isShuffleEnabled && playlist.length > 1;
 
     return (
-        <div className="sidebar playlist-sidebar">
-            <div className="sidebar-header">
-                <span className="sidebar-title">Playlist</span>
-                <div className="sidebar-header-actions">
-                    <button
-                        className={`sidebar-icon-btn shuffle${isShuffleEnabled ? ' active' : ''}`}
-                        type="button"
-                        onClick={onShuffle}
-                        disabled={playlist.length < 2}
-                        aria-label="Shuffle playlist"
-                        title="Shuffle playlist"
-                    >
-                        🔀
-                    </button>
-                    <button
-                        className={`sidebar-icon-btn preview${isPreviewModeEnabled ? ' active' : ''}`}
-                        type="button"
-                        onClick={onTogglePreview}
-                        disabled={playlist.length === 0}
-                        aria-label="Preview mode"
-                        aria-pressed={isPreviewModeEnabled}
-                        title="Preview mode"
-                    >
-                        <FastForwardIcon />
-                    </button>
-                    <span className="sidebar-count">{playlist.length} videos</span>
+        <div className={`sidebar playlist-sidebar${isCollapsed ? ' collapsed' : ''}`}>
+            <button
+                className={`playlist-collapse-tab${isCollapsed ? ' collapsed' : ''}`}
+                type="button"
+                onClick={onToggleCollapse}
+                aria-label={isCollapsed ? 'Expand playlist' : 'Collapse playlist'}
+                title={isCollapsed ? 'Expand playlist' : 'Collapse playlist'}
+            >
+                <ChevronIcon collapsed={isCollapsed} />
+            </button>
+            {!isCollapsed && (
+                <div className="sidebar-header">
+                    <span className="sidebar-title">Playlist</span>
+                    <div className="sidebar-header-actions">
+                        <button
+                            className={`sidebar-icon-btn shuffle${isShuffleEnabled ? ' active' : ''}`}
+                            type="button"
+                            onClick={onShuffle}
+                            disabled={playlist.length < 2}
+                            aria-label="Shuffle playlist"
+                            title="Shuffle playlist"
+                        >
+                            🔀
+                        </button>
+                        <button
+                            className={`sidebar-icon-btn preview${isPreviewModeEnabled ? ' active' : ''}`}
+                            type="button"
+                            onClick={onTogglePreview}
+                            disabled={playlist.length === 0}
+                            aria-label="Preview mode"
+                            aria-pressed={isPreviewModeEnabled}
+                            title="Preview mode"
+                        >
+                            <FastForwardIcon />
+                        </button>
+                        <span className="sidebar-count">{playlist.length} videos</span>
+                    </div>
                 </div>
-            </div>
-            <div className={`playlist-order-toggle${showOrderToggle ? ' visible' : ''}`}>
-                <div className="playlist-order-toggle-inner">
-                    <button
-                        className="sidebar-toolbar-btn"
-                        type="button"
-                        onClick={onToggleOrderView}
-                        disabled={!showOrderToggle}
-                    >
-                        {showOriginalOrder ? 'Show play order' : 'Show original order'}
-                    </button>
+            )}
+            {!isCollapsed && (
+                <div className={`playlist-order-toggle${showOrderToggle ? ' visible' : ''}`}>
+                    <div className="playlist-order-toggle-inner">
+                        <button
+                            className="sidebar-toolbar-btn"
+                            type="button"
+                            onClick={onToggleOrderView}
+                            disabled={!showOrderToggle}
+                        >
+                            {showOriginalOrder ? 'Show play order' : 'Show original order'}
+                        </button>
+                    </div>
                 </div>
-            </div>
-            <div className={`playlist-list${isPreviewModeEnabled ? ' preview-active' : ''}`} role="list">
-                {playlist.map((video, index) => (
-                    <PlaylistItem
-                        key={video.videoId}
-                        orderNumber={(video.loadIndex ?? index) + 1}
-                        video={video}
-                        isActive={index === currentIndex}
-                        isFlashing={flashIds.has(video.videoId)}
-                        listenedStatus={listenedStatusById[video.videoId] || null}
-                        onSelect={onSelect}
-                        isSupported={supportIds.has(video.videoId)}
-                        isNominated={nominationIds.has(video.videoId)}
-                        onToggleSupport={onToggleSupport}
-                        onOpenContextMenu={handleOpenContextMenu}
-                    />
-                ))}
-            </div>
-            {isPreviewModeEnabled && (
+            )}
+            {!isCollapsed && (
+                <div className={`playlist-list${isPreviewModeEnabled ? ' preview-active' : ''}`} role="list">
+                    {playlist.map((video, index) => (
+                        <PlaylistItem
+                            key={video.videoId}
+                            orderNumber={(video.loadIndex ?? index) + 1}
+                            video={video}
+                            isActive={index === currentIndex}
+                            isFlashing={flashIds.has(video.videoId)}
+                            listenedStatus={listenedStatusById[video.videoId] || null}
+                            onSelect={onSelect}
+                            isSupported={supportIds.has(video.videoId)}
+                            isNominated={nominationIds.has(video.videoId)}
+                            onToggleSupport={onToggleSupport}
+                            onOpenContextMenu={handleOpenContextMenu}
+                        />
+                    ))}
+                </div>
+            )}
+            {!isCollapsed && isPreviewModeEnabled && (
                 <div className="playlist-preview-indicator" role="img" aria-label="Preview mode active">
                     <FastForwardIcon />
                 </div>

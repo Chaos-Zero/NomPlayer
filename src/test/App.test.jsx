@@ -294,6 +294,24 @@ describe('App', () => {
         expect(appTestState.playlistSidebarProps.playlist.map(video => video.title)).toEqual(['Alpha', 'Beta', 'Gamma']);
     });
 
+    it('toggles the playlist collapsed state from the sidebar control', () => {
+        render(<App />);
+
+        expect(appTestState.playlistSidebarProps.isCollapsed).toBe(false);
+
+        act(() => {
+            appTestState.playlistSidebarProps.onToggleCollapse();
+        });
+
+        expect(appTestState.playlistSidebarProps.isCollapsed).toBe(true);
+
+        act(() => {
+            appTestState.playlistSidebarProps.onToggleCollapse();
+        });
+
+        expect(appTestState.playlistSidebarProps.isCollapsed).toBe(false);
+    });
+
     it('marks playlist songs as started and then completed once playback finishes', async () => {
         render(<App />);
 

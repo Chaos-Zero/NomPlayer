@@ -17,9 +17,11 @@ describe('PlaylistSidebar', () => {
             flashVideoIds: [],
             isShuffleEnabled: false,
             isPreviewModeEnabled: false,
+            isCollapsed: false,
             showOriginalOrder: false,
             onShuffle: vi.fn(),
             onTogglePreview: vi.fn(),
+            onToggleCollapse: vi.fn(),
             onToggleOrderView: vi.fn(),
             onSelect: vi.fn(),
             supportList: [],
@@ -149,6 +151,7 @@ describe('PlaylistSidebar', () => {
 
         expect(headerActions?.firstElementChild).toHaveAttribute('aria-label', 'Shuffle playlist');
         expect(headerActions?.children[1]).toHaveAttribute('aria-label', 'Preview mode');
+        expect(headerActions?.lastElementChild).toHaveTextContent('1 videos');
     });
 
     it('keeps the order toggle mounted but hidden while shuffle is off', () => {
@@ -190,5 +193,18 @@ describe('PlaylistSidebar', () => {
             screen.getByRole('button', { name: 'Nomination tracks cannot be changed from the playlist' })
         ).toHaveClass('nominated');
         expect(screen.getByRole('button', { name: 'Remove from support list' })).toHaveClass('supported');
+    });
+
+    it('collapses to a flat side tab with only the expand toggle visible', () => {
+        const { container, props } = renderSidebar({ isCollapsed: true });
+
+        expect(container.querySelector('.playlist-sidebar')).toHaveClass('collapsed');
+        expect(container.querySelector('.playlist-collapse-tab')).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Expand playlist' })).toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: 'Shuffle playlist' })).not.toBeInTheDocument();
+        expect(screen.queryByLabelText('Play Alpha')).not.toBeInTheDocument();
+
+        fireEvent.click(screen.getByRole('button', { name: 'Expand playlist' }));
+        expect(props.onToggleCollapse).toHaveBeenCalledTimes(1);
     });
 });

@@ -100,6 +100,7 @@ export default function App() {
   const [transientVideo, setTransientVideo] = useState(null);
   const transientResumeVideoIdRef = useRef(null);
   const [flashVideoIds, setFlashVideoIds] = useState([]);
+  const [isPlaylistCollapsed, setIsPlaylistCollapsed] = useState(false);
   const [isPreviewModeEnabled, setIsPreviewModeEnabled] = useState(false);
 
   // Playback
@@ -183,6 +184,12 @@ export default function App() {
 
   const currentPlaylistVideo = playlist.find(video => video.videoId === currentVideoId) || null;
   const currentVideo = transientVideo || currentPlaylistVideo;
+  const isCurrentVideoSupported = currentVideo
+    ? supportList.some(entry => entry.videoId === currentVideo.videoId)
+    : false;
+  const isCurrentVideoNominated = currentVideo
+    ? nominationList.some(entry => entry.videoId === currentVideo.videoId)
+    : false;
   const apiKeyMissing = !import.meta.env.VITE_YT_API_KEY;
 
   const markVideoCompleted = useCallback((videoId) => {
@@ -719,7 +726,7 @@ export default function App() {
   }, [markVideoStarted, transientVideo]);
 
   return (
-    <div className="app-shell">
+    <div className={`app-shell${isPlaylistCollapsed ? ' playlist-collapsed' : ''}`}>
       <TopBar
         isPlaying={isPlaying}
         setIsPlaying={handleSetIsPlaying}
@@ -769,19 +776,31 @@ export default function App() {
           video={currentVideo}
           isPlaying={isPlaying}
           onVideoEnd={handleVideoEnd}
+          onPrev={handlePrev}
+          onNext={handleNext}
+          onTogglePlay={() => handleSetIsPlaying(previousValue => !previousValue)}
+          isShuffleEnabled={isShuffleEnabled}
+          onShuffle={handleShufflePlaylist}
+          isPreviewModeEnabled={isPreviewModeEnabled}
+          onTogglePreview={handleTogglePreviewMode}
+          isSupported={isCurrentVideoSupported}
+          isNominated={isCurrentVideoNominated}
+          onToggleSupport={handleToggleSupportFromPlaylist}
         />
       </main>
 
-      <aside className="sidebar">
+      <aside className={`sidebar app-sidebar${isPlaylistCollapsed ? ' collapsed' : ''}`}>
         <PlaylistSidebar
           playlist={displayPlaylist}
           currentIndex={currentDisplayIndex < 0 ? null : currentDisplayIndex}
           flashVideoIds={flashVideoIds}
           isShuffleEnabled={isShuffleEnabled}
           isPreviewModeEnabled={isPreviewModeEnabled}
+          isCollapsed={isPlaylistCollapsed}
           showOriginalOrder={showOriginalOrder}
           onShuffle={handleShufflePlaylist}
           onTogglePreview={handleTogglePreviewMode}
+          onToggleCollapse={() => setIsPlaylistCollapsed(previousValue => !previousValue)}
           onToggleOrderView={handleTogglePlaylistOrderView}
           onSelect={goToVideo}
           supportList={supportList}
@@ -791,7 +810,7 @@ export default function App() {
           onAddToSupportList={handleAddToSupportList}
           onRemoveFromPlaylist={handleRemoveFromPlaylist}
         />
-        {apiKeyMissing && (
+        {!isPlaylistCollapsed && apiKeyMissing && (
           <div className="api-key-notice">
             <span>🔑</span>
             <span>
