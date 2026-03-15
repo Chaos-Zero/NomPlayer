@@ -43,6 +43,7 @@ npm run test:watch
 npm run build
 npm run preview
 npm run hooks:install
+npm run gitleaks:install
 npm run secrets:scan
 ```
 
@@ -56,7 +57,14 @@ Install the repo hooks once per clone:
 npm run hooks:install
 ```
 
-You also need `gitleaks` installed on your machine. After that, the hook will run automatically on commit, and you can run it manually with:
+If `gitleaks` is missing, the hook can prompt to install it automatically in an interactive shell.
+You can also install it manually with:
+
+```bash
+npm run gitleaks:install
+```
+
+After that, the hook will run automatically on commit, and you can run it manually with:
 
 ```bash
 npm run secrets:scan
