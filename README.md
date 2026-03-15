@@ -51,6 +51,16 @@ npm run precommit:run
 npm run prepush:run
 ```
 
+## Deployment Helper
+
+If you use `just`, this repo includes:
+
+```bash
+just deploy
+```
+
+That pushes `main` to the `github` remote for Cloudflare Pages deployments, while normal `git push` can still target Codeberg.
+
 ## Git Hooks
 
 This repo uses native Git hooks:
