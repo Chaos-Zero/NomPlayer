@@ -194,6 +194,7 @@ describe('FavouritesPanel', () => {
         fireEvent.pointerDown(screen.getByRole('menuitem', { name: 'Add to Current Playlist' }));
         fireEvent.click(screen.getByRole('menuitem', { name: 'Add to Current Playlist' }));
         expect(props.onAddToPlaylist).toHaveBeenCalledWith([alpha]);
+        expect(screen.getByText('Added 1 song to current playlist')).toBeInTheDocument();
 
         fireEvent.contextMenu(screen.getByLabelText('Support Alpha'));
         fireEvent.pointerDown(screen.getByRole('menuitem', { name: 'Remove Support' }));
@@ -201,11 +202,21 @@ describe('FavouritesPanel', () => {
         expect(props.onRemove).toHaveBeenCalledWith([alpha.videoId]);
     });
 
-    it('enables selection mode with select-all and multi-item context actions', () => {
+    it('enables selection mode with select-all, visible action buttons, and multi-item context actions', () => {
         const { props } = renderPanel();
 
         fireEvent.click(screen.getByRole('button', { name: 'Select' }));
         expect(screen.getByRole('button', { name: 'Select all' })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Add to Current Playlist' })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Remove Support' })).toBeInTheDocument();
+
+        fireEvent.click(screen.getByRole('button', { name: 'Select all' }));
+        fireEvent.click(screen.getByRole('button', { name: 'Add to Current Playlist' }));
+        expect(props.onAddToPlaylist).toHaveBeenCalledWith([alpha, beta]);
+        expect(screen.getByText('Added 2 songs to current playlist')).toBeInTheDocument();
+
+        fireEvent.click(screen.getByRole('button', { name: 'Remove Support' }));
+        expect(props.onRemove).toHaveBeenCalledWith([alpha.videoId, beta.videoId]);
 
         fireEvent.click(screen.getByRole('button', { name: 'Select all' }));
         fireEvent.contextMenu(screen.getByLabelText('Support Alpha'));
@@ -214,12 +225,12 @@ describe('FavouritesPanel', () => {
 
         fireEvent.pointerDown(screen.getByRole('menuitem', { name: 'Add to Current Playlist' }));
         fireEvent.click(screen.getByRole('menuitem', { name: 'Add to Current Playlist' }));
-        expect(props.onAddToPlaylist).toHaveBeenCalledWith([alpha, beta]);
+        expect(props.onAddToPlaylist).toHaveBeenLastCalledWith([alpha, beta]);
 
         fireEvent.contextMenu(screen.getByLabelText('Support Alpha'));
         fireEvent.pointerDown(screen.getByRole('menuitem', { name: 'Remove Support' }));
         fireEvent.click(screen.getByRole('menuitem', { name: 'Remove Support' }));
-        expect(props.onRemove).toHaveBeenCalledWith([alpha.videoId, beta.videoId]);
+        expect(props.onRemove).toHaveBeenLastCalledWith([alpha.videoId, beta.videoId]);
     });
 
     it('shows numeric positions for support-list entries', () => {

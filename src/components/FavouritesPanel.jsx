@@ -448,9 +448,21 @@ export default function FavouritesPanel({
     const [selectionMode, setSelectionMode] = useState(false);
     const [selectedIds, setSelectedIds] = useState([]);
     const [contextMenu, setContextMenu] = useState(null);
+    const [toastMessage, setToastMessage] = useState('');
     const contextMenuRef = useRef(null);
+    const toastTimeoutRef = useRef(null);
 
     const selectedIdSet = useMemo(() => new Set(selectedIds), [selectedIds]);
+    const selectedVideos = useMemo(
+        () => supportList.filter(video => selectedIdSet.has(video.videoId)),
+        [selectedIdSet, supportList]
+    );
+
+    useEffect(() => () => {
+        if (toastTimeoutRef.current) {
+            window.clearTimeout(toastTimeoutRef.current);
+        }
+    }, []);
 
     useEffect(() => {
         if (!contextMenu) return undefined;
@@ -510,6 +522,18 @@ export default function FavouritesPanel({
         ));
     }
 
+    function showToast(message) {
+        if (toastTimeoutRef.current) {
+            window.clearTimeout(toastTimeoutRef.current);
+        }
+
+        setToastMessage(message);
+        toastTimeoutRef.current = window.setTimeout(() => {
+            toastTimeoutRef.current = null;
+            setToastMessage('');
+        }, 2400);
+    }
+
     function handleToggleSelectionMode() {
         setSelectionMode(prev => {
             const nextValue = !prev;
@@ -566,7 +590,37 @@ export default function FavouritesPanel({
     }
 
     function handleDoubleQueue(video) {
-        onAddToPlaylist([video]);
+        handleQueueVideos([video]);
+    }
+
+    function normalizeAddResult(videos, addResult) {
+        if (typeof addResult === 'number') {
+            return addResult;
+        }
+
+        if (typeof addResult?.addedCount === 'number') {
+            return addResult.addedCount;
+        }
+
+        return videos.length;
+    }
+
+    function handleQueueVideos(videos) {
+        if (!videos.length) return;
+
+        const addResult = onAddToPlaylist(videos);
+        const addedCount = normalizeAddResult(videos, addResult);
+
+        if (addedCount > 0) {
+            showToast(
+                addedCount === 1
+                    ? 'Added 1 song to current playlist'
+                    : `Added ${addedCount} songs to current playlist`
+            );
+            return;
+        }
+
+        showToast('Those songs are already in the current playlist');
     }
 
     function handlePlayNow() {
@@ -577,7 +631,7 @@ export default function FavouritesPanel({
 
     function handleAddToCurrentPlaylist() {
         if (!contextMenu?.videos.length) return;
-        onAddToPlaylist(contextMenu.videos);
+        handleQueueVideos(contextMenu.videos);
         setContextMenu(null);
     }
 
@@ -590,6 +644,7 @@ export default function FavouritesPanel({
     }
 
     const showSelectAll = selectionMode && supportList.length > 0;
+    const showSelectionActions = selectionMode && supportList.length > 0;
 
     return (
         <>
@@ -605,6 +660,11 @@ export default function FavouritesPanel({
                 aria-label={title}
                 aria-modal="true"
             >
+                {toastMessage && (
+                    <div className="fav-panel-toast" role="status" aria-live="polite">
+                        {toastMessage}
+                    </div>
+                )}
                 <div className="fav-panel-header">
                     <div className="fav-panel-title">
                         <span className="fav-panel-title-icon">{titleIcon}</span>
@@ -644,6 +704,32 @@ export default function FavouritesPanel({
                         <button className="btn-close" onClick={onClose} aria-label={closeLabel}>✕</button>
                     </div>
                 </div>
+
+                {showSelectionActions && (
+                    <div className="fav-panel-selection-toolbar">
+                        <button
+                            className="fav-panel-action-btn"
+                            type="button"
+                            onClick={() => handleQueueVideos(selectedVideos)}
+                            disabled={selectedVideos.length === 0}
+                        >
+                            Add to Current Playlist
+                        </button>
+                        <button
+                            className="fav-panel-action-btn"
+                            type="button"
+                            onClick={() => {
+                                if (!selectedVideos.length) return;
+                                const removedIds = selectedVideos.map(video => video.videoId);
+                                setSelectedIds([]);
+                                onRemove(removedIds);
+                            }}
+                            disabled={selectedVideos.length === 0}
+                        >
+                            {contextRemoveLabel}
+                        </button>
+                    </div>
+                )}
 
                 <div className="fav-panel-body">
                     {supportList.length === 0 ? (

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import useMediaQuery from '../hooks/useMediaQuery.js';
 
 const CONTEXT_MENU_WIDTH = 180;
 const CONTEXT_MENU_HEIGHT = 96;
@@ -12,14 +13,21 @@ function FastForwardIcon() {
     );
 }
 
-function ChevronIcon({ collapsed }) {
+function ChevronIcon() {
     return (
         <svg viewBox="0 0 20 20" aria-hidden="true">
-            {collapsed ? (
-                <path d="M12.75 4.75 7.5 10l5.25 5.25" />
-            ) : (
-                <path d="M7.25 4.75 12.5 10l-5.25 5.25" />
-            )}
+            <path d="M7.25 4.75 12.5 10l-5.25 5.25" />
+        </svg>
+    );
+}
+
+function PlaylistTabIcon() {
+    return (
+        <svg viewBox="0 0 20 20" aria-hidden="true">
+            <path d="M4.5 5.25H10.75" />
+            <path d="M4.5 9.75H10.75" />
+            <path d="M4.5 14.25H10.75" />
+            <path d="M13.25 6.25L16.25 8.5L13.25 10.75V6.25Z" />
         </svg>
     );
 }
@@ -50,9 +58,10 @@ function PlaylistItem({
     const supportTooltip = isNominated
         ? 'In Nomination List'
         : isSupported
-            ? 'In Support List'
+            ? 'Remove Support'
             : 'Add to support list';
     const starStateClass = isNominated ? ' nominated locked' : isSupported ? ' supported' : '';
+    const supportGlyph = isNominated ? '★' : isSupported ? '♥' : '♡';
 
     return (
         <div
@@ -107,7 +116,7 @@ function PlaylistItem({
                     aria-label={supportLabel}
                     disabled={isNominated}
                 >
-                    {isNominated || isSupported ? '★' : '☆'}
+                    {supportGlyph}
                 </button>
             </div>
         </div>
@@ -134,8 +143,10 @@ export default function PlaylistSidebar({
     onAddToSupportList,
     onRemoveFromPlaylist,
 }) {
+    const isMobileLayout = useMediaQuery('(max-width: 960px)');
     const [contextMenu, setContextMenu] = useState(null);
     const contextMenuRef = useRef(null);
+    const collapseGestureRef = useRef(null);
     const supportIds = useMemo(
         () => new Set(supportList.map(entry => entry.videoId)),
         [supportList]
@@ -178,23 +189,173 @@ export default function PlaylistSidebar({
         };
     }, [contextMenu]);
 
+    useEffect(() => {
+        function clearGesture() {
+            collapseGestureRef.current = null;
+        }
+
+        function handlePointerMove(event) {
+            const gesture = collapseGestureRef.current;
+            if (!gesture || !isMobileLayout) return;
+
+            const deltaX = event.clientX - gesture.startX;
+            const deltaY = event.clientY - gesture.startY;
+            if (Math.abs(deltaX) > 8 || Math.abs(deltaY) > 8) {
+                gesture.moved = true;
+            }
+
+            if (gesture.toggled) return;
+
+            if (isCollapsed && deltaX <= -32) {
+                gesture.toggled = true;
+                onToggleCollapse();
+            } else if (!isCollapsed && deltaX >= 32) {
+                gesture.toggled = true;
+                onToggleCollapse();
+            }
+        }
+
+        function handlePointerUp(event) {
+            const gesture = collapseGestureRef.current;
+            if (!gesture) return;
+
+            const deltaX = event.clientX - gesture.startX;
+            const deltaY = event.clientY - gesture.startY;
+            if (
+                isMobileLayout
+                && !gesture.toggled
+                && Math.abs(deltaX) < 8
+                && Math.abs(deltaY) < 8
+            ) {
+                onToggleCollapse();
+            }
+
+            clearGesture();
+        }
+
+        function handlePointerCancel() {
+            clearGesture();
+        }
+
+        window.addEventListener('pointermove', handlePointerMove);
+        window.addEventListener('pointerup', handlePointerUp);
+        window.addEventListener('pointercancel', handlePointerCancel);
+
+        return () => {
+            window.removeEventListener('pointermove', handlePointerMove);
+            window.removeEventListener('pointerup', handlePointerUp);
+            window.removeEventListener('pointercancel', handlePointerCancel);
+        };
+    }, [isCollapsed, isMobileLayout, onToggleCollapse]);
+
+    function handleCollapseTabPointerDown(event) {
+        if (!isMobileLayout) return;
+
+        collapseGestureRef.current = {
+            startX: event.clientX,
+            startY: event.clientY,
+            moved: false,
+            toggled: false,
+        };
+    }
+
+    function handleCollapseTabClick(event) {
+        if (isMobileLayout) {
+            event.preventDefault();
+            return;
+        }
+
+        onToggleCollapse();
+    }
+
+    function handleDragEdgePointerDown(event) {
+        if (!isMobileLayout) return;
+
+        collapseGestureRef.current = {
+            startX: event.clientX,
+            startY: event.clientY,
+            moved: false,
+            toggled: false,
+        };
+    }
+
+    const shouldShowCollapseTab = !isMobileLayout || isCollapsed;
+    const showMobileHeaderClose = isMobileLayout && !isCollapsed;
+
+    function renderHeader({ showPlaylistActions = false } = {}) {
+        return (
+            <div className="sidebar-header">
+                <div className="sidebar-header-main">
+                    <span className="sidebar-title">Playlist</span>
+                    <span className="sidebar-count">{playlist.length} videos</span>
+                </div>
+
+                <div className="sidebar-header-actions">
+                    {showPlaylistActions && (
+                        <>
+                            <button
+                                className={`sidebar-icon-btn shuffle${isShuffleEnabled ? ' active' : ''}`}
+                                type="button"
+                                onClick={onShuffle}
+                                disabled={playlist.length < 2}
+                                aria-label="Shuffle playlist"
+                                title="Shuffle playlist"
+                            >
+                                🔀
+                            </button>
+                            <button
+                                className={`sidebar-icon-btn preview${isPreviewModeEnabled ? ' active' : ''}`}
+                                type="button"
+                                onClick={onTogglePreview}
+                                disabled={playlist.length === 0}
+                                aria-label="Preview mode"
+                                aria-pressed={isPreviewModeEnabled}
+                                title="Preview mode"
+                            >
+                                <FastForwardIcon />
+                            </button>
+                        </>
+                    )}
+                    {showMobileHeaderClose && (
+                        <button
+                            className="btn-close"
+                            type="button"
+                            onClick={onToggleCollapse}
+                            aria-label="Collapse playlist"
+                            title="Collapse playlist"
+                        >
+                            ✕
+                        </button>
+                    )}
+                </div>
+            </div>
+        );
+    }
+
     if (!playlist.length) {
         return (
             <div className={`sidebar playlist-sidebar${isCollapsed ? ' collapsed' : ''}`}>
-                <button
-                    className={`playlist-collapse-tab${isCollapsed ? ' collapsed' : ''}`}
-                    type="button"
-                    onClick={onToggleCollapse}
-                    aria-label={isCollapsed ? 'Expand playlist' : 'Collapse playlist'}
-                    title={isCollapsed ? 'Expand playlist' : 'Collapse playlist'}
-                >
-                    <ChevronIcon collapsed={isCollapsed} />
-                </button>
-                {!isCollapsed && (
-                    <div className="sidebar-header">
-                        <span className="sidebar-title">Playlist</span>
-                    </div>
+                {shouldShowCollapseTab && (
+                    <button
+                        className={`playlist-collapse-tab${isCollapsed ? ' collapsed' : ''}`}
+                        type="button"
+                        onPointerDown={handleCollapseTabPointerDown}
+                        onClick={handleCollapseTabClick}
+                        aria-label={isCollapsed ? 'Expand playlist' : 'Collapse playlist'}
+                        title={isCollapsed ? 'Expand playlist' : 'Collapse playlist'}
+                    >
+                        {isCollapsed ? <PlaylistTabIcon /> : <ChevronIcon />}
+                    </button>
                 )}
+                {!isCollapsed && isMobileLayout && (
+                    <div
+                        className="playlist-drag-edge"
+                        onPointerDown={handleDragEdgePointerDown}
+                        data-testid="playlist-drag-edge"
+                        aria-hidden="true"
+                    />
+                )}
+                {!isCollapsed && renderHeader()}
                 {!isCollapsed && (
                     <div
                         style={{
@@ -247,44 +408,27 @@ export default function PlaylistSidebar({
 
     return (
         <div className={`sidebar playlist-sidebar${isCollapsed ? ' collapsed' : ''}`}>
-            <button
-                className={`playlist-collapse-tab${isCollapsed ? ' collapsed' : ''}`}
-                type="button"
-                onClick={onToggleCollapse}
-                aria-label={isCollapsed ? 'Expand playlist' : 'Collapse playlist'}
-                title={isCollapsed ? 'Expand playlist' : 'Collapse playlist'}
-            >
-                <ChevronIcon collapsed={isCollapsed} />
-            </button>
-            {!isCollapsed && (
-                <div className="sidebar-header">
-                    <span className="sidebar-title">Playlist</span>
-                    <div className="sidebar-header-actions">
-                        <button
-                            className={`sidebar-icon-btn shuffle${isShuffleEnabled ? ' active' : ''}`}
-                            type="button"
-                            onClick={onShuffle}
-                            disabled={playlist.length < 2}
-                            aria-label="Shuffle playlist"
-                            title="Shuffle playlist"
-                        >
-                            🔀
-                        </button>
-                        <button
-                            className={`sidebar-icon-btn preview${isPreviewModeEnabled ? ' active' : ''}`}
-                            type="button"
-                            onClick={onTogglePreview}
-                            disabled={playlist.length === 0}
-                            aria-label="Preview mode"
-                            aria-pressed={isPreviewModeEnabled}
-                            title="Preview mode"
-                        >
-                            <FastForwardIcon />
-                        </button>
-                        <span className="sidebar-count">{playlist.length} videos</span>
-                    </div>
-                </div>
+            {shouldShowCollapseTab && (
+                <button
+                    className={`playlist-collapse-tab${isCollapsed ? ' collapsed' : ''}`}
+                    type="button"
+                    onPointerDown={handleCollapseTabPointerDown}
+                    onClick={handleCollapseTabClick}
+                    aria-label={isCollapsed ? 'Expand playlist' : 'Collapse playlist'}
+                    title={isCollapsed ? 'Expand playlist' : 'Collapse playlist'}
+                >
+                    {isCollapsed ? <PlaylistTabIcon /> : <ChevronIcon />}
+                </button>
             )}
+            {!isCollapsed && isMobileLayout && (
+                <div
+                    className="playlist-drag-edge"
+                    onPointerDown={handleDragEdgePointerDown}
+                    data-testid="playlist-drag-edge"
+                    aria-hidden="true"
+                />
+            )}
+            {!isCollapsed && renderHeader({ showPlaylistActions: true })}
             {!isCollapsed && (
                 <div className={`playlist-order-toggle${showOrderToggle ? ' visible' : ''}`}>
                     <div className="playlist-order-toggle-inner">

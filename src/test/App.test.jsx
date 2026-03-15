@@ -9,6 +9,20 @@ const appTestState = vi.hoisted(() => ({
     supportPanelProps: null,
 }));
 
+const originalMatchMedia = window.matchMedia;
+
+function mockMatchMedia(matches) {
+    window.matchMedia = vi.fn().mockImplementation(query => ({
+        matches,
+        media: query,
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        dispatchEvent: vi.fn(),
+    }));
+}
+
 vi.mock('../components/TopBar.jsx', () => ({
     default: function MockTopBar(props) {
         appTestState.topBarProps = props;
@@ -62,6 +76,11 @@ describe('App', () => {
     afterEach(() => {
         vi.useRealTimers();
         vi.restoreAllMocks();
+        if (originalMatchMedia) {
+            window.matchMedia = originalMatchMedia;
+        } else {
+            delete window.matchMedia;
+        }
     });
 
     it('autoplays a loaded single video when the playlist is empty', () => {
@@ -99,6 +118,44 @@ describe('App', () => {
         expect(appTestState.playlistSidebarProps.playlist.map(video => video.title)).toEqual(['Alpha', 'Beta']);
         expect(appTestState.videoPlayerProps.video.title).toBe('Alpha');
         expect(appTestState.videoPlayerProps.isPlaying).toBe(true);
+    });
+
+    it('reopens the playlist drawer on mobile after new songs are added', () => {
+        mockMatchMedia(true);
+
+        render(<App />);
+
+        expect(appTestState.playlistSidebarProps.isCollapsed).toBe(true);
+
+        act(() => {
+            appTestState.topBarProps.onLoad(
+                [{ videoId: 'alpha1234567', title: 'Alpha', thumbnail: 'a.jpg', channelTitle: '' }],
+                { mode: 'append', autoplay: true }
+            );
+        });
+
+        expect(appTestState.playlistSidebarProps.isCollapsed).toBe(false);
+        expect(appTestState.playlistSidebarProps.playlist).toHaveLength(1);
+    });
+
+    it('shows a floating preview indicator on mobile when the playlist is collapsed', () => {
+        mockMatchMedia(true);
+
+        render(<App />);
+
+        act(() => {
+            appTestState.topBarProps.onLoad(
+                [{ videoId: 'alpha1234567', title: 'Alpha', thumbnail: 'a.jpg', channelTitle: '' }],
+                { mode: 'append', autoplay: true }
+            );
+        });
+
+        act(() => {
+            appTestState.playlistSidebarProps.onTogglePreview();
+            appTestState.playlistSidebarProps.onToggleCollapse();
+        });
+
+        expect(screen.getByLabelText('Preview mode active')).toBeInTheDocument();
     });
 
     it('does not append duplicate videos to the playlist', () => {

@@ -1,6 +1,20 @@
 import { fireEvent, render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import PlaylistSidebar from '../../components/PlaylistSidebar.jsx';
+
+const originalMatchMedia = window.matchMedia;
+
+function mockMatchMedia(matches) {
+    window.matchMedia = vi.fn().mockImplementation(query => ({
+        matches,
+        media: query,
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        dispatchEvent: vi.fn(),
+    }));
+}
 
 describe('PlaylistSidebar', () => {
     const video = {
@@ -38,6 +52,14 @@ describe('PlaylistSidebar', () => {
             props,
         };
     }
+
+    afterEach(() => {
+        if (originalMatchMedia) {
+            window.matchMedia = originalMatchMedia;
+        } else {
+            delete window.matchMedia;
+        }
+    });
 
     it('adds playlist stars to the support list', () => {
         const { props } = renderSidebar();
@@ -145,13 +167,15 @@ describe('PlaylistSidebar', () => {
         expect(screen.getByLabelText('Preview mode active')).toBeInTheDocument();
     });
 
-    it('renders the shuffle and preview toggles before the video count in the header', () => {
+    it('renders the video count beside the title and keeps shuffle and preview on the right', () => {
         const { container } = renderSidebar({ isShuffleEnabled: true });
+        const headerMain = container.querySelector('.sidebar-header-main');
         const headerActions = container.querySelector('.sidebar-header-actions');
 
+        expect(headerMain).toHaveTextContent('Playlist');
+        expect(headerMain).toHaveTextContent('1 videos');
         expect(headerActions?.firstElementChild).toHaveAttribute('aria-label', 'Shuffle playlist');
         expect(headerActions?.children[1]).toHaveAttribute('aria-label', 'Preview mode');
-        expect(headerActions?.lastElementChild).toHaveTextContent('1 videos');
     });
 
     it('keeps the order toggle mounted but hidden while shuffle is off', () => {
@@ -205,6 +229,27 @@ describe('PlaylistSidebar', () => {
         expect(screen.queryByLabelText('Play Alpha')).not.toBeInTheDocument();
 
         fireEvent.click(screen.getByRole('button', { name: 'Expand playlist' }));
+        expect(props.onToggleCollapse).toHaveBeenCalledTimes(1);
+    });
+
+    it('supports closing the mobile playlist by dragging the drawer edge', () => {
+        mockMatchMedia(true);
+        const { props } = renderSidebar({ isCollapsed: false });
+
+        fireEvent.pointerDown(screen.getByTestId('playlist-drag-edge'), { clientX: 10, clientY: 10 });
+        fireEvent.pointerMove(window, { clientX: 50, clientY: 10 });
+
+        expect(props.onToggleCollapse).toHaveBeenCalledTimes(1);
+    });
+
+    it('shows a header close button instead of the side tab when the mobile playlist is open', () => {
+        mockMatchMedia(true);
+        const { container, props } = renderSidebar({ isCollapsed: false });
+
+        expect(container.querySelector('.playlist-collapse-tab')).not.toBeInTheDocument();
+
+        fireEvent.click(screen.getByRole('button', { name: 'Collapse playlist' }));
+
         expect(props.onToggleCollapse).toHaveBeenCalledTimes(1);
     });
 });

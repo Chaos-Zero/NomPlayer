@@ -3,6 +3,7 @@ import TopBar from './components/TopBar.jsx';
 import VideoPlayer from './components/VideoPlayer.jsx';
 import PlaylistSidebar from './components/PlaylistSidebar.jsx';
 import FavouritesPanel from './components/FavouritesPanel.jsx';
+import useMediaQuery from './hooks/useMediaQuery.js';
 
 const SUPPORT_STORAGE_KEY = 'yt_support_list';
 const NOMINATIONS_STORAGE_KEY = 'yt_nominations_list';
@@ -87,7 +88,17 @@ function shuffleVideoIds(videoIds, pinnedVideoId = null) {
   return pinnedVideoId ? [pinnedVideoId, ...remainingIds] : remainingIds;
 }
 
+function FastForwardIcon() {
+  return (
+    <svg viewBox="0 0 20 20" aria-hidden="true">
+      <path d="M3.75 4.95v10.1c0 .58.64.94 1.14.64l6.45-4.98c.44-.34.44-1.08 0-1.42L4.89 4.31c-.5-.3-1.14.06-1.14.64Z" />
+      <path d="M10.5 4.95v10.1c0 .58.64.94 1.14.64l6.45-4.98c.44-.34.44-1.08 0-1.42l-6.45-4.98c-.5-.3-1.14.06-1.14.64Z" />
+    </svg>
+  );
+}
+
 export default function App() {
+  const isMobileLayout = useMediaQuery('(max-width: 960px)');
   // Playlist state
   const [playlist, setPlaylist] = useState([]);
   const playlistRef = useRef([]);
@@ -100,7 +111,9 @@ export default function App() {
   const [transientVideo, setTransientVideo] = useState(null);
   const transientResumeVideoIdRef = useRef(null);
   const [flashVideoIds, setFlashVideoIds] = useState([]);
-  const [isPlaylistCollapsed, setIsPlaylistCollapsed] = useState(false);
+  const [isPlaylistCollapsed, setIsPlaylistCollapsed] = useState(
+    () => window.matchMedia?.('(max-width: 960px)')?.matches ?? false
+  );
   const [isPreviewModeEnabled, setIsPreviewModeEnabled] = useState(false);
 
   // Playback
@@ -191,6 +204,12 @@ export default function App() {
     ? nominationList.some(entry => entry.videoId === currentVideo.videoId)
     : false;
   const apiKeyMissing = !import.meta.env.VITE_YT_API_KEY;
+  const showFloatingPreviewIndicator = (
+    isMobileLayout
+    && isPlaylistCollapsed
+    && isPreviewModeEnabled
+    && playlist.length > 0
+  );
 
   const markVideoCompleted = useCallback((videoId) => {
     if (!videoId) return;
@@ -262,7 +281,12 @@ export default function App() {
       flashResolved = false,
     } = options;
 
-    if (!videos.length) return;
+    if (!videos.length) {
+      return {
+        addedCount: 0,
+        resolvedVideoIds: [],
+      };
+    }
 
     const previousPlaylist = playlistRef.current;
     const previousLength = previousPlaylist.length;
@@ -299,11 +323,17 @@ export default function App() {
       if (flashResolved && resolvedVideoIds.length > 0) {
         setFlashVideoIds(resolvedVideoIds);
       }
-      return;
+      return {
+        addedCount: 0,
+        resolvedVideoIds,
+      };
     }
 
     playlistRef.current = nextPlaylist;
     setPlaylist(nextPlaylist);
+    if (isMobileLayout) {
+      setIsPlaylistCollapsed(false);
+    }
 
     if (shuffleOrderIdsRef.current.length > 0) {
       const nextIdSet = new Set(nextPlaylist.map(video => video.videoId));
@@ -325,13 +355,20 @@ export default function App() {
       if (!transientVideo) {
         setIsPlaying(autoplayIfFirst);
       }
-      return;
+      return {
+        addedCount: newVideoIds.length,
+        resolvedVideoIds,
+      };
     }
 
     if (flashResolved && resolvedVideoIds.length > 0) {
       setFlashVideoIds(resolvedVideoIds);
     }
-  }, [markVideoStarted, transientVideo]);
+    return {
+      addedCount: newVideoIds.length,
+      resolvedVideoIds,
+    };
+  }, [isMobileLayout, markVideoStarted, transientVideo]);
 
   // ── Load a new playlist / single video ──────────────────────────
   const handleLoad = useCallback((items, options = {}) => {
@@ -350,6 +387,9 @@ export default function App() {
     setTransientVideo(null);
     playlistRef.current = items;
     setPlaylist(items);
+    if (isMobileLayout) {
+      setIsPlaylistCollapsed(false);
+    }
     shuffleOrderIdsRef.current = [];
     setShuffleOrderIds([]);
     setShowOriginalOrder(false);
@@ -366,7 +406,7 @@ export default function App() {
     }
     setCurrentVideoId(resolvedStartVideoId);
     setIsPlaying(autoplay);
-  }, [appendVideosToPlaylist, markVideoStarted]);
+  }, [appendVideosToPlaylist, isMobileLayout, markVideoStarted]);
 
   // ── Navigation ──────────────────────────────────────────────────
   const goToVideo = useCallback((videoId) => {
@@ -681,7 +721,7 @@ export default function App() {
   }, [isPlaying, markVideoStarted, transientVideo]);
 
   const handleQueueFromSupportList = useCallback((videos) => {
-    appendVideosToPlaylist(videos, { flashResolved: true });
+    return appendVideosToPlaylist(videos, { flashResolved: true });
   }, [appendVideosToPlaylist]);
 
   const handlePlayNowFromSupportList = useCallback((video) => {
@@ -768,6 +808,10 @@ export default function App() {
             handleRequestCloseNominationsList();
           }
         }}
+        currentVideo={currentVideo}
+        isCurrentVideoSupported={isCurrentVideoSupported}
+        isCurrentVideoNominated={isCurrentVideoNominated}
+        onToggleCurrentVideoSupport={handleToggleSupportFromPlaylist}
         onLoad={handleLoad}
       />
 
@@ -826,6 +870,16 @@ export default function App() {
           </div>
         )}
       </aside>
+
+      {showFloatingPreviewIndicator && (
+        <div
+          className="mobile-preview-indicator"
+          role="img"
+          aria-label="Preview mode active"
+        >
+          <FastForwardIcon />
+        </div>
+      )}
 
       {renderSupportList && (
         <FavouritesPanel

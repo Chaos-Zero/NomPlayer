@@ -1,5 +1,7 @@
+import { createPortal } from 'react-dom';
 import { useEffect, useRef, useState } from 'react';
 import { parseYouTubeInput, fetchPlaylistItems, singleVideoEntry } from '../utils/youtube.js';
+import useMediaQuery from '../hooks/useMediaQuery.js';
 
 const API_KEY = import.meta.env.VITE_YT_API_KEY || '';
 const SUCCESS_FLASH_MS = 1000;
@@ -52,8 +54,13 @@ export default function TopBar({
     onPrev, onNext,
     showSupportList, setShowSupportList,
     showNominationsList, setShowNominationsList,
+    currentVideo = null,
+    isCurrentVideoSupported = false,
+    isCurrentVideoNominated = false,
+    onToggleCurrentVideoSupport,
     onLoad,
 }) {
+    const isMobileLayout = useMediaQuery('(max-width: 960px)');
     const [urlValue, setUrlValue] = useState('');
     const [isInputOpen, setIsInputOpen] = useState(false);
     const [loading, setLoading] = useState(false);
@@ -68,6 +75,27 @@ export default function TopBar({
     const inputRef = useRef(null);
     const activeRequestRef = useRef(0);
     const successTimeoutRef = useRef(null);
+    const currentSupportLabel = !currentVideo
+        ? 'No current video to support'
+        : isCurrentVideoNominated
+            ? 'Nomination tracks cannot be changed from the player'
+            : isCurrentVideoSupported
+                ? 'Remove from support list'
+                : 'Add to support list';
+    const currentSupportTooltip = !currentVideo
+        ? 'No current video'
+        : isCurrentVideoNominated
+            ? 'In Nomination List'
+            : isCurrentVideoSupported
+                ? 'Remove Support'
+                : 'Add to support list';
+    const currentSupportClassName = isCurrentVideoNominated
+        ? ' nominated locked'
+        : isCurrentVideoSupported
+            ? ' supported'
+            : '';
+    const currentSupportGlyph = isCurrentVideoNominated ? '★' : isCurrentVideoSupported ? '♥' : '♡';
+    const mobileNowPlayingText = currentVideo?.title ?? '';
 
     useEffect(() => {
         if (!isInputOpen) return undefined;
@@ -88,6 +116,11 @@ export default function TopBar({
     }, []);
 
     useEffect(() => {
+        if (isMobileLayout) {
+            setControlsOffset(0);
+            return undefined;
+        }
+
         const topbarNode = topbarRef.current;
         const formNode = formRef.current;
         const centerNode = centerZoneRef.current;
@@ -98,7 +131,7 @@ export default function TopBar({
         let frameId = 0;
 
         function measure() {
-            const isCompactLayout = window.matchMedia?.('(max-width: 960px)').matches ?? false;
+            const isCompactLayout = window.matchMedia?.('(max-width: 960px)')?.matches ?? false;
             if (isCompactLayout) {
                 setControlsOffset(0);
                 return;
@@ -160,7 +193,7 @@ export default function TopBar({
             resizeObserver?.disconnect();
             window.removeEventListener('resize', scheduleMeasure);
         };
-    }, [error, isInputOpen, showSuccess]);
+    }, [error, isInputOpen, isMobileLayout, showSuccess]);
 
     function clearSuccessFlash() {
         if (successTimeoutRef.current) {
@@ -250,6 +283,191 @@ export default function TopBar({
         }
     }
 
+    function renderPlaybackControls({ className = '', hidden = false, withIds = false } = {}) {
+        return (
+            <div
+                className={`playback-controls${className ? ` ${className}` : ''}`}
+                aria-hidden={hidden || undefined}
+            >
+                <button
+                    className="btn btn-icon"
+                    onClick={onPrev}
+                    title="Previous"
+                    id={withIds ? 'prev-btn' : undefined}
+                    aria-label="Previous video"
+                    tabIndex={hidden ? -1 : 0}
+                >
+                    <PreviousIcon />
+                </button>
+
+                <button
+                    className="btn btn-play"
+                    onClick={() => setIsPlaying(p => !p)}
+                    title={isPlaying ? 'Pause' : 'Play'}
+                    id={withIds ? 'play-pause-btn' : undefined}
+                    aria-label={isPlaying ? 'Pause' : 'Play'}
+                    tabIndex={hidden ? -1 : 0}
+                >
+                    {isPlaying ? <PauseIcon /> : <PlayIcon />}
+                </button>
+
+                <button
+                    className="btn btn-icon"
+                    onClick={onNext}
+                    title="Next"
+                    id={withIds ? 'next-btn' : undefined}
+                    aria-label="Next video"
+                    tabIndex={hidden ? -1 : 0}
+                >
+                    <NextIcon />
+                </button>
+            </div>
+        );
+    }
+
+    const mobileCornerActions = (
+        isMobileLayout && !isInputOpen && typeof document !== 'undefined'
+            ? createPortal(
+                <div className="mobile-corner-actions">
+                    <button
+                        className={`mobile-corner-toggle support${showSupportList ? ' active' : ''}`}
+                        onClick={() => setShowSupportList(s => !s)}
+                        title={showSupportList ? 'Hide Support List' : 'Show Support List'}
+                        aria-label="Toggle support list"
+                    >
+                        <SupportIcon />
+                    </button>
+
+                    <button
+                        className={`mobile-corner-toggle nomination${showNominationsList ? ' active' : ''}`}
+                        onClick={() => setShowNominationsList(s => !s)}
+                        title={showNominationsList ? 'Hide Nominations' : 'Show Nominations'}
+                        aria-label="Toggle nominations list"
+                    >
+                        ★
+                    </button>
+                </div>,
+                document.body
+            )
+            : null
+    );
+
+    if (isMobileLayout) {
+        return (
+            <>
+                {mobileCornerActions}
+                <div ref={topbarRef} className={`topbar mobile-layout${isInputOpen ? ' input-open' : ''}`}>
+                    <div
+                        className={`mobile-topbar-floating-controls${isInputOpen ? ' visible' : ''}`}
+                        aria-hidden={!isInputOpen}
+                    >
+                        {renderPlaybackControls({
+                            className: 'mobile-playback-floating',
+                            hidden: !isInputOpen,
+                        })}
+                    </div>
+
+                    {error && (
+                        <span className="mobile-url-error">
+                            ⚠ {error}
+                        </span>
+                    )}
+
+                    <div className={`mobile-topbar-shell${isInputOpen ? ' open' : ''}`}>
+                        <div className="mobile-topbar-stage">
+                            <div className="mobile-topbar-face mobile-topbar-front" aria-hidden={isInputOpen}>
+                                {mobileNowPlayingText && (
+                                    <div className="mobile-now-playing-inline" title={mobileNowPlayingText}>
+                                        {isPlaying && <span className="mobile-now-playing-dot" aria-hidden="true" />}
+                                        <span className="mobile-now-playing-text">{mobileNowPlayingText}</span>
+                                    </div>
+                                )}
+
+                                <div className="mobile-topbar-controls-row">
+                                    <div className="mobile-topbar-slot mobile-topbar-slot-left">
+                                        <button
+                                            className="mobile-add-btn"
+                                            type="button"
+                                            onClick={openInput}
+                                            aria-label="Add to playlist"
+                                            tabIndex={isInputOpen ? -1 : 0}
+                                        >
+                                            Add
+                                        </button>
+                                    </div>
+
+                                    <div
+                                        className="mobile-playback-inline-wrap"
+                                        aria-hidden={isInputOpen || undefined}
+                                    >
+                                        {renderPlaybackControls({
+                                            className: 'mobile-playback-inline',
+                                            hidden: isInputOpen,
+                                        })}
+                                    </div>
+
+                                    <div className="mobile-topbar-slot mobile-topbar-slot-right">
+                                        <button
+                                            className={`btn btn-icon mobile-current-support-btn${currentSupportClassName}`}
+                                            type="button"
+                                            onClick={() => onToggleCurrentVideoSupport?.(currentVideo)}
+                                            title={currentSupportTooltip}
+                                            aria-label={currentSupportLabel}
+                                            disabled={!currentVideo || isCurrentVideoNominated}
+                                            tabIndex={isInputOpen ? -1 : 0}
+                                        >
+                                            {currentSupportGlyph}
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <form
+                                className={`mobile-topbar-face mobile-topbar-back${showSuccess ? ' success' : ''}`}
+                                onSubmit={handleSubmit}
+                                aria-hidden={!isInputOpen}
+                            >
+                                <input
+                                    ref={inputRef}
+                                    className="mobile-topbar-input"
+                                    type="text"
+                                    placeholder="Paste a YouTube video or playlist URL…"
+                                    value={urlValue}
+                                    onChange={event => {
+                                        setUrlValue(event.target.value);
+                                        setError('');
+                                        if (showSuccess) {
+                                            clearSuccessFlash();
+                                        }
+                                    }}
+                                    tabIndex={isInputOpen ? 0 : -1}
+                                />
+                                <button
+                                    className={`mobile-topbar-submit${showSuccess ? ' success' : ''}`}
+                                    type="submit"
+                                    disabled={!showSuccess && !urlValue.trim()}
+                                    aria-label={showSuccess ? 'Load successful' : undefined}
+                                    tabIndex={isInputOpen ? 0 : -1}
+                                >
+                                    {showSuccess ? '✓' : loading ? 'Loading…' : 'Load'}
+                                </button>
+                                <button
+                                    className="mobile-topbar-close"
+                                    type="button"
+                                    aria-label="Close add to playlist"
+                                    onClick={closeInput}
+                                    tabIndex={isInputOpen ? 0 : -1}
+                                >
+                                    ✕
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </>
+        );
+    }
+
     return (
         <div ref={topbarRef} className={`topbar${isInputOpen ? ' input-open' : ''}`}>
             <div className="topbar-side topbar-left">
@@ -311,37 +529,7 @@ export default function TopBar({
                 style={{ '--topbar-controls-offset': `${controlsOffset}px` }}
             >
                 <div className="controls-divider" aria-hidden="true" />
-                <div className="playback-controls">
-                    <button
-                        className="btn btn-icon"
-                        onClick={onPrev}
-                        title="Previous"
-                        id="prev-btn"
-                        aria-label="Previous video"
-                    >
-                        <PreviousIcon />
-                    </button>
-
-                    <button
-                        className="btn btn-play"
-                        onClick={() => setIsPlaying(p => !p)}
-                        title={isPlaying ? 'Pause' : 'Play'}
-                        id="play-pause-btn"
-                        aria-label={isPlaying ? 'Pause' : 'Play'}
-                    >
-                        {isPlaying ? <PauseIcon /> : <PlayIcon />}
-                    </button>
-
-                    <button
-                        className="btn btn-icon"
-                        onClick={onNext}
-                        title="Next"
-                        id="next-btn"
-                        aria-label="Next video"
-                    >
-                        <NextIcon />
-                    </button>
-                </div>
+                {renderPlaybackControls({ withIds: true })}
                 <div className="controls-divider" aria-hidden="true" />
             </div>
 

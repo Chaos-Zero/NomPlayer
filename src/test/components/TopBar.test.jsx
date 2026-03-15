@@ -9,6 +9,20 @@ vi.mock('../../utils/youtube.js', () => ({
     singleVideoEntry: vi.fn(),
 }));
 
+const originalMatchMedia = window.matchMedia;
+
+function mockMatchMedia(matches) {
+    window.matchMedia = vi.fn().mockImplementation(query => ({
+        matches,
+        media: query,
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        dispatchEvent: vi.fn(),
+    }));
+}
+
 function createDeferred() {
     let resolve;
     let reject;
@@ -48,6 +62,11 @@ describe('TopBar', () => {
 
     afterEach(() => {
         vi.useRealTimers();
+        if (originalMatchMedia) {
+            window.matchMedia = originalMatchMedia;
+        } else {
+            delete window.matchMedia;
+        }
     });
 
     function openLoader() {
@@ -70,6 +89,20 @@ describe('TopBar', () => {
 
         expect(screen.getByRole('button', { name: 'Toggle support list' })).toBeInTheDocument();
         expect(screen.getByRole('button', { name: 'Toggle nominations list' })).toBeInTheDocument();
+    });
+
+    it('shows the current song title in the mobile playback bar', () => {
+        mockMatchMedia(true);
+
+        renderTopBar({
+            isPlaying: true,
+            currentVideo: {
+                videoId: 'alpha1234567',
+                title: 'Alpha',
+            },
+        });
+
+        expect(screen.getByText('Alpha')).toBeInTheDocument();
     });
 
     it('awaits single video metadata before loading it', async () => {
