@@ -126,6 +126,8 @@ export default function App() {
   const [nominationList, setNominationList] = useState(loadNominationList);
   const [showNominationsList, setShowNominationsList] = useState(false);
   const [renderNominationsList, setRenderNominationsList] = useState(false);
+  const [supportToastMessage, setSupportToastMessage] = useState('');
+  const supportToastTimeoutRef = useRef(null);
 
   // Persist support list
   useEffect(() => {
@@ -136,6 +138,12 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem(NOMINATIONS_STORAGE_KEY, JSON.stringify(nominationList));
   }, [nominationList]);
+
+  useEffect(() => () => {
+    if (supportToastTimeoutRef.current) {
+      window.clearTimeout(supportToastTimeoutRef.current);
+    }
+  }, []);
 
   useEffect(() => {
     playlistRef.current = playlist;
@@ -559,20 +567,41 @@ export default function App() {
     setRenderNominationsList(false);
   }, []);
 
+  const showSupportToast = useCallback((message) => {
+    if (!message) return;
+
+    if (supportToastTimeoutRef.current) {
+      window.clearTimeout(supportToastTimeoutRef.current);
+    }
+
+    setSupportToastMessage(message);
+    supportToastTimeoutRef.current = window.setTimeout(() => {
+      supportToastTimeoutRef.current = null;
+      setSupportToastMessage('');
+    }, 1800);
+  }, []);
+
   const handleToggleSupportFromPlaylist = useCallback((video) => {
+    if (!video) return;
     if (nominationList.some(entry => entry.videoId === video.videoId)) return;
 
+    const exists = supportList.some(entry => entry.videoId === video.videoId);
+
     setSupportList(previousList => {
-      const exists = previousList.some(entry => entry.videoId === video.videoId);
       if (exists) {
         return previousList.filter(entry => entry.videoId !== video.videoId);
       }
 
       return [...previousList, video];
     });
-  }, [nominationList]);
+
+    if (!exists) {
+      showSupportToast('Added to Support list');
+    }
+  }, [nominationList, showSupportToast, supportList]);
 
   const handleAddToSupportList = useCallback((video) => {
+    if (!video) return 0;
     if (nominationList.some(entry => entry.videoId === video.videoId)) return 0;
 
     let addedCount = 0;
@@ -586,8 +615,12 @@ export default function App() {
       return result.nextList;
     });
 
+    if (addedCount > 0) {
+      showSupportToast('Added to Support list');
+    }
+
     return addedCount;
-  }, [nominationList]);
+  }, [nominationList, showSupportToast]);
 
   const handleAddManyToSupportList = useCallback((videos) => {
     if (!videos.length) {
@@ -611,8 +644,16 @@ export default function App() {
       return result.nextList;
     });
 
+    if (resultSummary.addedCount > 0) {
+      showSupportToast(
+        resultSummary.addedCount === 1
+          ? 'Added 1 song to Support list'
+          : `Added ${resultSummary.addedCount} songs to Support list`
+      );
+    }
+
     return resultSummary;
-  }, [nominationList]);
+  }, [nominationList, showSupportToast]);
 
   const handleRemoveFromNominationList = useCallback((videoIdsOrId) => {
     const videoIds = Array.isArray(videoIdsOrId) ? videoIdsOrId : [videoIdsOrId];
@@ -878,6 +919,12 @@ export default function App() {
           aria-label="Preview mode active"
         >
           <FastForwardIcon />
+        </div>
+      )}
+
+      {supportToastMessage && (
+        <div className="app-toast support-toast" role="status" aria-live="polite">
+          {supportToastMessage}
         </div>
       )}
 

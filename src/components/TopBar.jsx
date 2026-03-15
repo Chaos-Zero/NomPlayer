@@ -66,6 +66,7 @@ export default function TopBar({
     const [loading, setLoading] = useState(false);
     const [showSuccess, setShowSuccess] = useState(false);
     const [controlsOffset, setControlsOffset] = useState(0);
+    const [mobileKeyboardOffset, setMobileKeyboardOffset] = useState(0);
     const [error, setError] = useState('');
     const topbarRef = useRef(null);
     const formRef = useRef(null);
@@ -114,6 +115,50 @@ export default function TopBar({
             window.clearTimeout(successTimeoutRef.current);
         }
     }, []);
+
+    useEffect(() => {
+        if (!isMobileLayout || !isInputOpen) {
+            setMobileKeyboardOffset(0);
+            return undefined;
+        }
+
+        const visualViewport = window.visualViewport;
+        if (!visualViewport) {
+            setMobileKeyboardOffset(0);
+            return undefined;
+        }
+
+        let frameId = 0;
+
+        function measureKeyboardOffset() {
+            const nextOffset = Math.max(
+                0,
+                window.innerHeight - visualViewport.height - visualViewport.offsetTop
+            );
+            setMobileKeyboardOffset(previousOffset => (
+                Math.abs(previousOffset - nextOffset) < 1
+                    ? previousOffset
+                    : nextOffset
+            ));
+        }
+
+        function scheduleMeasure() {
+            window.cancelAnimationFrame(frameId);
+            frameId = window.requestAnimationFrame(measureKeyboardOffset);
+        }
+
+        scheduleMeasure();
+        visualViewport.addEventListener('resize', scheduleMeasure);
+        visualViewport.addEventListener('scroll', scheduleMeasure);
+        window.addEventListener('resize', scheduleMeasure);
+
+        return () => {
+            window.cancelAnimationFrame(frameId);
+            visualViewport.removeEventListener('resize', scheduleMeasure);
+            visualViewport.removeEventListener('scroll', scheduleMeasure);
+            window.removeEventListener('resize', scheduleMeasure);
+        };
+    }, [isInputOpen, isMobileLayout]);
 
     useEffect(() => {
         if (isMobileLayout) {
@@ -356,7 +401,11 @@ export default function TopBar({
         return (
             <>
                 {mobileCornerActions}
-                <div ref={topbarRef} className={`topbar mobile-layout${isInputOpen ? ' input-open' : ''}`}>
+                <div
+                    ref={topbarRef}
+                    className={`topbar mobile-layout${isInputOpen ? ' input-open' : ''}`}
+                    style={{ '--mobile-keyboard-offset': `${mobileKeyboardOffset}px` }}
+                >
                     <div
                         className={`mobile-topbar-floating-controls${isInputOpen ? ' visible' : ''}`}
                         aria-hidden={!isInputOpen}

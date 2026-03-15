@@ -178,6 +178,25 @@ describe('App', () => {
         expect(appTestState.playlistSidebarProps.playlist.map(video => video.title)).toEqual(['Alpha']);
     });
 
+    it('shows a toast when a song is added to the support list', () => {
+        render(<App />);
+
+        act(() => {
+            appTestState.topBarProps.onLoad(
+                [{ videoId: 'alpha1234567', title: 'Alpha', thumbnail: 'a.jpg', channelTitle: '' }],
+                { mode: 'append', autoplay: true }
+            );
+        });
+
+        act(() => {
+            appTestState.playlistSidebarProps.onToggleSupport(
+                { videoId: 'alpha1234567', title: 'Alpha', thumbnail: 'a.jpg', channelTitle: '' }
+            );
+        });
+
+        expect(screen.getByRole('status')).toHaveTextContent('Added to Support list');
+    });
+
     it('removes playlist entries and keeps playback on the next available track', () => {
         render(<App />);
 

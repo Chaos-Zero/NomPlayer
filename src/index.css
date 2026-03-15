@@ -892,6 +892,8 @@ body {
     border-top: none;
     border-bottom: none;
     overflow: visible;
+    transform: translateY(calc(-1 * var(--mobile-keyboard-offset, 0px)));
+    transition: transform 0.22s ease;
   }
 
   .main-content {
@@ -2035,6 +2037,28 @@ body {
   animation: collection-toast-in 0.22s ease;
 }
 
+.app-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  transform: translateX(-50%);
+  max-width: min(360px, calc(100% - 24px));
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  background: rgba(18, 18, 26, 0.96);
+  box-shadow: 0 16px 28px rgba(0, 0, 0, 0.34);
+  color: var(--text-primary);
+  font-size: 12px;
+  line-height: 1.4;
+  z-index: 190;
+  animation: collection-toast-in 0.22s ease;
+}
+
+.app-toast.support-toast {
+  border: 1px solid rgba(245, 158, 11, 0.36);
+  box-shadow: 0 16px 28px rgba(0, 0, 0, 0.34), 0 0 18px rgba(245, 158, 11, 0.12);
+}
+
 @keyframes collection-toast-in {
   from {
     opacity: 0;
@@ -2532,6 +2556,10 @@ body {
     right: 12px;
     left: 12px;
     max-width: none;
+  }
+
+  .app-toast {
+    bottom: calc(124px + env(safe-area-inset-bottom));
   }
 
   .fav-item {
