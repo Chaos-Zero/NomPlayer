@@ -39,10 +39,19 @@ function PauseIcon() {
     );
 }
 
+function SupportIcon() {
+    return (
+        <svg className="collection-icon" viewBox="0 0 20 20" aria-hidden="true">
+            <path d="M10 16.35 8.95 15.39C4.58 11.43 2 9.08 2 6.19 2 3.84 3.84 2 6.19 2c1.33 0 2.6.62 3.41 1.68A4.39 4.39 0 0 1 13.81 2C16.16 2 18 3.84 18 6.19c0 2.89-2.58 5.24-6.95 9.21L10 16.35Z" />
+        </svg>
+    );
+}
+
 export default function TopBar({
     isPlaying, setIsPlaying,
     onPrev, onNext,
     showSupportList, setShowSupportList,
+    showNominationsList, setShowNominationsList,
     onLoad,
 }) {
     const [urlValue, setUrlValue] = useState('');
@@ -338,11 +347,21 @@ export default function TopBar({
 
             <div ref={rightZoneRef} className="topbar-side topbar-right">
                 <button
-                    className={`star-btn${showSupportList ? ' active' : ''}`}
+                    className={`collection-toggle-btn support${showSupportList ? ' active' : ''}`}
                     onClick={() => setShowSupportList(s => !s)}
                     title={showSupportList ? 'Hide Support List' : 'Show Support List'}
-                    id="fav-toggle-btn"
+                    id="support-toggle-btn"
                     aria-label="Toggle support list"
+                >
+                    <SupportIcon />
+                </button>
+
+                <button
+                    className={`collection-toggle-btn nomination${showNominationsList ? ' active' : ''}`}
+                    onClick={() => setShowNominationsList(s => !s)}
+                    title={showNominationsList ? 'Hide Nominations' : 'Show Nominations'}
+                    id="nomination-toggle-btn"
+                    aria-label="Toggle nominations list"
                 >
                     ★
                 </button>

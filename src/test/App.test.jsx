@@ -60,6 +60,7 @@ describe('App', () => {
     });
 
     afterEach(() => {
+        vi.useRealTimers();
         vi.restoreAllMocks();
     });
 
@@ -314,6 +315,77 @@ describe('App', () => {
         expect(appTestState.playlistSidebarProps.listenedStatusById.alpha1234567).toBe('complete');
     });
 
+    it('advances to the next track after 31 seconds in preview mode without completing the current song', async () => {
+        vi.useFakeTimers();
+
+        render(<App />);
+
+        act(() => {
+            appTestState.topBarProps.onLoad(
+                [
+                    { videoId: 'alpha1234567', title: 'Alpha', thumbnail: 'a.jpg', channelTitle: '' },
+                    { videoId: 'beta12345678', title: 'Beta', thumbnail: 'b.jpg', channelTitle: '' },
+                ],
+                { mode: 'append', autoplay: true }
+            );
+        });
+
+        expect(appTestState.playlistSidebarProps.listenedStatusById.alpha1234567).toBe('partial');
+
+        act(() => {
+            appTestState.playlistSidebarProps.onTogglePreview();
+        });
+
+        expect(appTestState.playlistSidebarProps.isPreviewModeEnabled).toBe(true);
+
+        act(() => {
+            vi.advanceTimersByTime(31_000);
+        });
+
+        expect(appTestState.videoPlayerProps.video.title).toBe('Beta');
+        expect(appTestState.playlistSidebarProps.listenedStatusById.alpha1234567).toBe('partial');
+        expect(appTestState.playlistSidebarProps.listenedStatusById.beta12345678).toBe('partial');
+    });
+
+    it('stops the preview timer when preview mode is toggled off', async () => {
+        vi.useFakeTimers();
+
+        render(<App />);
+
+        act(() => {
+            appTestState.topBarProps.onLoad(
+                [
+                    { videoId: 'alpha1234567', title: 'Alpha', thumbnail: 'a.jpg', channelTitle: '' },
+                    { videoId: 'beta12345678', title: 'Beta', thumbnail: 'b.jpg', channelTitle: '' },
+                ],
+                { mode: 'append', autoplay: true }
+            );
+        });
+
+        expect(appTestState.playlistSidebarProps.listenedStatusById.alpha1234567).toBe('partial');
+
+        act(() => {
+            appTestState.playlistSidebarProps.onTogglePreview();
+        });
+
+        act(() => {
+            vi.advanceTimersByTime(15_000);
+        });
+
+        act(() => {
+            appTestState.playlistSidebarProps.onTogglePreview();
+        });
+
+        expect(appTestState.playlistSidebarProps.isPreviewModeEnabled).toBe(false);
+
+        act(() => {
+            vi.advanceTimersByTime(20_000);
+        });
+
+        expect(appTestState.videoPlayerProps.video.title).toBe('Alpha');
+        expect(appTestState.playlistSidebarProps.currentIndex).toBe(0);
+    });
+
     it('leaves a started song as partial when playback is skipped before completion', async () => {
         render(<App />);
 
@@ -337,5 +409,34 @@ describe('App', () => {
 
         expect(appTestState.playlistSidebarProps.listenedStatusById.alpha1234567).toBe('partial');
         expect(appTestState.videoPlayerProps.video.title).toBe('Beta');
+    });
+
+    it('removes a support item when the same song is added to nominations', () => {
+        render(<App />);
+
+        act(() => {
+            appTestState.topBarProps.setShowSupportList(true);
+        });
+
+        act(() => {
+            appTestState.supportPanelProps.onAddDirectItems([
+                { videoId: 'alpha1234567', title: 'Alpha', thumbnail: 'a.jpg', channelTitle: '' },
+            ]);
+        });
+
+        expect(appTestState.playlistSidebarProps.supportList.map(video => video.title)).toEqual(['Alpha']);
+
+        act(() => {
+            appTestState.topBarProps.setShowNominationsList(true);
+        });
+
+        act(() => {
+            appTestState.supportPanelProps.onAddDirectItems([
+                { videoId: 'alpha1234567', title: 'Alpha', thumbnail: 'a.jpg', channelTitle: '' },
+            ]);
+        });
+
+        expect(appTestState.playlistSidebarProps.supportList).toEqual([]);
+        expect(appTestState.playlistSidebarProps.nominationList.map(video => video.title)).toEqual(['Alpha']);
     });
 });

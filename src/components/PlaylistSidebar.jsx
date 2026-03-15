@@ -3,6 +3,15 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 const CONTEXT_MENU_WIDTH = 180;
 const CONTEXT_MENU_HEIGHT = 96;
 
+function FastForwardIcon() {
+    return (
+        <svg viewBox="0 0 20 20" aria-hidden="true">
+            <path d="M3.75 4.95v10.1c0 .58.64.94 1.14.64l6.45-4.98c.44-.34.44-1.08 0-1.42L4.89 4.31c-.5-.3-1.14.06-1.14.64Z" />
+            <path d="M10.5 4.95v10.1c0 .58.64.94 1.14.64l6.45-4.98c.44-.34.44-1.08 0-1.42l-6.45-4.98c-.5-.3-1.14.06-1.14.64Z" />
+        </svg>
+    );
+}
+
 function PlaylistItem({
     orderNumber,
     video,
@@ -11,6 +20,7 @@ function PlaylistItem({
     listenedStatus,
     onSelect,
     isSupported,
+    isNominated,
     onToggleSupport,
     onOpenContextMenu,
 }) {
@@ -20,6 +30,17 @@ function PlaylistItem({
         : listenedStatus === 'partial'
             ? 'Started'
             : null;
+    const supportLabel = isNominated
+        ? 'Nomination tracks cannot be changed from the playlist'
+        : isSupported
+            ? 'Remove from support list'
+            : 'Add to support list';
+    const supportTooltip = isNominated
+        ? 'In Nomination List'
+        : isSupported
+            ? 'In Support List'
+            : 'Add to support list';
+    const starStateClass = isNominated ? ' nominated locked' : isSupported ? ' supported' : '';
 
     return (
         <div
@@ -65,15 +86,16 @@ function PlaylistItem({
                     </svg>
                 </span>
                 <button
-                    className={`item-fav-btn${isSupported ? ' starred' : ''}`}
+                    className={`item-fav-btn${starStateClass}`}
                     onClick={event => {
                         event.stopPropagation();
                         onToggleSupport(video);
                     }}
-                    title={isSupported ? 'Remove from support list' : 'Add to support list'}
-                    aria-label={isSupported ? 'Remove from support list' : 'Add to support list'}
+                    title={supportTooltip}
+                    aria-label={supportLabel}
+                    disabled={isNominated}
                 >
-                    {isSupported ? '★' : '☆'}
+                    {isNominated || isSupported ? '★' : '☆'}
                 </button>
             </div>
         </div>
@@ -85,11 +107,14 @@ export default function PlaylistSidebar({
     currentIndex,
     flashVideoIds = [],
     isShuffleEnabled = false,
+    isPreviewModeEnabled = false,
     showOriginalOrder = false,
     onShuffle,
+    onTogglePreview,
     onToggleOrderView,
     onSelect,
     supportList,
+    nominationList = [],
     listenedStatusById = {},
     onToggleSupport,
     onAddToSupportList,
@@ -100,6 +125,10 @@ export default function PlaylistSidebar({
     const supportIds = useMemo(
         () => new Set(supportList.map(entry => entry.videoId)),
         [supportList]
+    );
+    const nominationIds = useMemo(
+        () => new Set(nominationList.map(entry => entry.videoId)),
+        [nominationList]
     );
     const flashIds = useMemo(
         () => new Set(flashVideoIds),
@@ -137,7 +166,7 @@ export default function PlaylistSidebar({
 
     if (!playlist.length) {
         return (
-            <div className="sidebar">
+            <div className="sidebar playlist-sidebar">
                 <div className="sidebar-header">
                     <span className="sidebar-title">Playlist</span>
                 </div>
@@ -190,12 +219,12 @@ export default function PlaylistSidebar({
     const showOrderToggle = isShuffleEnabled && playlist.length > 1;
 
     return (
-        <div className="sidebar">
+        <div className="sidebar playlist-sidebar">
             <div className="sidebar-header">
                 <span className="sidebar-title">Playlist</span>
                 <div className="sidebar-header-actions">
                     <button
-                        className={`sidebar-icon-btn${isShuffleEnabled ? ' active' : ''}`}
+                        className={`sidebar-icon-btn shuffle${isShuffleEnabled ? ' active' : ''}`}
                         type="button"
                         onClick={onShuffle}
                         disabled={playlist.length < 2}
@@ -203,6 +232,17 @@ export default function PlaylistSidebar({
                         title="Shuffle playlist"
                     >
                         🔀
+                    </button>
+                    <button
+                        className={`sidebar-icon-btn preview${isPreviewModeEnabled ? ' active' : ''}`}
+                        type="button"
+                        onClick={onTogglePreview}
+                        disabled={playlist.length === 0}
+                        aria-label="Preview mode"
+                        aria-pressed={isPreviewModeEnabled}
+                        title="Preview mode"
+                    >
+                        <FastForwardIcon />
                     </button>
                     <span className="sidebar-count">{playlist.length} videos</span>
                 </div>
@@ -219,7 +259,7 @@ export default function PlaylistSidebar({
                     </button>
                 </div>
             </div>
-            <div className="playlist-list" role="list">
+            <div className={`playlist-list${isPreviewModeEnabled ? ' preview-active' : ''}`} role="list">
                 {playlist.map((video, index) => (
                     <PlaylistItem
                         key={video.videoId}
@@ -230,11 +270,17 @@ export default function PlaylistSidebar({
                         listenedStatus={listenedStatusById[video.videoId] || null}
                         onSelect={onSelect}
                         isSupported={supportIds.has(video.videoId)}
+                        isNominated={nominationIds.has(video.videoId)}
                         onToggleSupport={onToggleSupport}
                         onOpenContextMenu={handleOpenContextMenu}
                     />
                 ))}
             </div>
+            {isPreviewModeEnabled && (
+                <div className="playlist-preview-indicator" role="img" aria-label="Preview mode active">
+                    <FastForwardIcon />
+                </div>
+            )}
             {contextMenu && (
                 <div
                     ref={contextMenuRef}
@@ -248,7 +294,10 @@ export default function PlaylistSidebar({
                         type="button"
                         role="menuitem"
                         onClick={() => handleSupport(contextMenu.video)}
-                        disabled={supportIds.has(contextMenu.video.videoId)}
+                        disabled={
+                            supportIds.has(contextMenu.video.videoId)
+                            || nominationIds.has(contextMenu.video.videoId)
+                        }
                     >
                         Support
                     </button>

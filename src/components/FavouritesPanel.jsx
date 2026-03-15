@@ -15,10 +15,13 @@ import {
     verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import { parseYouTubeInput, fetchPlaylistItems, singleVideoEntry } from '../utils/youtube.js';
 
 const CONTEXT_MENU_WIDTH = 220;
 const CONTEXT_MENU_HEIGHT = 140;
 const PANEL_CLOSE_MS = 240;
+const SUCCESS_FLASH_MS = 1000;
+const API_KEY = import.meta.env.VITE_YT_API_KEY || '';
 
 function SupportItem({
     index,
@@ -29,6 +32,9 @@ function SupportItem({
     selectionMode,
     isSelected,
     onToggleSelected,
+    itemAriaPrefix,
+    removeButtonTitle,
+    removeButtonAriaLabel,
 }) {
     const [imgError, setImgError] = useState(false);
 
@@ -81,7 +87,7 @@ function SupportItem({
                 style={{ cursor: selectionMode ? 'pointer' : 'default' }}
                 role="button"
                 tabIndex={0}
-                aria-label={`Support ${video.title}`}
+                aria-label={`${itemAriaPrefix} ${video.title}`}
                 onClick={() => {
                     if (selectionMode) {
                         onToggleSelected(video.videoId);
@@ -111,8 +117,8 @@ function SupportItem({
                         event.stopPropagation();
                         onRemove(video.videoId);
                     }}
-                    title="Remove from support list"
-                    aria-label="Remove from support list"
+                    title={removeButtonTitle}
+                    aria-label={removeButtonAriaLabel}
                 >
                     ✕
                 </button>
@@ -127,6 +133,9 @@ function SortableSupportItem({
     onRemove,
     onDoubleQueue,
     onOpenContextMenu,
+    itemAriaPrefix,
+    removeButtonTitle,
+    removeButtonAriaLabel,
 }) {
     const {
         attributes,
@@ -166,7 +175,245 @@ function SortableSupportItem({
                 selectionMode={false}
                 isSelected={false}
                 onToggleSelected={() => {}}
+                itemAriaPrefix={itemAriaPrefix}
+                removeButtonTitle={removeButtonTitle}
+                removeButtonAriaLabel={removeButtonAriaLabel}
             />
+        </div>
+    );
+}
+
+function CollectionAdder({
+    tone,
+    addButtonLabel,
+    onAddDirectItems,
+}) {
+    const [urlValue, setUrlValue] = useState('');
+    const [isOpen, setIsOpen] = useState(false);
+    const [loading, setLoading] = useState(false);
+    const [showSuccess, setShowSuccess] = useState(false);
+    const [error, setError] = useState('');
+    const [toastMessage, setToastMessage] = useState('');
+    const inputRef = useRef(null);
+    const activeRequestRef = useRef(0);
+    const successTimeoutRef = useRef(null);
+    const toastTimeoutRef = useRef(null);
+
+    useEffect(() => {
+        if (!isOpen) return undefined;
+
+        const frameId = window.requestAnimationFrame(() => {
+            inputRef.current?.focus();
+        });
+
+        return () => {
+            window.cancelAnimationFrame(frameId);
+        };
+    }, [isOpen]);
+
+    useEffect(() => () => {
+        if (successTimeoutRef.current) {
+            window.clearTimeout(successTimeoutRef.current);
+        }
+        if (toastTimeoutRef.current) {
+            window.clearTimeout(toastTimeoutRef.current);
+        }
+    }, []);
+
+    function clearSuccessFlash() {
+        if (successTimeoutRef.current) {
+            window.clearTimeout(successTimeoutRef.current);
+            successTimeoutRef.current = null;
+        }
+        setShowSuccess(false);
+    }
+
+    function flashSuccess() {
+        clearSuccessFlash();
+        setShowSuccess(true);
+        successTimeoutRef.current = window.setTimeout(() => {
+            successTimeoutRef.current = null;
+            setShowSuccess(false);
+        }, SUCCESS_FLASH_MS);
+    }
+
+    function showToast(message) {
+        if (toastTimeoutRef.current) {
+            window.clearTimeout(toastTimeoutRef.current);
+        }
+
+        setToastMessage(message);
+        toastTimeoutRef.current = window.setTimeout(() => {
+            toastTimeoutRef.current = null;
+            setToastMessage('');
+        }, 2600);
+    }
+
+    function openAdder() {
+        clearSuccessFlash();
+        setError('');
+        setIsOpen(true);
+    }
+
+    function closeAdder() {
+        activeRequestRef.current += 1;
+        clearSuccessFlash();
+        setLoading(false);
+        setError('');
+        setUrlValue('');
+        setIsOpen(false);
+    }
+
+    async function handleSubmit(event) {
+        event?.preventDefault();
+
+        if (!isOpen) {
+            openAdder();
+            return;
+        }
+
+        const trimmedUrl = urlValue.trim();
+        if (!trimmedUrl) return;
+
+        const parsed = parseYouTubeInput(trimmedUrl);
+        if (!parsed) {
+            setError('Could not recognise that URL or ID');
+            return;
+        }
+
+        const requestId = activeRequestRef.current + 1;
+        activeRequestRef.current = requestId;
+
+        clearSuccessFlash();
+        setError('');
+        setLoading(true);
+
+        try {
+            let items = [];
+
+            if (parsed.type === 'video') {
+                const item = await singleVideoEntry(parsed.videoId);
+                if (requestId !== activeRequestRef.current) return;
+                items = [item];
+            } else {
+                items = await fetchPlaylistItems(parsed.playlistId, API_KEY);
+                if (requestId !== activeRequestRef.current) return;
+
+                if (items.length === 0) {
+                    setError('Playlist is empty or private.');
+                    return;
+                }
+            }
+
+            const addResult = onAddDirectItems(items);
+            if (requestId !== activeRequestRef.current) return;
+
+            const normalizedResult = typeof addResult === 'number'
+                ? { addedCount: addResult, blockedNominationCount: 0 }
+                : {
+                    addedCount: addResult?.addedCount ?? 0,
+                    blockedNominationCount: addResult?.blockedNominationCount ?? 0,
+                };
+
+            if (normalizedResult.blockedNominationCount > 0 && tone === 'support') {
+                showToast(
+                    parsed.type === 'playlist'
+                        ? 'Some songs in this playlist have already been added as Nominations'
+                        : 'You have already added this link as a Nomination'
+                );
+            }
+
+            if (!normalizedResult.addedCount) {
+                if (normalizedResult.blockedNominationCount > 0) {
+                    setUrlValue('');
+                    return;
+                }
+
+                setError(
+                    tone === 'support'
+                        ? 'Nothing new could be added to the support list.'
+                        : 'Nothing new could be added to nominations.'
+                );
+                return;
+            }
+
+            setUrlValue('');
+            flashSuccess();
+        } catch (err) {
+            if (requestId !== activeRequestRef.current) return;
+
+            if (err.message === 'NO_API_KEY') {
+                setError('Add VITE_YT_API_KEY to .env to load playlists.');
+            } else {
+                setError(err.message || 'Failed to load videos.');
+            }
+        } finally {
+            if (requestId === activeRequestRef.current) {
+                setLoading(false);
+            }
+        }
+    }
+
+    return (
+        <div className={`collection-adder${isOpen ? ' open' : ''}${showSuccess ? ' success' : ''}`}>
+            {toastMessage && (
+                <div className="collection-adder-toast" role="status" aria-live="polite">
+                    {toastMessage}
+                </div>
+            )}
+            <div className="collection-adder-shell">
+                <div className="collection-adder-stage">
+                    <button
+                        className="collection-adder-face collection-adder-front"
+                        type="button"
+                        onClick={openAdder}
+                    >
+                        {addButtonLabel}
+                    </button>
+
+                    <form
+                        className={`collection-adder-face collection-adder-back${showSuccess ? ' success' : ''}`}
+                        onSubmit={handleSubmit}
+                    >
+                        <input
+                            ref={inputRef}
+                            className="collection-adder-input"
+                            type="text"
+                            placeholder="Paste a YouTube video or playlist URL…"
+                            value={urlValue}
+                            onChange={event => {
+                                setUrlValue(event.target.value);
+                                setError('');
+                                if (showSuccess) {
+                                    clearSuccessFlash();
+                                }
+                            }}
+                        />
+                        <button
+                            className={`collection-adder-submit${showSuccess ? ' success' : ''}`}
+                            type="submit"
+                            disabled={!showSuccess && !urlValue.trim()}
+                            aria-label={showSuccess ? 'Load successful' : undefined}
+                        >
+                            {showSuccess ? '✓' : loading ? 'Loading…' : 'Load'}
+                        </button>
+                        <button
+                            className="collection-adder-close"
+                            type="button"
+                            aria-label={`Close ${addButtonLabel.toLowerCase()}`}
+                            onClick={closeAdder}
+                        >
+                            ✕
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            {error && (
+                <div className="collection-adder-error">
+                    ⚠ {error}
+                </div>
+            )}
         </div>
     );
 }
@@ -180,6 +427,19 @@ export default function FavouritesPanel({
     onRemove,
     isOpen = true,
     onExited,
+    title = 'Support list',
+    titleIcon = '★',
+    tone = 'support',
+    emptyIcon = '☆',
+    emptyTitle = 'No support items yet',
+    emptyHint = 'Double-click an item to queue it, or right-click for Play Now, Add to Current Playlist, and Remove Support.',
+    itemAriaPrefix = 'Support',
+    removeButtonTitle = 'Remove from support list',
+    removeButtonAriaLabel = 'Remove from support list',
+    contextRemoveLabel = 'Remove Support',
+    closeLabel = 'Close support list',
+    addButtonLabel = 'Add Supports',
+    onAddDirectItems = () => 0,
 }) {
     const sensors = useSensors(
         useSensor(PointerSensor),
@@ -340,15 +600,15 @@ export default function FavouritesPanel({
             />
 
             <div
-                className={`fav-panel${isOpen ? '' : ' closing'}`}
+                className={`fav-panel ${tone}${isOpen ? '' : ' closing'}`}
                 role="dialog"
-                aria-label="Support list"
+                aria-label={title}
                 aria-modal="true"
             >
                 <div className="fav-panel-header">
                     <div className="fav-panel-title">
-                        <span>★</span>
-                        Support list
+                        <span className="fav-panel-title-icon">{titleIcon}</span>
+                        {title}
                         <span
                             style={{
                                 fontSize: 12,
@@ -381,21 +641,18 @@ export default function FavouritesPanel({
                                 {selectionMode ? 'Done' : 'Select'}
                             </button>
                         )}
-                        <button className="btn-close" onClick={onClose} aria-label="Close support list">✕</button>
+                        <button className="btn-close" onClick={onClose} aria-label={closeLabel}>✕</button>
                     </div>
                 </div>
 
                 <div className="fav-panel-body">
                     {supportList.length === 0 ? (
                         <div className="fav-empty">
-                            <div className="fav-empty-icon">☆</div>
+                            <div className="fav-empty-icon">{emptyIcon}</div>
                             <div style={{ fontSize: 14, color: 'var(--text-secondary)', fontWeight: 500 }}>
-                                No support items yet
+                                {emptyTitle}
                             </div>
-                            <div className="fav-hint">
-                                Double-click an item to queue it, or right-click for Play Now, Add to Current Playlist,
-                                and Remove Support.
-                            </div>
+                            <div className="fav-hint">{emptyHint}</div>
                         </div>
                     ) : selectionMode ? (
                         supportList.map((video, index) => (
@@ -409,6 +666,9 @@ export default function FavouritesPanel({
                                 selectionMode={true}
                                 isSelected={selectedIdSet.has(video.videoId)}
                                 onToggleSelected={handleToggleSelected}
+                                itemAriaPrefix={itemAriaPrefix}
+                                removeButtonTitle={removeButtonTitle}
+                                removeButtonAriaLabel={removeButtonAriaLabel}
                             />
                         ))
                     ) : (
@@ -429,11 +689,22 @@ export default function FavouritesPanel({
                                         onRemove={onRemove}
                                         onDoubleQueue={handleDoubleQueue}
                                         onOpenContextMenu={handleOpenContextMenu}
+                                        itemAriaPrefix={itemAriaPrefix}
+                                        removeButtonTitle={removeButtonTitle}
+                                        removeButtonAriaLabel={removeButtonAriaLabel}
                                     />
                                 ))}
                             </SortableContext>
                         </DndContext>
                     )}
+                </div>
+
+                <div className="fav-panel-footer">
+                    <CollectionAdder
+                        tone={tone}
+                        addButtonLabel={addButtonLabel}
+                        onAddDirectItems={onAddDirectItems}
+                    />
                 </div>
 
                 {contextMenu && isOpen && (
@@ -468,7 +739,7 @@ export default function FavouritesPanel({
                             role="menuitem"
                             onClick={handleRemoveSupport}
                         >
-                            Remove Support
+                            {contextRemoveLabel}
                         </button>
                     </div>
                 )}

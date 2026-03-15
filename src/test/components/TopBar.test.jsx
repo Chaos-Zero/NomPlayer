@@ -29,6 +29,8 @@ function renderTopBar(overrides = {}) {
         onNext: vi.fn(),
         showSupportList: false,
         setShowSupportList: vi.fn(),
+        showNominationsList: false,
+        setShowNominationsList: vi.fn(),
         onLoad: vi.fn(),
         ...overrides,
     };
@@ -61,6 +63,13 @@ describe('TopBar', () => {
 
         fireEvent.click(screen.getByRole('button', { name: 'Close add to playlist' }));
         expect(screen.getByRole('button', { name: 'Add to playlist' })).toBeInTheDocument();
+    });
+
+    it('renders separate support and nominations toggles', () => {
+        renderTopBar();
+
+        expect(screen.getByRole('button', { name: 'Toggle support list' })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Toggle nominations list' })).toBeInTheDocument();
     });
 
     it('awaits single video metadata before loading it', async () => {

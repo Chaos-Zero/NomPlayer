@@ -1,6 +1,7 @@
-import { act, fireEvent, render, screen } from '@testing-library/react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import FavouritesPanel from '../../components/FavouritesPanel.jsx';
+import { fetchPlaylistItems, parseYouTubeInput, singleVideoEntry } from '../../utils/youtube.js';
 
 vi.mock('@dnd-kit/core', () => ({
     DndContext: ({ children }) => <div>{children}</div>,
@@ -39,6 +40,12 @@ vi.mock('@dnd-kit/utilities', () => ({
     },
 }));
 
+vi.mock('../../utils/youtube.js', () => ({
+    parseYouTubeInput: vi.fn(),
+    fetchPlaylistItems: vi.fn(),
+    singleVideoEntry: vi.fn(),
+}));
+
 describe('FavouritesPanel', () => {
     const alpha = {
         videoId: 'alpha1234567',
@@ -61,6 +68,7 @@ describe('FavouritesPanel', () => {
             onPlayNow: vi.fn(),
             onAddToPlaylist: vi.fn(),
             onRemove: vi.fn(),
+            onAddDirectItems: vi.fn(() => 1),
             ...overrides,
         };
 
@@ -74,6 +82,10 @@ describe('FavouritesPanel', () => {
         vi.useRealTimers();
     });
 
+    beforeEach(() => {
+        vi.clearAllMocks();
+    });
+
     it('queues a support item on double click without playing it immediately', () => {
         const { props } = renderPanel();
 
@@ -81,6 +93,93 @@ describe('FavouritesPanel', () => {
 
         expect(props.onAddToPlaylist).toHaveBeenCalledWith([alpha]);
         expect(props.onPlayNow).not.toHaveBeenCalled();
+    });
+
+    it('loads a direct video into the support list from the footer adder', async () => {
+        const loadedVideo = {
+            videoId: 'gamma1234567',
+            title: 'Gamma',
+            thumbnail: 'g.jpg',
+            channelTitle: 'Channel G',
+        };
+        parseYouTubeInput.mockReturnValue({ type: 'video', videoId: loadedVideo.videoId });
+        singleVideoEntry.mockResolvedValue(loadedVideo);
+
+        const { props } = renderPanel({
+            supportList: [],
+            addButtonLabel: 'Add Supports',
+            onAddDirectItems: vi.fn(() => 1),
+        });
+
+        fireEvent.click(screen.getByRole('button', { name: 'Add Supports' }));
+        fireEvent.change(screen.getByRole('textbox'), { target: { value: loadedVideo.videoId } });
+        fireEvent.click(screen.getByRole('button', { name: 'Load' }));
+
+        await waitFor(() => {
+            expect(props.onAddDirectItems).toHaveBeenCalledWith([loadedVideo]);
+        });
+    });
+
+    it('shows a nomination-collision toast for blocked single support links', async () => {
+        const loadedVideo = {
+            videoId: 'gamma1234567',
+            title: 'Gamma',
+            thumbnail: 'g.jpg',
+            channelTitle: 'Channel G',
+        };
+        parseYouTubeInput.mockReturnValue({ type: 'video', videoId: loadedVideo.videoId });
+        singleVideoEntry.mockResolvedValue(loadedVideo);
+
+        renderPanel({
+            supportList: [],
+            addButtonLabel: 'Add Supports',
+            onAddDirectItems: vi.fn(() => ({ addedCount: 0, blockedNominationCount: 1 })),
+        });
+
+        fireEvent.click(screen.getByRole('button', { name: 'Add Supports' }));
+        fireEvent.change(screen.getByRole('textbox'), { target: { value: loadedVideo.videoId } });
+        fireEvent.click(screen.getByRole('button', { name: 'Load' }));
+
+        await waitFor(() => {
+            expect(
+                screen.getByText('You have already added this link as a Nomination')
+            ).toBeInTheDocument();
+        });
+    });
+
+    it('shows a nomination-collision toast for blocked support playlists', async () => {
+        const playlistItems = [
+            { videoId: 'gamma1234567', title: 'Gamma', thumbnail: 'g.jpg', channelTitle: 'Channel G' },
+            { videoId: 'delta1234567', title: 'Delta', thumbnail: 'd.jpg', channelTitle: 'Channel D' },
+        ];
+        parseYouTubeInput.mockReturnValue({ type: 'playlist', playlistId: 'PL123' });
+        fetchPlaylistItems.mockResolvedValue(playlistItems);
+
+        renderPanel({
+            supportList: [],
+            addButtonLabel: 'Add Supports',
+            onAddDirectItems: vi.fn(() => ({ addedCount: 1, blockedNominationCount: 1 })),
+        });
+
+        fireEvent.click(screen.getByRole('button', { name: 'Add Supports' }));
+        fireEvent.change(screen.getByRole('textbox'), { target: { value: 'PL123' } });
+        fireEvent.click(screen.getByRole('button', { name: 'Load' }));
+
+        await waitFor(() => {
+            expect(
+                screen.getByText('Some songs in this playlist have already been added as Nominations')
+            ).toBeInTheDocument();
+        });
+    });
+
+    it('renders nomination-specific footer copy', () => {
+        renderPanel({
+            title: 'Nominations',
+            tone: 'nomination',
+            addButtonLabel: 'Add Nominations',
+        });
+
+        expect(screen.getByRole('button', { name: 'Add Nominations' })).toBeInTheDocument();
     });
 
     it('shows single-item context menu actions including Play Now', () => {
