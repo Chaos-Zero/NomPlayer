@@ -691,6 +691,100 @@ describe('App', () => {
     ).toBe('complete');
   });
 
+  it('restarts from the first track when play is pressed after the last track finishes', () => {
+    render(<App />);
+    openPlayerView();
+
+    act(() => {
+      appTestState.topBarProps.onLoad(
+        [
+          {
+            videoId: 'alpha1234567',
+            title: 'Alpha',
+            thumbnail: 'a.jpg',
+            channelTitle: '',
+          },
+          {
+            videoId: 'beta12345678',
+            title: 'Beta',
+            thumbnail: 'b.jpg',
+            channelTitle: '',
+          },
+        ],
+        { mode: 'append', autoplay: true },
+      );
+    });
+
+    act(() => {
+      appTestState.topBarProps.onNext();
+    });
+
+    expect(appTestState.videoPlayerProps.video.title).toBe('Beta');
+    expect(appTestState.videoPlayerProps.isPlaying).toBe(true);
+
+    act(() => {
+      appTestState.videoPlayerProps.onVideoEnd();
+    });
+
+    expect(appTestState.videoPlayerProps.video.title).toBe('Beta');
+    expect(appTestState.videoPlayerProps.isPlaying).toBe(false);
+
+    act(() => {
+      appTestState.topBarProps.setIsPlaying((previousValue) => !previousValue);
+    });
+
+    expect(appTestState.videoPlayerProps.video.title).toBe('Alpha');
+    expect(appTestState.videoPlayerProps.isPlaying).toBe(true);
+    expect(appTestState.playlistSidebarProps.currentIndex).toBe(0);
+  });
+
+  it('resumes the current track after a normal pause on the last playlist song', () => {
+    render(<App />);
+    openPlayerView();
+
+    act(() => {
+      appTestState.topBarProps.onLoad(
+        [
+          {
+            videoId: 'alpha1234567',
+            title: 'Alpha',
+            thumbnail: 'a.jpg',
+            channelTitle: '',
+          },
+          {
+            videoId: 'beta12345678',
+            title: 'Beta',
+            thumbnail: 'b.jpg',
+            channelTitle: '',
+          },
+        ],
+        { mode: 'append', autoplay: true },
+      );
+    });
+
+    act(() => {
+      appTestState.topBarProps.onNext();
+    });
+
+    expect(appTestState.videoPlayerProps.video.title).toBe('Beta');
+    expect(appTestState.videoPlayerProps.isPlaying).toBe(true);
+
+    act(() => {
+      appTestState.topBarProps.setIsPlaying((previousValue) => !previousValue);
+    });
+
+    expect(appTestState.videoPlayerProps.video.title).toBe('Beta');
+    expect(appTestState.videoPlayerProps.isPlaying).toBe(false);
+
+    act(() => {
+      appTestState.topBarProps.setIsPlaying((previousValue) => !previousValue);
+    });
+
+    expect(appTestState.videoPlayerProps.video.title).toBe('Beta');
+    expect(appTestState.videoPlayerProps.isPlaying).toBe(true);
+    expect(appTestState.playlistSidebarProps.currentIndex).toBe(1);
+  });
+
   it('advances to the next track after 31 seconds in preview mode without completing the current song', async () => {
     vi.useFakeTimers();
 

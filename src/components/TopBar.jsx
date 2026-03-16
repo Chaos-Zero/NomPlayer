@@ -71,6 +71,7 @@ export default function TopBar({
   setIsPlaying,
   onPrev,
   onNext,
+  canTogglePlayback = true,
   showSupportList,
   setShowSupportList,
   showNominationsList,
@@ -448,6 +449,7 @@ export default function TopBar({
           title={isPlaying ? 'Pause' : 'Play'}
           id={withIds ? 'play-pause-btn' : undefined}
           aria-label={isPlaying ? 'Pause' : 'Play'}
+          disabled={!canTogglePlayback}
           tabIndex={hidden ? -1 : 0}
         >
           {isMobileLayout && isPreviewModeEnabled ? (

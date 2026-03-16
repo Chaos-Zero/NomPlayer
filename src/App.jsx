@@ -119,6 +119,7 @@ export default function App() {
   );
   const [isPreviewModeEnabled, setIsPreviewModeEnabled] = useState(false);
   const isPlayingRef = useRef(false);
+  const hasReachedPlaylistEndRef = useRef(false);
 
   // Playback
   const [isPlaying, setIsPlaying] = useState(false);
@@ -293,6 +294,7 @@ export default function App() {
     }
 
     if (resolvedPlayOrderIds.length === 0) {
+      hasReachedPlaylistEndRef.current = false;
       setIsPlaying(false);
       return;
     }
@@ -304,11 +306,13 @@ export default function App() {
     );
 
     if (currentPlayIndex >= resolvedPlayOrderIds.length - 1) {
+      hasReachedPlaylistEndRef.current = false;
       setIsPlaying(false);
       return;
     }
 
     const nextVideoId = resolvedPlayOrderIds[currentPlayIndex + 1];
+    hasReachedPlaylistEndRef.current = false;
     markVideoStarted(nextVideoId);
     setCurrentVideoId(nextVideoId);
     setIsPlaying(true);
@@ -391,6 +395,7 @@ export default function App() {
 
       playlistRef.current = nextPlaylist;
       setPlaylist(nextPlaylist);
+      hasReachedPlaylistEndRef.current = false;
       if (isMobileLayout) {
         setIsPlaylistCollapsed(false);
       }
@@ -456,6 +461,7 @@ export default function App() {
 
       transientResumeVideoIdRef.current = null;
       setTransientVideo(null);
+      hasReachedPlaylistEndRef.current = false;
       playlistRef.current = items;
       setPlaylist(items);
       if (isMobileLayout) {
@@ -488,6 +494,7 @@ export default function App() {
 
       transientResumeVideoIdRef.current = null;
       setTransientVideo(null);
+      hasReachedPlaylistEndRef.current = false;
       if (isPlaying) {
         markVideoStarted(videoId);
       }
@@ -505,6 +512,7 @@ export default function App() {
 
     transientResumeVideoIdRef.current = null;
     setTransientVideo(null);
+    hasReachedPlaylistEndRef.current = false;
 
     const activeVideoId = currentVideoIdRef.current ?? resolvedPlayOrderIds[0];
     const currentPlayIndex = Math.max(
@@ -529,6 +537,7 @@ export default function App() {
 
     transientResumeVideoIdRef.current = null;
     setTransientVideo(null);
+    hasReachedPlaylistEndRef.current = false;
 
     const activeVideoId = currentVideoIdRef.current ?? resolvedPlayOrderIds[0];
     const currentPlayIndex = Math.max(
@@ -558,10 +567,12 @@ export default function App() {
         resumeVideoId &&
         playlistRef.current.some((video) => video.videoId === resumeVideoId)
       ) {
+        hasReachedPlaylistEndRef.current = false;
         markVideoStarted(resumeVideoId);
         setCurrentVideoId(resumeVideoId);
         setIsPlaying(true);
       } else {
+        hasReachedPlaylistEndRef.current = false;
         setIsPlaying(false);
       }
       return;
@@ -585,11 +596,15 @@ export default function App() {
       currentPlayIndex < resolvedPlayOrderIds.length - 1
     ) {
       const nextVideoId = resolvedPlayOrderIds[currentPlayIndex + 1];
+      hasReachedPlaylistEndRef.current = false;
       markVideoStarted(nextVideoId);
       setCurrentVideoId(nextVideoId);
       return;
     }
 
+    hasReachedPlaylistEndRef.current =
+      resolvedPlayOrderIds.length > 0 &&
+      currentPlayIndex === resolvedPlayOrderIds.length - 1;
     setIsPlaying(false);
   }, [
     isPlaying,
@@ -601,6 +616,8 @@ export default function App() {
 
   // ── Shuffle ─────────────────────────────────────────────────────
   const handleShufflePlaylist = useCallback(() => {
+    hasReachedPlaylistEndRef.current = false;
+
     if (shuffleOrderIdsRef.current.length > 0) {
       shuffleOrderIdsRef.current = [];
       setShuffleOrderIds([]);
@@ -822,6 +839,7 @@ export default function App() {
 
   const handleRemoveFromPlaylist = useCallback(
     (videoId) => {
+      hasReachedPlaylistEndRef.current = false;
       const previousPlaylist = playlistRef.current;
       const removeIndex = previousPlaylist.findIndex(
         (video) => video.videoId === videoId,
@@ -908,6 +926,7 @@ export default function App() {
 
   const handlePlayNowFromSupportList = useCallback(
     (video) => {
+      hasReachedPlaylistEndRef.current = false;
       const resolvedPlayOrderIds = resolvePlayOrderIds(
         playlistRef.current,
         shuffleOrderIdsRef.current,
@@ -943,10 +962,34 @@ export default function App() {
       const previousValue = isPlayingRef.current;
       const nextValue =
         typeof value === 'function' ? value(previousValue) : value;
+      const resolvedPlayOrderIds = resolvePlayOrderIds(
+        playlistRef.current,
+        shuffleOrderIdsRef.current,
+      );
+      const hasPlayableQueue =
+        Boolean(transientVideo) || resolvedPlayOrderIds.length > 0;
+
+      if (!hasPlayableQueue) {
+        setIsPlaying(false);
+        return;
+      }
 
       if (!previousValue && nextValue) {
-        if (!transientVideo) {
-          markVideoStarted(currentVideoIdRef.current);
+        if (transientVideo) {
+          hasReachedPlaylistEndRef.current = false;
+        } else {
+          const restartVideoId =
+            hasReachedPlaylistEndRef.current && resolvedPlayOrderIds.length > 0
+              ? resolvedPlayOrderIds[0]
+              : (currentVideoIdRef.current ?? resolvedPlayOrderIds[0] ?? null);
+
+          if (restartVideoId && restartVideoId !== currentVideoIdRef.current) {
+            setCurrentVideoId(restartVideoId);
+          }
+          if (restartVideoId) {
+            markVideoStarted(restartVideoId);
+          }
+          hasReachedPlaylistEndRef.current = false;
         }
       }
 
@@ -1051,6 +1094,7 @@ export default function App() {
 
   const shellIsCollapsed = isPlaylistCollapsed || !isPlayerPage;
   const shouldRenderPersistentPlayer = isPlayerPage || Boolean(currentVideo);
+  const canTogglePlayback = Boolean(transientVideo) || playlist.length > 0;
   const hasDetachedFooter =
     !isPlayerPage && Boolean(currentVideo) && !isDetachedFooterPending;
   const isDesktopDetachedFooter = hasDetachedFooter && !isMobileLayout;
@@ -1127,6 +1171,7 @@ export default function App() {
           setIsPlaying={handleSetIsPlaying}
           onPrev={handlePrev}
           onNext={handleNext}
+          canTogglePlayback={canTogglePlayback}
           showSupportList={showSupportList}
           setShowSupportList={(value) => {
             if (typeof value === 'function') {

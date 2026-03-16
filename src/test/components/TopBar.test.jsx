@@ -51,6 +51,7 @@ function renderTopBar(overrides = {}) {
     setIsPlaying: vi.fn(),
     onPrev: vi.fn(),
     onNext: vi.fn(),
+    canTogglePlayback: true,
     showSupportList: false,
     setShowSupportList: vi.fn(),
     showNominationsList: false,
@@ -174,6 +175,12 @@ describe('TopBar', () => {
     });
 
     expect(screen.getByText('Alpha')).toBeInTheDocument();
+  });
+
+  it('disables the play button when there is no playable queue', () => {
+    renderTopBar({ canTogglePlayback: false });
+
+    expect(screen.getByRole('button', { name: 'Play' })).toBeDisabled();
   });
 
   it('awaits single video metadata before loading it', async () => {
