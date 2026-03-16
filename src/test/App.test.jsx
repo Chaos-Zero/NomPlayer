@@ -43,7 +43,9 @@ function openPlayerView() {
 vi.mock('../components/TopBar.jsx', () => ({
   default: function MockTopBar(props) {
     appTestState.topBarProps = props;
-    return <div data-testid="topbar-mock" />;
+    return (
+      <div data-testid="topbar-mock">{props.mobileDetachedPlayer ?? null}</div>
+    );
   },
 }));
 
@@ -146,6 +148,38 @@ describe('App', () => {
 
     expect(screen.getByText('Discover')).toBeInTheDocument();
     expect(screen.getByTestId('video-player-mock')).toHaveTextContent('Alpha');
+  });
+
+  it('switches the player into mini mode on mobile when leaving the player page', async () => {
+    mockMatchMedia(true);
+
+    render(<App />);
+    openPlayerView();
+
+    act(() => {
+      appTestState.topBarProps.onLoad(
+        [
+          {
+            videoId: 'alpha1234567',
+            title: 'Alpha',
+            thumbnail: 'a.jpg',
+            channelTitle: '',
+          },
+        ],
+        { mode: 'append', autoplay: true },
+      );
+    });
+
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Open navigation menu' }),
+    );
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Home' }));
+
+    expect(screen.getByText('Discover')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(appTestState.videoPlayerProps.variant).toBe('mini');
+      expect(appTestState.videoPlayerProps.showMetadata).toBe(false);
+    });
   });
 
   it('autoplays a loaded single video when the playlist is empty', () => {

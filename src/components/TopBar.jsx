@@ -85,6 +85,7 @@ export default function TopBar({
   onToggleCurrentVideoSupport,
   onLoad,
   isPlayerPage = true,
+  hasMobileDetachedPlayer = false,
   onNavigateToPlayer,
 }) {
   const isMobileLayout = useMediaQuery('(max-width: 960px)');
@@ -129,6 +130,11 @@ export default function TopBar({
       ? '♥'
       : '♡';
   const mobileNowPlayingText = currentVideo?.title ?? '';
+  const playerActionLabel = isPlayerPage
+    ? 'Add to playlist'
+    : isMobileLayout
+      ? 'Player'
+      : 'Go to player';
   const clearSuccessFlash = useCallback(() => {
     if (successTimeoutRef.current) {
       window.clearTimeout(successTimeoutRef.current);
@@ -516,7 +522,7 @@ export default function TopBar({
         {mobileCornerActions}
         <div
           ref={topbarRef}
-          className={`topbar mobile-layout${effectiveInputOpen ? ' input-open' : ''}`}
+          className={`topbar mobile-layout${effectiveInputOpen ? ' input-open' : ''}${hasMobileDetachedPlayer ? ' mobile-detached-player' : ''}`}
           style={{ '--mobile-keyboard-offset': `${mobileKeyboardOffset}px` }}
         >
           <div
@@ -532,13 +538,20 @@ export default function TopBar({
           {error && <span className="mobile-url-error">⚠ {error}</span>}
 
           <div
-            className={`mobile-topbar-shell${effectiveInputOpen ? ' open' : ''}`}
+            className={`mobile-topbar-shell${effectiveInputOpen ? ' open' : ''}${hasMobileDetachedPlayer ? ' has-detached-player' : ''}`}
           >
             <div className="mobile-topbar-stage">
               <div
-                className="mobile-topbar-face mobile-topbar-front"
+                className={`mobile-topbar-face mobile-topbar-front${hasMobileDetachedPlayer ? ' with-detached-player' : ''}`}
                 aria-hidden={effectiveInputOpen}
               >
+                {hasMobileDetachedPlayer && (
+                  <div
+                    className="mobile-topbar-player-spacer"
+                    aria-hidden="true"
+                  />
+                )}
+
                 {mobileNowPlayingText && (
                   <div
                     className="mobile-now-playing-inline"
@@ -562,12 +575,10 @@ export default function TopBar({
                       className="mobile-add-btn"
                       type="button"
                       onClick={openInput}
-                      aria-label={
-                        isPlayerPage ? 'Add to playlist' : 'Go to player'
-                      }
+                      aria-label={playerActionLabel}
                       tabIndex={effectiveInputOpen ? -1 : 0}
                     >
-                      {isPlayerPage ? 'Add' : 'Go to player'}
+                      {isPlayerPage ? 'Add' : playerActionLabel}
                     </button>
                   </div>
 
@@ -688,9 +699,7 @@ export default function TopBar({
                   ? 'Loading…'
                   : effectiveInputOpen
                     ? 'Load'
-                    : isPlayerPage
-                      ? 'Add to playlist'
-                      : 'Go to player'}
+                    : playerActionLabel}
             </button>
             <button
               className="btn btn-icon url-close-btn"

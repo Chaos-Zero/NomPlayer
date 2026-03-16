@@ -134,10 +134,14 @@ export default function App() {
   const [isDetachedFooterEntering, setIsDetachedFooterEntering] =
     useState(false);
   const [isDetachedFooterPending, setIsDetachedFooterPending] = useState(false);
+  const [isPlayerRevealPending, setIsPlayerRevealPending] = useState(false);
+  const [isPlayerRevealing, setIsPlayerRevealing] = useState(false);
   const supportToastTimeoutRef = useRef(null);
   const restoreTransitionFrameRef = useRef(0);
   const detachedFooterTimeoutRef = useRef(0);
   const detachedFooterFrameRef = useRef(0);
+  const playerRevealTimeoutRef = useRef(0);
+  const playerRevealFrameRef = useRef(0);
 
   // Persist support list
   useEffect(() => {
@@ -165,6 +169,12 @@ export default function App() {
       }
       if (detachedFooterFrameRef.current) {
         window.cancelAnimationFrame(detachedFooterFrameRef.current);
+      }
+      if (playerRevealTimeoutRef.current) {
+        window.clearTimeout(playerRevealTimeoutRef.current);
+      }
+      if (playerRevealFrameRef.current) {
+        window.cancelAnimationFrame(playerRevealFrameRef.current);
       }
     },
     [],
@@ -949,9 +959,12 @@ export default function App() {
     (nextPage) => {
       const shouldAnimateDetachedFooter =
         nextPage !== 'player' &&
-        !isMobileLayout &&
         Boolean(currentVideoIdRef.current) &&
         isPlayingRef.current;
+      const shouldAnimatePlayerReveal =
+        nextPage === 'player' &&
+        !isMobileLayout &&
+        Boolean(currentVideoIdRef.current);
 
       if (nextPage === 'player' && !isMobileLayout && !isPlaylistCollapsed) {
         if (restoreTransitionFrameRef.current) {
@@ -972,6 +985,14 @@ export default function App() {
         window.cancelAnimationFrame(detachedFooterFrameRef.current);
         detachedFooterFrameRef.current = 0;
       }
+      if (playerRevealFrameRef.current) {
+        window.cancelAnimationFrame(playerRevealFrameRef.current);
+        playerRevealFrameRef.current = 0;
+      }
+      if (playerRevealTimeoutRef.current) {
+        window.clearTimeout(playerRevealTimeoutRef.current);
+        playerRevealTimeoutRef.current = 0;
+      }
 
       if (shouldAnimateDetachedFooter) {
         if (detachedFooterTimeoutRef.current) {
@@ -986,6 +1007,14 @@ export default function App() {
         }
         setIsDetachedFooterPending(false);
         setIsDetachedFooterEntering(false);
+      }
+
+      if (shouldAnimatePlayerReveal) {
+        setIsPlayerRevealPending(true);
+        setIsPlayerRevealing(true);
+      } else {
+        setIsPlayerRevealPending(false);
+        setIsPlayerRevealing(false);
       }
 
       setActivePage(nextPage);
@@ -1003,6 +1032,19 @@ export default function App() {
           });
         });
       }
+
+      if (shouldAnimatePlayerReveal) {
+        playerRevealFrameRef.current = window.requestAnimationFrame(() => {
+          playerRevealFrameRef.current = window.requestAnimationFrame(() => {
+            playerRevealFrameRef.current = 0;
+            setIsPlayerRevealPending(false);
+            playerRevealTimeoutRef.current = window.setTimeout(() => {
+              playerRevealTimeoutRef.current = 0;
+              setIsPlayerRevealing(false);
+            }, 180);
+          });
+        });
+      }
     },
     [isMobileLayout, isPlaylistCollapsed],
   );
@@ -1010,15 +1052,53 @@ export default function App() {
   const shellIsCollapsed = isPlaylistCollapsed || !isPlayerPage;
   const shouldRenderPersistentPlayer = isPlayerPage || Boolean(currentVideo);
   const hasDetachedFooter =
-    !isPlayerPage &&
-    !isMobileLayout &&
-    Boolean(currentVideo) &&
-    !isDetachedFooterPending;
+    !isPlayerPage && Boolean(currentVideo) && !isDetachedFooterPending;
+  const isDesktopDetachedFooter = hasDetachedFooter && !isMobileLayout;
+  const isMobileDetachedFooter = hasDetachedFooter && isMobileLayout;
   const playerPresentation = isPlayerPage
-    ? 'full'
+    ? isPlayerRevealPending
+      ? 'hidden'
+      : 'full'
     : hasDetachedFooter
       ? 'mini'
       : 'hidden';
+  const persistentPlayer = shouldRenderPersistentPlayer ? (
+    <div
+      className={`player-surface player-surface-${playerPresentation}${hasDetachedFooter ? ' detached-footer' : ''}${isMobileDetachedFooter ? ' mobile-detached-footer' : ''}${isPlaying ? ' playing' : ''}${isDetachedFooterEntering ? ' entering' : ''}${isPlayerRevealing ? ' revealing' : ''}`}
+    >
+      <VideoPlayer
+        video={currentVideo}
+        isPlaying={isPlaying}
+        onVideoEnd={handleVideoEnd}
+        onPrev={handlePrev}
+        onNext={handleNext}
+        onTogglePlay={() =>
+          handleSetIsPlaying((previousValue) => !previousValue)
+        }
+        isShuffleEnabled={isShuffleEnabled}
+        onShuffle={handleShufflePlaylist}
+        isPreviewModeEnabled={isPreviewModeEnabled}
+        onTogglePreview={handleTogglePreviewMode}
+        isSupported={isCurrentVideoSupported}
+        isNominated={isCurrentVideoNominated}
+        onToggleSupport={handleToggleSupportFromPlaylist}
+        variant={playerPresentation}
+        showMetadata={isPlayerPage}
+      />
+
+      {isDesktopDetachedFooter && (
+        <div className="now-playing-footer">
+          <span className="now-playing-footer-dot-slot">
+            {isPlaying && <span className="now-playing-dot" />}
+          </span>
+          <ScrollingText
+            className="now-playing-footer-title"
+            text={currentVideo.title}
+          />
+        </div>
+      )}
+    </div>
+  ) : null;
 
   return (
     <div className={`app-frame${isMobileLayout ? ' mobile' : ''}`}>
@@ -1093,6 +1173,7 @@ export default function App() {
           onToggleCurrentVideoSupport={handleToggleSupportFromPlaylist}
           onLoad={handleLoad}
           isPlayerPage={isPlayerPage}
+          hasMobileDetachedPlayer={isMobileDetachedFooter}
           onNavigateToPlayer={() => handleNavigate('player')}
         />
 
@@ -1102,43 +1183,7 @@ export default function App() {
         >
           {!isPlayerPage && <HomePage />}
 
-          {shouldRenderPersistentPlayer && (
-            <div
-              className={`player-surface player-surface-${playerPresentation}${hasDetachedFooter ? ' detached-footer' : ''}${isPlaying ? ' playing' : ''}${isDetachedFooterEntering ? ' entering' : ''}`}
-            >
-              <VideoPlayer
-                video={currentVideo}
-                isPlaying={isPlaying}
-                onVideoEnd={handleVideoEnd}
-                onPrev={handlePrev}
-                onNext={handleNext}
-                onTogglePlay={() =>
-                  handleSetIsPlaying((previousValue) => !previousValue)
-                }
-                isShuffleEnabled={isShuffleEnabled}
-                onShuffle={handleShufflePlaylist}
-                isPreviewModeEnabled={isPreviewModeEnabled}
-                onTogglePreview={handleTogglePreviewMode}
-                isSupported={isCurrentVideoSupported}
-                isNominated={isCurrentVideoNominated}
-                onToggleSupport={handleToggleSupportFromPlaylist}
-                variant={playerPresentation}
-                showMetadata={isPlayerPage}
-              />
-
-              {hasDetachedFooter && (
-                <div className="now-playing-footer">
-                  <span className="now-playing-footer-dot-slot">
-                    {isPlaying && <span className="now-playing-dot" />}
-                  </span>
-                  <ScrollingText
-                    className="now-playing-footer-title"
-                    text={currentVideo.title}
-                  />
-                </div>
-              )}
-            </div>
-          )}
+          {persistentPlayer}
         </main>
 
         {isPlayerPage && (

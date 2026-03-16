@@ -117,6 +117,21 @@ describe('TopBar', () => {
     ).toBeInTheDocument();
   });
 
+  it('shows a shorter player button label on mobile outside the player page', () => {
+    mockMatchMedia(true);
+
+    const onNavigateToPlayer = vi.fn();
+    renderTopBar({
+      isPlayerPage: false,
+      onNavigateToPlayer,
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Player' }));
+
+    expect(onNavigateToPlayer).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole('button', { name: 'Player' })).toBeInTheDocument();
+  });
+
   it('renders shuffle/preview playback controls plus support and nominations toggles', () => {
     renderTopBar();
 

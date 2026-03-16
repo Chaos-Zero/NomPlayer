@@ -2,29 +2,25 @@ const HOME_PANES = [
   {
     title: 'Discover',
     eyebrow: 'Placeholder',
-    description:
-      'Surface featured playlists, staff picks, and fresh soundtrack finds here.',
+    description: 'Placeholder.',
     tone: 'discover',
   },
   {
     title: 'Manage Lists',
     eyebrow: 'Placeholder',
-    description:
-      'Give support, nominations, and curated collections a dedicated control hub.',
+    description: 'Placeholder.',
     tone: 'manage',
   },
   {
     title: 'Listen Now',
     eyebrow: 'Placeholder',
-    description:
-      'Highlight active sessions, quick-start mixes, and current listening queues.',
+    description: 'Placeholder.',
     tone: 'listen',
   },
   {
     title: 'VGMC Updates',
     eyebrow: 'Placeholder',
-    description:
-      'Reserve this space for announcements, events, and recently added tracks.',
+    description: 'Placeholder.',
     tone: 'updates',
   },
 ];
