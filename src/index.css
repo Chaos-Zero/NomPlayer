@@ -24,6 +24,8 @@
   --sidebar-w: 400px;
   --sidebar-collapsed-w: 0px;
   --support-panel-w: 520px;
+  --player-max-w: 900px;
+  --player-meta-reserve-h: 78px;
   --transition: 0.2s ease;
 }
 
@@ -1028,9 +1030,13 @@ body {
 /* ─── Video Player ─── */
 .player-wrap {
   width: 100%;
-  max-width: 900px;
+  max-width: var(--player-max-w);
+  min-height: min(
+    calc((var(--player-max-w) * 9 / 16) + var(--player-meta-reserve-h)),
+    calc(100dvh - var(--topbar-h) - 40px)
+  );
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
   position: relative;
 }
