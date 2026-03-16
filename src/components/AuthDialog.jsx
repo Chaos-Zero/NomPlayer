@@ -115,7 +115,7 @@ export default function AuthDialog({
                   </label>
 
                   <label className="auth-dialog-field">
-                    <span>GameFAQs username (optional)</span>
+                    <span>GameFAQs Username (optional)</span>
                     <input
                       name="gamefaqs_username"
                       type="text"

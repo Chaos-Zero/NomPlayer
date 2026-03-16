@@ -20,6 +20,7 @@ export default function UserMenu({
   compact = false,
 }) {
   const [isOpen, setIsOpen] = useState(false);
+  const [failedAvatarUrl, setFailedAvatarUrl] = useState('');
   const menuRef = useRef(null);
 
   useEffect(() => {
@@ -49,6 +50,10 @@ export default function UserMenu({
     profile?.username || user?.user_metadata?.username || 'User';
   const email = profile?.email || user?.email || '';
   const gamefaqsUsername = profile?.gamefaqs_username || '';
+  const avatarUrl = profile?.avatar_url || '';
+  const showAvatar = Boolean(
+    user && avatarUrl && avatarUrl !== failedAvatarUrl,
+  );
   const secondaryLabel = gamefaqsUsername
     ? `GameFaqs: ${gamefaqsUsername}`
     : email;
@@ -59,7 +64,7 @@ export default function UserMenu({
       className={`user-menu${compact ? ' compact' : ''}${isOpen ? ' open' : ''}`}
     >
       <button
-        className={`collection-toggle-btn user-toggle-btn${isOpen ? ' active' : ''}`}
+        className={`collection-toggle-btn user-toggle-btn${user ? ' signed-in' : ''}${isOpen ? ' active' : ''}${showAvatar ? ' has-avatar' : ''}`}
         type="button"
         onClick={() => setIsOpen((previousValue) => !previousValue)}
         aria-haspopup="menu"
@@ -67,7 +72,16 @@ export default function UserMenu({
         aria-label={user ? 'Open user menu' : 'Open login menu'}
         disabled={disabled}
       >
-        <UserIcon />
+        {showAvatar ? (
+          <img
+            className="user-menu-avatar"
+            src={avatarUrl}
+            alt={`${displayName} profile`}
+            onError={() => setFailedAvatarUrl(avatarUrl)}
+          />
+        ) : (
+          <UserIcon />
+        )}
       </button>
 
       {isOpen && (

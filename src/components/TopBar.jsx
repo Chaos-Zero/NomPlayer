@@ -499,17 +499,6 @@ export default function TopBar({
     isMobileLayout && !isInputOpen && typeof document !== 'undefined'
       ? createPortal(
           <div className="mobile-corner-actions">
-            <UserMenu
-              compact
-              user={authUser}
-              profile={userProfile}
-              authAvailable={isAuthAvailable}
-              onOpenAuth={onOpenAuthDialog}
-              onOpenSettings={onOpenSettings}
-              onLogout={onLogout}
-              disabled={effectiveInputOpen}
-            />
-
             <button
               className={`mobile-corner-toggle support${showSupportList ? ' active' : ''}`}
               onClick={() => setShowSupportList((s) => !s)}
@@ -531,6 +520,17 @@ export default function TopBar({
             >
               ★
             </button>
+
+            <UserMenu
+              compact
+              user={authUser}
+              profile={userProfile}
+              authAvailable={isAuthAvailable}
+              onOpenAuth={onOpenAuthDialog}
+              onOpenSettings={onOpenSettings}
+              onLogout={onLogout}
+              disabled={effectiveInputOpen}
+            />
           </div>,
           document.body,
         )

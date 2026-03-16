@@ -384,7 +384,12 @@ export default function App() {
   }, [authUser, createPlayerStateSnapshot]);
 
   const ensureUserProfile = useCallback(
-    async (user, preferredUsername = '', preferredGamefaqsUsername = '') => {
+    async (
+      user,
+      preferredUsername = '',
+      preferredGamefaqsUsername = '',
+      preferredAvatarUrl = '',
+    ) => {
       if (!supabase || !user) return null;
 
       const existingProfile = await fetchUserProfile(supabase, user.id);
@@ -392,12 +397,16 @@ export default function App() {
       const nextGamefaqsUsername = normalizeOptionalProfileValue(
         preferredGamefaqsUsername || existingProfile?.gamefaqs_username || '',
       );
+      const nextAvatarUrl = normalizeOptionalProfileValue(
+        preferredAvatarUrl || existingProfile?.avatar_url || '',
+      );
 
       if (
         existingProfile &&
         existingProfile.username === nextUsername &&
         existingProfile.email === (user.email || '') &&
-        (existingProfile.gamefaqs_username || null) === nextGamefaqsUsername
+        (existingProfile.gamefaqs_username || null) === nextGamefaqsUsername &&
+        (existingProfile.avatar_url || null) === nextAvatarUrl
       ) {
         return existingProfile;
       }
@@ -407,6 +416,7 @@ export default function App() {
         username: nextUsername,
         email: user.email || '',
         gamefaqs_username: nextGamefaqsUsername,
+        avatar_url: nextAvatarUrl,
       });
     },
     [supabase],
@@ -415,7 +425,11 @@ export default function App() {
   const hydrateAuthenticatedUser = useCallback(
     async (
       user,
-      { preferredUsername = '', preferredGamefaqsUsername = '' } = {},
+      {
+        preferredUsername = '',
+        preferredGamefaqsUsername = '',
+        preferredAvatarUrl = '',
+      } = {},
     ) => {
       if (!supabase || !user) return;
 
@@ -426,6 +440,7 @@ export default function App() {
           user,
           preferredUsername,
           preferredGamefaqsUsername,
+          preferredAvatarUrl,
         );
         setUserProfile(profile);
         const remoteState = await fetchUserPlayerState(supabase, user.id);
@@ -766,7 +781,7 @@ export default function App() {
   }, []);
 
   const handleSaveSettings = useCallback(
-    async ({ username, gamefaqsUsername }) => {
+    async ({ username, gamefaqsUsername, avatarUrl }) => {
       if (!supabase || !authUser) return;
 
       setIsSettingsSubmitting(true);
@@ -779,6 +794,7 @@ export default function App() {
           username: deriveProfileUsername(authUser, username),
           email: authUser.email || '',
           gamefaqs_username: normalizeOptionalProfileValue(gamefaqsUsername),
+          avatar_url: normalizeOptionalProfileValue(avatarUrl),
         });
         setUserProfile(profile);
         setSettingsNotice('Settings saved.');

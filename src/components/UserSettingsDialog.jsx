@@ -1,3 +1,70 @@
+import { useRef, useState } from 'react';
+
+function DisplayPictureField({ avatarUrl = '' }) {
+  const [isEditing, setIsEditing] = useState(!avatarUrl);
+  const inputRef = useRef(null);
+
+  function handleEditClick() {
+    setIsEditing(true);
+    window.requestAnimationFrame(() => {
+      inputRef.current?.focus();
+      inputRef.current?.select?.();
+    });
+  }
+
+  if (!avatarUrl) {
+    return (
+      <label className="auth-dialog-field">
+        <span>Display Picture URL</span>
+        <input
+          ref={inputRef}
+          name="avatar_url"
+          type="url"
+          defaultValue=""
+          inputMode="url"
+          autoComplete="url"
+          placeholder="https://example.com/avatar.png"
+        />
+      </label>
+    );
+  }
+
+  return (
+    <div className="auth-dialog-field settings-avatar-field">
+      <span>Display Picture</span>
+      <div className="settings-avatar-inline">
+        <div className="settings-avatar-preview-box">
+          <img
+            className="settings-avatar-preview"
+            src={avatarUrl}
+            alt="Current Display Picture"
+          />
+        </div>
+        <div className="settings-avatar-editor">
+          <input
+            ref={inputRef}
+            className="settings-avatar-url-input"
+            name="avatar_url"
+            type="url"
+            defaultValue={avatarUrl}
+            inputMode="url"
+            autoComplete="url"
+            placeholder="https://example.com/avatar.png"
+            readOnly={!isEditing}
+          />
+          <button
+            className="fav-panel-action-btn"
+            type="button"
+            onClick={handleEditClick}
+          >
+            Update Display Picture
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function UserSettingsDialog({
   isOpen = false,
   profile = null,
@@ -16,6 +83,7 @@ export default function UserSettingsDialog({
     onSave?.({
       username: String(formData.get('username') || '').trim(),
       gamefaqsUsername: String(formData.get('gamefaqs_username') || '').trim(),
+      avatarUrl: String(formData.get('avatar_url') || '').trim(),
     });
   }
 
@@ -61,19 +129,13 @@ export default function UserSettingsDialog({
             />
           </label>
 
-          {profile?.gamefaqs_username && (
-            <div className="auth-dialog-message">
-              Current GameFAQs username: {profile.gamefaqs_username}
-            </div>
-          )}
-
           <label className="auth-dialog-field">
             <span>Email</span>
             <input type="email" value={user.email || ''} readOnly disabled />
           </label>
 
           <label className="auth-dialog-field">
-            <span>GameFAQs username</span>
+            <span>GameFAQs Username</span>
             <input
               name="gamefaqs_username"
               type="text"
@@ -82,6 +144,8 @@ export default function UserSettingsDialog({
               maxLength={32}
             />
           </label>
+
+          <DisplayPictureField avatarUrl={profile?.avatar_url || ''} />
 
           {(error || notice) && (
             <div

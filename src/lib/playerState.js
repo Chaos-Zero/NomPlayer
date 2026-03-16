@@ -300,7 +300,7 @@ export function normalizeOptionalProfileValue(value) {
 export async function fetchUserProfile(supabase, userId) {
   const { data, error } = await supabase
     .from('profiles')
-    .select('id, username, email, gamefaqs_username')
+    .select('id, username, email, gamefaqs_username, avatar_url')
     .eq('id', userId)
     .maybeSingle();
 
@@ -317,7 +317,7 @@ export async function upsertUserProfile(supabase, profile) {
     .upsert(profile, {
       onConflict: 'id',
     })
-    .select('id, username, email, gamefaqs_username')
+    .select('id, username, email, gamefaqs_username, avatar_url')
     .single();
 
   if (error) {
