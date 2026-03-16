@@ -118,8 +118,6 @@ export default function SiteNavigation({
 
   return (
     <nav className="site-nav" aria-label="Primary navigation">
-      <div className="site-nav-brand">VGMC</div>
-
       <div className="site-nav-group">
         {NAV_ITEMS.map((item) => (
           <button
@@ -134,7 +132,6 @@ export default function SiteNavigation({
             <span className="site-nav-btn-icon" aria-hidden="true">
               <item.Icon />
             </span>
-            <span className="site-nav-btn-label">{item.label}</span>
           </button>
         ))}
       </div>
