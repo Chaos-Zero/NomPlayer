@@ -3,10 +3,25 @@ import TopBar from './components/TopBar.jsx';
 import VideoPlayer from './components/VideoPlayer.jsx';
 import PlaylistSidebar from './components/PlaylistSidebar.jsx';
 import FavouritesPanel from './components/FavouritesPanel.jsx';
+import AuthDialog from './components/AuthDialog.jsx';
 import HomePage from './components/HomePage.jsx';
 import SiteNavigation from './components/SiteNavigation.jsx';
 import ScrollingText from './components/ScrollingText.jsx';
+import UserSettingsDialog from './components/UserSettingsDialog.jsx';
 import useMediaQuery from './hooks/useMediaQuery.js';
+import {
+  PLAYER_STATE_STORAGE_KEY,
+  createPersistedPlayerState,
+  deriveProfileUsername,
+  fetchUserPlayerState,
+  fetchUserProfile,
+  hasMeaningfulPlayerState,
+  loadLocalPlayerState,
+  normalizePersistedPlayerState,
+  saveUserPlayerState,
+  upsertUserProfile,
+} from './lib/playerState.js';
+import { getSupabaseClient, isSupabaseConfigured } from './lib/supabase.js';
 
 const SUPPORT_STORAGE_KEY = 'yt_support_list';
 const NOMINATIONS_STORAGE_KEY = 'yt_nominations_list';
@@ -96,6 +111,15 @@ function shuffleVideoIds(videoIds, pinnedVideoId = null) {
 
 export default function App() {
   const isMobileLayout = useMediaQuery('(max-width: 960px)');
+  const supabase = getSupabaseClient();
+  const initialPlayerStateRef = useRef(null);
+  if (!initialPlayerStateRef.current) {
+    initialPlayerStateRef.current = loadLocalPlayerState({
+      supportListFallback: loadSupportList(),
+      nominationListFallback: loadNominationList(),
+    });
+  }
+  const initialPlayerState = initialPlayerStateRef.current;
   const [activePage, setActivePage] = useState('home');
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
   const [
@@ -103,14 +127,22 @@ export default function App() {
     setSuppressPlaylistRestoreTransition,
   ] = useState(false);
   // Playlist state
-  const [playlist, setPlaylist] = useState([]);
+  const [playlist, setPlaylist] = useState(initialPlayerState.playlist);
   const playlistRef = useRef([]);
-  const [currentVideoId, setCurrentVideoId] = useState(null);
+  const [currentVideoId, setCurrentVideoId] = useState(
+    initialPlayerState.currentVideoId,
+  );
   const currentVideoIdRef = useRef(null);
-  const [shuffleOrderIds, setShuffleOrderIds] = useState([]);
+  const [shuffleOrderIds, setShuffleOrderIds] = useState(
+    initialPlayerState.shuffleOrderIds,
+  );
   const shuffleOrderIdsRef = useRef([]);
-  const [showOriginalOrder, setShowOriginalOrder] = useState(false);
-  const [listenedStatusById, setListenedStatusById] = useState({});
+  const [showOriginalOrder, setShowOriginalOrder] = useState(
+    initialPlayerState.showOriginalOrder,
+  );
+  const [listenedStatusById, setListenedStatusById] = useState(
+    initialPlayerState.listenedStatusById,
+  );
   const [transientVideo, setTransientVideo] = useState(null);
   const transientResumeVideoIdRef = useRef(null);
   const [flashVideoIds, setFlashVideoIds] = useState([]);
@@ -125,10 +157,14 @@ export default function App() {
   const [isPlaying, setIsPlaying] = useState(false);
 
   // Support list
-  const [supportList, setSupportList] = useState(loadSupportList);
+  const [supportList, setSupportList] = useState(
+    initialPlayerState.supportList,
+  );
   const [showSupportList, setShowSupportList] = useState(false);
   const [renderSupportList, setRenderSupportList] = useState(false);
-  const [nominationList, setNominationList] = useState(loadNominationList);
+  const [nominationList, setNominationList] = useState(
+    initialPlayerState.nominationList,
+  );
   const [showNominationsList, setShowNominationsList] = useState(false);
   const [renderNominationsList, setRenderNominationsList] = useState(false);
   const [supportToastMessage, setSupportToastMessage] = useState('');
@@ -143,19 +179,21 @@ export default function App() {
   const detachedFooterFrameRef = useRef(0);
   const playerRevealTimeoutRef = useRef(0);
   const playerRevealFrameRef = useRef(0);
-
-  // Persist support list
-  useEffect(() => {
-    localStorage.setItem(SUPPORT_STORAGE_KEY, JSON.stringify(supportList));
-    localStorage.removeItem(LEGACY_STORAGE_KEY);
-  }, [supportList]);
-
-  useEffect(() => {
-    localStorage.setItem(
-      NOMINATIONS_STORAGE_KEY,
-      JSON.stringify(nominationList),
-    );
-  }, [nominationList]);
+  const syncTimeoutRef = useRef(0);
+  const pendingMergeAfterLoginRef = useRef(false);
+  const pendingPreferredUsernameRef = useRef('');
+  const lastSyncedPlayerStateRef = useRef('');
+  const [authSession, setAuthSession] = useState(null);
+  const [userProfile, setUserProfile] = useState(null);
+  const [isAuthReady, setIsAuthReady] = useState(!isSupabaseConfigured);
+  const [isAuthSubmitting, setIsAuthSubmitting] = useState(false);
+  const [authDialogMode, setAuthDialogMode] = useState(null);
+  const [authMessage, setAuthMessage] = useState('');
+  const [authError, setAuthError] = useState('');
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isSettingsSubmitting, setIsSettingsSubmitting] = useState(false);
+  const [settingsError, setSettingsError] = useState('');
+  const [settingsNotice, setSettingsNotice] = useState('');
 
   useEffect(
     () => () => {
@@ -176,6 +214,9 @@ export default function App() {
       }
       if (playerRevealFrameRef.current) {
         window.cancelAnimationFrame(playerRevealFrameRef.current);
+      }
+      if (syncTimeoutRef.current) {
+        window.clearTimeout(syncTimeoutRef.current);
       }
     },
     [],
@@ -208,6 +249,54 @@ export default function App() {
       window.clearTimeout(timeoutId);
     };
   }, [flashVideoIds]);
+
+  const createPlayerStateSnapshot = useCallback(
+    () =>
+      createPersistedPlayerState({
+        playlist,
+        currentVideoId,
+        shuffleOrderIds,
+        showOriginalOrder,
+        listenedStatusById,
+        supportList,
+        nominationList,
+      }),
+    [
+      currentVideoId,
+      listenedStatusById,
+      nominationList,
+      playlist,
+      showOriginalOrder,
+      shuffleOrderIds,
+      supportList,
+    ],
+  );
+
+  const applyPersistedPlayerState = useCallback((nextState) => {
+    const normalizedState = normalizePersistedPlayerState(nextState);
+
+    transientResumeVideoIdRef.current = null;
+    setTransientVideo(null);
+    setFlashVideoIds([]);
+    hasReachedPlaylistEndRef.current = false;
+
+    playlistRef.current = normalizedState.playlist;
+    setPlaylist(normalizedState.playlist);
+
+    currentVideoIdRef.current = normalizedState.currentVideoId;
+    setCurrentVideoId(normalizedState.currentVideoId);
+
+    shuffleOrderIdsRef.current = normalizedState.shuffleOrderIds;
+    setShuffleOrderIds(normalizedState.shuffleOrderIds);
+
+    setShowOriginalOrder(normalizedState.showOriginalOrder);
+    setListenedStatusById(normalizedState.listenedStatusById);
+    setSupportList(normalizedState.supportList);
+    setNominationList(normalizedState.nominationList);
+    setIsPlaying(false);
+  }, []);
+
+  const authUser = authSession?.user ?? null;
 
   const playOrderIds = useMemo(
     () => resolvePlayOrderIds(playlist, shuffleOrderIds),
@@ -258,6 +347,335 @@ export default function App() {
     ? nominationList.some((entry) => entry.videoId === currentVideo.videoId)
     : false;
   const apiKeyMissing = !import.meta.env.VITE_YT_API_KEY;
+
+  useEffect(() => {
+    const snapshot = createPlayerStateSnapshot();
+    localStorage.setItem(PLAYER_STATE_STORAGE_KEY, JSON.stringify(snapshot));
+    localStorage.setItem(
+      SUPPORT_STORAGE_KEY,
+      JSON.stringify(snapshot.supportList),
+    );
+    localStorage.setItem(
+      NOMINATIONS_STORAGE_KEY,
+      JSON.stringify(snapshot.nominationList),
+    );
+    localStorage.removeItem(LEGACY_STORAGE_KEY);
+  }, [createPlayerStateSnapshot]);
+
+  const ensureUserProfile = useCallback(
+    async (user, preferredUsername = '') => {
+      if (!supabase || !user) return null;
+
+      const existingProfile = await fetchUserProfile(supabase, user.id);
+      const nextUsername = deriveProfileUsername(user, preferredUsername);
+
+      if (
+        existingProfile &&
+        existingProfile.username === nextUsername &&
+        existingProfile.email === (user.email || '')
+      ) {
+        return existingProfile;
+      }
+
+      return upsertUserProfile(supabase, {
+        id: user.id,
+        username: nextUsername,
+        email: user.email || '',
+      });
+    },
+    [supabase],
+  );
+
+  const hydrateAuthenticatedUser = useCallback(
+    async (user, { mergeLocalState = false, preferredUsername = '' } = {}) => {
+      if (!supabase || !user) return;
+
+      setIsAuthReady(false);
+
+      try {
+        const profile = await ensureUserProfile(user, preferredUsername);
+        setUserProfile(profile);
+
+        if (
+          mergeLocalState &&
+          hasMeaningfulPlayerState(createPlayerStateSnapshot())
+        ) {
+          const snapshot = createPlayerStateSnapshot();
+          const savedSnapshot = await saveUserPlayerState(
+            supabase,
+            user.id,
+            snapshot,
+          );
+          lastSyncedPlayerStateRef.current = JSON.stringify(savedSnapshot);
+        } else {
+          const remoteState = await fetchUserPlayerState(supabase, user.id);
+          const normalizedState = normalizePersistedPlayerState(remoteState);
+          applyPersistedPlayerState(normalizedState);
+          lastSyncedPlayerStateRef.current = JSON.stringify(normalizedState);
+        }
+      } catch (error) {
+        setAuthError(error.message || 'Failed to load your account data.');
+      } finally {
+        setIsAuthReady(true);
+      }
+    },
+    [
+      applyPersistedPlayerState,
+      createPlayerStateSnapshot,
+      ensureUserProfile,
+      supabase,
+    ],
+  );
+
+  useEffect(() => {
+    if (!supabase) {
+      setIsAuthReady(true);
+      return undefined;
+    }
+
+    let isActive = true;
+
+    async function loadSession() {
+      try {
+        const {
+          data: { session },
+          error,
+        } = await supabase.auth.getSession();
+
+        if (!isActive) return;
+        if (error) throw error;
+
+        setAuthSession(session);
+
+        if (session?.user) {
+          await hydrateAuthenticatedUser(session.user);
+        } else {
+          setUserProfile(null);
+          setIsAuthReady(true);
+        }
+      } catch (error) {
+        if (!isActive) return;
+        setAuthError(error.message || 'Failed to restore your session.');
+        setIsAuthReady(true);
+      }
+    }
+
+    loadSession();
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'INITIAL_SESSION') return;
+
+      setAuthSession(session);
+
+      if (!session?.user) {
+        pendingMergeAfterLoginRef.current = false;
+        pendingPreferredUsernameRef.current = '';
+        lastSyncedPlayerStateRef.current = '';
+        setUserProfile(null);
+        setIsSettingsOpen(false);
+        setIsAuthReady(true);
+        return;
+      }
+
+      const mergeLocalState = pendingMergeAfterLoginRef.current;
+      const preferredUsername = pendingPreferredUsernameRef.current;
+      pendingMergeAfterLoginRef.current = false;
+      pendingPreferredUsernameRef.current = '';
+
+      window.setTimeout(() => {
+        if (!isActive) return;
+        hydrateAuthenticatedUser(session.user, {
+          mergeLocalState,
+          preferredUsername,
+        });
+      }, 0);
+    });
+
+    return () => {
+      isActive = false;
+      subscription.unsubscribe();
+    };
+  }, [hydrateAuthenticatedUser, supabase]);
+
+  useEffect(() => {
+    if (!supabase || !authUser || !isAuthReady) {
+      return undefined;
+    }
+
+    const snapshot = createPlayerStateSnapshot();
+    const serializedSnapshot = JSON.stringify(snapshot);
+
+    if (serializedSnapshot === lastSyncedPlayerStateRef.current) {
+      return undefined;
+    }
+
+    if (syncTimeoutRef.current) {
+      window.clearTimeout(syncTimeoutRef.current);
+    }
+
+    syncTimeoutRef.current = window.setTimeout(() => {
+      syncTimeoutRef.current = 0;
+      saveUserPlayerState(supabase, authUser.id, snapshot)
+        .then((savedSnapshot) => {
+          lastSyncedPlayerStateRef.current = JSON.stringify(savedSnapshot);
+        })
+        .catch((error) => {
+          setAuthError(error.message || 'Failed to sync your account data.');
+        });
+    }, 400);
+
+    return () => {
+      if (syncTimeoutRef.current) {
+        window.clearTimeout(syncTimeoutRef.current);
+        syncTimeoutRef.current = 0;
+      }
+    };
+  }, [authUser, createPlayerStateSnapshot, isAuthReady, supabase]);
+
+  const handleOpenAuthDialog = useCallback(() => {
+    setAuthError('');
+    setAuthMessage('');
+    setAuthDialogMode('signin');
+  }, []);
+
+  const handleCloseAuthDialog = useCallback(() => {
+    setAuthDialogMode(null);
+    setAuthError('');
+    setAuthMessage('');
+  }, []);
+
+  const handleSignIn = useCallback(
+    async ({ email, password }) => {
+      if (!supabase) {
+        setAuthError('Supabase is not configured yet.');
+        return;
+      }
+
+      setIsAuthSubmitting(true);
+      setAuthError('');
+      setAuthMessage('');
+      pendingMergeAfterLoginRef.current = hasMeaningfulPlayerState(
+        createPlayerStateSnapshot(),
+      );
+      pendingPreferredUsernameRef.current = '';
+
+      try {
+        const { error } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+
+        if (error) throw error;
+
+        setAuthDialogMode(null);
+      } catch (error) {
+        pendingMergeAfterLoginRef.current = false;
+        setAuthError(error.message || 'Failed to log in.');
+      } finally {
+        setIsAuthSubmitting(false);
+      }
+    },
+    [createPlayerStateSnapshot, supabase],
+  );
+
+  const handleSignUp = useCallback(
+    async ({ email, password, username }) => {
+      if (!supabase) {
+        setAuthError('Supabase is not configured yet.');
+        return;
+      }
+
+      setIsAuthSubmitting(true);
+      setAuthError('');
+      setAuthMessage('');
+      pendingMergeAfterLoginRef.current = hasMeaningfulPlayerState(
+        createPlayerStateSnapshot(),
+      );
+      pendingPreferredUsernameRef.current = username.trim();
+
+      try {
+        const {
+          data: { session },
+          error,
+        } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            data: {
+              username: username.trim(),
+            },
+          },
+        });
+
+        if (error) throw error;
+
+        if (!session) {
+          pendingMergeAfterLoginRef.current = false;
+          pendingPreferredUsernameRef.current = '';
+          setAuthMessage(
+            'Account created. Check your email to confirm the sign-up, then log in.',
+          );
+          return;
+        }
+
+        setAuthDialogMode(null);
+      } catch (error) {
+        pendingMergeAfterLoginRef.current = false;
+        pendingPreferredUsernameRef.current = '';
+        setAuthError(error.message || 'Failed to create your account.');
+      } finally {
+        setIsAuthSubmitting(false);
+      }
+    },
+    [createPlayerStateSnapshot, supabase],
+  );
+
+  const handleLogout = useCallback(async () => {
+    if (!supabase) return;
+
+    setAuthError('');
+
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+    } catch (error) {
+      setAuthError(error.message || 'Failed to log out.');
+    }
+  }, [supabase]);
+
+  const handleOpenSettings = useCallback(() => {
+    setSettingsError('');
+    setSettingsNotice('');
+    setIsSettingsOpen(true);
+  }, []);
+
+  const handleSaveSettings = useCallback(
+    async ({ username }) => {
+      if (!supabase || !authUser) return;
+
+      setIsSettingsSubmitting(true);
+      setSettingsError('');
+      setSettingsNotice('');
+
+      try {
+        const profile = await upsertUserProfile(supabase, {
+          id: authUser.id,
+          username: deriveProfileUsername(authUser, username),
+          email: authUser.email || '',
+        });
+        setUserProfile(profile);
+        setSettingsNotice('Settings saved.');
+      } catch (error) {
+        setSettingsError(error.message || 'Failed to save your settings.');
+      } finally {
+        setIsSettingsSubmitting(false);
+      }
+    },
+    [authUser, supabase],
+  );
+
   const markVideoCompleted = useCallback((videoId) => {
     if (!videoId) return;
 
@@ -1220,6 +1638,12 @@ export default function App() {
           isPlayerPage={isPlayerPage}
           hasMobileDetachedPlayer={isMobileDetachedFooter}
           onNavigateToPlayer={() => handleNavigate('player')}
+          authUser={authUser}
+          userProfile={userProfile}
+          isAuthAvailable={isSupabaseConfigured}
+          onOpenAuthDialog={handleOpenAuthDialog}
+          onOpenSettings={handleOpenSettings}
+          onLogout={handleLogout}
         />
 
         <main
@@ -1340,6 +1764,30 @@ export default function App() {
           onAddDirectItems={handleAddManyToNominationList}
         />
       )}
+
+      <AuthDialog
+        isOpen={Boolean(authDialogMode)}
+        mode={authDialogMode || 'signin'}
+        isConfigured={isSupabaseConfigured}
+        isSubmitting={isAuthSubmitting}
+        error={authError}
+        notice={authMessage}
+        onClose={handleCloseAuthDialog}
+        onModeChange={setAuthDialogMode}
+        onSignIn={handleSignIn}
+        onSignUp={handleSignUp}
+      />
+
+      <UserSettingsDialog
+        isOpen={isSettingsOpen}
+        user={authUser}
+        profile={userProfile}
+        isSubmitting={isSettingsSubmitting}
+        error={settingsError}
+        notice={settingsNotice}
+        onClose={() => setIsSettingsOpen(false)}
+        onSave={handleSaveSettings}
+      />
     </div>
   );
 }

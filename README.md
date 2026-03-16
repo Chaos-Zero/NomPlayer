@@ -33,6 +33,15 @@ Playlist loading needs a YouTube Data API key. Copy `.env.example` to `.env` and
 VITE_YT_API_KEY=your_key_here
 ```
 
+User accounts need a Supabase project:
+
+```bash
+VITE_SUPABASE_URL=https://your-project.supabase.co
+VITE_SUPABASE_PUBLISHABLE_KEY=your_publishable_key_here
+```
+
+Apply the SQL schema in [supabase/schema.sql](/run/media/calzoneb/SSD/My%20Documents/Projects/Web/Websites/VGMC-Taster/supabase/schema.sql) inside the Supabase SQL editor before testing login.
+
 ## Scripts
 
 ```bash

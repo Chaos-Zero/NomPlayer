@@ -6,6 +6,7 @@ import {
   singleVideoEntry,
 } from '../utils/youtube.js';
 import useMediaQuery from '../hooks/useMediaQuery.js';
+import UserMenu from './UserMenu.jsx';
 
 const API_KEY = import.meta.env.VITE_YT_API_KEY || '';
 const SUCCESS_FLASH_MS = 1000;
@@ -84,6 +85,12 @@ export default function TopBar({
   isCurrentVideoSupported = false,
   isCurrentVideoNominated = false,
   onToggleCurrentVideoSupport,
+  authUser = null,
+  userProfile = null,
+  isAuthAvailable = false,
+  onOpenAuthDialog,
+  onOpenSettings,
+  onLogout,
   onLoad,
   isPlayerPage = true,
   hasMobileDetachedPlayer = false,
@@ -492,6 +499,17 @@ export default function TopBar({
     isMobileLayout && !isInputOpen && typeof document !== 'undefined'
       ? createPortal(
           <div className="mobile-corner-actions">
+            <UserMenu
+              compact
+              user={authUser}
+              profile={userProfile}
+              authAvailable={isAuthAvailable}
+              onOpenAuth={onOpenAuthDialog}
+              onOpenSettings={onOpenSettings}
+              onLogout={onLogout}
+              disabled={effectiveInputOpen}
+            />
+
             <button
               className={`mobile-corner-toggle support${showSupportList ? ' active' : ''}`}
               onClick={() => setShowSupportList((s) => !s)}
@@ -752,6 +770,15 @@ export default function TopBar({
         >
           ★
         </button>
+
+        <UserMenu
+          user={authUser}
+          profile={userProfile}
+          authAvailable={isAuthAvailable}
+          onOpenAuth={onOpenAuthDialog}
+          onOpenSettings={onOpenSettings}
+          onLogout={onLogout}
+        />
       </div>
     </div>
   );
