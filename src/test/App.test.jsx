@@ -206,6 +206,40 @@ describe('App', () => {
     });
   });
 
+  it('animates the detached footer in when playback starts on a non-player page', async () => {
+    render(<App />);
+    openPlayerView();
+
+    act(() => {
+      appTestState.topBarProps.onLoad(
+        [
+          {
+            videoId: 'alpha1234567',
+            title: 'Alpha',
+            thumbnail: 'a.jpg',
+            channelTitle: '',
+          },
+        ],
+        { mode: 'append', autoplay: false },
+      );
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Home' }));
+
+    expect(appTestState.videoPlayerProps.variant).toBe('hidden');
+
+    act(() => {
+      appTestState.topBarProps.setIsPlaying(true);
+    });
+
+    await waitFor(() => {
+      expect(appTestState.videoPlayerProps.variant).toBe('mini');
+      expect(
+        document.querySelector('.player-surface.detached-footer.entering'),
+      ).toBeInTheDocument();
+    });
+  });
+
   it('autoplays a loaded single video when the playlist is empty', () => {
     render(<App />);
     openPlayerView();

@@ -20,13 +20,11 @@ describe('UserSettingsDialog', () => {
       screen.queryByText(/Current GameFAQs Username:/i),
     ).not.toBeInTheDocument();
     expect(screen.getByDisplayValue('FAQFan')).toBeInTheDocument();
-    expect(screen.getByAltText('Current Display picture')).toHaveAttribute(
+    expect(screen.getByAltText('Current Display Picture')).toHaveAttribute(
       'src',
       'https://example.com/avatar.png',
     );
-    expect(
-      screen.getByText('Update Display Picture with new URL'),
-    ).toBeInTheDocument();
+    expect(screen.getByText('Update Display Picture')).toBeInTheDocument();
   });
 
   it('submits the avatar URL with the rest of the profile changes', () => {

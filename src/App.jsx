@@ -1605,6 +1605,81 @@ export default function App() {
     [markVideoStarted, transientVideo],
   );
 
+  const clearDetachedFooterEntrance = useCallback(() => {
+    if (detachedFooterFrameRef.current) {
+      window.cancelAnimationFrame(detachedFooterFrameRef.current);
+      detachedFooterFrameRef.current = 0;
+    }
+
+    if (detachedFooterTimeoutRef.current) {
+      window.clearTimeout(detachedFooterTimeoutRef.current);
+      detachedFooterTimeoutRef.current = 0;
+    }
+
+    setIsDetachedFooterPending(false);
+    setIsDetachedFooterEntering(false);
+  }, []);
+
+  const startDetachedFooterEntrance = useCallback(() => {
+    if (detachedFooterFrameRef.current) {
+      window.cancelAnimationFrame(detachedFooterFrameRef.current);
+      detachedFooterFrameRef.current = 0;
+    }
+
+    if (detachedFooterTimeoutRef.current) {
+      window.clearTimeout(detachedFooterTimeoutRef.current);
+      detachedFooterTimeoutRef.current = 0;
+    }
+
+    setIsDetachedFooterPending(true);
+    setIsDetachedFooterEntering(true);
+
+    detachedFooterFrameRef.current = window.requestAnimationFrame(() => {
+      detachedFooterFrameRef.current = window.requestAnimationFrame(() => {
+        detachedFooterFrameRef.current = 0;
+        setIsDetachedFooterPending(false);
+        detachedFooterTimeoutRef.current = window.setTimeout(() => {
+          detachedFooterTimeoutRef.current = 0;
+          setIsDetachedFooterEntering(false);
+        }, 360);
+      });
+    });
+  }, []);
+
+  const shouldShowDetachedFooter =
+    !isPlayerPage && Boolean(currentVideo) && isPlaying;
+  const previousDetachedFooterIntentRef = useRef(shouldShowDetachedFooter);
+
+  useEffect(() => {
+    const previousDetachedFooterIntent =
+      previousDetachedFooterIntentRef.current;
+    previousDetachedFooterIntentRef.current = shouldShowDetachedFooter;
+
+    if (
+      !previousDetachedFooterIntent &&
+      shouldShowDetachedFooter &&
+      !isDetachedFooterPending &&
+      !isDetachedFooterEntering
+    ) {
+      startDetachedFooterEntrance();
+      return;
+    }
+
+    if (
+      previousDetachedFooterIntent &&
+      !shouldShowDetachedFooter &&
+      (isDetachedFooterPending || isDetachedFooterEntering)
+    ) {
+      clearDetachedFooterEntrance();
+    }
+  }, [
+    clearDetachedFooterEntrance,
+    isDetachedFooterEntering,
+    isDetachedFooterPending,
+    shouldShowDetachedFooter,
+    startDetachedFooterEntrance,
+  ]);
+
   const handleNavigate = useCallback(
     (nextPage) => {
       const shouldAnimateDetachedFooter =
@@ -1645,18 +1720,9 @@ export default function App() {
       }
 
       if (shouldAnimateDetachedFooter) {
-        if (detachedFooterTimeoutRef.current) {
-          window.clearTimeout(detachedFooterTimeoutRef.current);
-        }
-        setIsDetachedFooterPending(true);
-        setIsDetachedFooterEntering(true);
+        startDetachedFooterEntrance();
       } else {
-        if (detachedFooterTimeoutRef.current) {
-          window.clearTimeout(detachedFooterTimeoutRef.current);
-          detachedFooterTimeoutRef.current = 0;
-        }
-        setIsDetachedFooterPending(false);
-        setIsDetachedFooterEntering(false);
+        clearDetachedFooterEntrance();
       }
 
       if (shouldAnimatePlayerReveal) {
@@ -1669,19 +1735,6 @@ export default function App() {
 
       setActivePage(nextPage);
       setIsMobileNavOpen(false);
-
-      if (shouldAnimateDetachedFooter) {
-        detachedFooterFrameRef.current = window.requestAnimationFrame(() => {
-          detachedFooterFrameRef.current = window.requestAnimationFrame(() => {
-            detachedFooterFrameRef.current = 0;
-            setIsDetachedFooterPending(false);
-            detachedFooterTimeoutRef.current = window.setTimeout(() => {
-              detachedFooterTimeoutRef.current = 0;
-              setIsDetachedFooterEntering(false);
-            }, 360);
-          });
-        });
-      }
 
       if (shouldAnimatePlayerReveal) {
         playerRevealFrameRef.current = window.requestAnimationFrame(() => {
@@ -1696,17 +1749,19 @@ export default function App() {
         });
       }
     },
-    [isMobileLayout, isPlaylistCollapsed],
+    [
+      clearDetachedFooterEntrance,
+      isMobileLayout,
+      isPlaylistCollapsed,
+      startDetachedFooterEntrance,
+    ],
   );
 
   const shellIsCollapsed = isPlaylistCollapsed || !isPlayerPage;
   const shouldRenderPersistentPlayer = isPlayerPage || Boolean(currentVideo);
   const canTogglePlayback = Boolean(transientVideo) || playlist.length > 0;
   const hasDetachedFooter =
-    !isPlayerPage &&
-    Boolean(currentVideo) &&
-    isPlaying &&
-    !isDetachedFooterPending;
+    shouldShowDetachedFooter && !isDetachedFooterPending;
   const isDesktopDetachedFooter = hasDetachedFooter && !isMobileLayout;
   const isMobileDetachedFooter = hasDetachedFooter && isMobileLayout;
   const playerPresentation = isPlayerPage
@@ -1830,6 +1885,9 @@ export default function App() {
           onLoad={handleLoad}
           isPlayerPage={isPlayerPage}
           hasMobileDetachedPlayer={isMobileDetachedFooter}
+          isMobileDetachedPlayerEntering={
+            isMobileDetachedFooter && isDetachedFooterEntering
+          }
           onNavigateToPlayer={() => handleNavigate('player')}
           authUser={authUser}
           userProfile={userProfile}

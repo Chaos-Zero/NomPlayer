@@ -1,5 +1,11 @@
 import { createPortal } from 'react-dom';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from 'react';
 import {
   parseYouTubeInput,
   fetchPlaylistItems,
@@ -94,6 +100,8 @@ export default function TopBar({
   onLoad,
   isPlayerPage = true,
   hasMobileDetachedPlayer = false,
+  isMobileDetachedPlayerEntering = false,
+  isMobileDetachedPlayerExiting = false,
   onNavigateToPlayer,
 }) {
   const isMobileLayout = useMediaQuery('(max-width: 960px)');
@@ -103,8 +111,10 @@ export default function TopBar({
   const [showSuccess, setShowSuccess] = useState(false);
   const [controlsOffset, setControlsOffset] = useState(0);
   const [mobileKeyboardOffset, setMobileKeyboardOffset] = useState(0);
+  const [mobileDetachedPlayerVars, setMobileDetachedPlayerVars] = useState({});
   const [error, setError] = useState('');
   const topbarRef = useRef(null);
+  const mobileShellRef = useRef(null);
   const formRef = useRef(null);
   const errorRef = useRef(null);
   const centerZoneRef = useRef(null);
@@ -254,6 +264,105 @@ export default function TopBar({
       window.removeEventListener('resize', scheduleMeasure);
     };
   }, [effectiveInputOpen, isMobileLayout]);
+
+  useLayoutEffect(() => {
+    if (!isMobileLayout || !hasMobileDetachedPlayer) {
+      setMobileDetachedPlayerVars({});
+      return undefined;
+    }
+
+    const shellNode = mobileShellRef.current;
+    if (!shellNode) return undefined;
+
+    const playerSelector =
+      '.player-surface.detached-footer.mobile-detached-footer .player-wrap-mini';
+    let frameId = 0;
+    let playerNode = null;
+
+    function updateVars(nextVars) {
+      setMobileDetachedPlayerVars((previousVars) => {
+        const previousKeys = Object.keys(previousVars);
+        const nextKeys = Object.keys(nextVars);
+
+        if (
+          previousKeys.length === nextKeys.length &&
+          nextKeys.every((key) => previousVars[key] === nextVars[key])
+        ) {
+          return previousVars;
+        }
+
+        return nextVars;
+      });
+    }
+
+    function measure() {
+      playerNode = document.querySelector(playerSelector);
+      if (!shellNode || !playerNode) {
+        updateVars({});
+        return;
+      }
+
+      const shellRect = shellNode.getBoundingClientRect();
+      const playerRect = playerNode.getBoundingClientRect();
+      const topbarShellHeight =
+        Number.parseFloat(
+          getComputedStyle(shellNode).getPropertyValue(
+            '--mobile-topbar-shell-h',
+          ),
+        ) || 88;
+      const controlsSurfaceTop = shellRect.bottom - (topbarShellHeight + 6);
+      const visibleHeight = Math.max(0, controlsSurfaceTop - playerRect.top);
+
+      updateVars({
+        '--mobile-detached-player-top': `${Math.max(
+          0,
+          playerRect.top - shellRect.top,
+        )}px`,
+        '--mobile-detached-player-left': `${Math.max(
+          0,
+          playerRect.left - shellRect.left,
+        )}px`,
+        '--mobile-detached-player-right': `${Math.max(
+          0,
+          shellRect.right - playerRect.right,
+        )}px`,
+        '--mobile-detached-player-width': `${playerRect.width}px`,
+        '--mobile-detached-player-height': `${playerRect.height}px`,
+        '--mobile-detached-player-visible-height': `${visibleHeight}px`,
+      });
+    }
+
+    function scheduleMeasure() {
+      window.cancelAnimationFrame(frameId);
+      frameId = window.requestAnimationFrame(measure);
+    }
+
+    scheduleMeasure();
+
+    const resizeObserver =
+      typeof ResizeObserver === 'undefined'
+        ? null
+        : new ResizeObserver(scheduleMeasure);
+
+    resizeObserver?.observe(shellNode);
+
+    playerNode = document.querySelector(playerSelector);
+    if (playerNode) {
+      resizeObserver?.observe(playerNode);
+    }
+
+    window.addEventListener('resize', scheduleMeasure);
+    window.visualViewport?.addEventListener('resize', scheduleMeasure);
+    window.visualViewport?.addEventListener('scroll', scheduleMeasure);
+
+    return () => {
+      window.cancelAnimationFrame(frameId);
+      resizeObserver?.disconnect();
+      window.removeEventListener('resize', scheduleMeasure);
+      window.visualViewport?.removeEventListener('resize', scheduleMeasure);
+      window.visualViewport?.removeEventListener('scroll', scheduleMeasure);
+    };
+  }, [hasMobileDetachedPlayer, isMobileLayout]);
 
   useEffect(() => {
     if (isMobileLayout) {
@@ -536,6 +645,14 @@ export default function TopBar({
         )
       : null;
 
+  const mobileTopbarStyle = {
+    '--mobile-keyboard-offset': `${mobileKeyboardOffset}px`,
+    ...mobileDetachedPlayerVars,
+  };
+  const mobileDetachedPlayerMotionClass = hasMobileDetachedPlayer
+    ? `${isMobileDetachedPlayerEntering ? ' entering' : ''}${isMobileDetachedPlayerExiting ? ' exiting' : ''}`
+    : '';
+
   if (isMobileLayout) {
     return (
       <>
@@ -543,7 +660,7 @@ export default function TopBar({
         <div
           ref={topbarRef}
           className={`topbar mobile-layout${effectiveInputOpen ? ' input-open' : ''}${hasMobileDetachedPlayer ? ' mobile-detached-player' : ''}`}
-          style={{ '--mobile-keyboard-offset': `${mobileKeyboardOffset}px` }}
+          style={mobileTopbarStyle}
         >
           <div
             className={`mobile-topbar-floating-controls${effectiveInputOpen ? ' visible' : ''}`}
@@ -558,11 +675,12 @@ export default function TopBar({
           {error && <span className="mobile-url-error">⚠ {error}</span>}
 
           <div
-            className={`mobile-topbar-shell${effectiveInputOpen ? ' open' : ''}${hasMobileDetachedPlayer ? ' has-detached-player' : ''}`}
+            ref={mobileShellRef}
+            className={`mobile-topbar-shell${effectiveInputOpen ? ' open' : ''}${hasMobileDetachedPlayer ? ' has-detached-player' : ''}${mobileDetachedPlayerMotionClass}`}
           >
             <div className="mobile-topbar-stage">
               <div
-                className={`mobile-topbar-face mobile-topbar-front${hasMobileDetachedPlayer ? ' with-detached-player' : ''}`}
+                className={`mobile-topbar-face mobile-topbar-front${hasMobileDetachedPlayer ? ' with-detached-player' : ''}${mobileDetachedPlayerMotionClass}`}
                 aria-hidden={effectiveInputOpen}
               >
                 {hasMobileDetachedPlayer && (
@@ -572,60 +690,66 @@ export default function TopBar({
                   />
                 )}
 
-                {mobileNowPlayingText && (
-                  <div
-                    className="mobile-now-playing-inline"
-                    title={mobileNowPlayingText}
-                  >
-                    {isPlaying && (
-                      <span
-                        className="mobile-now-playing-dot"
-                        aria-hidden="true"
-                      />
-                    )}
-                    <span className="mobile-now-playing-text">
-                      {mobileNowPlayingText}
-                    </span>
-                  </div>
-                )}
-
-                <div className="mobile-topbar-controls-row">
-                  <div className="mobile-topbar-slot mobile-topbar-slot-left">
-                    <button
-                      className="mobile-add-btn"
-                      type="button"
-                      onClick={openInput}
-                      aria-label={playerActionLabel}
-                      tabIndex={effectiveInputOpen ? -1 : 0}
+                <div
+                  className={`mobile-topbar-footer-shell${hasMobileDetachedPlayer ? ' with-detached-player' : ''}`}
+                >
+                  {mobileNowPlayingText && (
+                    <div
+                      className="mobile-now-playing-inline"
+                      title={mobileNowPlayingText}
                     >
-                      {isPlayerPage ? 'Add' : playerActionLabel}
-                    </button>
-                  </div>
+                      <div className="mobile-now-playing-content">
+                        {isPlaying && (
+                          <span
+                            className="mobile-now-playing-dot"
+                            aria-hidden="true"
+                          />
+                        )}
+                        <span className="mobile-now-playing-text">
+                          {mobileNowPlayingText}
+                        </span>
+                      </div>
+                    </div>
+                  )}
 
-                  <div
-                    className="mobile-playback-inline-wrap"
-                    aria-hidden={effectiveInputOpen || undefined}
-                  >
-                    {renderPlaybackControls({
-                      className: 'mobile-playback-inline',
-                      hidden: effectiveInputOpen,
-                    })}
-                  </div>
+                  <div className="mobile-topbar-controls-row">
+                    <div className="mobile-topbar-slot mobile-topbar-slot-left">
+                      <button
+                        className="mobile-add-btn"
+                        type="button"
+                        onClick={openInput}
+                        aria-label={playerActionLabel}
+                        tabIndex={effectiveInputOpen ? -1 : 0}
+                      >
+                        {isPlayerPage ? 'Add' : playerActionLabel}
+                      </button>
+                    </div>
 
-                  <div className="mobile-topbar-slot mobile-topbar-slot-right">
-                    <button
-                      className={`btn btn-icon mobile-current-support-btn${currentSupportClassName}`}
-                      type="button"
-                      onClick={() =>
-                        onToggleCurrentVideoSupport?.(currentVideo)
-                      }
-                      title={currentSupportTooltip}
-                      aria-label={currentSupportLabel}
-                      disabled={!currentVideo || isCurrentVideoNominated}
-                      tabIndex={effectiveInputOpen ? -1 : 0}
+                    <div
+                      className="mobile-playback-inline-wrap"
+                      aria-hidden={effectiveInputOpen || undefined}
                     >
-                      {currentSupportGlyph}
-                    </button>
+                      {renderPlaybackControls({
+                        className: 'mobile-playback-inline',
+                        hidden: effectiveInputOpen,
+                      })}
+                    </div>
+
+                    <div className="mobile-topbar-slot mobile-topbar-slot-right">
+                      <button
+                        className={`btn btn-icon mobile-current-support-btn${currentSupportClassName}`}
+                        type="button"
+                        onClick={() =>
+                          onToggleCurrentVideoSupport?.(currentVideo)
+                        }
+                        title={currentSupportTooltip}
+                        aria-label={currentSupportLabel}
+                        disabled={!currentVideo || isCurrentVideoNominated}
+                        tabIndex={effectiveInputOpen ? -1 : 0}
+                      >
+                        {currentSupportGlyph}
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
