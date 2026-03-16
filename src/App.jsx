@@ -91,15 +91,6 @@ function shuffleVideoIds(videoIds, pinnedVideoId = null) {
   return pinnedVideoId ? [pinnedVideoId, ...remainingIds] : remainingIds;
 }
 
-function FastForwardIcon() {
-  return (
-    <svg viewBox="0 0 20 20" aria-hidden="true">
-      <path d="M3.75 4.95v10.1c0 .58.64.94 1.14.64l6.45-4.98c.44-.34.44-1.08 0-1.42L4.89 4.31c-.5-.3-1.14.06-1.14.64Z" />
-      <path d="M10.5 4.95v10.1c0 .58.64.94 1.14.64l6.45-4.98c.44-.34.44-1.08 0-1.42l-6.45-4.98c-.5-.3-1.14.06-1.14.64Z" />
-    </svg>
-  );
-}
-
 export default function App() {
   const isMobileLayout = useMediaQuery('(max-width: 960px)');
   // Playlist state
@@ -226,12 +217,6 @@ export default function App() {
     ? nominationList.some((entry) => entry.videoId === currentVideo.videoId)
     : false;
   const apiKeyMissing = !import.meta.env.VITE_YT_API_KEY;
-  const showFloatingPreviewIndicator =
-    isMobileLayout &&
-    isPlaylistCollapsed &&
-    isPreviewModeEnabled &&
-    playlist.length > 0;
-
   const markVideoCompleted = useCallback((videoId) => {
     if (!videoId) return;
 
@@ -974,6 +959,10 @@ export default function App() {
             handleRequestCloseNominationsList();
           }
         }}
+        isShuffleEnabled={isShuffleEnabled}
+        onShuffle={handleShufflePlaylist}
+        isPreviewModeEnabled={isPreviewModeEnabled}
+        onTogglePreview={handleTogglePreviewMode}
         currentVideo={currentVideo}
         isCurrentVideoSupported={isCurrentVideoSupported}
         isCurrentVideoNominated={isCurrentVideoNominated}
@@ -1043,16 +1032,6 @@ export default function App() {
           </div>
         )}
       </aside>
-
-      {showFloatingPreviewIndicator && (
-        <div
-          className="mobile-preview-indicator"
-          role="img"
-          aria-label="Preview mode active"
-        >
-          <FastForwardIcon />
-        </div>
-      )}
 
       {supportToastMessage && (
         <div

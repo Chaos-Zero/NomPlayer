@@ -57,6 +57,15 @@ function SupportIcon() {
   );
 }
 
+function FastForwardIcon({ className = 'collection-icon' }) {
+  return (
+    <svg className={className} viewBox="0 0 20 20" aria-hidden="true">
+      <path d="M3.75 4.95v10.1c0 .58.64.94 1.14.64l6.45-4.98c.44-.34.44-1.08 0-1.42L4.89 4.31c-.5-.3-1.14.06-1.14.64Z" />
+      <path d="M10.5 4.95v10.1c0 .58.64.94 1.14.64l6.45-4.98c.44-.34.44-1.08 0-1.42l-6.45-4.98c-.5-.3-1.14.06-1.14.64Z" />
+    </svg>
+  );
+}
+
 export default function TopBar({
   isPlaying,
   setIsPlaying,
@@ -66,6 +75,10 @@ export default function TopBar({
   setShowSupportList,
   showNominationsList,
   setShowNominationsList,
+  isShuffleEnabled = false,
+  onShuffle,
+  isPreviewModeEnabled = false,
+  onTogglePreview,
   currentVideo = null,
   isCurrentVideoSupported = false,
   isCurrentVideoNominated = false,
@@ -366,11 +379,28 @@ export default function TopBar({
     hidden = false,
     withIds = false,
   } = {}) {
+    const showModeButtons = !isMobileLayout;
+
     return (
       <div
         className={`playback-controls${className ? ` ${className}` : ''}`}
         aria-hidden={hidden || undefined}
       >
+        {showModeButtons && (
+          <button
+            className={`btn btn-icon shuffle-btn${isShuffleEnabled ? ' active' : ''}`}
+            onClick={onShuffle}
+            title="Shuffle playlist"
+            aria-label="Shuffle playlist"
+            aria-pressed={isShuffleEnabled}
+            tabIndex={hidden ? -1 : 0}
+          >
+            <span className="shuffle-glyph" aria-hidden="true">
+              🔀
+            </span>
+          </button>
+        )}
+
         <button
           className="btn btn-icon"
           onClick={onPrev}
@@ -390,7 +420,13 @@ export default function TopBar({
           aria-label={isPlaying ? 'Pause' : 'Play'}
           tabIndex={hidden ? -1 : 0}
         >
-          {isPlaying ? <PauseIcon /> : <PlayIcon />}
+          {isMobileLayout && isPreviewModeEnabled ? (
+            <FastForwardIcon className="transport-icon transport-icon-preview" />
+          ) : isPlaying ? (
+            <PauseIcon />
+          ) : (
+            <PlayIcon />
+          )}
         </button>
 
         <button
@@ -403,6 +439,19 @@ export default function TopBar({
         >
           <NextIcon />
         </button>
+
+        {showModeButtons && (
+          <button
+            className={`btn btn-icon${isPreviewModeEnabled ? ' active' : ''}`}
+            onClick={onTogglePreview}
+            title="Preview mode"
+            aria-label="Preview mode"
+            aria-pressed={isPreviewModeEnabled}
+            tabIndex={hidden ? -1 : 0}
+          >
+            <FastForwardIcon />
+          </button>
+        )}
       </div>
     );
   }

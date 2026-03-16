@@ -286,7 +286,7 @@ export default function PlaylistSidebar({
   const shouldShowCollapseTab = !isMobileLayout || isCollapsed;
   const showMobileHeaderClose = isMobileLayout && !isCollapsed;
 
-  function renderHeader({ showPlaylistActions = false } = {}) {
+  function renderHeader() {
     return (
       <div className="sidebar-header">
         <div className="sidebar-header-main">
@@ -295,7 +295,7 @@ export default function PlaylistSidebar({
         </div>
 
         <div className="sidebar-header-actions">
-          {showPlaylistActions && (
+          {isMobileLayout && (
             <>
               <button
                 className={`sidebar-icon-btn shuffle${isShuffleEnabled ? ' active' : ''}`}
@@ -440,7 +440,7 @@ export default function PlaylistSidebar({
           aria-hidden="true"
         />
       )}
-      {!isCollapsed && renderHeader({ showPlaylistActions: true })}
+      {!isCollapsed && renderHeader()}
       {!isCollapsed && (
         <div
           className={`playlist-order-toggle${showOrderToggle ? ' visible' : ''}`}
@@ -458,10 +458,7 @@ export default function PlaylistSidebar({
         </div>
       )}
       {!isCollapsed && (
-        <div
-          className={`playlist-list${isPreviewModeEnabled ? ' preview-active' : ''}`}
-          role="list"
-        >
+        <div className="playlist-list" role="list">
           {playlist.map((video, index) => (
             <PlaylistItem
               key={video.videoId}
@@ -477,15 +474,6 @@ export default function PlaylistSidebar({
               onOpenContextMenu={handleOpenContextMenu}
             />
           ))}
-        </div>
-      )}
-      {!isCollapsed && isPreviewModeEnabled && (
-        <div
-          className="playlist-preview-indicator"
-          role="img"
-          aria-label="Preview mode active"
-        >
-          <FastForwardIcon />
         </div>
       )}
       {contextMenu && (

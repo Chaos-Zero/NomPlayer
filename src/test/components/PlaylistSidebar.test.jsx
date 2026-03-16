@@ -156,8 +156,44 @@ describe('PlaylistSidebar', () => {
     expect(numbers).toEqual(['2', '1']);
   });
 
-  it('shows shuffle and preview controls and toggles the playlist view mode', () => {
+  it('toggles the playlist view mode when shuffle is active', () => {
     const { container, props } = renderSidebar({
+      isShuffleEnabled: true,
+      playlist: [
+        { ...video, loadIndex: 0 },
+        {
+          videoId: 'beta12345678',
+          title: 'Beta',
+          thumbnail: 'b.jpg',
+          channelTitle: 'Channel B',
+          loadIndex: 1,
+        },
+      ],
+    });
+
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Show original order' }),
+    );
+    expect(props.onToggleOrderView).toHaveBeenCalledTimes(1);
+
+    expect(container.querySelector('.playlist-order-toggle')).toHaveClass(
+      'visible',
+    );
+  });
+
+  it('renders the video count beside the title with no desktop action buttons', () => {
+    const { container } = renderSidebar({ isShuffleEnabled: true });
+    const headerMain = container.querySelector('.sidebar-header-main');
+    const headerActions = container.querySelector('.sidebar-header-actions');
+
+    expect(headerMain).toHaveTextContent('Playlist');
+    expect(headerMain).toHaveTextContent('1 videos');
+    expect(headerActions?.children).toHaveLength(0);
+  });
+
+  it('shows shuffle and preview controls in the mobile playlist header', () => {
+    mockMatchMedia(true);
+    const { props } = renderSidebar({
       isShuffleEnabled: true,
       isPreviewModeEnabled: true,
       playlist: [
@@ -177,33 +213,6 @@ describe('PlaylistSidebar', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Preview mode' }));
     expect(props.onTogglePreview).toHaveBeenCalledTimes(1);
-
-    fireEvent.click(
-      screen.getByRole('button', { name: 'Show original order' }),
-    );
-    expect(props.onToggleOrderView).toHaveBeenCalledTimes(1);
-
-    expect(container.querySelector('.playlist-order-toggle')).toHaveClass(
-      'visible',
-    );
-    expect(screen.getByLabelText('Preview mode active')).toBeInTheDocument();
-  });
-
-  it('renders the video count beside the title and keeps shuffle and preview on the right', () => {
-    const { container } = renderSidebar({ isShuffleEnabled: true });
-    const headerMain = container.querySelector('.sidebar-header-main');
-    const headerActions = container.querySelector('.sidebar-header-actions');
-
-    expect(headerMain).toHaveTextContent('Playlist');
-    expect(headerMain).toHaveTextContent('1 videos');
-    expect(headerActions?.firstElementChild).toHaveAttribute(
-      'aria-label',
-      'Shuffle playlist',
-    );
-    expect(headerActions?.children[1]).toHaveAttribute(
-      'aria-label',
-      'Preview mode',
-    );
   });
 
   it('keeps the order toggle mounted but hidden while shuffle is off', () => {

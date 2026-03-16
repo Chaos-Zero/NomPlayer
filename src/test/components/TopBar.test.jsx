@@ -55,6 +55,10 @@ function renderTopBar(overrides = {}) {
     setShowSupportList: vi.fn(),
     showNominationsList: false,
     setShowNominationsList: vi.fn(),
+    isShuffleEnabled: false,
+    onShuffle: vi.fn(),
+    isPreviewModeEnabled: false,
+    onTogglePreview: vi.fn(),
     onLoad: vi.fn(),
     ...overrides,
   };
@@ -98,15 +102,34 @@ describe('TopBar', () => {
     ).toBeInTheDocument();
   });
 
-  it('renders separate support and nominations toggles', () => {
+  it('renders shuffle/preview playback controls plus support and nominations toggles', () => {
     renderTopBar();
 
+    expect(
+      screen.getByRole('button', { name: 'Shuffle playlist' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Preview mode' }),
+    ).toBeInTheDocument();
     expect(
       screen.getByRole('button', { name: 'Toggle support list' }),
     ).toBeInTheDocument();
     expect(
       screen.getByRole('button', { name: 'Toggle nominations list' }),
     ).toBeInTheDocument();
+  });
+
+  it('hides shuffle and preview buttons from the mobile bottom controls', () => {
+    mockMatchMedia(true);
+
+    renderTopBar();
+
+    expect(
+      screen.queryByRole('button', { name: 'Shuffle playlist' }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Preview mode' }),
+    ).not.toBeInTheDocument();
   });
 
   it('shows the current song title in the mobile playback bar', () => {

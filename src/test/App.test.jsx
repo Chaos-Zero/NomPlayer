@@ -170,7 +170,7 @@ describe('App', () => {
     expect(appTestState.playlistSidebarProps.playlist).toHaveLength(1);
   });
 
-  it('shows a floating preview indicator on mobile when the playlist is collapsed', () => {
+  it('passes preview mode state to the top bar on mobile when enabled', () => {
     mockMatchMedia(true);
 
     render(<App />);
@@ -190,11 +190,11 @@ describe('App', () => {
     });
 
     act(() => {
-      appTestState.playlistSidebarProps.onTogglePreview();
+      appTestState.topBarProps.onTogglePreview();
       appTestState.playlistSidebarProps.onToggleCollapse();
     });
 
-    expect(screen.getByLabelText('Preview mode active')).toBeInTheDocument();
+    expect(appTestState.topBarProps.isPreviewModeEnabled).toBe(true);
   });
 
   it('does not append duplicate videos to the playlist', () => {
@@ -500,7 +500,7 @@ describe('App', () => {
     });
 
     act(() => {
-      appTestState.playlistSidebarProps.onShuffle();
+      appTestState.topBarProps.onShuffle();
     });
 
     expect(appTestState.playlistSidebarProps.isShuffleEnabled).toBe(true);
@@ -518,7 +518,7 @@ describe('App', () => {
     ).toEqual(['Alpha', 'Beta', 'Gamma']);
 
     act(() => {
-      appTestState.playlistSidebarProps.onShuffle();
+      appTestState.topBarProps.onShuffle();
     });
 
     expect(appTestState.playlistSidebarProps.isShuffleEnabled).toBe(false);
@@ -608,10 +608,10 @@ describe('App', () => {
     ).toBe('partial');
 
     act(() => {
-      appTestState.playlistSidebarProps.onTogglePreview();
+      appTestState.topBarProps.onTogglePreview();
     });
 
-    expect(appTestState.playlistSidebarProps.isPreviewModeEnabled).toBe(true);
+    expect(appTestState.topBarProps.isPreviewModeEnabled).toBe(true);
 
     act(() => {
       vi.advanceTimersByTime(31_000);
@@ -656,7 +656,7 @@ describe('App', () => {
     ).toBe('partial');
 
     act(() => {
-      appTestState.playlistSidebarProps.onTogglePreview();
+      appTestState.topBarProps.onTogglePreview();
     });
 
     act(() => {
@@ -664,10 +664,10 @@ describe('App', () => {
     });
 
     act(() => {
-      appTestState.playlistSidebarProps.onTogglePreview();
+      appTestState.topBarProps.onTogglePreview();
     });
 
-    expect(appTestState.playlistSidebarProps.isPreviewModeEnabled).toBe(false);
+    expect(appTestState.topBarProps.isPreviewModeEnabled).toBe(false);
 
     act(() => {
       vi.advanceTimersByTime(20_000);
