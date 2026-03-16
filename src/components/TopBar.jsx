@@ -1,5 +1,5 @@
 import { createPortal } from 'react-dom';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   parseYouTubeInput,
   fetchPlaylistItems,
@@ -84,6 +84,8 @@ export default function TopBar({
   isCurrentVideoNominated = false,
   onToggleCurrentVideoSupport,
   onLoad,
+  isPlayerPage = true,
+  onNavigateToPlayer,
 }) {
   const isMobileLayout = useMediaQuery('(max-width: 960px)');
   const [urlValue, setUrlValue] = useState('');
@@ -101,6 +103,7 @@ export default function TopBar({
   const inputRef = useRef(null);
   const activeRequestRef = useRef(0);
   const successTimeoutRef = useRef(null);
+  const effectiveInputOpen = isPlayerPage && isInputOpen;
   const currentSupportLabel = !currentVideo
     ? 'No current video to support'
     : isCurrentVideoNominated
@@ -126,9 +129,45 @@ export default function TopBar({
       ? '♥'
       : '♡';
   const mobileNowPlayingText = currentVideo?.title ?? '';
+  const clearSuccessFlash = useCallback(() => {
+    if (successTimeoutRef.current) {
+      window.clearTimeout(successTimeoutRef.current);
+      successTimeoutRef.current = null;
+    }
+    setShowSuccess(false);
+  }, []);
+
+  const flashSuccess = useCallback(() => {
+    clearSuccessFlash();
+    setShowSuccess(true);
+    successTimeoutRef.current = window.setTimeout(() => {
+      successTimeoutRef.current = null;
+      setShowSuccess(false);
+    }, SUCCESS_FLASH_MS);
+  }, [clearSuccessFlash]);
+
+  const openInput = useCallback(() => {
+    if (!isPlayerPage) {
+      onNavigateToPlayer?.();
+      return;
+    }
+
+    clearSuccessFlash();
+    setError('');
+    setIsInputOpen(true);
+  }, [clearSuccessFlash, isPlayerPage, onNavigateToPlayer]);
+
+  const closeInput = useCallback(() => {
+    activeRequestRef.current += 1;
+    clearSuccessFlash();
+    setLoading(false);
+    setError('');
+    setUrlValue('');
+    setIsInputOpen(false);
+  }, [clearSuccessFlash]);
 
   useEffect(() => {
-    if (!isInputOpen) return undefined;
+    if (!effectiveInputOpen) return undefined;
 
     const frameId = window.requestAnimationFrame(() => {
       inputRef.current?.focus();
@@ -137,7 +176,19 @@ export default function TopBar({
     return () => {
       window.cancelAnimationFrame(frameId);
     };
-  }, [isInputOpen]);
+  }, [effectiveInputOpen]);
+
+  useEffect(() => {
+    if (isPlayerPage || !isInputOpen) return undefined;
+
+    const frameId = window.requestAnimationFrame(() => {
+      closeInput();
+    });
+
+    return () => {
+      window.cancelAnimationFrame(frameId);
+    };
+  }, [closeInput, isInputOpen, isPlayerPage]);
 
   useEffect(
     () => () => {
@@ -149,7 +200,7 @@ export default function TopBar({
   );
 
   useEffect(() => {
-    if (!isMobileLayout || !isInputOpen) {
+    if (!isMobileLayout || !effectiveInputOpen) {
       setMobileKeyboardOffset(0);
       return undefined;
     }
@@ -188,7 +239,7 @@ export default function TopBar({
       visualViewport.removeEventListener('scroll', scheduleMeasure);
       window.removeEventListener('resize', scheduleMeasure);
     };
-  }, [isInputOpen, isMobileLayout]);
+  }, [effectiveInputOpen, isMobileLayout]);
 
   useEffect(() => {
     if (isMobileLayout) {
@@ -281,44 +332,17 @@ export default function TopBar({
       resizeObserver?.disconnect();
       window.removeEventListener('resize', scheduleMeasure);
     };
-  }, [error, isInputOpen, isMobileLayout, showSuccess]);
-
-  function clearSuccessFlash() {
-    if (successTimeoutRef.current) {
-      window.clearTimeout(successTimeoutRef.current);
-      successTimeoutRef.current = null;
-    }
-    setShowSuccess(false);
-  }
-
-  function flashSuccess() {
-    clearSuccessFlash();
-    setShowSuccess(true);
-    successTimeoutRef.current = window.setTimeout(() => {
-      successTimeoutRef.current = null;
-      setShowSuccess(false);
-    }, SUCCESS_FLASH_MS);
-  }
-
-  function openInput() {
-    clearSuccessFlash();
-    setError('');
-    setIsInputOpen(true);
-  }
-
-  function closeInput() {
-    activeRequestRef.current += 1;
-    clearSuccessFlash();
-    setLoading(false);
-    setError('');
-    setUrlValue('');
-    setIsInputOpen(false);
-  }
+  }, [effectiveInputOpen, error, isMobileLayout, showSuccess]);
 
   async function handleSubmit(e) {
     e?.preventDefault();
 
-    if (!isInputOpen) {
+    if (!isPlayerPage) {
+      onNavigateToPlayer?.();
+      return;
+    }
+
+    if (!effectiveInputOpen) {
       openInput();
       return;
     }
@@ -492,26 +516,28 @@ export default function TopBar({
         {mobileCornerActions}
         <div
           ref={topbarRef}
-          className={`topbar mobile-layout${isInputOpen ? ' input-open' : ''}`}
+          className={`topbar mobile-layout${effectiveInputOpen ? ' input-open' : ''}`}
           style={{ '--mobile-keyboard-offset': `${mobileKeyboardOffset}px` }}
         >
           <div
-            className={`mobile-topbar-floating-controls${isInputOpen ? ' visible' : ''}`}
-            aria-hidden={!isInputOpen}
+            className={`mobile-topbar-floating-controls${effectiveInputOpen ? ' visible' : ''}`}
+            aria-hidden={!effectiveInputOpen}
           >
             {renderPlaybackControls({
               className: 'mobile-playback-floating',
-              hidden: !isInputOpen,
+              hidden: !effectiveInputOpen,
             })}
           </div>
 
           {error && <span className="mobile-url-error">⚠ {error}</span>}
 
-          <div className={`mobile-topbar-shell${isInputOpen ? ' open' : ''}`}>
+          <div
+            className={`mobile-topbar-shell${effectiveInputOpen ? ' open' : ''}`}
+          >
             <div className="mobile-topbar-stage">
               <div
                 className="mobile-topbar-face mobile-topbar-front"
-                aria-hidden={isInputOpen}
+                aria-hidden={effectiveInputOpen}
               >
                 {mobileNowPlayingText && (
                   <div
@@ -536,20 +562,22 @@ export default function TopBar({
                       className="mobile-add-btn"
                       type="button"
                       onClick={openInput}
-                      aria-label="Add to playlist"
-                      tabIndex={isInputOpen ? -1 : 0}
+                      aria-label={
+                        isPlayerPage ? 'Add to playlist' : 'Go to player'
+                      }
+                      tabIndex={effectiveInputOpen ? -1 : 0}
                     >
-                      Add
+                      {isPlayerPage ? 'Add' : 'Go to player'}
                     </button>
                   </div>
 
                   <div
                     className="mobile-playback-inline-wrap"
-                    aria-hidden={isInputOpen || undefined}
+                    aria-hidden={effectiveInputOpen || undefined}
                   >
                     {renderPlaybackControls({
                       className: 'mobile-playback-inline',
-                      hidden: isInputOpen,
+                      hidden: effectiveInputOpen,
                     })}
                   </div>
 
@@ -563,7 +591,7 @@ export default function TopBar({
                       title={currentSupportTooltip}
                       aria-label={currentSupportLabel}
                       disabled={!currentVideo || isCurrentVideoNominated}
-                      tabIndex={isInputOpen ? -1 : 0}
+                      tabIndex={effectiveInputOpen ? -1 : 0}
                     >
                       {currentSupportGlyph}
                     </button>
@@ -574,7 +602,7 @@ export default function TopBar({
               <form
                 className={`mobile-topbar-face mobile-topbar-back${showSuccess ? ' success' : ''}`}
                 onSubmit={handleSubmit}
-                aria-hidden={!isInputOpen}
+                aria-hidden={!effectiveInputOpen}
               >
                 <input
                   ref={inputRef}
@@ -589,14 +617,14 @@ export default function TopBar({
                       clearSuccessFlash();
                     }
                   }}
-                  tabIndex={isInputOpen ? 0 : -1}
+                  tabIndex={effectiveInputOpen ? 0 : -1}
                 />
                 <button
                   className={`mobile-topbar-submit${showSuccess ? ' success' : ''}`}
                   type="submit"
                   disabled={!showSuccess && !urlValue.trim()}
                   aria-label={showSuccess ? 'Load successful' : undefined}
-                  tabIndex={isInputOpen ? 0 : -1}
+                  tabIndex={effectiveInputOpen ? 0 : -1}
                 >
                   {showSuccess ? '✓' : loading ? 'Loading…' : 'Load'}
                 </button>
@@ -605,7 +633,7 @@ export default function TopBar({
                   type="button"
                   aria-label="Close add to playlist"
                   onClick={closeInput}
-                  tabIndex={isInputOpen ? 0 : -1}
+                  tabIndex={effectiveInputOpen ? 0 : -1}
                 >
                   ✕
                 </button>
@@ -620,13 +648,13 @@ export default function TopBar({
   return (
     <div
       ref={topbarRef}
-      className={`topbar${isInputOpen ? ' input-open' : ''}`}
+      className={`topbar${effectiveInputOpen ? ' input-open' : ''}`}
     >
       <div className="topbar-side topbar-left">
         <div className="topbar-load-area">
           <form
             ref={formRef}
-            className={`url-form${isInputOpen ? ' open' : ''}${showSuccess ? ' success' : ''}`}
+            className={`url-form${effectiveInputOpen ? ' open' : ''}${showSuccess ? ' success' : ''}`}
             onSubmit={handleSubmit}
           >
             <div className="url-input-wrap">
@@ -648,26 +676,28 @@ export default function TopBar({
             </div>
             <button
               className={`btn btn-primary url-submit-btn${showSuccess ? ' success' : ''}`}
-              type={isInputOpen ? 'submit' : 'button'}
-              disabled={isInputOpen && !showSuccess && !urlValue.trim()}
+              type={effectiveInputOpen ? 'submit' : 'button'}
+              disabled={effectiveInputOpen && !showSuccess && !urlValue.trim()}
               id="load-btn"
               aria-label={showSuccess ? 'Load successful' : undefined}
-              onClick={!isInputOpen ? openInput : undefined}
+              onClick={!effectiveInputOpen ? openInput : undefined}
             >
               {showSuccess
                 ? '✓'
                 : loading
                   ? 'Loading…'
-                  : isInputOpen
+                  : effectiveInputOpen
                     ? 'Load'
-                    : 'Add to playlist'}
+                    : isPlayerPage
+                      ? 'Add to playlist'
+                      : 'Go to player'}
             </button>
             <button
               className="btn btn-icon url-close-btn"
               type="button"
               aria-label="Close add to playlist"
               onClick={closeInput}
-              tabIndex={isInputOpen ? 0 : -1}
+              tabIndex={effectiveInputOpen ? 0 : -1}
             >
               ✕
             </button>

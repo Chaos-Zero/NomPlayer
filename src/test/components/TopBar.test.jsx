@@ -102,6 +102,21 @@ describe('TopBar', () => {
     ).toBeInTheDocument();
   });
 
+  it('turns the add button into a go-to-player action outside the player page', () => {
+    const onNavigateToPlayer = vi.fn();
+    renderTopBar({
+      isPlayerPage: false,
+      onNavigateToPlayer,
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Go to player' }));
+
+    expect(onNavigateToPlayer).toHaveBeenCalledTimes(1);
+    expect(
+      screen.getByRole('button', { name: 'Go to player' }),
+    ).toBeInTheDocument();
+  });
+
   it('renders shuffle/preview playback controls plus support and nominations toggles', () => {
     renderTopBar();
 

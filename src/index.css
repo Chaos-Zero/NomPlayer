@@ -27,6 +27,8 @@
   --support-panel-w: 520px;
   --player-max-w: 900px;
   --player-meta-reserve-h: 78px;
+  --footer-player-w: 200px;
+  --footer-player-h: calc(var(--footer-player-w) * 9 / 16);
   --transition: 0.2s ease;
 }
 
@@ -360,7 +362,7 @@ body {
   left: calc(var(--nav-w) + 24px);
   right: 24px;
   bottom: 20px;
-  min-height: 232px;
+  min-height: calc(var(--footer-player-h) + 32px);
   padding: 16px 20px 16px 28px;
   border: 1px solid var(--border);
   border-radius: 24px;
@@ -370,7 +372,7 @@ body {
     0 24px 52px rgba(0, 0, 0, 0.34),
     inset 0 1px 0 rgba(255, 255, 255, 0.04);
   display: grid;
-  grid-template-columns: 200px minmax(0, 1fr);
+  grid-template-columns: var(--footer-player-w) minmax(0, 1fr);
   align-items: center;
   gap: 28px;
   z-index: 90;
@@ -404,14 +406,18 @@ body {
 .player-surface.detached-footer .player-wrap-mini {
   grid-column: 1;
   justify-self: start;
-  width: 200px;
-  max-width: 200px;
-  min-width: 200px;
-  min-height: 200px;
+  width: var(--footer-player-w);
+  max-width: var(--footer-player-w);
+  min-width: var(--footer-player-w);
+  height: var(--footer-player-h);
+  min-height: var(--footer-player-h);
+  max-height: var(--footer-player-h);
   transition:
     width 0.24s ease,
     min-width 0.24s ease,
+    height 0.24s ease,
     min-height 0.24s ease,
+    max-height 0.24s ease,
     opacity 0.2s ease,
     transform 0.24s ease;
 }
@@ -420,7 +426,9 @@ body {
   width: 0;
   max-width: 0;
   min-width: 0;
+  height: 0;
   min-height: 0;
+  max-height: 0;
   opacity: 0;
   transform: translateX(16px);
   pointer-events: none;
@@ -1672,9 +1680,10 @@ body {
 }
 
 .player-wrap-mini {
-  width: 200px;
-  max-width: 200px;
-  min-height: 200px;
+  width: var(--footer-player-w);
+  max-width: var(--footer-player-w);
+  height: var(--footer-player-h);
+  min-height: var(--footer-player-h);
   display: flex;
   align-items: stretch;
   justify-content: stretch;

@@ -72,6 +72,8 @@ export default function VideoPlayer({
   isSupported = false,
   isNominated = false,
   onToggleSupport,
+  variant = 'full',
+  showMetadata = true,
 }) {
   const playerRef = useRef(null);
   const isOverlayEnabled = false;
@@ -153,7 +155,7 @@ export default function VideoPlayer({
   };
 
   return (
-    <div className="player-wrap">
+    <div className={`player-wrap player-wrap-${variant}`}>
       <div className="player-stage">
         <div className="player-video-stack">
           <div className="player-iframe-container" id="player-container">
@@ -231,7 +233,7 @@ export default function VideoPlayer({
             )}
           </div>
 
-          {video.title && (
+          {showMetadata && video.title && (
             <div className="now-playing-info">
               <div className="now-playing-main">
                 {isPlaying && <div className="now-playing-dot" />}
