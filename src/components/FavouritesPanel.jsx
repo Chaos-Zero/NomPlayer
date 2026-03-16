@@ -662,7 +662,6 @@ export default function FavouritesPanel({
     setContextMenu(null);
   }
 
-  const showSelectAll = selectionMode && supportList.length > 0;
   const showSelectionActions = selectionMode && supportList.length > 0;
 
   return (
@@ -702,15 +701,6 @@ export default function FavouritesPanel({
             </span>
           </div>
           <div className="fav-panel-actions">
-            {showSelectAll && (
-              <button
-                className="fav-panel-action-btn"
-                type="button"
-                onClick={handleSelectAll}
-              >
-                Select all
-              </button>
-            )}
             {supportList.length > 0 && (
               <button
                 className={`fav-panel-action-btn${selectionMode ? ' active' : ''}`}
@@ -733,7 +723,14 @@ export default function FavouritesPanel({
         {showSelectionActions && (
           <div className="fav-panel-selection-toolbar">
             <button
-              className="fav-panel-action-btn"
+              className="fav-panel-action-btn selection-accent"
+              type="button"
+              onClick={handleSelectAll}
+            >
+              Select all
+            </button>
+            <button
+              className="fav-panel-action-btn selection-accent"
               type="button"
               onClick={() => handleQueueVideos(selectedVideos)}
               disabled={selectedVideos.length === 0}
@@ -741,7 +738,7 @@ export default function FavouritesPanel({
               Add to Current Playlist
             </button>
             <button
-              className="fav-panel-action-btn"
+              className="fav-panel-action-btn selection-accent"
               type="button"
               onClick={() => {
                 if (!selectedVideos.length) return;

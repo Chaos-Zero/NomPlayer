@@ -1458,11 +1458,15 @@ export default function App() {
   }, []);
 
   const handleRemoveFromPlaylist = useCallback(
-    (videoId) => {
+    (videoIdsOrId) => {
       hasReachedPlaylistEndRef.current = false;
+      const videoIds = Array.isArray(videoIdsOrId)
+        ? videoIdsOrId
+        : [videoIdsOrId];
+      const idSet = new Set(videoIds);
       const previousPlaylist = playlistRef.current;
-      const removeIndex = previousPlaylist.findIndex(
-        (video) => video.videoId === videoId,
+      const removeIndex = previousPlaylist.findIndex((video) =>
+        idSet.has(video.videoId),
       );
       if (removeIndex < 0) return;
 
@@ -1470,9 +1474,11 @@ export default function App() {
         previousPlaylist,
         shuffleOrderIdsRef.current,
       );
-      const removedPlayIndex = previousPlayOrderIds.indexOf(videoId);
+      const removedPlayIndex = previousPlayOrderIds.findIndex((id) =>
+        idSet.has(id),
+      );
       const nextPlaylist = previousPlaylist.filter(
-        (video) => video.videoId !== videoId,
+        (video) => !idSet.has(video.videoId),
       );
       const nextIdSet = new Set(nextPlaylist.map((video) => video.videoId));
       const nextShuffleOrderIds =
@@ -1489,14 +1495,22 @@ export default function App() {
       }
 
       setListenedStatusById((previousStatus) => {
-        if (!(videoId in previousStatus)) return previousStatus;
+        const hasTrackedIds = videoIds.some(
+          (videoId) => videoId in previousStatus,
+        );
+        if (!hasTrackedIds) return previousStatus;
 
         const nextStatus = { ...previousStatus };
-        delete nextStatus[videoId];
+        videoIds.forEach((videoId) => {
+          delete nextStatus[videoId];
+        });
         return nextStatus;
       });
 
-      if (transientResumeVideoIdRef.current === videoId) {
+      if (
+        transientResumeVideoIdRef.current &&
+        idSet.has(transientResumeVideoIdRef.current)
+      ) {
         const remainingResumeIds = previousPlayOrderIds
           .slice(removedPlayIndex + 1)
           .filter((id) => nextIdSet.has(id));
@@ -1511,7 +1525,11 @@ export default function App() {
         return;
       }
 
-      if (!transientVideo && currentVideoIdRef.current === videoId) {
+      if (
+        !transientVideo &&
+        currentVideoIdRef.current &&
+        idSet.has(currentVideoIdRef.current)
+      ) {
         const nextPlayOrderIds = resolvePlayOrderIds(
           nextPlaylist,
           nextShuffleOrderIds,
@@ -1536,6 +1554,19 @@ export default function App() {
     },
     [isPlaying, markVideoStarted, transientVideo],
   );
+
+  const handleReorderPlaylist = useCallback((newOrder) => {
+    if (
+      !Array.isArray(newOrder) ||
+      newOrder.length !== playlistRef.current.length
+    ) {
+      return;
+    }
+
+    playlistRef.current = newOrder;
+    setPlaylist(newOrder);
+    hasReachedPlaylistEndRef.current = false;
+  }, []);
 
   const handleQueueFromSupportList = useCallback(
     (videos) => {
@@ -1980,6 +2011,7 @@ export default function App() {
               }}
               onToggleOrderView={handleTogglePlaylistOrderView}
               onSelect={goToVideo}
+              onReorder={handleReorderPlaylist}
               supportList={supportList}
               nominationList={nominationList}
               listenedStatusById={listenedStatusById}

@@ -1,6 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 
-export default function ScrollingText({ text, className = '' }) {
+export default function ScrollingText({
+  text,
+  className = '',
+  truncateWhenStatic = false,
+}) {
   const viewportRef = useRef(null);
   const contentRef = useRef(null);
   const [isOverflowing, setIsOverflowing] = useState(false);
@@ -36,7 +40,9 @@ export default function ScrollingText({ text, className = '' }) {
       ref={viewportRef}
       className={`scrolling-text${className ? ` ${className}` : ''}`}
     >
-      <div className={`scrolling-text-track${isOverflowing ? ' marquee' : ''}`}>
+      <div
+        className={`scrolling-text-track${isOverflowing ? ' marquee' : ''}${truncateWhenStatic ? ' truncate-static' : ''}`}
+      >
         <span ref={contentRef}>{text}</span>
         {isOverflowing && <span aria-hidden="true">{text}</span>}
       </div>

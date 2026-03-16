@@ -38,6 +38,7 @@ describe('PlaylistSidebar', () => {
       onToggleCollapse: vi.fn(),
       onToggleOrderView: vi.fn(),
       onSelect: vi.fn(),
+      onReorder: vi.fn(),
       supportList: [],
       nominationList: [],
       listenedStatusById: {},
@@ -181,14 +182,15 @@ describe('PlaylistSidebar', () => {
     );
   });
 
-  it('renders the video count beside the title with no desktop action buttons', () => {
+  it('renders the video count beside the title with a desktop select button', () => {
     const { container } = renderSidebar({ isShuffleEnabled: true });
     const headerMain = container.querySelector('.sidebar-header-main');
     const headerActions = container.querySelector('.sidebar-header-actions');
 
     expect(headerMain).toHaveTextContent('Playlist');
     expect(headerMain).toHaveTextContent('1 videos');
-    expect(headerActions?.children).toHaveLength(0);
+    expect(headerActions?.children).toHaveLength(1);
+    expect(screen.getByRole('button', { name: 'Select' })).toBeInTheDocument();
   });
 
   it('shows shuffle and preview controls in the mobile playlist header', () => {
@@ -283,6 +285,12 @@ describe('PlaylistSidebar', () => {
     ).toHaveClass('supported');
   });
 
+  it('uses the scrolling title wrapper for the active playlist item', () => {
+    const { container } = renderSidebar();
+
+    expect(container.querySelector('.playlist-item-title-scroll')).toBeTruthy();
+  });
+
   it('collapses to a flat side tab with only the expand toggle visible', () => {
     const { container, props } = renderSidebar({ isCollapsed: true });
 
@@ -328,5 +336,29 @@ describe('PlaylistSidebar', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Collapse playlist' }));
 
     expect(props.onToggleCollapse).toHaveBeenCalledTimes(1);
+  });
+
+  it('supports selecting all playlist items and removing them in bulk', () => {
+    const beta = {
+      videoId: 'beta12345678',
+      title: 'Beta',
+      thumbnail: 'b.jpg',
+      channelTitle: 'Channel B',
+    };
+    const { props } = renderSidebar({
+      playlist: [{ ...video }, beta],
+      currentIndex: null,
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Select' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Select all' }));
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Remove from Playlist' }),
+    );
+
+    expect(props.onRemoveFromPlaylist).toHaveBeenCalledWith([
+      'alpha1234567',
+      'beta12345678',
+    ]);
   });
 });

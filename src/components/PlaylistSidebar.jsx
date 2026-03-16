@@ -1,4 +1,21 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import ScrollingText from './ScrollingText.jsx';
 import useMediaQuery from '../hooks/useMediaQuery.js';
 
 const CONTEXT_MENU_WIDTH = 180;
@@ -43,6 +60,9 @@ function PlaylistItem({
   isNominated,
   onToggleSupport,
   onOpenContextMenu,
+  selectionMode,
+  isSelected,
+  onToggleSelected,
 }) {
   const [imgError, setImgError] = useState(false);
   const tickLabel =
@@ -70,14 +90,47 @@ function PlaylistItem({
 
   return (
     <div
-      className={`playlist-item${isActive ? ' active' : ''}${isFlashing ? ' flash' : ''}`}
-      onClick={() => onSelect(video.videoId)}
+      className={`playlist-item${isActive ? ' active' : ''}${isFlashing ? ' flash' : ''}${isSelected ? ' selected' : ''}`}
+      onClick={() => {
+        if (selectionMode) {
+          onToggleSelected(video.videoId);
+          return;
+        }
+
+        onSelect(video.videoId);
+      }}
       onContextMenu={(event) => onOpenContextMenu(event, video)}
       role="button"
       tabIndex={0}
-      onKeyDown={(event) => event.key === 'Enter' && onSelect(video.videoId)}
-      aria-label={`Play ${video.title}`}
+      onKeyDown={(event) => {
+        if (event.key !== 'Enter') return;
+
+        if (selectionMode) {
+          onToggleSelected(video.videoId);
+          return;
+        }
+
+        onSelect(video.videoId);
+      }}
+      aria-label={
+        selectionMode ? `Select ${video.title}` : `Play ${video.title}`
+      }
     >
+      {selectionMode && (
+        <button
+          className={`support-select-toggle${isSelected ? ' active' : ''}`}
+          type="button"
+          aria-label={
+            isSelected ? `Deselect ${video.title}` : `Select ${video.title}`
+          }
+          aria-pressed={isSelected}
+          onClick={(event) => {
+            event.stopPropagation();
+            onToggleSelected(video.videoId);
+          }}
+        />
+      )}
+
       <div className="list-entry-number" aria-hidden="true">
         {orderNumber}
       </div>
@@ -94,9 +147,17 @@ function PlaylistItem({
       )}
 
       <div className="playlist-item-info">
-        <div className="playlist-item-title">
-          {video.title || video.videoId}
-        </div>
+        {isActive && !selectionMode ? (
+          <ScrollingText
+            className="playlist-item-title-scroll"
+            text={video.title || video.videoId}
+            truncateWhenStatic
+          />
+        ) : (
+          <div className="playlist-item-title">
+            {video.title || video.videoId}
+          </div>
+        )}
         {video.channelTitle && (
           <div className="playlist-item-meta">{video.channelTitle}</div>
         )}
@@ -130,6 +191,66 @@ function PlaylistItem({
   );
 }
 
+function SortablePlaylistItem({
+  orderNumber,
+  video,
+  isActive,
+  isFlashing,
+  listenedStatus,
+  onSelect,
+  isSupported,
+  isNominated,
+  onToggleSupport,
+  onOpenContextMenu,
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: video.videoId });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`fav-sortable-wrap${isDragging ? ' dragging' : ''}`}
+    >
+      <div
+        className="drag-handle"
+        {...attributes}
+        {...listeners}
+        aria-label="Drag to reorder"
+        title="Drag to reorder"
+      >
+        ⠿
+      </div>
+      <PlaylistItem
+        orderNumber={orderNumber}
+        video={video}
+        isActive={isActive}
+        isFlashing={isFlashing}
+        listenedStatus={listenedStatus}
+        onSelect={onSelect}
+        isSupported={isSupported}
+        isNominated={isNominated}
+        onToggleSupport={onToggleSupport}
+        onOpenContextMenu={onOpenContextMenu}
+        selectionMode={false}
+        isSelected={false}
+        onToggleSelected={() => {}}
+      />
+    </div>
+  );
+}
+
 export default function PlaylistSidebar({
   playlist,
   currentIndex,
@@ -143,6 +264,7 @@ export default function PlaylistSidebar({
   onToggleCollapse,
   onToggleOrderView,
   onSelect,
+  onReorder,
   supportList,
   nominationList = [],
   listenedStatusById = {},
@@ -150,7 +272,15 @@ export default function PlaylistSidebar({
   onAddToSupportList,
   onRemoveFromPlaylist,
 }) {
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    }),
+  );
   const isMobileLayout = useMediaQuery('(max-width: 960px)');
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState([]);
   const [contextMenu, setContextMenu] = useState(null);
   const contextMenuRef = useRef(null);
   const collapseGestureRef = useRef(null);
@@ -163,6 +293,20 @@ export default function PlaylistSidebar({
     [nominationList],
   );
   const flashIds = useMemo(() => new Set(flashVideoIds), [flashVideoIds]);
+  const selectedIdSet = useMemo(
+    () =>
+      new Set(
+        selectedIds.filter((videoId) =>
+          playlist.some((video) => video.videoId === videoId),
+        ),
+      ),
+    [playlist, selectedIds],
+  );
+  const selectedVideos = useMemo(
+    () => playlist.filter((video) => selectedIdSet.has(video.videoId)),
+    [playlist, selectedIdSet],
+  );
+  const canReorder = !selectionMode && (!isShuffleEnabled || showOriginalOrder);
 
   useEffect(() => {
     if (!contextMenu) return undefined;
@@ -286,6 +430,40 @@ export default function PlaylistSidebar({
   const shouldShowCollapseTab = !isMobileLayout || isCollapsed;
   const showMobileHeaderClose = isMobileLayout && !isCollapsed;
 
+  function handleDragEnd(event) {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+
+    const oldIdx = playlist.findIndex((video) => video.videoId === active.id);
+    const newIdx = playlist.findIndex((video) => video.videoId === over.id);
+    if (oldIdx < 0 || newIdx < 0) return;
+
+    onReorder?.(arrayMove(playlist, oldIdx, newIdx));
+  }
+
+  function handleToggleSelectionMode() {
+    setSelectionMode((previousValue) => {
+      const nextValue = !previousValue;
+      if (!nextValue) {
+        setSelectedIds([]);
+        setContextMenu(null);
+      }
+      return nextValue;
+    });
+  }
+
+  function handleToggleSelected(videoId) {
+    setSelectedIds((previousIds) =>
+      previousIds.includes(videoId)
+        ? previousIds.filter((id) => id !== videoId)
+        : [...previousIds, videoId],
+    );
+  }
+
+  function handleSelectAll() {
+    setSelectedIds(playlist.map((video) => video.videoId));
+  }
+
   function renderHeader() {
     return (
       <div className="sidebar-header">
@@ -319,6 +497,15 @@ export default function PlaylistSidebar({
                 <FastForwardIcon />
               </button>
             </>
+          )}
+          {playlist.length > 0 && (
+            <button
+              className={`fav-panel-action-btn${selectionMode ? ' active' : ''}`}
+              type="button"
+              onClick={handleToggleSelectionMode}
+            >
+              {selectionMode ? 'Done' : 'Select'}
+            </button>
           )}
           {showMobileHeaderClose && (
             <button
@@ -415,6 +602,7 @@ export default function PlaylistSidebar({
   }
 
   const showOrderToggle = isShuffleEnabled && playlist.length > 1;
+  const showSelectionActions = selectionMode && playlist.length > 0;
 
   return (
     <div
@@ -457,23 +645,98 @@ export default function PlaylistSidebar({
           </div>
         </div>
       )}
+      {!isCollapsed && showSelectionActions && (
+        <div className="fav-panel-selection-toolbar playlist-selection-toolbar">
+          <button
+            className="fav-panel-action-btn selection-accent"
+            type="button"
+            onClick={handleSelectAll}
+          >
+            Select all
+          </button>
+          <button
+            className="fav-panel-action-btn selection-accent"
+            type="button"
+            onClick={() => {
+              if (!selectedVideos.length) return;
+              const removedIds = selectedVideos.map((video) => video.videoId);
+              setSelectedIds([]);
+              onRemoveFromPlaylist(removedIds);
+            }}
+            disabled={selectedVideos.length === 0}
+          >
+            Remove from Playlist
+          </button>
+        </div>
+      )}
       {!isCollapsed && (
         <div className="playlist-list" role="list">
-          {playlist.map((video, index) => (
-            <PlaylistItem
-              key={video.videoId}
-              orderNumber={(video.loadIndex ?? index) + 1}
-              video={video}
-              isActive={index === currentIndex}
-              isFlashing={flashIds.has(video.videoId)}
-              listenedStatus={listenedStatusById[video.videoId] || null}
-              onSelect={onSelect}
-              isSupported={supportIds.has(video.videoId)}
-              isNominated={nominationIds.has(video.videoId)}
-              onToggleSupport={onToggleSupport}
-              onOpenContextMenu={handleOpenContextMenu}
-            />
-          ))}
+          {selectionMode ? (
+            playlist.map((video, index) => (
+              <PlaylistItem
+                key={video.videoId}
+                orderNumber={(video.loadIndex ?? index) + 1}
+                video={video}
+                isActive={index === currentIndex}
+                isFlashing={flashIds.has(video.videoId)}
+                listenedStatus={listenedStatusById[video.videoId] || null}
+                onSelect={onSelect}
+                isSupported={supportIds.has(video.videoId)}
+                isNominated={nominationIds.has(video.videoId)}
+                onToggleSupport={onToggleSupport}
+                onOpenContextMenu={handleOpenContextMenu}
+                selectionMode={true}
+                isSelected={selectedIdSet.has(video.videoId)}
+                onToggleSelected={handleToggleSelected}
+              />
+            ))
+          ) : canReorder ? (
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragEnd={handleDragEnd}
+            >
+              <SortableContext
+                items={playlist.map((video) => video.videoId)}
+                strategy={verticalListSortingStrategy}
+              >
+                {playlist.map((video, index) => (
+                  <SortablePlaylistItem
+                    key={video.videoId}
+                    orderNumber={(video.loadIndex ?? index) + 1}
+                    video={video}
+                    isActive={index === currentIndex}
+                    isFlashing={flashIds.has(video.videoId)}
+                    listenedStatus={listenedStatusById[video.videoId] || null}
+                    onSelect={onSelect}
+                    isSupported={supportIds.has(video.videoId)}
+                    isNominated={nominationIds.has(video.videoId)}
+                    onToggleSupport={onToggleSupport}
+                    onOpenContextMenu={handleOpenContextMenu}
+                  />
+                ))}
+              </SortableContext>
+            </DndContext>
+          ) : (
+            playlist.map((video, index) => (
+              <PlaylistItem
+                key={video.videoId}
+                orderNumber={(video.loadIndex ?? index) + 1}
+                video={video}
+                isActive={index === currentIndex}
+                isFlashing={flashIds.has(video.videoId)}
+                listenedStatus={listenedStatusById[video.videoId] || null}
+                onSelect={onSelect}
+                isSupported={supportIds.has(video.videoId)}
+                isNominated={nominationIds.has(video.videoId)}
+                onToggleSupport={onToggleSupport}
+                onOpenContextMenu={handleOpenContextMenu}
+                selectionMode={false}
+                isSelected={false}
+                onToggleSelected={() => {}}
+              />
+            ))
+          )}
         </div>
       )}
       {contextMenu && (
