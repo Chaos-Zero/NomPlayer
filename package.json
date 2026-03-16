@@ -12,6 +12,12 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
+    "supabase:start": "npx supabase start",
+    "supabase:stop": "npx supabase stop",
+    "supabase:status": "npx supabase status",
+    "supabase:push": "npx supabase db push",
+    "supabase:pull": "npx supabase db pull",
+    "supabase:migration:new": "npx supabase migration new",
     "hooks:install": "bash scripts/install-hooks.sh",
     "gitleaks:install": "bash scripts/install-gitleaks.sh",
     "secrets:scan": "bash scripts/run-gitleaks.sh",
@@ -40,6 +46,7 @@
     "globals": "^17.4.0",
     "jsdom": "^28.1.0",
     "prettier": "^3.6.2",
+    "supabase": "^2.78.1",
     "vite": "^8.0.0",
     "vitest": "^4.1.0"
   }

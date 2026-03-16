@@ -1,0 +1,2 @@
+-- Intentionally empty.
+-- Add development-only seed data here if you want local accounts or test rows.

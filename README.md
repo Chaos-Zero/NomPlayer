@@ -40,7 +40,60 @@ VITE_SUPABASE_URL=https://your-project.supabase.co
 VITE_SUPABASE_PUBLISHABLE_KEY=your_publishable_key_here
 ```
 
-Apply the SQL schema in [supabase/schema.sql](/run/media/calzoneb/SSD/My%20Documents/Projects/Web/Websites/VGMC-Taster/supabase/schema.sql) inside the Supabase SQL editor before testing login.
+## Supabase Workflow
+
+This repo now manages Supabase schema changes as code with the Supabase CLI.
+
+Common commands:
+
+```bash
+npm run supabase:start
+npm run supabase:stop
+npm run supabase:status
+npm run supabase:push
+npm run supabase:pull
+npm run supabase:migration:new -- add_some_change
+```
+
+Or with `just`:
+
+```bash
+just supabase-start
+just supabase-stop
+just supabase-status
+just supabase-login
+just supabase-link ref=YOUR_PROJECT_REF
+just supabase-push
+just supabase-pull
+just supabase-migration name=add_some_change
+just supabase-reset
+```
+
+The current schema lives in:
+
+- [supabase/migrations/20260316130555_init_auth_player_state.sql](/run/media/calzoneb/SSD/My%20Documents/Projects/Web/Websites/VGMC-Taster/supabase/migrations/20260316130555_init_auth_player_state.sql)
+
+To connect this repo to your hosted Supabase project for future pushes:
+
+1. Log in to the CLI:
+
+```bash
+npx supabase login
+```
+
+2. Link the repo to your hosted project:
+
+```bash
+npx supabase link --project-ref YOUR_PROJECT_REF
+```
+
+3. Push local migrations to the hosted database:
+
+```bash
+npx supabase db push
+```
+
+You can find the project ref in the Supabase dashboard URL or project settings.
 
 ## Scripts
 
