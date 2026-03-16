@@ -3,6 +3,9 @@ import TopBar from './components/TopBar.jsx';
 import VideoPlayer from './components/VideoPlayer.jsx';
 import PlaylistSidebar from './components/PlaylistSidebar.jsx';
 import FavouritesPanel from './components/FavouritesPanel.jsx';
+import HomePage from './components/HomePage.jsx';
+import SiteNavigation from './components/SiteNavigation.jsx';
+import ScrollingText from './components/ScrollingText.jsx';
 import useMediaQuery from './hooks/useMediaQuery.js';
 
 const SUPPORT_STORAGE_KEY = 'yt_support_list';
@@ -93,6 +96,12 @@ function shuffleVideoIds(videoIds, pinnedVideoId = null) {
 
 export default function App() {
   const isMobileLayout = useMediaQuery('(max-width: 960px)');
+  const [activePage, setActivePage] = useState('home');
+  const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
+  const [
+    suppressPlaylistRestoreTransition,
+    setSuppressPlaylistRestoreTransition,
+  ] = useState(false);
   // Playlist state
   const [playlist, setPlaylist] = useState([]);
   const playlistRef = useRef([]);
@@ -109,6 +118,7 @@ export default function App() {
     () => window.matchMedia?.('(max-width: 960px)')?.matches ?? false,
   );
   const [isPreviewModeEnabled, setIsPreviewModeEnabled] = useState(false);
+  const isPlayingRef = useRef(false);
 
   // Playback
   const [isPlaying, setIsPlaying] = useState(false);
@@ -121,7 +131,13 @@ export default function App() {
   const [showNominationsList, setShowNominationsList] = useState(false);
   const [renderNominationsList, setRenderNominationsList] = useState(false);
   const [supportToastMessage, setSupportToastMessage] = useState('');
+  const [isDetachedFooterEntering, setIsDetachedFooterEntering] =
+    useState(false);
+  const [isDetachedFooterPending, setIsDetachedFooterPending] = useState(false);
   const supportToastTimeoutRef = useRef(null);
+  const restoreTransitionFrameRef = useRef(0);
+  const detachedFooterTimeoutRef = useRef(0);
+  const detachedFooterFrameRef = useRef(0);
 
   // Persist support list
   useEffect(() => {
@@ -141,6 +157,15 @@ export default function App() {
       if (supportToastTimeoutRef.current) {
         window.clearTimeout(supportToastTimeoutRef.current);
       }
+      if (restoreTransitionFrameRef.current) {
+        window.cancelAnimationFrame(restoreTransitionFrameRef.current);
+      }
+      if (detachedFooterTimeoutRef.current) {
+        window.clearTimeout(detachedFooterTimeoutRef.current);
+      }
+      if (detachedFooterFrameRef.current) {
+        window.cancelAnimationFrame(detachedFooterFrameRef.current);
+      }
     },
     [],
   );
@@ -152,6 +177,10 @@ export default function App() {
   useEffect(() => {
     currentVideoIdRef.current = currentVideoId;
   }, [currentVideoId]);
+
+  useEffect(() => {
+    isPlayingRef.current = isPlaying;
+  }, [isPlaying]);
 
   useEffect(() => {
     shuffleOrderIdsRef.current = shuffleOrderIds;
@@ -206,6 +235,7 @@ export default function App() {
   const currentDisplayIndex = transientVideo
     ? null
     : displayPlaylist.findIndex((video) => video.videoId === currentVideoId);
+  const isPlayerPage = activePage === 'player';
 
   const currentPlaylistVideo =
     playlist.find((video) => video.videoId === currentVideoId) || null;
@@ -900,138 +930,264 @@ export default function App() {
 
   const handleSetIsPlaying = useCallback(
     (value) => {
-      setIsPlaying((previousValue) => {
-        const nextValue =
-          typeof value === 'function' ? value(previousValue) : value;
+      const previousValue = isPlayingRef.current;
+      const nextValue =
+        typeof value === 'function' ? value(previousValue) : value;
 
-        if (!previousValue && nextValue && !transientVideo) {
+      if (!previousValue && nextValue) {
+        if (!transientVideo) {
           markVideoStarted(currentVideoIdRef.current);
         }
+      }
 
-        return nextValue;
-      });
+      setIsPlaying(nextValue);
     },
     [markVideoStarted, transientVideo],
   );
 
+  const handleNavigate = useCallback(
+    (nextPage) => {
+      const shouldAnimateDetachedFooter =
+        nextPage !== 'player' &&
+        !isMobileLayout &&
+        Boolean(currentVideoIdRef.current) &&
+        isPlayingRef.current;
+
+      if (nextPage === 'player' && !isMobileLayout && !isPlaylistCollapsed) {
+        if (restoreTransitionFrameRef.current) {
+          window.cancelAnimationFrame(restoreTransitionFrameRef.current);
+        }
+        setSuppressPlaylistRestoreTransition(true);
+        restoreTransitionFrameRef.current = window.requestAnimationFrame(() => {
+          restoreTransitionFrameRef.current = window.requestAnimationFrame(
+            () => {
+              restoreTransitionFrameRef.current = 0;
+              setSuppressPlaylistRestoreTransition(false);
+            },
+          );
+        });
+      }
+
+      if (detachedFooterFrameRef.current) {
+        window.cancelAnimationFrame(detachedFooterFrameRef.current);
+        detachedFooterFrameRef.current = 0;
+      }
+
+      if (shouldAnimateDetachedFooter) {
+        if (detachedFooterTimeoutRef.current) {
+          window.clearTimeout(detachedFooterTimeoutRef.current);
+        }
+        setIsDetachedFooterPending(true);
+        setIsDetachedFooterEntering(true);
+      } else {
+        if (detachedFooterTimeoutRef.current) {
+          window.clearTimeout(detachedFooterTimeoutRef.current);
+          detachedFooterTimeoutRef.current = 0;
+        }
+        setIsDetachedFooterPending(false);
+        setIsDetachedFooterEntering(false);
+      }
+
+      setActivePage(nextPage);
+      setIsMobileNavOpen(false);
+
+      if (shouldAnimateDetachedFooter) {
+        detachedFooterFrameRef.current = window.requestAnimationFrame(() => {
+          detachedFooterFrameRef.current = window.requestAnimationFrame(() => {
+            detachedFooterFrameRef.current = 0;
+            setIsDetachedFooterPending(false);
+            detachedFooterTimeoutRef.current = window.setTimeout(() => {
+              detachedFooterTimeoutRef.current = 0;
+              setIsDetachedFooterEntering(false);
+            }, 360);
+          });
+        });
+      }
+    },
+    [isMobileLayout, isPlaylistCollapsed],
+  );
+
+  const shellIsCollapsed = isPlaylistCollapsed || !isPlayerPage;
+  const shouldRenderPersistentPlayer = isPlayerPage || Boolean(currentVideo);
+  const hasDetachedFooter =
+    !isPlayerPage &&
+    !isMobileLayout &&
+    Boolean(currentVideo) &&
+    !isDetachedFooterPending;
+  const playerPresentation = isPlayerPage
+    ? 'full'
+    : hasDetachedFooter
+      ? 'mini'
+      : 'hidden';
+
   return (
-    <div
-      className={`app-shell${isPlaylistCollapsed ? ' playlist-collapsed' : ''}`}
-    >
-      <TopBar
-        isPlaying={isPlaying}
-        setIsPlaying={handleSetIsPlaying}
-        onPrev={handlePrev}
-        onNext={handleNext}
-        showSupportList={showSupportList}
-        setShowSupportList={(value) => {
-          if (typeof value === 'function') {
-            const nextValue = value(showSupportList);
-            if (nextValue) {
+    <div className={`app-frame${isMobileLayout ? ' mobile' : ''}`}>
+      {!isMobileLayout && (
+        <SiteNavigation activePage={activePage} onNavigate={handleNavigate} />
+      )}
+
+      {isMobileLayout && (
+        <SiteNavigation
+          isMobile
+          activePage={activePage}
+          onNavigate={handleNavigate}
+          isMenuOpen={isMobileNavOpen}
+          onToggleMenu={() =>
+            setIsMobileNavOpen((previousValue) => !previousValue)
+          }
+          onCloseMenu={() => setIsMobileNavOpen(false)}
+        />
+      )}
+
+      <div
+        className={`app-shell${shellIsCollapsed ? ' playlist-collapsed' : ''}${isPlayerPage ? '' : ' home-view'}${suppressPlaylistRestoreTransition ? ' playlist-transitionless' : ''}`}
+      >
+        <TopBar
+          isPlaying={isPlaying}
+          setIsPlaying={handleSetIsPlaying}
+          onPrev={handlePrev}
+          onNext={handleNext}
+          showSupportList={showSupportList}
+          setShowSupportList={(value) => {
+            if (typeof value === 'function') {
+              const nextValue = value(showSupportList);
+              if (nextValue) {
+                handleOpenSupportList();
+              } else {
+                handleRequestCloseSupportList();
+              }
+              return;
+            }
+
+            if (value) {
               handleOpenSupportList();
             } else {
               handleRequestCloseSupportList();
             }
-            return;
-          }
+          }}
+          showNominationsList={showNominationsList}
+          setShowNominationsList={(value) => {
+            if (typeof value === 'function') {
+              const nextValue = value(showNominationsList);
+              if (nextValue) {
+                handleOpenNominationsList();
+              } else {
+                handleRequestCloseNominationsList();
+              }
+              return;
+            }
 
-          if (value) {
-            handleOpenSupportList();
-          } else {
-            handleRequestCloseSupportList();
-          }
-        }}
-        showNominationsList={showNominationsList}
-        setShowNominationsList={(value) => {
-          if (typeof value === 'function') {
-            const nextValue = value(showNominationsList);
-            if (nextValue) {
+            if (value) {
               handleOpenNominationsList();
             } else {
               handleRequestCloseNominationsList();
             }
-            return;
-          }
-
-          if (value) {
-            handleOpenNominationsList();
-          } else {
-            handleRequestCloseNominationsList();
-          }
-        }}
-        isShuffleEnabled={isShuffleEnabled}
-        onShuffle={handleShufflePlaylist}
-        isPreviewModeEnabled={isPreviewModeEnabled}
-        onTogglePreview={handleTogglePreviewMode}
-        currentVideo={currentVideo}
-        isCurrentVideoSupported={isCurrentVideoSupported}
-        isCurrentVideoNominated={isCurrentVideoNominated}
-        onToggleCurrentVideoSupport={handleToggleSupportFromPlaylist}
-        onLoad={handleLoad}
-      />
-
-      <main className="main-content" id="main-content">
-        <VideoPlayer
-          video={currentVideo}
-          isPlaying={isPlaying}
-          onVideoEnd={handleVideoEnd}
-          onPrev={handlePrev}
-          onNext={handleNext}
-          onTogglePlay={() =>
-            handleSetIsPlaying((previousValue) => !previousValue)
-          }
+          }}
           isShuffleEnabled={isShuffleEnabled}
           onShuffle={handleShufflePlaylist}
           isPreviewModeEnabled={isPreviewModeEnabled}
           onTogglePreview={handleTogglePreviewMode}
-          isSupported={isCurrentVideoSupported}
-          isNominated={isCurrentVideoNominated}
-          onToggleSupport={handleToggleSupportFromPlaylist}
+          currentVideo={currentVideo}
+          isCurrentVideoSupported={isCurrentVideoSupported}
+          isCurrentVideoNominated={isCurrentVideoNominated}
+          onToggleCurrentVideoSupport={handleToggleSupportFromPlaylist}
+          onLoad={handleLoad}
+          isPlayerPage={isPlayerPage}
+          onNavigateToPlayer={() => handleNavigate('player')}
         />
-      </main>
 
-      <aside
-        className={`sidebar app-sidebar${isPlaylistCollapsed ? ' collapsed' : ''}`}
-      >
-        <PlaylistSidebar
-          playlist={displayPlaylist}
-          currentIndex={currentDisplayIndex < 0 ? null : currentDisplayIndex}
-          flashVideoIds={flashVideoIds}
-          isShuffleEnabled={isShuffleEnabled}
-          isPreviewModeEnabled={isPreviewModeEnabled}
-          isCollapsed={isPlaylistCollapsed}
-          showOriginalOrder={showOriginalOrder}
-          onShuffle={handleShufflePlaylist}
-          onTogglePreview={handleTogglePreviewMode}
-          onToggleCollapse={() =>
-            setIsPlaylistCollapsed((previousValue) => !previousValue)
-          }
-          onToggleOrderView={handleTogglePlaylistOrderView}
-          onSelect={goToVideo}
-          supportList={supportList}
-          nominationList={nominationList}
-          listenedStatusById={listenedStatusById}
-          onToggleSupport={handleToggleSupportFromPlaylist}
-          onAddToSupportList={handleAddToSupportList}
-          onRemoveFromPlaylist={handleRemoveFromPlaylist}
-        />
-        {!isPlaylistCollapsed && apiKeyMissing && (
-          <div className="api-key-notice">
-            <span>🔑</span>
-            <span>
-              Add <code>VITE_YT_API_KEY</code> to <code>.env</code> to enable
-              playlist loading.{' '}
-              <a
-                href="https://console.cloud.google.com/apis/library/youtube.googleapis.com"
-                target="_blank"
-                rel="noreferrer"
-              >
-                Get key
-              </a>
-            </span>
-          </div>
+        <main
+          className={`main-content${isPlayerPage ? ' player-view' : ' home-view'}`}
+          id="main-content"
+        >
+          {!isPlayerPage && <HomePage />}
+
+          {shouldRenderPersistentPlayer && (
+            <div
+              className={`player-surface player-surface-${playerPresentation}${hasDetachedFooter ? ' detached-footer' : ''}${isPlaying ? ' playing' : ''}${isDetachedFooterEntering ? ' entering' : ''}`}
+            >
+              <VideoPlayer
+                video={currentVideo}
+                isPlaying={isPlaying}
+                onVideoEnd={handleVideoEnd}
+                onPrev={handlePrev}
+                onNext={handleNext}
+                onTogglePlay={() =>
+                  handleSetIsPlaying((previousValue) => !previousValue)
+                }
+                isShuffleEnabled={isShuffleEnabled}
+                onShuffle={handleShufflePlaylist}
+                isPreviewModeEnabled={isPreviewModeEnabled}
+                onTogglePreview={handleTogglePreviewMode}
+                isSupported={isCurrentVideoSupported}
+                isNominated={isCurrentVideoNominated}
+                onToggleSupport={handleToggleSupportFromPlaylist}
+                variant={playerPresentation}
+                showMetadata={isPlayerPage}
+              />
+
+              {hasDetachedFooter && (
+                <div className="now-playing-footer">
+                  <span className="now-playing-footer-dot-slot">
+                    {isPlaying && <span className="now-playing-dot" />}
+                  </span>
+                  <ScrollingText
+                    className="now-playing-footer-title"
+                    text={currentVideo.title}
+                  />
+                </div>
+              )}
+            </div>
+          )}
+        </main>
+
+        {isPlayerPage && (
+          <aside
+            className={`sidebar app-sidebar${isPlaylistCollapsed ? ' collapsed' : ''}`}
+          >
+            <PlaylistSidebar
+              playlist={displayPlaylist}
+              currentIndex={
+                currentDisplayIndex < 0 ? null : currentDisplayIndex
+              }
+              flashVideoIds={flashVideoIds}
+              isShuffleEnabled={isShuffleEnabled}
+              isPreviewModeEnabled={isPreviewModeEnabled}
+              isCollapsed={isPlaylistCollapsed}
+              showOriginalOrder={showOriginalOrder}
+              onShuffle={handleShufflePlaylist}
+              onTogglePreview={handleTogglePreviewMode}
+              onToggleCollapse={() =>
+                setIsPlaylistCollapsed((previousValue) => !previousValue)
+              }
+              onToggleOrderView={handleTogglePlaylistOrderView}
+              onSelect={goToVideo}
+              supportList={supportList}
+              nominationList={nominationList}
+              listenedStatusById={listenedStatusById}
+              onToggleSupport={handleToggleSupportFromPlaylist}
+              onAddToSupportList={handleAddToSupportList}
+              onRemoveFromPlaylist={handleRemoveFromPlaylist}
+            />
+            {!isPlaylistCollapsed && apiKeyMissing && (
+              <div className="api-key-notice">
+                <span>🔑</span>
+                <span>
+                  Add <code>VITE_YT_API_KEY</code> to <code>.env</code> to
+                  enable playlist loading.{' '}
+                  <a
+                    href="https://console.cloud.google.com/apis/library/youtube.googleapis.com"
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    Get key
+                  </a>
+                </span>
+              </div>
+            )}
+          </aside>
         )}
-      </aside>
+      </div>
 
       {supportToastMessage && (
         <div

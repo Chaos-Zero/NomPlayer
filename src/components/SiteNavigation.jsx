@@ -1,0 +1,143 @@
+import { useEffect, useRef } from 'react';
+
+function HomeIcon() {
+  return (
+    <svg viewBox="0 0 20 20" aria-hidden="true">
+      <path d="M3.5 9.1 10 3.75l6.5 5.35V16a.75.75 0 0 1-.75.75H11.5v-4.5h-3v4.5H4.25A.75.75 0 0 1 3.5 16V9.1Z" />
+    </svg>
+  );
+}
+
+function PlayerIcon() {
+  return (
+    <svg viewBox="0 0 20 20" aria-hidden="true">
+      <path d="M6.5 4.52v10.96c0 .62.68 1 1.22.68l8.3-5.48a.8.8 0 0 0 0-1.36l-8.3-5.48c-.54-.32-1.22.06-1.22.68Z" />
+    </svg>
+  );
+}
+
+function MenuIcon() {
+  return (
+    <svg viewBox="0 0 20 20" aria-hidden="true">
+      <path d="M4 5.75h12" />
+      <path d="M4 10h12" />
+      <path d="M4 14.25h12" />
+    </svg>
+  );
+}
+
+const NAV_ITEMS = [
+  {
+    id: 'home',
+    label: 'Home',
+    Icon: HomeIcon,
+  },
+  {
+    id: 'player',
+    label: 'Player',
+    Icon: PlayerIcon,
+  },
+];
+
+export default function SiteNavigation({
+  activePage,
+  onNavigate,
+  isMobile = false,
+  isMenuOpen = false,
+  onToggleMenu,
+  onCloseMenu,
+}) {
+  const menuRef = useRef(null);
+
+  useEffect(() => {
+    if (!isMobile || !isMenuOpen) return undefined;
+
+    function handlePointerDown(event) {
+      const target = event.target;
+      if (menuRef.current?.contains(target)) return;
+      if (target.closest('.mobile-site-nav-toggle')) return;
+      onCloseMenu?.();
+    }
+
+    function handleKeyDown(event) {
+      if (event.key === 'Escape') {
+        onCloseMenu?.();
+      }
+    }
+
+    window.addEventListener('pointerdown', handlePointerDown);
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      window.removeEventListener('pointerdown', handlePointerDown);
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isMenuOpen, isMobile, onCloseMenu]);
+
+  if (isMobile) {
+    return (
+      <>
+        <button
+          className={`mobile-site-nav-toggle${isMenuOpen ? ' active' : ''}`}
+          type="button"
+          onClick={onToggleMenu}
+          aria-label="Open navigation menu"
+          aria-expanded={isMenuOpen}
+          aria-controls="mobile-site-nav-menu"
+        >
+          <MenuIcon />
+        </button>
+
+        <div
+          ref={menuRef}
+          id="mobile-site-nav-menu"
+          className={`mobile-site-nav-menu${isMenuOpen ? ' open' : ''}`}
+          role="menu"
+          aria-label="Site navigation"
+        >
+          {NAV_ITEMS.map((item) => (
+            <button
+              key={item.id}
+              className={`mobile-site-nav-item${activePage === item.id ? ' active' : ''}`}
+              type="button"
+              role="menuitem"
+              aria-current={activePage === item.id ? 'page' : undefined}
+              onClick={() => {
+                onNavigate(item.id);
+                onCloseMenu?.();
+              }}
+            >
+              <item.Icon />
+              <span>{item.label}</span>
+            </button>
+          ))}
+        </div>
+      </>
+    );
+  }
+
+  return (
+    <nav className="site-nav" aria-label="Primary navigation">
+      <div className="site-nav-brand">VGMC</div>
+
+      <div className="site-nav-group">
+        {NAV_ITEMS.map((item) => (
+          <button
+            key={item.id}
+            className={`site-nav-btn${activePage === item.id ? ' active' : ''}`}
+            type="button"
+            aria-label={item.label}
+            aria-current={activePage === item.id ? 'page' : undefined}
+            title={item.label}
+            onClick={() => onNavigate(item.id)}
+          >
+            <span className="site-nav-btn-icon" aria-hidden="true">
+              <item.Icon />
+            </span>
+            <span className="site-nav-btn-label">{item.label}</span>
+          </button>
+        ))}
+      </div>
+    </nav>
+  );
+}

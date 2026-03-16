@@ -1,4 +1,10 @@
-import { act, render, screen, waitFor } from '@testing-library/react';
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import App from '../App.jsx';
 
@@ -21,6 +27,17 @@ function mockMatchMedia(matches) {
     removeListener: vi.fn(),
     dispatchEvent: vi.fn(),
   }));
+}
+
+function openPlayerView() {
+  const directPlayerButton = screen.queryByRole('button', { name: 'Player' });
+  if (directPlayerButton) {
+    fireEvent.click(directPlayerButton);
+    return;
+  }
+
+  fireEvent.click(screen.getByRole('button', { name: 'Open navigation menu' }));
+  fireEvent.click(screen.getByRole('menuitem', { name: 'Player' }));
 }
 
 vi.mock('../components/TopBar.jsx', () => ({
@@ -83,8 +100,57 @@ describe('App', () => {
     }
   });
 
+  it('shows the home placeholders by default', () => {
+    render(<App />);
+
+    expect(screen.getByText('Discover')).toBeInTheDocument();
+    expect(screen.getByText('Manage Lists')).toBeInTheDocument();
+    expect(screen.getByText('Listen Now')).toBeInTheDocument();
+    expect(screen.getByText('VGMC Updates')).toBeInTheDocument();
+  });
+
+  it('shows a mobile navigation menu with home and player entries', () => {
+    mockMatchMedia(true);
+
+    render(<App />);
+
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Open navigation menu' }),
+    );
+
+    expect(screen.getByRole('menuitem', { name: 'Home' })).toBeInTheDocument();
+    expect(
+      screen.getByRole('menuitem', { name: 'Player' }),
+    ).toBeInTheDocument();
+  });
+
+  it('keeps the player mounted when leaving the player page with a loaded track', () => {
+    render(<App />);
+    openPlayerView();
+
+    act(() => {
+      appTestState.topBarProps.onLoad(
+        [
+          {
+            videoId: 'alpha1234567',
+            title: 'Alpha',
+            thumbnail: 'a.jpg',
+            channelTitle: '',
+          },
+        ],
+        { mode: 'append', autoplay: true },
+      );
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Home' }));
+
+    expect(screen.getByText('Discover')).toBeInTheDocument();
+    expect(screen.getByTestId('video-player-mock')).toHaveTextContent('Alpha');
+  });
+
   it('autoplays a loaded single video when the playlist is empty', () => {
     render(<App />);
+    openPlayerView();
 
     act(() => {
       appTestState.topBarProps.onLoad(
@@ -109,6 +175,7 @@ describe('App', () => {
 
   it('appends a loaded single video to the existing playlist without interrupting playback', () => {
     render(<App />);
+    openPlayerView();
 
     act(() => {
       appTestState.topBarProps.onLoad(
@@ -149,6 +216,7 @@ describe('App', () => {
     mockMatchMedia(true);
 
     render(<App />);
+    openPlayerView();
 
     expect(appTestState.playlistSidebarProps.isCollapsed).toBe(true);
 
@@ -174,6 +242,7 @@ describe('App', () => {
     mockMatchMedia(true);
 
     render(<App />);
+    openPlayerView();
 
     act(() => {
       appTestState.topBarProps.onLoad(
@@ -199,6 +268,7 @@ describe('App', () => {
 
   it('does not append duplicate videos to the playlist', () => {
     render(<App />);
+    openPlayerView();
 
     act(() => {
       appTestState.topBarProps.onLoad(
@@ -235,6 +305,7 @@ describe('App', () => {
 
   it('shows a toast when a song is added to the support list', () => {
     render(<App />);
+    openPlayerView();
 
     act(() => {
       appTestState.topBarProps.onLoad(
@@ -266,6 +337,7 @@ describe('App', () => {
 
   it('removes playlist entries and keeps playback on the next available track', () => {
     render(<App />);
+    openPlayerView();
 
     act(() => {
       appTestState.topBarProps.onLoad(
@@ -299,6 +371,7 @@ describe('App', () => {
 
   it('queues a support-list song without interrupting the current playback and highlights the queued item', () => {
     render(<App />);
+    openPlayerView();
 
     act(() => {
       appTestState.topBarProps.onLoad(
@@ -342,6 +415,7 @@ describe('App', () => {
 
   it('plays a support-list song immediately without adding it to the playlist', () => {
     render(<App />);
+    openPlayerView();
 
     act(() => {
       appTestState.topBarProps.onLoad(
@@ -380,6 +454,7 @@ describe('App', () => {
 
   it('resumes the next playlist song after a Play Now track ends', () => {
     render(<App />);
+    openPlayerView();
 
     act(() => {
       appTestState.topBarProps.onLoad(
@@ -425,6 +500,7 @@ describe('App', () => {
 
   it('appends loaded playlists to the current queue without interrupting playback', () => {
     render(<App />);
+    openPlayerView();
 
     act(() => {
       appTestState.topBarProps.onLoad(
@@ -472,6 +548,7 @@ describe('App', () => {
     vi.spyOn(Math, 'random').mockReturnValue(0);
 
     render(<App />);
+    openPlayerView();
 
     act(() => {
       appTestState.topBarProps.onLoad(
@@ -530,6 +607,7 @@ describe('App', () => {
 
   it('toggles the playlist collapsed state from the sidebar control', () => {
     render(<App />);
+    openPlayerView();
 
     expect(appTestState.playlistSidebarProps.isCollapsed).toBe(false);
 
@@ -548,6 +626,7 @@ describe('App', () => {
 
   it('marks playlist songs as started and then completed once playback finishes', async () => {
     render(<App />);
+    openPlayerView();
 
     act(() => {
       appTestState.topBarProps.onLoad(
@@ -582,6 +661,7 @@ describe('App', () => {
     vi.useFakeTimers();
 
     render(<App />);
+    openPlayerView();
 
     act(() => {
       appTestState.topBarProps.onLoad(
@@ -630,6 +710,7 @@ describe('App', () => {
     vi.useFakeTimers();
 
     render(<App />);
+    openPlayerView();
 
     act(() => {
       appTestState.topBarProps.onLoad(
@@ -679,6 +760,7 @@ describe('App', () => {
 
   it('leaves a started song as partial when playback is skipped before completion', async () => {
     render(<App />);
+    openPlayerView();
 
     act(() => {
       appTestState.topBarProps.onLoad(
@@ -718,6 +800,7 @@ describe('App', () => {
 
   it('removes a support item when the same song is added to nominations', () => {
     render(<App />);
+    openPlayerView();
 
     act(() => {
       appTestState.topBarProps.setShowSupportList(true);
