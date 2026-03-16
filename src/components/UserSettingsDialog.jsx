@@ -15,6 +15,7 @@ export default function UserSettingsDialog({
     const formData = new FormData(event.currentTarget);
     onSave?.({
       username: String(formData.get('username') || '').trim(),
+      gamefaqsUsername: String(formData.get('gamefaqs_username') || '').trim(),
     });
   }
 
@@ -60,9 +61,26 @@ export default function UserSettingsDialog({
             />
           </label>
 
+          {profile?.gamefaqs_username && (
+            <div className="auth-dialog-message">
+              Current GameFAQs username: {profile.gamefaqs_username}
+            </div>
+          )}
+
           <label className="auth-dialog-field">
             <span>Email</span>
             <input type="email" value={user.email || ''} readOnly disabled />
+          </label>
+
+          <label className="auth-dialog-field">
+            <span>GameFAQs username</span>
+            <input
+              name="gamefaqs_username"
+              type="text"
+              defaultValue={profile?.gamefaqs_username || ''}
+              autoComplete="nickname"
+              maxLength={32}
+            />
           </label>
 
           {(error || notice) && (

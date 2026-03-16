@@ -150,6 +150,30 @@ describe('App', () => {
     expect(screen.getByTestId('video-player-mock')).toHaveTextContent('Alpha');
   });
 
+  it('does not switch into detached mini-player mode when the current track is paused', () => {
+    render(<App />);
+    openPlayerView();
+
+    act(() => {
+      appTestState.topBarProps.onLoad(
+        [
+          {
+            videoId: 'alpha1234567',
+            title: 'Alpha',
+            thumbnail: 'a.jpg',
+            channelTitle: '',
+          },
+        ],
+        { mode: 'append', autoplay: false },
+      );
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Home' }));
+
+    expect(screen.getByText('Discover')).toBeInTheDocument();
+    expect(appTestState.videoPlayerProps.variant).toBe('hidden');
+  });
+
   it('switches the player into mini mode on mobile when leaving the player page', async () => {
     mockMatchMedia(true);
 

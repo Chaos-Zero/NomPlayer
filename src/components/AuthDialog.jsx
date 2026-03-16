@@ -18,12 +18,16 @@ export default function AuthDialog({
     const email = String(formData.get('email') || '').trim();
     const password = String(formData.get('password') || '');
     const username = String(formData.get('username') || '').trim();
+    const gamefaqsUsername = String(
+      formData.get('gamefaqs_username') || '',
+    ).trim();
 
     if (mode === 'signup') {
       onSignUp?.({
         email,
         password,
         username,
+        gamefaqsUsername,
       });
       return;
     }
@@ -97,17 +101,29 @@ export default function AuthDialog({
 
             <form className="auth-dialog-form" onSubmit={handleSubmit}>
               {mode === 'signup' && (
-                <label className="auth-dialog-field">
-                  <span>Username</span>
-                  <input
-                    name="username"
-                    type="text"
-                    autoComplete="username"
-                    minLength={3}
-                    maxLength={32}
-                    required
-                  />
-                </label>
+                <>
+                  <label className="auth-dialog-field">
+                    <span>Username</span>
+                    <input
+                      name="username"
+                      type="text"
+                      autoComplete="username"
+                      minLength={3}
+                      maxLength={32}
+                      required
+                    />
+                  </label>
+
+                  <label className="auth-dialog-field">
+                    <span>GameFAQs username (optional)</span>
+                    <input
+                      name="gamefaqs_username"
+                      type="text"
+                      autoComplete="nickname"
+                      maxLength={32}
+                    />
+                  </label>
+                </>
               )}
 
               <label className="auth-dialog-field">

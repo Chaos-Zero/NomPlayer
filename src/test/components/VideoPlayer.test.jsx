@@ -5,12 +5,13 @@ import VideoPlayer from '../../components/VideoPlayer.jsx';
 const youtubeMockState = vi.hoisted(() => ({
   players: new Map(),
   destroyedById: new Map(),
+  stateChangeHandlers: new Map(),
 }));
 
 vi.mock('react-youtube', async () => {
   const React = await import('react');
 
-  function MockYouTube({ videoId, onReady, style }) {
+  function MockYouTube({ videoId, onReady, onStateChange, style }) {
     const player = React.useMemo(() => {
       youtubeMockState.destroyedById.set(videoId, false);
       const player = {
@@ -32,12 +33,14 @@ vi.mock('react-youtube', async () => {
 
     React.useEffect(() => {
       youtubeMockState.destroyedById.set(videoId, false);
+      youtubeMockState.stateChangeHandlers.set(videoId, onStateChange);
       onReady?.({ target: player });
 
       return () => {
         youtubeMockState.destroyedById.set(videoId, true);
+        youtubeMockState.stateChangeHandlers.delete(videoId);
       };
-    }, [onReady, player, videoId]);
+    }, [onReady, onStateChange, player, videoId]);
 
     return <div data-testid={`youtube-${videoId}`} style={style} />;
   }
@@ -49,6 +52,7 @@ describe('VideoPlayer', () => {
   beforeEach(() => {
     youtubeMockState.players.clear();
     youtubeMockState.destroyedById.clear();
+    youtubeMockState.stateChangeHandlers.clear();
   });
 
   it('controls the current player when playback toggles', () => {
@@ -106,5 +110,24 @@ describe('VideoPlayer', () => {
     expect(
       screen.queryByRole('button', { name: /player overlay/i }),
     ).not.toBeInTheDocument();
+  });
+
+  it('reports direct YouTube play and pause state changes', () => {
+    const onPlaybackChange = vi.fn();
+    const video = { videoId: 'alpha1234567', title: 'Alpha' };
+
+    render(
+      <VideoPlayer
+        video={video}
+        isPlaying={false}
+        onPlaybackChange={onPlaybackChange}
+      />,
+    );
+
+    youtubeMockState.stateChangeHandlers.get(video.videoId)?.({ data: 1 });
+    youtubeMockState.stateChangeHandlers.get(video.videoId)?.({ data: 2 });
+
+    expect(onPlaybackChange).toHaveBeenNthCalledWith(1, true);
+    expect(onPlaybackChange).toHaveBeenNthCalledWith(2, false);
   });
 });

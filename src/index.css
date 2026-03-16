@@ -385,6 +385,12 @@ body {
   animation: footer-rise 0.34s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
+.player-surface.detached-footer.logging-out {
+  opacity: 0;
+  transform: translateY(18px);
+  pointer-events: none;
+}
+
 .player-surface.detached-footer.playing:hover {
   border-color: var(--border-hover);
   box-shadow:
@@ -491,6 +497,16 @@ body {
   }
 }
 
+@keyframes logout-home-fade-in {
+  from {
+    opacity: 0.18;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
 @keyframes footer-marquee {
   0% {
     transform: translateX(0);
@@ -528,6 +544,10 @@ body {
   display: block;
   padding: 0;
   overflow: auto;
+}
+
+.main-content.home-view.logout-fade-in {
+  animation: logout-home-fade-in 0.24s ease both;
 }
 
 .sidebar {
@@ -3033,6 +3053,97 @@ body {
   line-height: 1.55;
 }
 
+.guest-import-dialog {
+  width: min(480px, 100%);
+}
+
+.guest-import-options {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.guest-import-option {
+  width: 100%;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.02);
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  color: var(--text-primary);
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color var(--transition),
+    background var(--transition),
+    box-shadow var(--transition);
+}
+
+.guest-import-option:hover:not(:disabled) {
+  border-color: var(--border-hover);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.guest-import-option.selected {
+  border-color: rgba(124, 58, 237, 0.4);
+  background: rgba(124, 58, 237, 0.1);
+  box-shadow: inset 0 0 0 1px rgba(124, 58, 237, 0.18);
+}
+
+.guest-import-option.disabled {
+  opacity: 0.48;
+  cursor: not-allowed;
+}
+
+.guest-import-option-toggle {
+  width: 20px;
+  height: 20px;
+  flex: 0 0 20px;
+  border: 2px solid rgba(255, 255, 255, 0.18);
+  border-radius: 50%;
+  background: transparent;
+  transition:
+    border-color var(--transition),
+    background var(--transition),
+    box-shadow var(--transition);
+}
+
+.guest-import-option-toggle.selected {
+  border-color: var(--accent-light);
+  background: radial-gradient(
+    circle,
+    var(--accent-light) 0 48%,
+    transparent 50% 100%
+  );
+  box-shadow: 0 0 12px rgba(124, 58, 237, 0.24);
+}
+
+.guest-import-option-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.guest-import-option-title {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.guest-import-option-description {
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.guest-import-actions {
+  margin-top: 18px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
 .fav-panel-body {
   flex: 1;
   overflow-y: auto;
@@ -3124,6 +3235,13 @@ body {
   box-shadow:
     0 16px 28px rgba(0, 0, 0, 0.34),
     0 0 18px rgba(245, 158, 11, 0.12);
+}
+
+.app-toast.logout-toast {
+  border: 1px solid rgba(124, 58, 237, 0.38);
+  box-shadow:
+    0 16px 28px rgba(0, 0, 0, 0.34),
+    0 0 18px rgba(124, 58, 237, 0.16);
 }
 
 @keyframes collection-toast-in {

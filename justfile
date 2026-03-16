@@ -1,4 +1,5 @@
 set shell := ["bash", "-eu", "-o", "pipefail", "-c"]
+set dotenv-load := true
 
 deploy:
     git push github main
@@ -15,8 +16,8 @@ supabase-status:
 supabase-login:
     npx supabase login
 
-supabase-link ref:
-    npx supabase link --project-ref {{ref}}
+supabase-link:
+    @npx supabase link --project-ref "{{ env_var('SUPABASE_PROJECT_REF') }}"
 
 supabase-push:
     npx supabase db push

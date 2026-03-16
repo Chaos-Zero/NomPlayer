@@ -5,28 +5,36 @@ import PlaylistSidebar from './components/PlaylistSidebar.jsx';
 import FavouritesPanel from './components/FavouritesPanel.jsx';
 import AuthDialog from './components/AuthDialog.jsx';
 import HomePage from './components/HomePage.jsx';
+import GuestImportDialog from './components/GuestImportDialog.jsx';
 import SiteNavigation from './components/SiteNavigation.jsx';
 import ScrollingText from './components/ScrollingText.jsx';
 import UserSettingsDialog from './components/UserSettingsDialog.jsx';
 import useMediaQuery from './hooks/useMediaQuery.js';
 import {
-  PLAYER_STATE_STORAGE_KEY,
+  clearLocalGuestPlayerState,
+  NOMINATION_LIST_STORAGE_KEY,
+  SUPPORT_LIST_STORAGE_KEY,
+  createGuestImportSelectionState,
   createPersistedPlayerState,
+  checkSignupAvailability,
   deriveProfileUsername,
   fetchUserPlayerState,
   fetchUserProfile,
+  hasImportableGuestCollections,
   hasMeaningfulPlayerState,
   loadLocalPlayerState,
+  mergeGuestCollectionsIntoPlayerState,
+  normalizeOptionalProfileValue,
   normalizePersistedPlayerState,
+  persistLocalGuestPlayerState,
   saveUserPlayerState,
   upsertUserProfile,
+  LEGACY_SUPPORT_STORAGE_KEY,
 } from './lib/playerState.js';
 import { getSupabaseClient, isSupabaseConfigured } from './lib/supabase.js';
 
-const SUPPORT_STORAGE_KEY = 'yt_support_list';
-const NOMINATIONS_STORAGE_KEY = 'yt_nominations_list';
-const LEGACY_STORAGE_KEY = 'yt_favourites';
 const PREVIEW_DURATION_MS = 31_000;
+const LOGOUT_TRANSITION_MS = 260;
 
 function loadStoredList(storageKey, fallbackKey = null) {
   try {
@@ -45,11 +53,11 @@ function loadStoredList(storageKey, fallbackKey = null) {
 }
 
 function loadSupportList() {
-  return loadStoredList(SUPPORT_STORAGE_KEY, LEGACY_STORAGE_KEY);
+  return loadStoredList(SUPPORT_LIST_STORAGE_KEY, LEGACY_SUPPORT_STORAGE_KEY);
 }
 
 function loadNominationList() {
-  return loadStoredList(NOMINATIONS_STORAGE_KEY);
+  return loadStoredList(NOMINATION_LIST_STORAGE_KEY);
 }
 
 function appendUniqueVideos(list, videos, blockedIds = new Set()) {
@@ -168,20 +176,26 @@ export default function App() {
   const [showNominationsList, setShowNominationsList] = useState(false);
   const [renderNominationsList, setRenderNominationsList] = useState(false);
   const [supportToastMessage, setSupportToastMessage] = useState('');
+  const [appToastMessage, setAppToastMessage] = useState('');
+  const [appToastTone, setAppToastTone] = useState('default');
   const [isDetachedFooterEntering, setIsDetachedFooterEntering] =
     useState(false);
   const [isDetachedFooterPending, setIsDetachedFooterPending] = useState(false);
   const [isPlayerRevealPending, setIsPlayerRevealPending] = useState(false);
   const [isPlayerRevealing, setIsPlayerRevealing] = useState(false);
+  const [isLogoutTransitioning, setIsLogoutTransitioning] = useState(false);
   const supportToastTimeoutRef = useRef(null);
+  const appToastTimeoutRef = useRef(null);
   const restoreTransitionFrameRef = useRef(0);
   const detachedFooterTimeoutRef = useRef(0);
   const detachedFooterFrameRef = useRef(0);
   const playerRevealTimeoutRef = useRef(0);
   const playerRevealFrameRef = useRef(0);
+  const logoutTransitionTimeoutRef = useRef(0);
   const syncTimeoutRef = useRef(0);
-  const pendingMergeAfterLoginRef = useRef(false);
+  const pendingGuestImportStateRef = useRef(null);
   const pendingPreferredUsernameRef = useRef('');
+  const pendingGamefaqsUsernameRef = useRef('');
   const lastSyncedPlayerStateRef = useRef('');
   const [authSession, setAuthSession] = useState(null);
   const [userProfile, setUserProfile] = useState(null);
@@ -194,11 +208,16 @@ export default function App() {
   const [isSettingsSubmitting, setIsSettingsSubmitting] = useState(false);
   const [settingsError, setSettingsError] = useState('');
   const [settingsNotice, setSettingsNotice] = useState('');
+  const [guestImportState, setGuestImportState] = useState(null);
+  const [guestImportSelections, setGuestImportSelections] = useState(null);
 
   useEffect(
     () => () => {
       if (supportToastTimeoutRef.current) {
         window.clearTimeout(supportToastTimeoutRef.current);
+      }
+      if (appToastTimeoutRef.current) {
+        window.clearTimeout(appToastTimeoutRef.current);
       }
       if (restoreTransitionFrameRef.current) {
         window.cancelAnimationFrame(restoreTransitionFrameRef.current);
@@ -211,6 +230,9 @@ export default function App() {
       }
       if (playerRevealTimeoutRef.current) {
         window.clearTimeout(playerRevealTimeoutRef.current);
+      }
+      if (logoutTransitionTimeoutRef.current) {
+        window.clearTimeout(logoutTransitionTimeoutRef.current);
       }
       if (playerRevealFrameRef.current) {
         window.cancelAnimationFrame(playerRevealFrameRef.current);
@@ -347,32 +369,35 @@ export default function App() {
     ? nominationList.some((entry) => entry.videoId === currentVideo.videoId)
     : false;
   const apiKeyMissing = !import.meta.env.VITE_YT_API_KEY;
+  const guestImportCounts = guestImportState
+    ? {
+        playlist: guestImportState.playlist.length,
+        supportList: guestImportState.supportList.length,
+        nominationList: guestImportState.nominationList.length,
+      }
+    : null;
 
   useEffect(() => {
-    const snapshot = createPlayerStateSnapshot();
-    localStorage.setItem(PLAYER_STATE_STORAGE_KEY, JSON.stringify(snapshot));
-    localStorage.setItem(
-      SUPPORT_STORAGE_KEY,
-      JSON.stringify(snapshot.supportList),
-    );
-    localStorage.setItem(
-      NOMINATIONS_STORAGE_KEY,
-      JSON.stringify(snapshot.nominationList),
-    );
-    localStorage.removeItem(LEGACY_STORAGE_KEY);
-  }, [createPlayerStateSnapshot]);
+    if (authUser) return;
+
+    persistLocalGuestPlayerState(createPlayerStateSnapshot());
+  }, [authUser, createPlayerStateSnapshot]);
 
   const ensureUserProfile = useCallback(
-    async (user, preferredUsername = '') => {
+    async (user, preferredUsername = '', preferredGamefaqsUsername = '') => {
       if (!supabase || !user) return null;
 
       const existingProfile = await fetchUserProfile(supabase, user.id);
       const nextUsername = deriveProfileUsername(user, preferredUsername);
+      const nextGamefaqsUsername = normalizeOptionalProfileValue(
+        preferredGamefaqsUsername || existingProfile?.gamefaqs_username || '',
+      );
 
       if (
         existingProfile &&
         existingProfile.username === nextUsername &&
-        existingProfile.email === (user.email || '')
+        existingProfile.email === (user.email || '') &&
+        (existingProfile.gamefaqs_username || null) === nextGamefaqsUsername
       ) {
         return existingProfile;
       }
@@ -381,37 +406,46 @@ export default function App() {
         id: user.id,
         username: nextUsername,
         email: user.email || '',
+        gamefaqs_username: nextGamefaqsUsername,
       });
     },
     [supabase],
   );
 
   const hydrateAuthenticatedUser = useCallback(
-    async (user, { mergeLocalState = false, preferredUsername = '' } = {}) => {
+    async (
+      user,
+      { preferredUsername = '', preferredGamefaqsUsername = '' } = {},
+    ) => {
       if (!supabase || !user) return;
 
       setIsAuthReady(false);
 
       try {
-        const profile = await ensureUserProfile(user, preferredUsername);
+        const profile = await ensureUserProfile(
+          user,
+          preferredUsername,
+          preferredGamefaqsUsername,
+        );
         setUserProfile(profile);
+        const remoteState = await fetchUserPlayerState(supabase, user.id);
+        const normalizedState = normalizePersistedPlayerState(remoteState);
+        applyPersistedPlayerState(normalizedState);
+        lastSyncedPlayerStateRef.current = JSON.stringify(normalizedState);
 
-        if (
-          mergeLocalState &&
-          hasMeaningfulPlayerState(createPlayerStateSnapshot())
-        ) {
-          const snapshot = createPlayerStateSnapshot();
-          const savedSnapshot = await saveUserPlayerState(
-            supabase,
-            user.id,
-            snapshot,
+        const pendingGuestImportState = pendingGuestImportStateRef.current;
+        pendingGuestImportStateRef.current = null;
+
+        if (hasImportableGuestCollections(pendingGuestImportState)) {
+          setGuestImportState(
+            normalizePersistedPlayerState(pendingGuestImportState),
           );
-          lastSyncedPlayerStateRef.current = JSON.stringify(savedSnapshot);
+          setGuestImportSelections(
+            createGuestImportSelectionState(pendingGuestImportState),
+          );
         } else {
-          const remoteState = await fetchUserPlayerState(supabase, user.id);
-          const normalizedState = normalizePersistedPlayerState(remoteState);
-          applyPersistedPlayerState(normalizedState);
-          lastSyncedPlayerStateRef.current = JSON.stringify(normalizedState);
+          setGuestImportState(null);
+          setGuestImportSelections(null);
         }
       } catch (error) {
         setAuthError(error.message || 'Failed to load your account data.');
@@ -419,12 +453,7 @@ export default function App() {
         setIsAuthReady(true);
       }
     },
-    [
-      applyPersistedPlayerState,
-      createPlayerStateSnapshot,
-      ensureUserProfile,
-      supabase,
-    ],
+    [applyPersistedPlayerState, ensureUserProfile, supabase],
   );
 
   useEffect(() => {
@@ -470,25 +499,28 @@ export default function App() {
       setAuthSession(session);
 
       if (!session?.user) {
-        pendingMergeAfterLoginRef.current = false;
+        pendingGuestImportStateRef.current = null;
         pendingPreferredUsernameRef.current = '';
+        pendingGamefaqsUsernameRef.current = '';
         lastSyncedPlayerStateRef.current = '';
         setUserProfile(null);
         setIsSettingsOpen(false);
+        setGuestImportState(null);
+        setGuestImportSelections(null);
         setIsAuthReady(true);
         return;
       }
 
-      const mergeLocalState = pendingMergeAfterLoginRef.current;
       const preferredUsername = pendingPreferredUsernameRef.current;
-      pendingMergeAfterLoginRef.current = false;
+      const preferredGamefaqsUsername = pendingGamefaqsUsernameRef.current;
       pendingPreferredUsernameRef.current = '';
+      pendingGamefaqsUsernameRef.current = '';
 
       window.setTimeout(() => {
         if (!isActive) return;
         hydrateAuthenticatedUser(session.user, {
-          mergeLocalState,
           preferredUsername,
+          preferredGamefaqsUsername,
         });
       }, 0);
     });
@@ -556,10 +588,13 @@ export default function App() {
       setIsAuthSubmitting(true);
       setAuthError('');
       setAuthMessage('');
-      pendingMergeAfterLoginRef.current = hasMeaningfulPlayerState(
+      pendingGuestImportStateRef.current = hasMeaningfulPlayerState(
         createPlayerStateSnapshot(),
-      );
+      )
+        ? createPlayerStateSnapshot()
+        : null;
       pendingPreferredUsernameRef.current = '';
+      pendingGamefaqsUsernameRef.current = '';
 
       try {
         const { error } = await supabase.auth.signInWithPassword({
@@ -571,7 +606,7 @@ export default function App() {
 
         setAuthDialogMode(null);
       } catch (error) {
-        pendingMergeAfterLoginRef.current = false;
+        pendingGuestImportStateRef.current = null;
         setAuthError(error.message || 'Failed to log in.');
       } finally {
         setIsAuthSubmitting(false);
@@ -581,7 +616,7 @@ export default function App() {
   );
 
   const handleSignUp = useCallback(
-    async ({ email, password, username }) => {
+    async ({ email, password, username, gamefaqsUsername }) => {
       if (!supabase) {
         setAuthError('Supabase is not configured yet.');
         return;
@@ -590,12 +625,36 @@ export default function App() {
       setIsAuthSubmitting(true);
       setAuthError('');
       setAuthMessage('');
-      pendingMergeAfterLoginRef.current = hasMeaningfulPlayerState(
+      pendingGuestImportStateRef.current = hasMeaningfulPlayerState(
         createPlayerStateSnapshot(),
-      );
+      )
+        ? createPlayerStateSnapshot()
+        : null;
       pendingPreferredUsernameRef.current = username.trim();
+      pendingGamefaqsUsernameRef.current = gamefaqsUsername.trim();
 
       try {
+        const availability = await checkSignupAvailability(supabase, {
+          email,
+          username,
+        });
+
+        if (!availability.emailAvailable) {
+          setAuthError('That email address is already registered.');
+          pendingGuestImportStateRef.current = null;
+          pendingPreferredUsernameRef.current = '';
+          pendingGamefaqsUsernameRef.current = '';
+          return;
+        }
+
+        if (!availability.usernameAvailable) {
+          setAuthError('That username is already in use.');
+          pendingGuestImportStateRef.current = null;
+          pendingPreferredUsernameRef.current = '';
+          pendingGamefaqsUsernameRef.current = '';
+          return;
+        }
+
         const {
           data: { session },
           error,
@@ -605,6 +664,7 @@ export default function App() {
           options: {
             data: {
               username: username.trim(),
+              gamefaqs_username: gamefaqsUsername.trim(),
             },
           },
         });
@@ -612,18 +672,21 @@ export default function App() {
         if (error) throw error;
 
         if (!session) {
-          pendingMergeAfterLoginRef.current = false;
+          pendingGuestImportStateRef.current = null;
           pendingPreferredUsernameRef.current = '';
+          pendingGamefaqsUsernameRef.current = '';
+          setAuthDialogMode('signin');
           setAuthMessage(
-            'Account created. Check your email to confirm the sign-up, then log in.',
+            'Check your email to activate your account, then log in.',
           );
           return;
         }
 
         setAuthDialogMode(null);
       } catch (error) {
-        pendingMergeAfterLoginRef.current = false;
+        pendingGuestImportStateRef.current = null;
         pendingPreferredUsernameRef.current = '';
+        pendingGamefaqsUsernameRef.current = '';
         setAuthError(error.message || 'Failed to create your account.');
       } finally {
         setIsAuthSubmitting(false);
@@ -636,14 +699,65 @@ export default function App() {
     if (!supabase) return;
 
     setAuthError('');
+    setAuthMessage('');
+
+    const finalizeLogout = () => {
+      clearLocalGuestPlayerState();
+      applyPersistedPlayerState({});
+      setIsPreviewModeEnabled(false);
+      setShowSupportList(false);
+      setRenderSupportList(false);
+      setShowNominationsList(false);
+      setRenderNominationsList(false);
+      setGuestImportState(null);
+      setGuestImportSelections(null);
+      setSupportToastMessage('');
+      setIsLogoutTransitioning(false);
+      setAppToastTone('logout');
+      setAppToastMessage('Logout successful.');
+
+      if (appToastTimeoutRef.current) {
+        window.clearTimeout(appToastTimeoutRef.current);
+      }
+      appToastTimeoutRef.current = window.setTimeout(() => {
+        appToastTimeoutRef.current = null;
+        setAppToastMessage('');
+        setAppToastTone('default');
+      }, 1800);
+    };
 
     try {
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
+
+      setActivePage('home');
+      setIsMobileNavOpen(false);
+      setAuthDialogMode(null);
+      setIsSettingsOpen(false);
+      setIsDetachedFooterPending(false);
+      setIsDetachedFooterEntering(false);
+      setIsPlayerRevealPending(false);
+      setIsPlayerRevealing(false);
+
+      if (logoutTransitionTimeoutRef.current) {
+        window.clearTimeout(logoutTransitionTimeoutRef.current);
+      }
+
+      if (currentVideo && isPlayingRef.current) {
+        setIsLogoutTransitioning(true);
+        logoutTransitionTimeoutRef.current = window.setTimeout(() => {
+          logoutTransitionTimeoutRef.current = 0;
+          finalizeLogout();
+        }, LOGOUT_TRANSITION_MS);
+        return;
+      }
+
+      finalizeLogout();
     } catch (error) {
+      setIsLogoutTransitioning(false);
       setAuthError(error.message || 'Failed to log out.');
     }
-  }, [supabase]);
+  }, [applyPersistedPlayerState, currentVideo, supabase]);
 
   const handleOpenSettings = useCallback(() => {
     setSettingsError('');
@@ -652,7 +766,7 @@ export default function App() {
   }, []);
 
   const handleSaveSettings = useCallback(
-    async ({ username }) => {
+    async ({ username, gamefaqsUsername }) => {
       if (!supabase || !authUser) return;
 
       setIsSettingsSubmitting(true);
@@ -664,6 +778,7 @@ export default function App() {
           id: authUser.id,
           username: deriveProfileUsername(authUser, username),
           email: authUser.email || '',
+          gamefaqs_username: normalizeOptionalProfileValue(gamefaqsUsername),
         });
         setUserProfile(profile);
         setSettingsNotice('Settings saved.');
@@ -675,6 +790,47 @@ export default function App() {
     },
     [authUser, supabase],
   );
+
+  const handleToggleGuestImportSelection = useCallback((key) => {
+    setGuestImportSelections((previousSelections) => {
+      if (!previousSelections || !(key in previousSelections)) {
+        return previousSelections;
+      }
+
+      return {
+        ...previousSelections,
+        [key]: !previousSelections[key],
+      };
+    });
+  }, []);
+
+  const handleSkipGuestImport = useCallback(() => {
+    clearLocalGuestPlayerState();
+    pendingGuestImportStateRef.current = null;
+    setGuestImportState(null);
+    setGuestImportSelections(null);
+  }, []);
+
+  const handleImportGuestCollections = useCallback(() => {
+    if (!guestImportState || !guestImportSelections) return;
+
+    const mergedState = mergeGuestCollectionsIntoPlayerState(
+      createPlayerStateSnapshot(),
+      guestImportState,
+      guestImportSelections,
+    );
+
+    applyPersistedPlayerState(mergedState);
+    clearLocalGuestPlayerState();
+    pendingGuestImportStateRef.current = null;
+    setGuestImportState(null);
+    setGuestImportSelections(null);
+  }, [
+    applyPersistedPlayerState,
+    createPlayerStateSnapshot,
+    guestImportSelections,
+    guestImportState,
+  ]);
 
   const markVideoCompleted = useCallback((videoId) => {
     if (!videoId) return;
@@ -1416,6 +1572,23 @@ export default function App() {
     [markVideoStarted, transientVideo],
   );
 
+  const handlePlayerPlaybackChange = useCallback(
+    (nextIsPlaying) => {
+      if (typeof nextIsPlaying !== 'boolean') return;
+
+      if (nextIsPlaying) {
+        hasReachedPlaylistEndRef.current = false;
+
+        if (!transientVideo && currentVideoIdRef.current) {
+          markVideoStarted(currentVideoIdRef.current);
+        }
+      }
+
+      setIsPlaying(nextIsPlaying);
+    },
+    [markVideoStarted, transientVideo],
+  );
+
   const handleNavigate = useCallback(
     (nextPage) => {
       const shouldAnimateDetachedFooter =
@@ -1514,7 +1687,10 @@ export default function App() {
   const shouldRenderPersistentPlayer = isPlayerPage || Boolean(currentVideo);
   const canTogglePlayback = Boolean(transientVideo) || playlist.length > 0;
   const hasDetachedFooter =
-    !isPlayerPage && Boolean(currentVideo) && !isDetachedFooterPending;
+    !isPlayerPage &&
+    Boolean(currentVideo) &&
+    isPlaying &&
+    !isDetachedFooterPending;
   const isDesktopDetachedFooter = hasDetachedFooter && !isMobileLayout;
   const isMobileDetachedFooter = hasDetachedFooter && isMobileLayout;
   const playerPresentation = isPlayerPage
@@ -1526,12 +1702,13 @@ export default function App() {
       : 'hidden';
   const persistentPlayer = shouldRenderPersistentPlayer ? (
     <div
-      className={`player-surface player-surface-${playerPresentation}${hasDetachedFooter ? ' detached-footer' : ''}${isMobileDetachedFooter ? ' mobile-detached-footer' : ''}${isPlaying ? ' playing' : ''}${isDetachedFooterEntering ? ' entering' : ''}${isPlayerRevealing ? ' revealing' : ''}`}
+      className={`player-surface player-surface-${playerPresentation}${hasDetachedFooter ? ' detached-footer' : ''}${isMobileDetachedFooter ? ' mobile-detached-footer' : ''}${isPlaying ? ' playing' : ''}${isDetachedFooterEntering ? ' entering' : ''}${isPlayerRevealing ? ' revealing' : ''}${isLogoutTransitioning ? ' logging-out' : ''}`}
     >
       <VideoPlayer
         video={currentVideo}
         isPlaying={isPlaying}
         onVideoEnd={handleVideoEnd}
+        onPlaybackChange={handlePlayerPlaybackChange}
         onPrev={handlePrev}
         onNext={handleNext}
         onTogglePlay={() =>
@@ -1647,7 +1824,7 @@ export default function App() {
         />
 
         <main
-          className={`main-content${isPlayerPage ? ' player-view' : ' home-view'}`}
+          className={`main-content${isPlayerPage ? ' player-view' : ' home-view'}${!isPlayerPage && isLogoutTransitioning ? ' logout-fade-in' : ''}`}
           id="main-content"
         >
           {!isPlayerPage && <HomePage />}
@@ -1710,6 +1887,16 @@ export default function App() {
           aria-live="polite"
         >
           {supportToastMessage}
+        </div>
+      )}
+
+      {appToastMessage && (
+        <div
+          className={`app-toast${appToastTone === 'logout' ? ' logout-toast' : ''}`}
+          role="status"
+          aria-live="polite"
+        >
+          {appToastMessage}
         </div>
       )}
 
@@ -1787,6 +1974,15 @@ export default function App() {
         notice={settingsNotice}
         onClose={() => setIsSettingsOpen(false)}
         onSave={handleSaveSettings}
+      />
+
+      <GuestImportDialog
+        isOpen={Boolean(guestImportState && guestImportSelections)}
+        selections={guestImportSelections}
+        counts={guestImportCounts}
+        onToggle={handleToggleGuestImportSelection}
+        onImport={handleImportGuestCollections}
+        onSkip={handleSkipGuestImport}
       />
     </div>
   );

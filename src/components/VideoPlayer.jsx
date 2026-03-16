@@ -61,6 +61,7 @@ export default function VideoPlayer({
   video,
   isPlaying,
   onVideoEnd,
+  onPlaybackChange,
   onReady,
   onPrev,
   onNext,
@@ -130,6 +131,17 @@ export default function VideoPlayer({
     onVideoEnd?.();
   }, [onVideoEnd]);
 
+  const handleStateChange = useCallback(
+    (event) => {
+      if (event?.data === 1) {
+        onPlaybackChange?.(true);
+      } else if (event?.data === 2) {
+        onPlaybackChange?.(false);
+      }
+    },
+    [onPlaybackChange],
+  );
+
   if (!video) {
     return (
       <div className="player-empty" id="player-empty">
@@ -165,6 +177,7 @@ export default function VideoPlayer({
               opts={opts}
               onReady={handleReady}
               onEnd={handleEnd}
+              onStateChange={handleStateChange}
               style={{ width: '100%', height: '100%' }}
             />
             {isOverlayEnabled && (

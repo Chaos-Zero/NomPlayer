@@ -1,4 +1,7 @@
 export const PLAYER_STATE_STORAGE_KEY = 'yt_player_state';
+export const SUPPORT_LIST_STORAGE_KEY = 'yt_support_list';
+export const NOMINATION_LIST_STORAGE_KEY = 'yt_nominations_list';
+export const LEGACY_SUPPORT_STORAGE_KEY = 'yt_favourites';
 
 function normalizeVideoEntry(entry) {
   if (!entry || typeof entry !== 'object') return null;
@@ -32,6 +35,19 @@ function normalizeVideoList(list) {
   }
 
   return normalizedList;
+}
+
+function mergeUniqueVideoLists(baseList, incomingList) {
+  const nextList = [...baseList];
+  const knownIds = new Set(baseList.map((entry) => entry.videoId));
+
+  for (const entry of incomingList) {
+    if (knownIds.has(entry.videoId)) continue;
+    knownIds.add(entry.videoId);
+    nextList.push(entry);
+  }
+
+  return nextList;
 }
 
 function normalizeIdList(ids, allowedIds = null) {
@@ -109,6 +125,30 @@ export function createPersistedPlayerState(state) {
   return normalizePersistedPlayerState(state);
 }
 
+export function persistLocalGuestPlayerState(state) {
+  const snapshot = createPersistedPlayerState(state);
+
+  localStorage.setItem(PLAYER_STATE_STORAGE_KEY, JSON.stringify(snapshot));
+  localStorage.setItem(
+    SUPPORT_LIST_STORAGE_KEY,
+    JSON.stringify(snapshot.supportList),
+  );
+  localStorage.setItem(
+    NOMINATION_LIST_STORAGE_KEY,
+    JSON.stringify(snapshot.nominationList),
+  );
+  localStorage.removeItem(LEGACY_SUPPORT_STORAGE_KEY);
+
+  return snapshot;
+}
+
+export function clearLocalGuestPlayerState() {
+  localStorage.removeItem(PLAYER_STATE_STORAGE_KEY);
+  localStorage.removeItem(SUPPORT_LIST_STORAGE_KEY);
+  localStorage.removeItem(NOMINATION_LIST_STORAGE_KEY);
+  localStorage.removeItem(LEGACY_SUPPORT_STORAGE_KEY);
+}
+
 export function loadLocalPlayerState(options = {}) {
   try {
     const storedValue = localStorage.getItem(PLAYER_STATE_STORAGE_KEY);
@@ -131,6 +171,99 @@ export function hasMeaningfulPlayerState(state) {
     normalizedState.nominationList.length > 0 ||
     Object.keys(normalizedState.listenedStatusById).length > 0
   );
+}
+
+export function hasImportableGuestCollections(state) {
+  const normalizedState = normalizePersistedPlayerState(state);
+
+  return (
+    normalizedState.playlist.length > 0 ||
+    normalizedState.supportList.length > 0 ||
+    normalizedState.nominationList.length > 0
+  );
+}
+
+export function createGuestImportSelectionState(state) {
+  const normalizedState = normalizePersistedPlayerState(state);
+
+  return {
+    playlist: normalizedState.playlist.length > 0,
+    supportList: normalizedState.supportList.length > 0,
+    nominationList: normalizedState.nominationList.length > 0,
+  };
+}
+
+export function mergeGuestCollectionsIntoPlayerState(
+  accountState,
+  guestState,
+  selections,
+) {
+  const baseState = normalizePersistedPlayerState(accountState);
+  const incomingState = normalizePersistedPlayerState(guestState);
+  const shouldImportPlaylist = Boolean(selections?.playlist);
+  const shouldImportSupportList = Boolean(selections?.supportList);
+  const shouldImportNominationList = Boolean(selections?.nominationList);
+
+  const nextPlaylist = shouldImportPlaylist
+    ? mergeUniqueVideoLists(baseState.playlist, incomingState.playlist)
+    : baseState.playlist;
+  const playlistIdSet = new Set(nextPlaylist.map((video) => video.videoId));
+
+  let nextShuffleOrderIds = normalizeIdList(
+    baseState.shuffleOrderIds,
+    playlistIdSet,
+  );
+  if (shouldImportPlaylist && nextShuffleOrderIds.length > 0) {
+    for (const video of incomingState.playlist) {
+      if (
+        playlistIdSet.has(video.videoId) &&
+        !nextShuffleOrderIds.includes(video.videoId)
+      ) {
+        nextShuffleOrderIds.push(video.videoId);
+      }
+    }
+  }
+
+  const nextNominationList = shouldImportNominationList
+    ? mergeUniqueVideoLists(
+        baseState.nominationList,
+        incomingState.nominationList,
+      )
+    : baseState.nominationList;
+  const nominationIds = new Set(
+    nextNominationList.map((video) => video.videoId),
+  );
+  const baseSupportWithoutNominations = baseState.supportList.filter(
+    (video) => !nominationIds.has(video.videoId),
+  );
+  const nextSupportList = shouldImportSupportList
+    ? mergeUniqueVideoLists(
+        baseSupportWithoutNominations,
+        incomingState.supportList.filter(
+          (video) => !nominationIds.has(video.videoId),
+        ),
+      )
+    : baseSupportWithoutNominations;
+
+  const currentVideoId =
+    typeof baseState.currentVideoId === 'string' &&
+    playlistIdSet.has(baseState.currentVideoId)
+      ? baseState.currentVideoId
+      : shouldImportPlaylist &&
+          typeof incomingState.currentVideoId === 'string' &&
+          playlistIdSet.has(incomingState.currentVideoId)
+        ? incomingState.currentVideoId
+        : (nextPlaylist[0]?.videoId ?? null);
+
+  return normalizePersistedPlayerState({
+    playlist: nextPlaylist,
+    currentVideoId,
+    shuffleOrderIds: nextShuffleOrderIds,
+    showOriginalOrder: baseState.showOriginalOrder,
+    listenedStatusById: baseState.listenedStatusById,
+    supportList: nextSupportList,
+    nominationList: nextNominationList,
+  });
 }
 
 export function deriveProfileUsername(user, existingUsername = '') {
@@ -157,10 +290,17 @@ export function deriveProfileUsername(user, existingUsername = '') {
   return 'listener';
 }
 
+export function normalizeOptionalProfileValue(value) {
+  if (typeof value !== 'string') return null;
+
+  const trimmedValue = value.trim();
+  return trimmedValue ? trimmedValue : null;
+}
+
 export async function fetchUserProfile(supabase, userId) {
   const { data, error } = await supabase
     .from('profiles')
-    .select('id, username, email')
+    .select('id, username, email, gamefaqs_username')
     .eq('id', userId)
     .maybeSingle();
 
@@ -177,7 +317,7 @@ export async function upsertUserProfile(supabase, profile) {
     .upsert(profile, {
       onConflict: 'id',
     })
-    .select('id, username, email')
+    .select('id, username, email, gamefaqs_username')
     .single();
 
   if (error) {
@@ -185,6 +325,22 @@ export async function upsertUserProfile(supabase, profile) {
   }
 
   return data;
+}
+
+export async function checkSignupAvailability(supabase, { email, username }) {
+  const { data, error } = await supabase.rpc('check_signup_availability', {
+    check_email: email,
+    check_username: username,
+  });
+
+  if (error) {
+    throw error;
+  }
+
+  return {
+    emailAvailable: Boolean(data?.email_available),
+    usernameAvailable: Boolean(data?.username_available),
+  };
 }
 
 export async function fetchUserPlayerState(

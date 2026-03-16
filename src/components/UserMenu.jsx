@@ -48,6 +48,10 @@ export default function UserMenu({
   const displayName =
     profile?.username || user?.user_metadata?.username || 'User';
   const email = profile?.email || user?.email || '';
+  const gamefaqsUsername = profile?.gamefaqs_username || '';
+  const secondaryLabel = gamefaqsUsername
+    ? `GameFaqs: ${gamefaqsUsername}`
+    : email;
 
   return (
     <div
@@ -72,7 +76,9 @@ export default function UserMenu({
             <>
               <div className="user-menu-summary">
                 <span className="user-menu-name">{displayName}</span>
-                {email && <span className="user-menu-email">{email}</span>}
+                {secondaryLabel && (
+                  <span className="user-menu-email">{secondaryLabel}</span>
+                )}
               </div>
               <button
                 className="user-menu-item"

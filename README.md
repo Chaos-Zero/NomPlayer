@@ -62,7 +62,7 @@ just supabase-start
 just supabase-stop
 just supabase-status
 just supabase-login
-just supabase-link ref=YOUR_PROJECT_REF
+just supabase-link
 just supabase-push
 just supabase-pull
 just supabase-migration name=add_some_change
@@ -84,8 +84,10 @@ npx supabase login
 2. Link the repo to your hosted project:
 
 ```bash
-npx supabase link --project-ref YOUR_PROJECT_REF
+just supabase-link
 ```
+
+This reads `SUPABASE_PROJECT_REF` from your local `.env`.
 
 3. Push local migrations to the hosted database:
 
