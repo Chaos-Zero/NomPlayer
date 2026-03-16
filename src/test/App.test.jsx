@@ -111,6 +111,14 @@ describe('App', () => {
     expect(screen.getByText('VGMC Updates')).toBeInTheDocument();
   });
 
+  it('keeps the playlist available as a collapsed overlay on desktop home view', () => {
+    render(<App />);
+
+    expect(screen.getByText('Discover')).toBeInTheDocument();
+    expect(screen.getByTestId('playlist-sidebar-mock')).toBeInTheDocument();
+    expect(appTestState.playlistSidebarProps.isCollapsed).toBe(true);
+  });
+
   it('shows a mobile navigation menu with home and player entries', () => {
     mockMatchMedia(true);
 
@@ -148,6 +156,39 @@ describe('App', () => {
 
     expect(screen.getByText('Discover')).toBeInTheDocument();
     expect(screen.getByTestId('video-player-mock')).toHaveTextContent('Alpha');
+  });
+
+  it('shows a support toggle on the detached desktop footer and updates its state', async () => {
+    render(<App />);
+    openPlayerView();
+
+    act(() => {
+      appTestState.topBarProps.onLoad(
+        [
+          {
+            videoId: 'alpha1234567',
+            title: 'Alpha',
+            thumbnail: 'a.jpg',
+            channelTitle: '',
+          },
+        ],
+        { mode: 'append', autoplay: true },
+      );
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Home' }));
+
+    const supportButton = await screen.findByRole('button', {
+      name: 'Add to support list',
+    });
+
+    fireEvent.click(supportButton);
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole('button', { name: 'Remove from support list' }),
+      ).toBeInTheDocument();
+    });
   });
 
   it('does not switch into detached mini-player mode when the current track is paused', () => {
@@ -204,6 +245,22 @@ describe('App', () => {
       expect(appTestState.videoPlayerProps.variant).toBe('mini');
       expect(appTestState.videoPlayerProps.showMetadata).toBe(false);
     });
+  });
+
+  it('closes the desktop overlay playlist on other pages without losing the player page state', () => {
+    render(<App />);
+    openPlayerView();
+
+    expect(appTestState.playlistSidebarProps.isCollapsed).toBe(false);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Home' }));
+
+    expect(screen.getByText('Discover')).toBeInTheDocument();
+    expect(appTestState.playlistSidebarProps.isCollapsed).toBe(true);
+
+    openPlayerView();
+
+    expect(appTestState.playlistSidebarProps.isCollapsed).toBe(false);
   });
 
   it('animates the detached footer in when playback starts on a non-player page', async () => {

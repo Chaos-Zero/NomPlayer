@@ -157,6 +157,8 @@ export default function App() {
   const [isPlaylistCollapsed, setIsPlaylistCollapsed] = useState(
     () => window.matchMedia?.('(max-width: 960px)')?.matches ?? false,
   );
+  const [isDesktopOverlayPlaylistOpen, setIsDesktopOverlayPlaylistOpen] =
+    useState(false);
   const [isPreviewModeEnabled, setIsPreviewModeEnabled] = useState(false);
   const isPlayingRef = useRef(false);
   const hasReachedPlaylistEndRef = useRef(false);
@@ -358,6 +360,10 @@ export default function App() {
     ? null
     : displayPlaylist.findIndex((video) => video.videoId === currentVideoId);
   const isPlayerPage = activePage === 'player';
+  const shouldRenderDesktopPlaylistOverlay = !isMobileLayout && !isPlayerPage;
+  const effectivePlaylistCollapsed = isPlayerPage
+    ? isPlaylistCollapsed
+    : !isDesktopOverlayPlaylistOpen;
 
   const currentPlaylistVideo =
     playlist.find((video) => video.videoId === currentVideoId) || null;
@@ -368,6 +374,30 @@ export default function App() {
   const isCurrentVideoNominated = currentVideo
     ? nominationList.some((entry) => entry.videoId === currentVideo.videoId)
     : false;
+  const currentSupportLabel = !currentVideo
+    ? 'No current video to support'
+    : isCurrentVideoNominated
+      ? 'Nomination tracks cannot be changed from the player'
+      : isCurrentVideoSupported
+        ? 'Remove from support list'
+        : 'Add to support list';
+  const currentSupportTooltip = !currentVideo
+    ? 'No current video'
+    : isCurrentVideoNominated
+      ? 'In Nomination List'
+      : isCurrentVideoSupported
+        ? 'Remove Support'
+        : 'Add to support list';
+  const currentSupportClassName = isCurrentVideoNominated
+    ? ' nominated locked'
+    : isCurrentVideoSupported
+      ? ' supported'
+      : '';
+  const currentSupportGlyph = isCurrentVideoNominated
+    ? '★'
+    : isCurrentVideoSupported
+      ? '♥'
+      : '♡';
   const apiKeyMissing = !import.meta.env.VITE_YT_API_KEY;
   const guestImportCounts = guestImportState
     ? {
@@ -1735,6 +1765,9 @@ export default function App() {
 
       setActivePage(nextPage);
       setIsMobileNavOpen(false);
+      if (!isMobileLayout && nextPage !== 'player') {
+        setIsDesktopOverlayPlaylistOpen(false);
+      }
 
       if (shouldAnimatePlayerReveal) {
         playerRevealFrameRef.current = window.requestAnimationFrame(() => {
@@ -1797,15 +1830,28 @@ export default function App() {
       />
 
       {isDesktopDetachedFooter && (
-        <div className="now-playing-footer">
-          <span className="now-playing-footer-dot-slot">
-            {isPlaying && <span className="now-playing-dot" />}
-          </span>
-          <ScrollingText
-            className="now-playing-footer-title"
-            text={currentVideo.title}
-          />
-        </div>
+        <>
+          <div className="now-playing-footer">
+            <span className="now-playing-footer-dot-slot">
+              {isPlaying && <span className="now-playing-dot" />}
+            </span>
+            <ScrollingText
+              className="now-playing-footer-title"
+              text={currentVideo.title}
+            />
+          </div>
+
+          <button
+            className={`btn btn-icon detached-footer-support-btn${currentSupportClassName}`}
+            type="button"
+            onClick={() => handleToggleSupportFromPlaylist(currentVideo)}
+            title={currentSupportTooltip}
+            aria-label={currentSupportLabel}
+            disabled={!currentVideo || isCurrentVideoNominated}
+          >
+            {currentSupportGlyph}
+          </button>
+        </>
       )}
     </div>
   ) : null;
@@ -1906,9 +1952,9 @@ export default function App() {
           {persistentPlayer}
         </main>
 
-        {isPlayerPage && (
+        {(isPlayerPage || shouldRenderDesktopPlaylistOverlay) && (
           <aside
-            className={`sidebar app-sidebar${isPlaylistCollapsed ? ' collapsed' : ''}`}
+            className={`sidebar app-sidebar${effectivePlaylistCollapsed ? ' collapsed' : ''}${shouldRenderDesktopPlaylistOverlay ? ' overlay-sidebar' : ''}`}
           >
             <PlaylistSidebar
               playlist={displayPlaylist}
@@ -1918,13 +1964,20 @@ export default function App() {
               flashVideoIds={flashVideoIds}
               isShuffleEnabled={isShuffleEnabled}
               isPreviewModeEnabled={isPreviewModeEnabled}
-              isCollapsed={isPlaylistCollapsed}
+              isCollapsed={effectivePlaylistCollapsed}
               showOriginalOrder={showOriginalOrder}
               onShuffle={handleShufflePlaylist}
               onTogglePreview={handleTogglePreviewMode}
-              onToggleCollapse={() =>
-                setIsPlaylistCollapsed((previousValue) => !previousValue)
-              }
+              onToggleCollapse={() => {
+                if (isPlayerPage) {
+                  setIsPlaylistCollapsed((previousValue) => !previousValue);
+                  return;
+                }
+
+                setIsDesktopOverlayPlaylistOpen(
+                  (previousValue) => !previousValue,
+                );
+              }}
               onToggleOrderView={handleTogglePlaylistOrderView}
               onSelect={goToVideo}
               supportList={supportList}
@@ -1934,7 +1987,7 @@ export default function App() {
               onAddToSupportList={handleAddToSupportList}
               onRemoveFromPlaylist={handleRemoveFromPlaylist}
             />
-            {!isPlaylistCollapsed && apiKeyMissing && (
+            {!effectivePlaylistCollapsed && apiKeyMissing && (
               <div className="api-key-notice">
                 <span>🔑</span>
                 <span>
