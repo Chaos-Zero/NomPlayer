@@ -83,6 +83,19 @@ vi.mock('../components/FavouritesPanel.jsx', () => ({
   },
 }));
 
+vi.mock('../components/HomePage.jsx', () => ({
+  default: function MockHomePage() {
+    return (
+      <div data-testid="home-page-mock">
+        <span>Updated Nominations</span>
+        <span>Discover</span>
+        <span>Listen Now</span>
+        <span>VGMC Updates</span>
+      </div>
+    );
+  },
+}));
+
 describe('App', () => {
   beforeEach(() => {
     localStorage.clear();
@@ -102,11 +115,11 @@ describe('App', () => {
     }
   });
 
-  it('shows the home placeholders by default', () => {
+  it('shows the dashboard sections by default', () => {
     render(<App />);
 
+    expect(screen.getByText('Updated Nominations')).toBeInTheDocument();
     expect(screen.getByText('Discover')).toBeInTheDocument();
-    expect(screen.getByText('Manage Lists')).toBeInTheDocument();
     expect(screen.getByText('Listen Now')).toBeInTheDocument();
     expect(screen.getByText('VGMC Updates')).toBeInTheDocument();
   });

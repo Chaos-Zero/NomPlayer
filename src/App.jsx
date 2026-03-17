@@ -2004,7 +2004,17 @@ export default function App() {
           className={`main-content${isPlayerPage ? ' player-view' : ' home-view'}${!isPlayerPage && isLogoutTransitioning ? ' logout-fade-in' : ''}`}
           id="main-content"
         >
-          {!isPlayerPage && <HomePage />}
+          {!isPlayerPage && (
+            <HomePage
+              supabase={supabase}
+              authUser={authUser}
+              currentPlaylist={playlist}
+              listenedStatusById={listenedStatusById}
+              onAddToPlaylist={handleQueueFromSupportList}
+              onPlayNow={handlePlayNowFromSupportList}
+              onNavigateToPlayer={() => handleNavigate('player')}
+            />
+          )}
 
           {persistentPlayer}
         </main>
