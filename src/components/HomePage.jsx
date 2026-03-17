@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import DiscordIcon from './DiscordIcon.jsx';
+import useMediaQuery from '../hooks/useMediaQuery.js';
 import {
   buildDiscoveryCandidates,
   fetchDashboardNominationUpdates,
@@ -13,6 +14,18 @@ import {
 } from '../lib/playerState.js';
 
 const DASHBOARD_REFRESH_LIMIT = 8;
+const MOBILE_DASHBOARD_COLLAPSE_DEFAULTS = {
+  overview: false,
+  nominations: false,
+  discover: true,
+  updates: true,
+};
+const DESKTOP_DASHBOARD_COLLAPSE_DEFAULTS = {
+  overview: false,
+  nominations: false,
+  discover: false,
+  updates: false,
+};
 
 function DashboardSection({
   title,
@@ -22,6 +35,10 @@ function DashboardSection({
   actions = null,
   caption = null,
   className = '',
+  isMobileLayout = false,
+  isCollapsed = false,
+  onToggleCollapse = null,
+  summary = '',
 }) {
   return (
     <section
@@ -39,7 +56,31 @@ function DashboardSection({
           {actions && <div className="dashboard-pane-actions">{actions}</div>}
         </div>
 
-        <div className="dashboard-pane-body">{children}</div>
+        {isMobileLayout && onToggleCollapse && (
+          <button
+            className={`dashboard-mobile-toggle${isCollapsed ? ' collapsed' : ''}`}
+            type="button"
+            aria-expanded={!isCollapsed}
+            aria-label={`${isCollapsed ? 'Expand' : 'Collapse'} ${title}`}
+            onClick={onToggleCollapse}
+          >
+            <span className="dashboard-mobile-toggle-copy">
+              <span className="dashboard-mobile-toggle-label">
+                {isCollapsed ? 'Expand section' : 'Collapse section'}
+              </span>
+              {summary && (
+                <span className="dashboard-mobile-toggle-summary">
+                  {summary}
+                </span>
+              )}
+            </span>
+            <span className="dashboard-mobile-toggle-icon" aria-hidden="true">
+              ▾
+            </span>
+          </button>
+        )}
+
+        {!isCollapsed && <div className="dashboard-pane-body">{children}</div>}
       </div>
     </section>
   );
@@ -215,7 +256,9 @@ export default function HomePage({
   onAddToPlaylist,
   onPlayNow,
   onNavigateToPlayer,
+  onShowToast,
 }) {
+  const isMobileLayout = useMediaQuery('(max-width: 960px)');
   const [nominationUpdates, setNominationUpdates] = useState([]);
   const [vgmcThreads, setVgmcThreads] = useState([]);
   const [dashboardError, setDashboardError] = useState('');
@@ -223,8 +266,9 @@ export default function HomePage({
   const [isDashboardLoading, setIsDashboardLoading] = useState(true);
   const [isUpdatesLoading, setIsUpdatesLoading] = useState(true);
   const [featuredDiscoveryId, setFeaturedDiscoveryId] = useState(null);
-  const [actionNotice, setActionNotice] = useState('');
-  const noticeTimeoutRef = useRef(0);
+  const [mobileCollapsedSections, setMobileCollapsedSections] = useState(
+    MOBILE_DASHBOARD_COLLAPSE_DEFAULTS,
+  );
 
   const currentPlaylistIds = useMemo(
     () => new Set(currentPlaylist.map((video) => video.videoId)),
@@ -273,27 +317,12 @@ export default function HomePage({
     [visibleNominationUpdates],
   );
 
-  const showActionNotice = useCallback((message) => {
-    if (!message) return;
-
-    if (noticeTimeoutRef.current) {
-      window.clearTimeout(noticeTimeoutRef.current);
-    }
-
-    setActionNotice(message);
-    noticeTimeoutRef.current = window.setTimeout(() => {
-      noticeTimeoutRef.current = 0;
-      setActionNotice('');
-    }, 2400);
-  }, []);
-
-  useEffect(
-    () => () => {
-      if (noticeTimeoutRef.current) {
-        window.clearTimeout(noticeTimeoutRef.current);
-      }
+  const showActionNotice = useCallback(
+    (message) => {
+      if (!message) return;
+      onShowToast?.(message);
     },
-    [],
+    [onShowToast],
   );
 
   useEffect(() => {
@@ -459,52 +488,114 @@ export default function HomePage({
     },
   ];
 
+  const sectionSummaries = useMemo(
+    () => ({
+      overview: isDashboardLoading
+        ? 'Loading current dashboard stats'
+        : `${visibleNominationUpdates.length} lists, ${discoveryCandidates.length} picks, ${vgmcThreads.length} threads`,
+      nominations: isDashboardLoading
+        ? 'Loading updated lists'
+        : `${visibleNominationUpdates.length} updated lists`,
+      discover:
+        discoveryCandidates.length === 0
+          ? 'You are caught up'
+          : `${discoveryCandidates.length} discovery picks`,
+      updates: isUpdatesLoading
+        ? 'Loading GameFAQs threads'
+        : `${vgmcThreads.length} VGMC threads`,
+    }),
+    [
+      discoveryCandidates.length,
+      isDashboardLoading,
+      isUpdatesLoading,
+      vgmcThreads.length,
+      visibleNominationUpdates.length,
+    ],
+  );
+
+  useEffect(() => {
+    setMobileCollapsedSections(
+      isMobileLayout
+        ? MOBILE_DASHBOARD_COLLAPSE_DEFAULTS
+        : DESKTOP_DASHBOARD_COLLAPSE_DEFAULTS,
+    );
+  }, [isMobileLayout]);
+
+  const toggleMobileSection = useCallback((sectionKey) => {
+    setMobileCollapsedSections((previousState) => ({
+      ...previousState,
+      [sectionKey]: !previousState[sectionKey],
+    }));
+  }, []);
+
   return (
     <div className="home-shell dashboard-home-shell">
       <section className="dashboard-hero" aria-label="Dashboard overview">
         <div className="dashboard-hero-copy">
           <span className="dashboard-hero-badge">Community Dashboard</span>
-          <h1 className="dashboard-hero-title">
-            What&apos;s moving in VGMC right now
-          </h1>
-          <p className="dashboard-hero-description">
-            Track recently refreshed nomination lists, surface the next songs
-            you have not queued yet, and jump straight into the latest contest
-            board chatter without leaving the dashboard.
-          </p>
+          <h1 className="dashboard-hero-title">VGMC Stats</h1>
 
-          <div className="dashboard-hero-actions">
+          {isMobileLayout && (
             <button
-              className="dashboard-action-btn"
+              className={`dashboard-mobile-toggle dashboard-mobile-toggle-hero${mobileCollapsedSections.overview ? ' collapsed' : ''}`}
               type="button"
-              onClick={onNavigateToPlayer}
+              aria-expanded={!mobileCollapsedSections.overview}
+              aria-label={`${mobileCollapsedSections.overview ? 'Expand' : 'Collapse'} VGMC Stats overview`}
+              onClick={() => toggleMobileSection('overview')}
             >
-              Open player
+              <span className="dashboard-mobile-toggle-copy">
+                <span className="dashboard-mobile-toggle-label">
+                  {mobileCollapsedSections.overview
+                    ? 'Expand overview'
+                    : 'Collapse overview'}
+                </span>
+                <span className="dashboard-mobile-toggle-summary">
+                  {sectionSummaries.overview}
+                </span>
+              </span>
+              <span className="dashboard-mobile-toggle-icon" aria-hidden="true">
+                ▾
+              </span>
             </button>
-            <button
-              className="dashboard-link-btn"
-              type="button"
-              onClick={handleFindNewSong}
-            >
-              Find new song
-            </button>
-          </div>
-
-          {actionNotice && (
-            <DashboardMessage tone="accent">{actionNotice}</DashboardMessage>
           )}
 
-          <div className="dashboard-stat-strip">
-            {dashboardStats.map((stat) => (
-              <div
-                key={stat.label}
-                className={`dashboard-stat-card dashboard-stat-card-${stat.accent}`}
-              >
-                <span className="dashboard-stat-value">{stat.value}</span>
-                <span className="dashboard-stat-label">{stat.label}</span>
+          {(!isMobileLayout || !mobileCollapsedSections.overview) && (
+            <>
+              <p className="dashboard-hero-description">
+                Track recently refreshed nomination lists, find songs you might
+                have missed, and discover older tracks from the VGMC archives.
+              </p>
+
+              <div className="dashboard-hero-actions">
+                <button
+                  className="dashboard-action-btn"
+                  type="button"
+                  onClick={onNavigateToPlayer}
+                >
+                  Open player
+                </button>
+                <button
+                  className="dashboard-link-btn"
+                  type="button"
+                  onClick={handleFindNewSong}
+                >
+                  Find new song
+                </button>
               </div>
-            ))}
-          </div>
+
+              <div className="dashboard-stat-strip">
+                {dashboardStats.map((stat) => (
+                  <div
+                    key={stat.label}
+                    className={`dashboard-stat-card dashboard-stat-card-${stat.accent}`}
+                  >
+                    <span className="dashboard-stat-value">{stat.value}</span>
+                    <span className="dashboard-stat-label">{stat.label}</span>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
         </div>
 
         <div className="dashboard-hero-spotlight">
@@ -568,6 +659,10 @@ export default function HomePage({
             tone="discover"
             caption="Recently refreshed nomination lists from other users."
             className="dashboard-section-feed"
+            isMobileLayout={isMobileLayout}
+            isCollapsed={isMobileLayout && mobileCollapsedSections.nominations}
+            onToggleCollapse={() => toggleMobileSection('nominations')}
+            summary={sectionSummaries.nominations}
           >
             {isDashboardLoading ? (
               <DashboardMessage>Loading nomination updates…</DashboardMessage>
@@ -602,6 +697,10 @@ export default function HomePage({
             tone="manage"
             caption="Songs other users nominated that are still missing from your current playlist."
             className="dashboard-section-discover"
+            isMobileLayout={isMobileLayout}
+            isCollapsed={isMobileLayout && mobileCollapsedSections.discover}
+            onToggleCollapse={() => toggleMobileSection('discover')}
+            summary={sectionSummaries.discover}
           >
             {discoveryCandidates.length === 0 ? (
               <DashboardMessage>
@@ -628,6 +727,10 @@ export default function HomePage({
             tone="updates"
             caption="Live threads from the GameFAQs Contests board with VGMC in the title."
             className="dashboard-section-updates"
+            isMobileLayout={isMobileLayout}
+            isCollapsed={isMobileLayout && mobileCollapsedSections.updates}
+            onToggleCollapse={() => toggleMobileSection('updates')}
+            summary={sectionSummaries.updates}
           >
             {isUpdatesLoading ? (
               <DashboardMessage>Loading GameFAQs threads…</DashboardMessage>

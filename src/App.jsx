@@ -723,8 +723,8 @@ export default function App() {
     setAuthMessage('');
   }, []);
 
-  const showDefaultAppToast = useCallback((message) => {
-    setAppToastTone('default');
+  const showDefaultAppToast = useCallback((message, tone = 'default') => {
+    setAppToastTone(tone);
     setAppToastMessage(message);
 
     if (appToastTimeoutRef.current) {
@@ -2258,6 +2258,9 @@ export default function App() {
               onAddToPlaylist={handleQueueFromSupportList}
               onPlayNow={handlePlayNowFromSupportList}
               onNavigateToPlayer={() => handleNavigate('player')}
+              onShowToast={(message) =>
+                showDefaultAppToast(message, 'dashboard')
+              }
             />
           )}
 
@@ -2332,7 +2335,7 @@ export default function App() {
 
       {appToastMessage && (
         <div
-          className={`app-toast${appToastTone === 'logout' ? ' logout-toast' : ''}`}
+          className={`app-toast${appToastTone === 'logout' ? ' logout-toast' : ''}${appToastTone === 'dashboard' ? ' dashboard-toast' : ''}`}
           role="status"
           aria-live="polite"
         >
