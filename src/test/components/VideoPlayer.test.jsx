@@ -1,11 +1,12 @@
-import { render, screen } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { act, render, screen } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import VideoPlayer from '../../components/VideoPlayer.jsx';
 
 const youtubeMockState = vi.hoisted(() => ({
   players: new Map(),
   destroyedById: new Map(),
   stateChangeHandlers: new Map(),
+  playerStates: new Map(),
 }));
 
 vi.mock('react-youtube', async () => {
@@ -14,17 +15,21 @@ vi.mock('react-youtube', async () => {
   function MockYouTube({ videoId, onReady, onStateChange, style }) {
     const player = React.useMemo(() => {
       youtubeMockState.destroyedById.set(videoId, false);
+      youtubeMockState.playerStates.set(videoId, -1);
       const player = {
         playVideo: vi.fn(() => {
           if (youtubeMockState.destroyedById.get(videoId)) {
             throw new Error('stale player');
           }
+          youtubeMockState.playerStates.set(videoId, 1);
         }),
         pauseVideo: vi.fn(() => {
           if (youtubeMockState.destroyedById.get(videoId)) {
             throw new Error('stale player');
           }
+          youtubeMockState.playerStates.set(videoId, 2);
         }),
+        getPlayerState: vi.fn(() => youtubeMockState.playerStates.get(videoId)),
       };
 
       youtubeMockState.players.set(videoId, player);
@@ -49,10 +54,33 @@ vi.mock('react-youtube', async () => {
 });
 
 describe('VideoPlayer', () => {
+  const originalVisibilityStateDescriptor = Object.getOwnPropertyDescriptor(
+    document,
+    'visibilityState',
+  );
+  let hasFocusMock;
+
   beforeEach(() => {
     youtubeMockState.players.clear();
     youtubeMockState.destroyedById.clear();
     youtubeMockState.stateChangeHandlers.clear();
+    youtubeMockState.playerStates.clear();
+    hasFocusMock = vi.spyOn(document, 'hasFocus').mockReturnValue(true);
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    hasFocusMock?.mockRestore();
+
+    if (originalVisibilityStateDescriptor) {
+      Object.defineProperty(
+        document,
+        'visibilityState',
+        originalVisibilityStateDescriptor,
+      );
+    } else {
+      delete document.visibilityState;
+    }
   });
 
   it('controls the current player when playback toggles', () => {
@@ -113,6 +141,8 @@ describe('VideoPlayer', () => {
   });
 
   it('reports direct YouTube play and pause state changes', () => {
+    vi.useFakeTimers();
+
     const onPlaybackChange = vi.fn();
     const video = { videoId: 'alpha1234567', title: 'Alpha' };
 
@@ -124,10 +154,120 @@ describe('VideoPlayer', () => {
       />,
     );
 
+    youtubeMockState.playerStates.set(video.videoId, 1);
     youtubeMockState.stateChangeHandlers.get(video.videoId)?.({ data: 1 });
+    youtubeMockState.playerStates.set(video.videoId, 2);
     youtubeMockState.stateChangeHandlers.get(video.videoId)?.({ data: 2 });
+
+    act(() => {
+      vi.advanceTimersByTime(181);
+    });
 
     expect(onPlaybackChange).toHaveBeenNthCalledWith(1, true);
     expect(onPlaybackChange).toHaveBeenNthCalledWith(2, false);
+  });
+
+  it('ignores a transient pause event right after the page becomes visible again', () => {
+    vi.useFakeTimers();
+
+    let visibilityState = 'visible';
+    Object.defineProperty(document, 'visibilityState', {
+      configurable: true,
+      get: () => visibilityState,
+    });
+
+    const onPlaybackChange = vi.fn();
+    const video = { videoId: 'alpha1234567', title: 'Alpha' };
+
+    render(
+      <VideoPlayer
+        video={video}
+        isPlaying={true}
+        onPlaybackChange={onPlaybackChange}
+      />,
+    );
+
+    onPlaybackChange.mockClear();
+
+    act(() => {
+      visibilityState = 'hidden';
+      document.dispatchEvent(new Event('visibilitychange'));
+    });
+
+    youtubeMockState.playerStates.set(video.videoId, 2);
+    youtubeMockState.stateChangeHandlers.get(video.videoId)?.({ data: 2 });
+
+    expect(onPlaybackChange).not.toHaveBeenCalledWith(false);
+
+    act(() => {
+      visibilityState = 'visible';
+      document.dispatchEvent(new Event('visibilitychange'));
+    });
+
+    youtubeMockState.stateChangeHandlers.get(video.videoId)?.({ data: 1 });
+    youtubeMockState.playerStates.set(video.videoId, 2);
+    youtubeMockState.stateChangeHandlers.get(video.videoId)?.({ data: 2 });
+
+    expect(onPlaybackChange).toHaveBeenCalledWith(true);
+    expect(onPlaybackChange).not.toHaveBeenCalledWith(false);
+
+    act(() => {
+      vi.advanceTimersByTime(2501);
+    });
+
+    youtubeMockState.playerStates.set(video.videoId, 2);
+    youtubeMockState.stateChangeHandlers.get(video.videoId)?.({ data: 2 });
+
+    act(() => {
+      vi.advanceTimersByTime(181);
+    });
+
+    expect(onPlaybackChange).toHaveBeenCalledWith(false);
+  });
+
+  it('restores the playback state on visible when it fell false during the hidden cycle', () => {
+    vi.useFakeTimers();
+
+    let visibilityState = 'visible';
+    Object.defineProperty(document, 'visibilityState', {
+      configurable: true,
+      get: () => visibilityState,
+    });
+
+    const onPlaybackChange = vi.fn();
+    const video = { videoId: 'alpha1234567', title: 'Alpha' };
+
+    const { rerender } = render(
+      <VideoPlayer
+        video={video}
+        isPlaying={true}
+        onPlaybackChange={onPlaybackChange}
+      />,
+    );
+
+    onPlaybackChange.mockClear();
+
+    act(() => {
+      hasFocusMock.mockReturnValue(false);
+      window.dispatchEvent(new Event('blur'));
+      visibilityState = 'hidden';
+      document.dispatchEvent(new Event('visibilitychange'));
+    });
+
+    rerender(
+      <VideoPlayer
+        video={video}
+        isPlaying={false}
+        onPlaybackChange={onPlaybackChange}
+      />,
+    );
+
+    act(() => {
+      hasFocusMock.mockReturnValue(true);
+      visibilityState = 'visible';
+      document.dispatchEvent(new Event('visibilitychange'));
+    });
+
+    expect(onPlaybackChange).toHaveBeenCalledWith(true);
   });
 });

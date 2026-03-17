@@ -77,6 +77,11 @@ export default function VideoPlayer({
   showMetadata = true,
 }) {
   const playerRef = useRef(null);
+  const isPlayingRef = useRef(isPlaying);
+  const resumeAfterVisibilityRef = useRef(false);
+  const restorePauseGuardUntilRef = useRef(0);
+  const restorePlayRetryTimeoutsRef = useRef([]);
+  const pauseVerificationTimeoutRef = useRef(0);
   const isOverlayEnabled = false;
   const videoId = video?.videoId ?? null;
   const videoUrl = videoId
@@ -99,11 +104,117 @@ export default function VideoPlayer({
       : '';
   const supportGlyph = isNominated ? '★' : isSupported ? '♥' : '♡';
 
+  const clearRestorePauseGuard = useCallback(() => {
+    restorePauseGuardUntilRef.current = 0;
+
+    for (const timeoutId of restorePlayRetryTimeoutsRef.current) {
+      window.clearTimeout(timeoutId);
+    }
+
+    restorePlayRetryTimeoutsRef.current = [];
+  }, []);
+
+  const clearPauseVerification = useCallback(() => {
+    if (pauseVerificationTimeoutRef.current) {
+      window.clearTimeout(pauseVerificationTimeoutRef.current);
+      pauseVerificationTimeoutRef.current = 0;
+    }
+  }, []);
+
+  const clearVisibilityResumeTracking = useCallback(() => {
+    resumeAfterVisibilityRef.current = false;
+    clearRestorePauseGuard();
+    clearPauseVerification();
+  }, [clearPauseVerification, clearRestorePauseGuard]);
+
+  const isPauseIgnoredDuringRestore = useCallback(() => {
+    return (
+      resumeAfterVisibilityRef.current &&
+      isPlayingRef.current &&
+      (document.visibilityState !== 'visible' ||
+        !document.hasFocus() ||
+        Date.now() < restorePauseGuardUntilRef.current)
+    );
+  }, []);
+
+  const armRestorePauseGuard = useCallback(() => {
+    if (
+      document.visibilityState !== 'visible' ||
+      !resumeAfterVisibilityRef.current
+    ) {
+      return;
+    }
+
+    clearRestorePauseGuard();
+    restorePauseGuardUntilRef.current = Date.now() + 2500;
+
+    if (!isPlayingRef.current) {
+      onPlaybackChange?.(true);
+    }
+
+    safelyControlPlayer(playerRef.current, 'playVideo');
+    restorePlayRetryTimeoutsRef.current = [
+      window.setTimeout(() => {
+        safelyControlPlayer(playerRef.current, 'playVideo');
+      }, 180),
+      window.setTimeout(() => {
+        safelyControlPlayer(playerRef.current, 'playVideo');
+      }, 700),
+      window.setTimeout(() => {
+        safelyControlPlayer(playerRef.current, 'playVideo');
+      }, 1500),
+    ];
+  }, [clearRestorePauseGuard, onPlaybackChange]);
+
+  const verifyPauseState = useCallback(() => {
+    clearPauseVerification();
+
+    if (isPauseIgnoredDuringRestore()) {
+      return;
+    }
+
+    if (
+      document.visibilityState !== 'visible' ||
+      (typeof document.hasFocus === 'function' && !document.hasFocus())
+    ) {
+      return;
+    }
+
+    const playerState = playerRef.current?.getPlayerState?.();
+    const isActuallyPaused =
+      typeof playerState === 'number' ? playerState === 2 : true;
+
+    if (!isActuallyPaused) {
+      return;
+    }
+
+    clearVisibilityResumeTracking();
+    onPlaybackChange?.(false);
+  }, [
+    clearPauseVerification,
+    clearVisibilityResumeTracking,
+    isPauseIgnoredDuringRestore,
+    onPlaybackChange,
+  ]);
+
   useEffect(() => {
     return () => {
+      clearVisibilityResumeTracking();
       playerRef.current = null;
     };
-  }, [videoId]);
+  }, [clearVisibilityResumeTracking, videoId]);
+
+  useEffect(() => {
+    isPlayingRef.current = isPlaying;
+
+    if (
+      !isPlaying &&
+      document.visibilityState === 'visible' &&
+      !resumeAfterVisibilityRef.current
+    ) {
+      clearVisibilityResumeTracking();
+    }
+  }, [clearVisibilityResumeTracking, isPlaying]);
 
   // Sync play/pause state with the YouTube player
   useEffect(() => {
@@ -115,6 +226,39 @@ export default function VideoPlayer({
       safelyControlPlayer(player, 'pauseVideo');
     }
   }, [isPlaying, videoId]);
+
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') {
+        resumeAfterVisibilityRef.current = isPlayingRef.current;
+        return;
+      }
+
+      if (document.visibilityState === 'visible') {
+        armRestorePauseGuard();
+      }
+    };
+
+    const handleWindowFocus = () => {
+      if (document.visibilityState === 'visible') {
+        armRestorePauseGuard();
+      }
+    };
+
+    const handleWindowBlur = () => {
+      resumeAfterVisibilityRef.current = isPlayingRef.current;
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('focus', handleWindowFocus);
+    window.addEventListener('blur', handleWindowBlur);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', handleWindowFocus);
+      window.removeEventListener('blur', handleWindowBlur);
+    };
+  }, [armRestorePauseGuard]);
 
   const handleReady = useCallback(
     (event) => {
@@ -134,12 +278,26 @@ export default function VideoPlayer({
   const handleStateChange = useCallback(
     (event) => {
       if (event?.data === 1) {
+        clearPauseVerification();
         onPlaybackChange?.(true);
       } else if (event?.data === 2) {
-        onPlaybackChange?.(false);
+        if (isPauseIgnoredDuringRestore()) {
+          return;
+        }
+
+        clearPauseVerification();
+        pauseVerificationTimeoutRef.current = window.setTimeout(() => {
+          pauseVerificationTimeoutRef.current = 0;
+          verifyPauseState();
+        }, 180);
       }
     },
-    [onPlaybackChange],
+    [
+      clearPauseVerification,
+      isPauseIgnoredDuringRestore,
+      onPlaybackChange,
+      verifyPauseState,
+    ],
   );
 
   if (!video) {

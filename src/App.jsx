@@ -175,6 +175,7 @@ export default function App() {
   const [nominationList, setNominationList] = useState(
     initialPlayerState.nominationList,
   );
+  const nominationListRef = useRef(initialPlayerState.nominationList);
   const [showNominationsList, setShowNominationsList] = useState(false);
   const [renderNominationsList, setRenderNominationsList] = useState(false);
   const [supportToastMessage, setSupportToastMessage] = useState('');
@@ -212,6 +213,7 @@ export default function App() {
   const [settingsNotice, setSettingsNotice] = useState('');
   const [guestImportState, setGuestImportState] = useState(null);
   const [guestImportSelections, setGuestImportSelections] = useState(null);
+  const authUserIdRef = useRef(null);
 
   useEffect(
     () => () => {
@@ -257,6 +259,10 @@ export default function App() {
   useEffect(() => {
     isPlayingRef.current = isPlaying;
   }, [isPlaying]);
+
+  useEffect(() => {
+    nominationListRef.current = nominationList;
+  }, [nominationList]);
 
   useEffect(() => {
     shuffleOrderIdsRef.current = shuffleOrderIds;
@@ -321,6 +327,10 @@ export default function App() {
   }, []);
 
   const authUser = authSession?.user ?? null;
+
+  useEffect(() => {
+    authUserIdRef.current = authUser?.id ?? null;
+  }, [authUser]);
 
   const playOrderIds = useMemo(
     () => resolvePlayOrderIds(playlist, shuffleOrderIds),
@@ -558,8 +568,24 @@ export default function App() {
 
       const preferredUsername = pendingPreferredUsernameRef.current;
       const preferredGamefaqsUsername = pendingGamefaqsUsernameRef.current;
+      const hasPendingGuestImport = Boolean(pendingGuestImportStateRef.current);
+      const hasPendingProfileValues = Boolean(
+        preferredUsername || preferredGamefaqsUsername,
+      );
+      const isSameAuthenticatedUser = authUserIdRef.current === session.user.id;
       pendingPreferredUsernameRef.current = '';
       pendingGamefaqsUsernameRef.current = '';
+
+      const shouldHydrateAuthenticatedUser =
+        !isSameAuthenticatedUser ||
+        hasPendingGuestImport ||
+        hasPendingProfileValues ||
+        event === 'USER_UPDATED';
+
+      if (!shouldHydrateAuthenticatedUser) {
+        setIsAuthReady(true);
+        return;
+      }
 
       window.setTimeout(() => {
         if (!isActive) return;
@@ -1418,25 +1444,25 @@ export default function App() {
       return { addedCount: 0, blockedNominationCount: 0 };
     }
 
+    const nominationResult = appendUniqueVideos(
+      nominationListRef.current,
+      videos,
+    );
+
+    if (!nominationResult.addedCount) {
+      return { addedCount: 0, blockedNominationCount: 0 };
+    }
+
     const incomingIds = new Set(videos.map((video) => video.videoId));
     setSupportList((previousList) =>
       previousList.filter((entry) => !incomingIds.has(entry.videoId)),
     );
+    setNominationList(nominationResult.nextList);
 
-    let resultSummary = {
-      addedCount: 0,
+    return {
+      addedCount: nominationResult.addedCount,
       blockedNominationCount: 0,
     };
-    setNominationList((previousList) => {
-      const result = appendUniqueVideos(previousList, videos);
-      resultSummary = {
-        addedCount: result.addedCount,
-        blockedNominationCount: 0,
-      };
-      return result.nextList;
-    });
-
-    return resultSummary;
   }, []);
 
   const handleReorderNominationList = useCallback((newOrder) => {

@@ -12,6 +12,7 @@ import {
   singleVideoEntry,
 } from '../utils/youtube.js';
 import useMediaQuery from '../hooks/useMediaQuery.js';
+import ScrollingText from './ScrollingText.jsx';
 import UserMenu from './UserMenu.jsx';
 
 const API_KEY = import.meta.env.VITE_YT_API_KEY || '';
@@ -705,9 +706,10 @@ export default function TopBar({
                             aria-hidden="true"
                           />
                         )}
-                        <span className="mobile-now-playing-text">
-                          {mobileNowPlayingText}
-                        </span>
+                        <ScrollingText
+                          className="mobile-now-playing-text"
+                          text={mobileNowPlayingText}
+                        />
                       </div>
                     </div>
                   )}

@@ -1086,4 +1086,35 @@ describe('App', () => {
       ),
     ).toEqual(['Alpha']);
   });
+
+  it('returns a positive add count when a nomination is added directly', () => {
+    render(<App />);
+    openPlayerView();
+
+    act(() => {
+      appTestState.topBarProps.setShowNominationsList(true);
+    });
+
+    let addResult;
+    act(() => {
+      addResult = appTestState.supportPanelProps.onAddDirectItems([
+        {
+          videoId: 'alpha1234567',
+          title: 'Alpha',
+          thumbnail: 'a.jpg',
+          channelTitle: '',
+        },
+      ]);
+    });
+
+    expect(addResult).toEqual({
+      addedCount: 1,
+      blockedNominationCount: 0,
+    });
+    expect(
+      appTestState.playlistSidebarProps.nominationList.map(
+        (video) => video.title,
+      ),
+    ).toEqual(['Alpha']);
+  });
 });
