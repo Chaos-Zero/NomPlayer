@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   DISCORD_USERNAME_PREFIX,
   LEGACY_SUPPORT_STORAGE_KEY,
@@ -8,9 +8,11 @@ import {
   clearLocalGuestPlayerState,
   createGuestImportSelectionState,
   deriveProfileUsername,
+  fetchUserTrackListenStatuses,
   getDisplayProfileName,
   hasImportableGuestCollections,
   parseStoredProfileUsername,
+  recordYouTubeTrackListen,
   mergeGuestCollectionsIntoPlayerState,
   persistLocalGuestPlayerState,
 } from '../lib/playerState.js';
@@ -181,5 +183,74 @@ describe('playerState guest import helpers', () => {
       provider: 'discord',
     });
     expect(getDisplayProfileName(storedUsername)).toBe('ProtoMan');
+  });
+
+  it('builds a playlist status map from persisted track listen rows', async () => {
+    const rpc = vi.fn().mockResolvedValue({
+      data: [
+        {
+          youtube_video_id: 'alpha1234567',
+          track_id: 'track-alpha',
+          listen_status: 'partial',
+          listen_count: 1,
+        },
+        {
+          youtube_video_id: 'beta12345678',
+          track_id: 'track-beta',
+          listen_status: 'complete',
+          listen_count: 3,
+          completion_count: 2,
+        },
+      ],
+      error: null,
+    });
+
+    const result = await fetchUserTrackListenStatuses({ rpc }, [
+      'alpha1234567',
+      'beta12345678',
+      'alpha1234567',
+    ]);
+
+    expect(rpc).toHaveBeenCalledWith('get_user_youtube_track_listens', {
+      youtube_video_ids: ['alpha1234567', 'beta12345678'],
+    });
+    expect(result).toEqual({
+      alpha1234567: 'partial',
+      beta12345678: 'complete',
+    });
+  });
+
+  it('records a persisted listen event through the Supabase RPC wrapper', async () => {
+    const rpc = vi.fn().mockResolvedValue({
+      data: {
+        track_id: 'track-alpha',
+        listen_status: 'complete',
+        listen_count: 2,
+        completion_count: 1,
+        total_seconds_played: 241,
+      },
+      error: null,
+    });
+
+    const result = await recordYouTubeTrackListen(
+      { rpc },
+      ' alpha1234567 ',
+      'completed',
+      241,
+    );
+
+    expect(rpc).toHaveBeenCalledWith('record_youtube_track_listen', {
+      youtube_video_id: 'alpha1234567',
+      listen_event: 'completed',
+      seconds_played: 241,
+    });
+    expect(result).toMatchObject({
+      youtubeVideoId: 'alpha1234567',
+      trackId: 'track-alpha',
+      listenStatus: 'complete',
+      listenCount: 2,
+      completionCount: 1,
+      totalSecondsPlayed: 241,
+    });
   });
 });

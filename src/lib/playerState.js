@@ -477,3 +477,121 @@ export async function saveUserPlayerState(supabase, userId, state) {
 
   return snapshot;
 }
+
+function normalizeTrackListenStatusRow(row) {
+  if (!row || typeof row !== 'object') return null;
+
+  const youtubeVideoId =
+    typeof row.youtube_video_id === 'string' && row.youtube_video_id.trim()
+      ? row.youtube_video_id.trim()
+      : null;
+  const listenStatus =
+    row.listen_status === 'complete'
+      ? 'complete'
+      : row.listen_status === 'partial'
+        ? 'partial'
+        : null;
+
+  if (!youtubeVideoId || !listenStatus) {
+    return null;
+  }
+
+  return {
+    youtubeVideoId,
+    trackId:
+      typeof row.track_id === 'string' && row.track_id.trim()
+        ? row.track_id
+        : null,
+    listenStatus,
+    listenCount:
+      typeof row.listen_count === 'number' && Number.isFinite(row.listen_count)
+        ? row.listen_count
+        : 0,
+    completionCount:
+      typeof row.completion_count === 'number' &&
+      Number.isFinite(row.completion_count)
+        ? row.completion_count
+        : 0,
+    totalSecondsPlayed:
+      typeof row.total_seconds_played === 'number' &&
+      Number.isFinite(row.total_seconds_played)
+        ? row.total_seconds_played
+        : 0,
+    firstListenedAt:
+      typeof row.first_listened_at === 'string' ? row.first_listened_at : null,
+    lastListenedAt:
+      typeof row.last_listened_at === 'string' ? row.last_listened_at : null,
+    firstCompletedAt:
+      typeof row.first_completed_at === 'string'
+        ? row.first_completed_at
+        : null,
+    lastCompletedAt:
+      typeof row.last_completed_at === 'string' ? row.last_completed_at : null,
+  };
+}
+
+function normalizeRequestedYoutubeIds(youtubeVideoIds) {
+  if (!Array.isArray(youtubeVideoIds)) {
+    return null;
+  }
+
+  const normalizedIds = [];
+  const seenIds = new Set();
+
+  for (const videoId of youtubeVideoIds) {
+    if (typeof videoId !== 'string') continue;
+    const normalizedVideoId = videoId.trim();
+    if (!normalizedVideoId || seenIds.has(normalizedVideoId)) continue;
+    seenIds.add(normalizedVideoId);
+    normalizedIds.push(normalizedVideoId);
+  }
+
+  return normalizedIds.length > 0 ? normalizedIds : null;
+}
+
+export async function fetchUserTrackListenStatuses(
+  supabase,
+  youtubeVideoIds = null,
+) {
+  const { data, error } = await supabase.rpc('get_user_youtube_track_listens', {
+    youtube_video_ids: normalizeRequestedYoutubeIds(youtubeVideoIds),
+  });
+
+  if (error) {
+    throw error;
+  }
+
+  const rows = Array.isArray(data)
+    ? data.map(normalizeTrackListenStatusRow).filter(Boolean)
+    : [];
+
+  return rows.reduce((statusById, row) => {
+    statusById[row.youtubeVideoId] = row.listenStatus;
+    return statusById;
+  }, {});
+}
+
+export async function recordYouTubeTrackListen(
+  supabase,
+  youtubeVideoId,
+  listenEvent,
+  secondsPlayed = 0,
+) {
+  const normalizedVideoId =
+    typeof youtubeVideoId === 'string' ? youtubeVideoId.trim() : '';
+
+  const { data, error } = await supabase.rpc('record_youtube_track_listen', {
+    youtube_video_id: normalizedVideoId,
+    listen_event: listenEvent,
+    seconds_played: secondsPlayed,
+  });
+
+  if (error) {
+    throw error;
+  }
+
+  return normalizeTrackListenStatusRow({
+    youtube_video_id: normalizedVideoId,
+    ...data,
+  });
+}

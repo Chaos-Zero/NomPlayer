@@ -33,6 +33,7 @@ import {
   upsertUserProfile,
   LEGACY_SUPPORT_STORAGE_KEY,
 } from './lib/playerState.js';
+import { ingestYouTubeTrackSources } from './lib/trackCatalog.js';
 import { getSupabaseClient, isSupabaseConfigured } from './lib/supabase.js';
 
 const PREVIEW_DURATION_MS = 31_000;
@@ -68,6 +69,7 @@ function appendUniqueVideos(list, videos, blockedIds = new Set()) {
   const existingIds = new Set(list.map((entry) => entry.videoId));
   const nextList = [...list];
   let addedCount = 0;
+  const addedVideos = [];
   const blockedVideoIds = new Set();
   const duplicateVideoIds = new Set();
 
@@ -84,12 +86,14 @@ function appendUniqueVideos(list, videos, blockedIds = new Set()) {
 
     existingIds.add(video.videoId);
     nextList.push(video);
+    addedVideos.push(video);
     addedCount += 1;
   }
 
   return {
     nextList: addedCount > 0 ? nextList : list,
     addedCount,
+    addedVideos,
     blockedCount: blockedVideoIds.size,
     duplicateCount: duplicateVideoIds.size,
   };
@@ -384,6 +388,24 @@ export default function App() {
 
   const authUser = authSession?.user ?? null;
 
+  const syncCatalogForNominationVideos = useCallback(
+    (videos, { userId = authUser?.id ?? null } = {}) => {
+      if (
+        !supabase ||
+        !userId ||
+        !Array.isArray(videos) ||
+        videos.length === 0
+      ) {
+        return;
+      }
+
+      ingestYouTubeTrackSources(supabase, videos).catch((error) => {
+        setAuthError(error.message || 'Failed to sync nomination tracks.');
+      });
+    },
+    [authUser, supabase],
+  );
+
   useEffect(() => {
     authUserIdRef.current = authUser?.id ?? null;
   }, [authUser]);
@@ -555,6 +577,9 @@ export default function App() {
         const normalizedState = normalizePersistedPlayerState(remoteState);
         applyPersistedPlayerState(normalizedState);
         lastSyncedPlayerStateRef.current = JSON.stringify(normalizedState);
+        syncCatalogForNominationVideos(normalizedState.nominationList, {
+          userId: user.id,
+        });
 
         const pendingGuestImportState = pendingGuestImportStateRef.current;
         pendingGuestImportStateRef.current = null;
@@ -576,7 +601,12 @@ export default function App() {
         setIsAuthReady(true);
       }
     },
-    [applyPersistedPlayerState, ensureUserProfile, supabase],
+    [
+      applyPersistedPlayerState,
+      ensureUserProfile,
+      supabase,
+      syncCatalogForNominationVideos,
+    ],
   );
 
   useEffect(() => {
@@ -1138,6 +1168,9 @@ export default function App() {
     );
 
     applyPersistedPlayerState(mergedState);
+    if (guestImportSelections.nominationList) {
+      syncCatalogForNominationVideos(mergedState.nominationList);
+    }
     clearLocalGuestPlayerState();
     pendingGuestImportStateRef.current = null;
     setGuestImportState(null);
@@ -1147,6 +1180,7 @@ export default function App() {
     createPlayerStateSnapshot,
     guestImportSelections,
     guestImportState,
+    syncCatalogForNominationVideos,
   ]);
 
   const markVideoCompleted = useCallback((videoId) => {
@@ -1684,31 +1718,35 @@ export default function App() {
     );
   }, []);
 
-  const handleAddManyToNominationList = useCallback((videos) => {
-    if (!videos.length) {
-      return { addedCount: 0, blockedNominationCount: 0 };
-    }
+  const handleAddManyToNominationList = useCallback(
+    (videos) => {
+      if (!videos.length) {
+        return { addedCount: 0, blockedNominationCount: 0 };
+      }
 
-    const nominationResult = appendUniqueVideos(
-      nominationListRef.current,
-      videos,
-    );
+      const nominationResult = appendUniqueVideos(
+        nominationListRef.current,
+        videos,
+      );
 
-    if (!nominationResult.addedCount) {
-      return { addedCount: 0, blockedNominationCount: 0 };
-    }
+      if (!nominationResult.addedCount) {
+        return { addedCount: 0, blockedNominationCount: 0 };
+      }
 
-    const incomingIds = new Set(videos.map((video) => video.videoId));
-    setSupportList((previousList) =>
-      previousList.filter((entry) => !incomingIds.has(entry.videoId)),
-    );
-    setNominationList(nominationResult.nextList);
+      const incomingIds = new Set(videos.map((video) => video.videoId));
+      setSupportList((previousList) =>
+        previousList.filter((entry) => !incomingIds.has(entry.videoId)),
+      );
+      setNominationList(nominationResult.nextList);
+      syncCatalogForNominationVideos(nominationResult.addedVideos);
 
-    return {
-      addedCount: nominationResult.addedCount,
-      blockedNominationCount: 0,
-    };
-  }, []);
+      return {
+        addedCount: nominationResult.addedCount,
+        blockedNominationCount: 0,
+      };
+    },
+    [syncCatalogForNominationVideos],
+  );
 
   const handleReorderNominationList = useCallback((newOrder) => {
     setNominationList(newOrder);
