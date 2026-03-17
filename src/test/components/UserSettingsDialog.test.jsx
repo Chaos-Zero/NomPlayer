@@ -51,4 +51,50 @@ describe('UserSettingsDialog', () => {
       }),
     );
   });
+
+  it('updates the display picture preview when the update button is clicked', () => {
+    render(
+      <UserSettingsDialog
+        isOpen
+        user={{ email: 'listener@example.com' }}
+        profile={{
+          username: 'Listener',
+          avatar_url: 'https://example.com/original.png',
+        }}
+      />,
+    );
+
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Update Display Picture' }),
+    );
+    fireEvent.change(
+      screen.getByDisplayValue('https://example.com/original.png'),
+      {
+        target: { value: 'https://example.com/updated.png' },
+      },
+    );
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Update Display Picture' }),
+    );
+
+    expect(screen.getByAltText('Current Display Picture')).toHaveAttribute(
+      'src',
+      'https://example.com/updated.png',
+    );
+  });
+
+  it('shows Discord usernames without the stored prefix in settings', () => {
+    render(
+      <UserSettingsDialog
+        isOpen
+        user={{ email: 'listener@example.com' }}
+        profile={{
+          username: 'dc:Listener',
+        }}
+      />,
+    );
+
+    expect(screen.getByDisplayValue('Listener')).toBeInTheDocument();
+    expect(screen.queryByDisplayValue('dc:Listener')).not.toBeInTheDocument();
+  });
 });

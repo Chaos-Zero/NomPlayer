@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import DiscordIcon from './DiscordIcon.jsx';
 import {
   buildDiscoveryCandidates,
   fetchDashboardNominationUpdates,
@@ -6,6 +7,10 @@ import {
   formatRelativeDashboardTime,
   pickNextDiscoveryCandidate,
 } from '../lib/dashboard.js';
+import {
+  getDisplayProfileName,
+  parseStoredProfileUsername,
+} from '../lib/playerState.js';
 
 const DASHBOARD_REFRESH_LIMIT = 8;
 
@@ -49,6 +54,8 @@ function DashboardMessage({ children, tone = 'muted' }) {
 }
 
 function DashboardAvatar({ update }) {
+  const displayName = getDisplayProfileName(update.username, 'U');
+
   if (update.avatarUrl) {
     return (
       <img
@@ -65,12 +72,14 @@ function DashboardAvatar({ update }) {
       className="dashboard-avatar dashboard-avatar-fallback"
       aria-hidden="true"
     >
-      {update.username.slice(0, 1).toUpperCase()}
+      {displayName.slice(0, 1).toUpperCase()}
     </div>
   );
 }
 
 function NominationUpdateCard({ update, onAddWholeList, onAddUpdates }) {
+  const displayIdentity = parseStoredProfileUsername(update.username);
+
   return (
     <article className="dashboard-update-card">
       <div className="dashboard-update-meta">
@@ -78,7 +87,14 @@ function NominationUpdateCard({ update, onAddWholeList, onAddUpdates }) {
 
         <div className="dashboard-update-copy">
           <div className="dashboard-update-title-row">
-            <h3 className="dashboard-update-title">{update.username}</h3>
+            <h3 className="dashboard-update-title">
+              <span className="profile-name-inline">
+                {displayIdentity.provider === 'discord' && (
+                  <DiscordIcon className="profile-provider-icon dashboard-provider-icon" />
+                )}
+                <span>{displayIdentity.displayName}</span>
+              </span>
+            </h3>
             <span className="dashboard-chip">
               {formatRelativeDashboardTime(update.updatedAt)}
             </span>
@@ -124,6 +140,11 @@ function NominationUpdateCard({ update, onAddWholeList, onAddUpdates }) {
 }
 
 function DiscoveryRow({ candidate, onAdd, onPlayNow }) {
+  const nominatorNames = candidate.nominators
+    .slice(0, 3)
+    .map((nominator) => getDisplayProfileName(nominator.username))
+    .join(', ');
+
   return (
     <article className="dashboard-discovery-row">
       <img
@@ -143,11 +164,7 @@ function DiscoveryRow({ candidate, onAdd, onPlayNow }) {
         </div>
 
         <p className="dashboard-discovery-meta">
-          Nominated by{' '}
-          {candidate.nominators
-            .slice(0, 3)
-            .map((nominator) => nominator.username)
-            .join(', ')}
+          Nominated by {nominatorNames}
         </p>
       </div>
 
@@ -246,6 +263,15 @@ export default function HomePage({
 
   const activeFeaturedDiscoveryId =
     featuredDiscoveryCandidate?.videoId ?? featuredDiscoveryId ?? null;
+
+  const totalVisibleNominationCount = useMemo(
+    () =>
+      visibleNominationUpdates.reduce(
+        (sum, update) => sum + update.nominations.length,
+        0,
+      ),
+    [visibleNominationUpdates],
+  );
 
   const showActionNotice = useCallback((message) => {
     if (!message) return;
@@ -357,7 +383,7 @@ export default function HomePage({
     (update) => {
       handleQueueVideos(
         update.nominations,
-        `${update.username}'s nominations are already in your current playlist.`,
+        `${getDisplayProfileName(update.username)}'s nominations are already in your current playlist.`,
       );
     },
     [handleQueueVideos],
@@ -370,7 +396,7 @@ export default function HomePage({
       );
       handleQueueVideos(
         nextVideos,
-        `No new nominations from ${update.username} for your current playlist.`,
+        `No new nominations from ${getDisplayProfileName(update.username)} for your current playlist.`,
       );
     },
     [currentPlaylistIds, handleQueueVideos],
@@ -408,19 +434,53 @@ export default function HomePage({
     setFeaturedDiscoveryId(nextCandidate.videoId);
   }, [activeFeaturedDiscoveryId, discoveryCandidates, showActionNotice]);
 
+  const dashboardStats = [
+    {
+      label: 'Updated lists',
+      value: isDashboardLoading
+        ? '...'
+        : String(visibleNominationUpdates.length),
+      accent: 'purple',
+    },
+    {
+      label: 'Fresh nominations',
+      value: isDashboardLoading ? '...' : String(totalVisibleNominationCount),
+      accent: 'orange',
+    },
+    {
+      label: 'Discovery picks',
+      value: String(discoveryCandidates.length),
+      accent: 'blue',
+    },
+    {
+      label: 'VGMC threads',
+      value: isUpdatesLoading ? '...' : String(vgmcThreads.length),
+      accent: 'pink',
+    },
+  ];
+
   return (
     <div className="home-shell dashboard-home-shell">
-      {actionNotice && (
-        <DashboardMessage tone="accent">{actionNotice}</DashboardMessage>
-      )}
+      <section className="dashboard-hero" aria-label="Dashboard overview">
+        <div className="dashboard-hero-copy">
+          <span className="dashboard-hero-badge">Community Dashboard</span>
+          <h1 className="dashboard-hero-title">
+            What&apos;s moving in VGMC right now
+          </h1>
+          <p className="dashboard-hero-description">
+            Track recently refreshed nomination lists, surface the next songs
+            you have not queued yet, and jump straight into the latest contest
+            board chatter without leaving the dashboard.
+          </p>
 
-      <div className="dashboard-layout">
-        <DashboardSection
-          title="Listen Now"
-          eyebrow="Fresh pick"
-          tone="listen"
-          caption="A rotating recommendation from the community nomination pool."
-          actions={
+          <div className="dashboard-hero-actions">
+            <button
+              className="dashboard-action-btn"
+              type="button"
+              onClick={onNavigateToPlayer}
+            >
+              Open player
+            </button>
             <button
               className="dashboard-link-btn"
               type="button"
@@ -428,11 +488,28 @@ export default function HomePage({
             >
               Find new song
             </button>
-          }
-          className="dashboard-section-spotlight"
-        >
+          </div>
+
+          {actionNotice && (
+            <DashboardMessage tone="accent">{actionNotice}</DashboardMessage>
+          )}
+
+          <div className="dashboard-stat-strip">
+            {dashboardStats.map((stat) => (
+              <div
+                key={stat.label}
+                className={`dashboard-stat-card dashboard-stat-card-${stat.accent}`}
+              >
+                <span className="dashboard-stat-value">{stat.value}</span>
+                <span className="dashboard-stat-label">{stat.label}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="dashboard-hero-spotlight">
           {featuredDiscoveryCandidate ? (
-            <article className="dashboard-feature-card">
+            <article className="dashboard-feature-card dashboard-feature-card-hero">
               <img
                 className="dashboard-feature-thumb"
                 src={featuredDiscoveryCandidate.thumbnail}
@@ -441,14 +518,16 @@ export default function HomePage({
               />
 
               <div className="dashboard-feature-copy">
-                <span className="dashboard-feature-kicker">Community pick</span>
-                <h3 className="dashboard-feature-title">
+                <span className="dashboard-feature-kicker">Listen now</span>
+                <h2 className="dashboard-feature-title">
                   {featuredDiscoveryCandidate.title}
-                </h3>
+                </h2>
                 <p className="dashboard-feature-meta">
                   Nominated by{' '}
                   {featuredDiscoveryCandidate.nominators
-                    .map((nominator) => nominator.username)
+                    .map((nominator) =>
+                      getDisplayProfileName(nominator.username),
+                    )
                     .join(', ')}
                 </p>
                 <div className="dashboard-feature-actions">
@@ -478,96 +557,95 @@ export default function HomePage({
               No featured discovery pick is available yet.
             </DashboardMessage>
           )}
-        </DashboardSection>
+        </div>
+      </section>
 
-        <DashboardSection
-          title="Updated Nominations"
-          eyebrow="Community"
-          tone="discover"
-          caption="Recently refreshed nomination lists from other users."
-          actions={
-            <button
-              className="dashboard-link-btn"
-              type="button"
-              onClick={onNavigateToPlayer}
-            >
-              Open player
-            </button>
-          }
-          className="dashboard-section-feed"
-        >
-          {isDashboardLoading ? (
-            <DashboardMessage>Loading nomination updates…</DashboardMessage>
-          ) : dashboardError ? (
-            <DashboardMessage tone="danger">{dashboardError}</DashboardMessage>
-          ) : visibleNominationUpdates.length === 0 ? (
-            <DashboardMessage>
-              No public nomination updates yet. Once users start curating lists,
-              they will appear here.
-            </DashboardMessage>
-          ) : (
-            <div className="dashboard-update-list">
-              {visibleNominationUpdates.map((update) => (
-                <NominationUpdateCard
-                  key={update.userId}
-                  update={update}
-                  onAddWholeList={handleAddWholeList}
-                  onAddUpdates={handleAddUpdates}
-                />
-              ))}
-            </div>
-          )}
-        </DashboardSection>
+      <div className="dashboard-flow">
+        <div className="dashboard-flow-main">
+          <DashboardSection
+            title="Updated Nominations"
+            eyebrow="Community"
+            tone="discover"
+            caption="Recently refreshed nomination lists from other users."
+            className="dashboard-section-feed"
+          >
+            {isDashboardLoading ? (
+              <DashboardMessage>Loading nomination updates…</DashboardMessage>
+            ) : dashboardError ? (
+              <DashboardMessage tone="danger">
+                {dashboardError}
+              </DashboardMessage>
+            ) : visibleNominationUpdates.length === 0 ? (
+              <DashboardMessage>
+                No public nomination updates yet. Once users start curating
+                lists, they will appear here.
+              </DashboardMessage>
+            ) : (
+              <div className="dashboard-update-list">
+                {visibleNominationUpdates.map((update) => (
+                  <NominationUpdateCard
+                    key={update.userId}
+                    update={update}
+                    onAddWholeList={handleAddWholeList}
+                    onAddUpdates={handleAddUpdates}
+                  />
+                ))}
+              </div>
+            )}
+          </DashboardSection>
+        </div>
 
-        <DashboardSection
-          title="Discover"
-          eyebrow="Recommended"
-          tone="manage"
-          caption="Songs other users nominated that are still missing from your current playlist."
-          className="dashboard-section-discover"
-        >
-          {discoveryCandidates.length === 0 ? (
-            <DashboardMessage>
-              You are caught up for now. When more nomination lists appear, new
-              discovery picks will show here.
-            </DashboardMessage>
-          ) : (
-            <div className="dashboard-discovery-list">
-              {discoveryCandidates.slice(0, 5).map((candidate) => (
-                <DiscoveryRow
-                  key={candidate.videoId}
-                  candidate={candidate}
-                  onAdd={handleAddDiscoveryCandidate}
-                  onPlayNow={handlePlayDiscoveryCandidate}
-                />
-              ))}
-            </div>
-          )}
-        </DashboardSection>
+        <div className="dashboard-flow-side">
+          <DashboardSection
+            title="Discover"
+            eyebrow="Recommended"
+            tone="manage"
+            caption="Songs other users nominated that are still missing from your current playlist."
+            className="dashboard-section-discover"
+          >
+            {discoveryCandidates.length === 0 ? (
+              <DashboardMessage>
+                You are caught up for now. When more nomination lists appear,
+                new discovery picks will show here.
+              </DashboardMessage>
+            ) : (
+              <div className="dashboard-discovery-list">
+                {discoveryCandidates.slice(0, 5).map((candidate) => (
+                  <DiscoveryRow
+                    key={candidate.videoId}
+                    candidate={candidate}
+                    onAdd={handleAddDiscoveryCandidate}
+                    onPlayNow={handlePlayDiscoveryCandidate}
+                  />
+                ))}
+              </div>
+            )}
+          </DashboardSection>
 
-        <DashboardSection
-          title="VGMC Updates"
-          eyebrow="GameFAQs"
-          tone="updates"
-          caption="Live threads from the GameFAQs Contests board with VGMC in the title."
-          className="dashboard-section-updates"
-        >
-          {isUpdatesLoading ? (
-            <DashboardMessage>Loading GameFAQs threads…</DashboardMessage>
-          ) : updatesError ? (
-            <DashboardMessage tone="danger">{updatesError}</DashboardMessage>
-          ) : vgmcThreads.length === 0 ? (
-            <DashboardMessage>
-              No VGMC threads were found on the contests board right now.
-            </DashboardMessage>
-          ) : (
-            <div className="dashboard-thread-list">
-              {vgmcThreads.map((thread) => (
-                <VgmcThreadItem key={thread.url} thread={thread} />
-              ))}
-            </div>
-          )}
-        </DashboardSection>
+          <DashboardSection
+            title="VGMC Updates"
+            eyebrow="GameFAQs"
+            tone="updates"
+            caption="Live threads from the GameFAQs Contests board with VGMC in the title."
+            className="dashboard-section-updates"
+          >
+            {isUpdatesLoading ? (
+              <DashboardMessage>Loading GameFAQs threads…</DashboardMessage>
+            ) : updatesError ? (
+              <DashboardMessage tone="danger">{updatesError}</DashboardMessage>
+            ) : vgmcThreads.length === 0 ? (
+              <DashboardMessage>
+                No VGMC threads were found on the contests board right now.
+              </DashboardMessage>
+            ) : (
+              <div className="dashboard-thread-list">
+                {vgmcThreads.map((thread) => (
+                  <VgmcThreadItem key={thread.url} thread={thread} />
+                ))}
+              </div>
+            )}
+          </DashboardSection>
+        </div>
       </div>
     </div>
   );

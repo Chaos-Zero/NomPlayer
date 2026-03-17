@@ -1,10 +1,19 @@
 import { useRef, useState } from 'react';
+import { getDisplayProfileName } from '../lib/playerState.js';
 
 function DisplayPictureField({ avatarUrl = '' }) {
   const [isEditing, setIsEditing] = useState(!avatarUrl);
+  const [inputValue, setInputValue] = useState(avatarUrl);
+  const [previewUrl, setPreviewUrl] = useState(avatarUrl);
   const inputRef = useRef(null);
 
   function handleEditClick() {
+    const nextValue = inputValue.trim();
+
+    if (isEditing && nextValue) {
+      setPreviewUrl(nextValue);
+    }
+
     setIsEditing(true);
     window.requestAnimationFrame(() => {
       inputRef.current?.focus();
@@ -12,7 +21,7 @@ function DisplayPictureField({ avatarUrl = '' }) {
     });
   }
 
-  if (!avatarUrl) {
+  if (!previewUrl && !avatarUrl) {
     return (
       <label className="auth-dialog-field">
         <span>Display Picture URL</span>
@@ -20,10 +29,11 @@ function DisplayPictureField({ avatarUrl = '' }) {
           ref={inputRef}
           name="avatar_url"
           type="url"
-          defaultValue=""
+          value={inputValue}
           inputMode="url"
           autoComplete="url"
           placeholder="https://example.com/avatar.png"
+          onChange={(event) => setInputValue(event.target.value)}
         />
       </label>
     );
@@ -36,7 +46,7 @@ function DisplayPictureField({ avatarUrl = '' }) {
         <div className="settings-avatar-preview-box">
           <img
             className="settings-avatar-preview"
-            src={avatarUrl}
+            src={previewUrl}
             alt="Current Display Picture"
           />
         </div>
@@ -46,11 +56,12 @@ function DisplayPictureField({ avatarUrl = '' }) {
             className="settings-avatar-url-input"
             name="avatar_url"
             type="url"
-            defaultValue={avatarUrl}
+            value={inputValue}
             inputMode="url"
             autoComplete="url"
             placeholder="https://example.com/avatar.png"
             readOnly={!isEditing}
+            onChange={(event) => setInputValue(event.target.value)}
           />
           <button
             className="fav-panel-action-btn"
@@ -119,9 +130,10 @@ export default function UserSettingsDialog({
             <input
               name="username"
               type="text"
-              defaultValue={
-                profile?.username || user?.user_metadata?.username || ''
-              }
+              defaultValue={getDisplayProfileName(
+                profile?.username || user?.user_metadata?.username || '',
+                '',
+              )}
               minLength={3}
               maxLength={32}
               autoComplete="username"
@@ -145,7 +157,10 @@ export default function UserSettingsDialog({
             />
           </label>
 
-          <DisplayPictureField avatarUrl={profile?.avatar_url || ''} />
+          <DisplayPictureField
+            key={profile?.avatar_url || ''}
+            avatarUrl={profile?.avatar_url || ''}
+          />
 
           {(error || notice) && (
             <div

@@ -17,11 +17,13 @@ import {
   createGuestImportSelectionState,
   createPersistedPlayerState,
   checkSignupAvailability,
+  deriveProfileAvatarUrl,
   deriveProfileUsername,
   fetchUserPlayerState,
   fetchUserProfile,
   hasImportableGuestCollections,
   hasMeaningfulPlayerState,
+  isDiscordAuthUser,
   loadLocalPlayerState,
   mergeGuestCollectionsIntoPlayerState,
   normalizeOptionalProfileValue,
@@ -35,6 +37,8 @@ import { getSupabaseClient, isSupabaseConfigured } from './lib/supabase.js';
 
 const PREVIEW_DURATION_MS = 31_000;
 const LOGOUT_TRANSITION_MS = 260;
+const DISCORD_OAUTH_SEEN_STORAGE_KEY = 'discord_oauth_seen';
+const DISCORD_OAUTH_SILENT_PENDING_KEY = 'discord_oauth_silent_pending';
 
 function loadStoredList(storageKey, fallbackKey = null) {
   try {
@@ -115,6 +119,58 @@ function shuffleVideoIds(videoIds, pinnedVideoId = null) {
   }
 
   return pinnedVideoId ? [pinnedVideoId, ...remainingIds] : remainingIds;
+}
+
+function getAppRedirectPath() {
+  if (typeof window === 'undefined') return undefined;
+  return `${window.location.origin}${window.location.pathname}`;
+}
+
+function getUrlParamsFromHash(hashValue) {
+  if (typeof hashValue !== 'string' || hashValue.length <= 1) {
+    return new URLSearchParams();
+  }
+
+  return new URLSearchParams(hashValue.slice(1));
+}
+
+function readOAuthCallbackErrorFromUrl() {
+  if (typeof window === 'undefined') return null;
+
+  const searchParams = new URLSearchParams(window.location.search);
+  const hashParams = getUrlParamsFromHash(window.location.hash);
+  const error =
+    searchParams.get('error') ||
+    hashParams.get('error') ||
+    searchParams.get('error_description') ||
+    hashParams.get('error_description') ||
+    searchParams.get('error_code') ||
+    hashParams.get('error_code');
+
+  if (!error) return null;
+
+  return {
+    searchParams,
+    hashParams,
+  };
+}
+
+function stripOAuthErrorParamsFromUrl() {
+  if (typeof window === 'undefined') return;
+
+  const url = new URL(window.location.href);
+  const hashParams = getUrlParamsFromHash(url.hash);
+  const oauthErrorKeys = ['error', 'error_description', 'error_code'];
+
+  for (const key of oauthErrorKeys) {
+    url.searchParams.delete(key);
+    hashParams.delete(key);
+  }
+
+  const nextHash = hashParams.toString();
+  url.hash = nextHash ? `#${nextHash}` : '';
+
+  window.history.replaceState(window.history.state, '', url.toString());
 }
 
 export default function App() {
@@ -332,6 +388,15 @@ export default function App() {
     authUserIdRef.current = authUser?.id ?? null;
   }, [authUser]);
 
+  useEffect(() => {
+    if (typeof window === 'undefined' || !authUser) return;
+
+    if (isDiscordAuthUser(authUser)) {
+      window.localStorage.setItem(DISCORD_OAUTH_SEEN_STORAGE_KEY, '1');
+      window.sessionStorage.removeItem(DISCORD_OAUTH_SILENT_PENDING_KEY);
+    }
+  }, [authUser]);
+
   const playOrderIds = useMemo(
     () => resolvePlayOrderIds(playlist, shuffleOrderIds),
     [playlist, shuffleOrderIds],
@@ -438,7 +503,10 @@ export default function App() {
         preferredGamefaqsUsername || existingProfile?.gamefaqs_username || '',
       );
       const nextAvatarUrl = normalizeOptionalProfileValue(
-        preferredAvatarUrl || existingProfile?.avatar_url || '',
+        deriveProfileAvatarUrl(
+          user,
+          preferredAvatarUrl || existingProfile?.avatar_url || '',
+        ),
       );
 
       if (
@@ -553,6 +621,12 @@ export default function App() {
 
       setAuthSession(session);
 
+      if (event === 'PASSWORD_RECOVERY') {
+        setAuthDialogMode('recovery');
+        setAuthError('');
+        setAuthMessage('Enter your new password to finish resetting it.');
+      }
+
       if (!session?.user) {
         pendingGuestImportStateRef.current = null;
         pendingPreferredUsernameRef.current = '';
@@ -647,6 +721,20 @@ export default function App() {
     setAuthDialogMode(null);
     setAuthError('');
     setAuthMessage('');
+  }, []);
+
+  const showDefaultAppToast = useCallback((message) => {
+    setAppToastTone('default');
+    setAppToastMessage(message);
+
+    if (appToastTimeoutRef.current) {
+      window.clearTimeout(appToastTimeoutRef.current);
+    }
+
+    appToastTimeoutRef.current = window.setTimeout(() => {
+      appToastTimeoutRef.current = null;
+      setAppToastMessage('');
+    }, 3200);
   }, []);
 
   const handleSignIn = useCallback(
@@ -764,6 +852,163 @@ export default function App() {
       }
     },
     [createPlayerStateSnapshot, supabase],
+  );
+
+  const handleRequestPasswordReset = useCallback(
+    async ({ email }) => {
+      if (!supabase) {
+        setAuthError('Supabase is not configured yet.');
+        return;
+      }
+
+      setIsAuthSubmitting(true);
+      setAuthError('');
+      setAuthMessage('');
+
+      try {
+        const redirectTo =
+          typeof window === 'undefined'
+            ? undefined
+            : `${window.location.origin}${window.location.pathname}`;
+
+        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+          redirectTo,
+        });
+
+        if (error) throw error;
+
+        setAuthDialogMode('signin');
+        setAuthMessage('Check your email for a password reset link.');
+      } catch (error) {
+        setAuthError(error.message || 'Failed to send a password reset email.');
+      } finally {
+        setIsAuthSubmitting(false);
+      }
+    },
+    [supabase],
+  );
+
+  const startDiscordOAuth = useCallback(
+    async ({ silent = false } = {}) => {
+      if (!supabase) {
+        throw new Error('Supabase is not configured yet.');
+      }
+
+      const redirectTo = getAppRedirectPath();
+
+      if (typeof window !== 'undefined') {
+        if (silent) {
+          window.sessionStorage.setItem(DISCORD_OAUTH_SILENT_PENDING_KEY, '1');
+        } else {
+          window.sessionStorage.removeItem(DISCORD_OAUTH_SILENT_PENDING_KEY);
+        }
+      }
+
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'discord',
+        options: {
+          redirectTo,
+          queryParams: silent ? { prompt: 'none' } : undefined,
+        },
+      });
+
+      if (error) {
+        throw error;
+      }
+    },
+    [supabase],
+  );
+
+  const handleContinueWithDiscord = useCallback(async () => {
+    if (!supabase) {
+      setAuthError('Supabase is not configured yet.');
+      return;
+    }
+
+    setIsAuthSubmitting(true);
+    setAuthError('');
+    setAuthMessage('');
+    pendingGuestImportStateRef.current = hasMeaningfulPlayerState(
+      createPlayerStateSnapshot(),
+    )
+      ? createPlayerStateSnapshot()
+      : null;
+    pendingPreferredUsernameRef.current = '';
+    pendingGamefaqsUsernameRef.current = '';
+
+    try {
+      const shouldTrySilent =
+        typeof window !== 'undefined' &&
+        window.localStorage.getItem(DISCORD_OAUTH_SEEN_STORAGE_KEY) === '1';
+
+      await startDiscordOAuth({ silent: shouldTrySilent });
+    } catch (error) {
+      pendingGuestImportStateRef.current = null;
+      pendingPreferredUsernameRef.current = '';
+      pendingGamefaqsUsernameRef.current = '';
+      setAuthError(error.message || 'Failed to continue with Discord.');
+      setIsAuthSubmitting(false);
+    }
+  }, [createPlayerStateSnapshot, startDiscordOAuth, supabase]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !supabase) return;
+    if (
+      window.sessionStorage.getItem(DISCORD_OAUTH_SILENT_PENDING_KEY) !== '1'
+    ) {
+      return;
+    }
+
+    if (!readOAuthCallbackErrorFromUrl()) {
+      return;
+    }
+
+    window.sessionStorage.removeItem(DISCORD_OAUTH_SILENT_PENDING_KEY);
+    stripOAuthErrorParamsFromUrl();
+    setIsAuthSubmitting(true);
+    setAuthError('');
+    setAuthMessage('');
+
+    window.setTimeout(() => {
+      startDiscordOAuth({ silent: false }).catch((error) => {
+        setAuthError(error.message || 'Failed to continue with Discord.');
+        setIsAuthSubmitting(false);
+      });
+    }, 0);
+  }, [startDiscordOAuth, supabase]);
+
+  const handleUpdateRecoveredPassword = useCallback(
+    async ({ password, confirmPassword }) => {
+      if (!supabase) {
+        setAuthError('Supabase is not configured yet.');
+        return;
+      }
+
+      if (password !== confirmPassword) {
+        setAuthError('Passwords do not match.');
+        return;
+      }
+
+      setIsAuthSubmitting(true);
+      setAuthError('');
+      setAuthMessage('');
+
+      try {
+        const { error } = await supabase.auth.updateUser({
+          password,
+        });
+
+        if (error) throw error;
+
+        setAuthDialogMode(null);
+        showDefaultAppToast('Password updated.');
+      } catch (error) {
+        setAuthError(error.message || 'Failed to update your password.');
+      } finally {
+        setIsAuthSubmitting(false);
+      }
+    },
+    [showDefaultAppToast, supabase],
   );
 
   const handleLogout = useCallback(async () => {
@@ -2158,6 +2403,9 @@ export default function App() {
         onModeChange={setAuthDialogMode}
         onSignIn={handleSignIn}
         onSignUp={handleSignUp}
+        onContinueWithDiscord={handleContinueWithDiscord}
+        onRequestPasswordReset={handleRequestPasswordReset}
+        onUpdatePassword={handleUpdateRecoveredPassword}
       />
 
       <UserSettingsDialog
