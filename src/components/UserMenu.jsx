@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
+import DiscordIcon from './DiscordIcon.jsx';
+import { parseStoredProfileUsername } from '../lib/playerState.js';
 
 function UserIcon() {
   return (
@@ -48,6 +50,7 @@ export default function UserMenu({
 
   const displayName =
     profile?.username || user?.user_metadata?.username || 'User';
+  const displayIdentity = parseStoredProfileUsername(displayName);
   const email = profile?.email || user?.email || '';
   const gamefaqsUsername = profile?.gamefaqs_username || '';
   const avatarUrl = profile?.avatar_url || '';
@@ -76,7 +79,7 @@ export default function UserMenu({
           <img
             className="user-menu-avatar"
             src={avatarUrl}
-            alt={`${displayName} profile`}
+            alt={`${displayIdentity.displayName} profile`}
             onError={() => setFailedAvatarUrl(avatarUrl)}
           />
         ) : (
@@ -89,7 +92,12 @@ export default function UserMenu({
           {user ? (
             <>
               <div className="user-menu-summary">
-                <span className="user-menu-name">{displayName}</span>
+                <span className="user-menu-name">
+                  {displayIdentity.provider === 'discord' && (
+                    <DiscordIcon className="profile-provider-icon user-menu-provider-icon" />
+                  )}
+                  <span>{displayIdentity.displayName}</span>
+                </span>
                 {secondaryLabel && (
                   <span className="user-menu-email">{secondaryLabel}</span>
                 )}

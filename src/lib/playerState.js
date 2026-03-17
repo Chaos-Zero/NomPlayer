@@ -2,6 +2,7 @@ export const PLAYER_STATE_STORAGE_KEY = 'yt_player_state';
 export const SUPPORT_LIST_STORAGE_KEY = 'yt_support_list';
 export const NOMINATION_LIST_STORAGE_KEY = 'yt_nominations_list';
 export const LEGACY_SUPPORT_STORAGE_KEY = 'yt_favourites';
+export const DISCORD_USERNAME_PREFIX = 'dc:';
 
 function normalizeVideoEntry(entry) {
   if (!entry || typeof entry !== 'object') return null;
@@ -266,17 +267,61 @@ export function mergeGuestCollectionsIntoPlayerState(
   });
 }
 
-export function deriveProfileUsername(user, existingUsername = '') {
-  if (existingUsername && existingUsername.trim()) {
-    return existingUsername.trim();
+export function isDiscordAuthUser(user) {
+  if (!user || typeof user !== 'object') return false;
+
+  if (user?.app_metadata?.provider === 'discord') return true;
+  if (
+    Array.isArray(user?.identities) &&
+    user.identities.some((identity) => identity?.provider === 'discord')
+  ) {
+    return true;
   }
 
-  const metadataUsername =
-    typeof user?.user_metadata?.username === 'string'
-      ? user.user_metadata.username.trim()
+  return user?.user_metadata?.iss?.includes('discord.com') ?? false;
+}
+
+export function parseStoredProfileUsername(username, fallback = 'User') {
+  const rawUsername =
+    typeof username === 'string' && username.trim() ? username.trim() : '';
+  const isDiscordUsername = rawUsername.startsWith(DISCORD_USERNAME_PREFIX);
+  const displayName = isDiscordUsername
+    ? rawUsername.slice(DISCORD_USERNAME_PREFIX.length).trim()
+    : rawUsername;
+
+  return {
+    rawUsername,
+    displayName: displayName || fallback,
+    provider: isDiscordUsername ? 'discord' : null,
+  };
+}
+
+export function getDisplayProfileName(username, fallback = 'User') {
+  return parseStoredProfileUsername(username, fallback).displayName;
+}
+
+function deriveBaseProfileUsername(user, existingUsername = '') {
+  const preferredUsername =
+    typeof existingUsername === 'string' && existingUsername.trim()
+      ? existingUsername.trim()
       : '';
-  if (metadataUsername) {
-    return metadataUsername;
+  if (preferredUsername) {
+    return preferredUsername;
+  }
+
+  const metadataUsernameFields = [
+    user?.user_metadata?.preferred_username,
+    user?.user_metadata?.user_name,
+    user?.user_metadata?.username,
+    user?.user_metadata?.name,
+    user?.user_metadata?.global_name,
+    user?.user_metadata?.full_name,
+  ];
+
+  for (const candidate of metadataUsernameFields) {
+    if (typeof candidate === 'string' && candidate.trim()) {
+      return candidate.trim();
+    }
   }
 
   const email =
@@ -288,6 +333,59 @@ export function deriveProfileUsername(user, existingUsername = '') {
   }
 
   return 'listener';
+}
+
+export function deriveProfileUsername(user, existingUsername = '') {
+  const baseUsername = deriveBaseProfileUsername(
+    user,
+    parseStoredProfileUsername(existingUsername, '').displayName,
+  );
+
+  if (isDiscordAuthUser(user)) {
+    return `${DISCORD_USERNAME_PREFIX}${baseUsername}`;
+  }
+
+  return baseUsername;
+}
+
+export function deriveProfileAvatarUrl(user, existingAvatarUrl = '') {
+  if (existingAvatarUrl && existingAvatarUrl.trim()) {
+    return existingAvatarUrl.trim();
+  }
+
+  const metadataAvatarFields = [
+    user?.user_metadata?.avatar_url,
+    user?.user_metadata?.picture,
+  ];
+
+  for (const candidate of metadataAvatarFields) {
+    if (typeof candidate === 'string' && candidate.trim()) {
+      return candidate.trim();
+    }
+  }
+
+  const isDiscordProvider =
+    user?.app_metadata?.provider === 'discord' ||
+    user?.user_metadata?.iss?.includes('discord.com');
+  const discordAvatarHash =
+    typeof user?.user_metadata?.avatar === 'string'
+      ? user.user_metadata.avatar.trim()
+      : '';
+  const discordUserIdCandidates = [
+    user?.user_metadata?.provider_id,
+    user?.user_metadata?.sub,
+    user?.user_metadata?.user_id,
+  ];
+  const discordUserId = discordUserIdCandidates.find(
+    (candidate) => typeof candidate === 'string' && candidate.trim(),
+  );
+
+  if (isDiscordProvider && discordAvatarHash && discordUserId) {
+    const extension = discordAvatarHash.startsWith('a_') ? 'gif' : 'png';
+    return `https://cdn.discordapp.com/avatars/${discordUserId.trim()}/${discordAvatarHash}.${extension}?size=256`;
+  }
+
+  return '';
 }
 
 export function normalizeOptionalProfileValue(value) {

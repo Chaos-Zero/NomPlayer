@@ -1,12 +1,16 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import {
+  DISCORD_USERNAME_PREFIX,
   LEGACY_SUPPORT_STORAGE_KEY,
   NOMINATION_LIST_STORAGE_KEY,
   PLAYER_STATE_STORAGE_KEY,
   SUPPORT_LIST_STORAGE_KEY,
   clearLocalGuestPlayerState,
   createGuestImportSelectionState,
+  deriveProfileUsername,
+  getDisplayProfileName,
   hasImportableGuestCollections,
+  parseStoredProfileUsername,
   mergeGuestCollectionsIntoPlayerState,
   persistLocalGuestPlayerState,
 } from '../lib/playerState.js';
@@ -159,5 +163,23 @@ describe('playerState guest import helpers', () => {
     expect(localStorage.getItem(SUPPORT_LIST_STORAGE_KEY)).toBeNull();
     expect(localStorage.getItem(NOMINATION_LIST_STORAGE_KEY)).toBeNull();
     expect(localStorage.getItem(LEGACY_SUPPORT_STORAGE_KEY)).toBeNull();
+  });
+
+  it('stores Discord usernames in a namespaced format and strips that in the UI', () => {
+    const authUser = {
+      app_metadata: { provider: 'discord' },
+      user_metadata: { preferred_username: 'ProtoMan' },
+      email: 'protoman@example.com',
+    };
+
+    const storedUsername = deriveProfileUsername(authUser);
+
+    expect(storedUsername).toBe(`${DISCORD_USERNAME_PREFIX}ProtoMan`);
+    expect(parseStoredProfileUsername(storedUsername)).toEqual({
+      rawUsername: `${DISCORD_USERNAME_PREFIX}ProtoMan`,
+      displayName: 'ProtoMan',
+      provider: 'discord',
+    });
+    expect(getDisplayProfileName(storedUsername)).toBe('ProtoMan');
   });
 });

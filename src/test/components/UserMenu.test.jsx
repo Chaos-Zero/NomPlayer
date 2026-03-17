@@ -40,6 +40,23 @@ describe('UserMenu', () => {
     expect(screen.getByText('GameFaqs: FAQFan')).toBeInTheDocument();
   });
 
+  it('renders Discord-backed usernames without the stored prefix', () => {
+    render(
+      <UserMenu
+        user={{ id: 'user-1', email: 'listener@example.com' }}
+        profile={{
+          username: 'dc:Listener',
+        }}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Open user menu' }));
+
+    expect(screen.getByText('Listener')).toBeInTheDocument();
+    expect(screen.queryByText('dc:Listener')).not.toBeInTheDocument();
+    expect(document.querySelector('.user-menu-provider-icon')).not.toBeNull();
+  });
+
   it('falls back to the user icon if the avatar fails to load', () => {
     render(
       <UserMenu
