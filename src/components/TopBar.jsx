@@ -58,6 +58,19 @@ function PauseIcon() {
   );
 }
 
+function PlaylistPlusIcon() {
+  return (
+    <svg
+      className="collection-icon"
+      viewBox="0 0 24 24"
+      aria-hidden="true"
+      fill="currentColor"
+    >
+      <path d="M14 10H2v2h12v-2zm0-4H2v2h12V6zm4 8v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zM2 16h8v-2H2v2z" />
+    </svg>
+  );
+}
+
 function SupportIcon() {
   return (
     <svg className="collection-icon" viewBox="0 0 20 20" aria-hidden="true">
@@ -93,6 +106,8 @@ export default function TopBar({
   isCurrentVideoSupported = false,
   isCurrentVideoNominated = false,
   onToggleCurrentVideoSupport,
+  isCurrentVideoInPlaylist = false,
+  onAddToPlaylist,
   authUser = null,
   userProfile = null,
   isAuthAvailable = false,
@@ -748,6 +763,17 @@ export default function TopBar({
                     </div>
 
                     <div className="mobile-topbar-slot mobile-topbar-slot-right">
+                      <button
+                        className={`btn btn-icon add-to-playlist-btn mobile-add-to-playlist-btn${isCurrentVideoInPlaylist ? ' hidden' : ''}`}
+                        type="button"
+                        onClick={() => onAddToPlaylist?.([currentVideo])}
+                        aria-label="Add to current playlist"
+                        title="Add to current playlist"
+                        disabled={!currentVideo}
+                        tabIndex={effectiveInputOpen ? -1 : 0}
+                      >
+                        <PlaylistPlusIcon />
+                      </button>
                       <button
                         className={`btn btn-icon mobile-current-support-btn${currentSupportClassName}`}
                         type="button"

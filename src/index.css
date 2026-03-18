@@ -1178,9 +1178,15 @@ body {
   gap: 14px;
 }
 
-.detached-footer-support-btn {
+.detached-footer-actions {
   grid-column: 3;
   justify-self: end;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.detached-footer-support-btn {
   width: 44px;
   height: 44px;
   font-size: 20px;
@@ -1816,6 +1822,18 @@ body {
   transform: translateY(-0.5px);
 }
 
+.add-to-playlist-btn {
+  opacity: 1;
+  transition:
+    opacity 0.3s ease,
+    transform var(--transition);
+}
+
+.add-to-playlist-btn.hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
 .btn-play {
   width: 44px;
   height: 44px;
@@ -2307,6 +2325,9 @@ body {
 .mobile-topbar-slot-right {
   justify-content: flex-end;
   justify-self: end;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .mobile-topbar-back {
@@ -3486,6 +3507,13 @@ body {
   display: flex;
   flex-direction: column;
   gap: 4px;
+}
+
+.now-playing-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
 }
 
 .now-playing-link {

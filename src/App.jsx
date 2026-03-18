@@ -354,6 +354,19 @@ function stripOAuthErrorParamsFromUrl() {
   window.history.replaceState(window.history.state, '', url.toString());
 }
 
+function PlaylistPlusIcon() {
+  return (
+    <svg
+      className="collection-icon"
+      viewBox="0 0 24 24"
+      aria-hidden="true"
+      fill="currentColor"
+    >
+      <path d="M14 10H2v2h12v-2zm0-4H2v2h12V6zm4 8v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zM2 16h8v-2H2v2z" />
+    </svg>
+  );
+}
+
 export default function App() {
   const isMobileLayout = useMediaQuery('(max-width: 960px)');
   const supabase = getSupabaseClient();
@@ -1287,6 +1300,9 @@ export default function App() {
     : false;
   const isCurrentVideoRetired = currentVideo
     ? isVideoRetired(currentVideo)
+    : false;
+  const isCurrentVideoInPlaylist = currentVideo
+    ? playlist.some((entry) => entry.videoId === currentVideo.videoId)
     : false;
   const currentSupportLabel = !currentVideo
     ? 'No current video to support'
@@ -3254,6 +3270,8 @@ export default function App() {
         isSupported={isCurrentVideoSupported}
         isNominated={isCurrentVideoNominated}
         onToggleSupport={handleToggleSupportFromPlaylist}
+        isCurrentVideoInPlaylist={isCurrentVideoInPlaylist}
+        onAddToPlaylist={handleQueueFromSupportList}
         variant={playerPresentation}
         showMetadata={isPlayerPage}
       />
@@ -3270,16 +3288,29 @@ export default function App() {
             />
           </div>
 
-          <button
-            className={`btn btn-icon detached-footer-support-btn${currentSupportClassName}`}
-            type="button"
-            onClick={() => handleToggleSupportFromPlaylist(currentVideo)}
-            title={currentSupportTooltip}
-            aria-label={currentSupportLabel}
-            disabled={!currentVideo || isCurrentVideoNominated}
-          >
-            {currentSupportGlyph}
-          </button>
+          <div className="detached-footer-actions">
+            <button
+              className={`btn btn-icon add-to-playlist-btn detached-footer-add-btn${isCurrentVideoInPlaylist ? ' hidden' : ''}`}
+              type="button"
+              onClick={() => handleQueueFromSupportList([currentVideo])}
+              aria-label="Add to current playlist"
+              title="Add to current playlist"
+              disabled={!currentVideo}
+            >
+              <PlaylistPlusIcon />
+            </button>
+
+            <button
+              className={`btn btn-icon detached-footer-support-btn${currentSupportClassName}`}
+              type="button"
+              onClick={() => handleToggleSupportFromPlaylist(currentVideo)}
+              title={currentSupportTooltip}
+              aria-label={currentSupportLabel}
+              disabled={!currentVideo || isCurrentVideoNominated}
+            >
+              {currentSupportGlyph}
+            </button>
+          </div>
         </>
       )}
     </div>
@@ -3357,6 +3388,8 @@ export default function App() {
           isCurrentVideoSupported={isCurrentVideoSupported}
           isCurrentVideoNominated={isCurrentVideoNominated}
           onToggleCurrentVideoSupport={handleToggleSupportFromPlaylist}
+          isCurrentVideoInPlaylist={isCurrentVideoInPlaylist}
+          onAddToPlaylist={handleQueueFromSupportList}
           onLoad={handleLoad}
           supabase={supabase}
           onCatalogPlayNow={handlePlayCatalogTrack}
