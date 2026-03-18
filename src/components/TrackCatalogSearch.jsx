@@ -169,7 +169,9 @@ export default function TrackCatalogSearch({
           className="playlist-search-input"
           type="search"
           placeholder={
-            supabase ? 'Search catalog tracks…' : 'Catalog search unavailable'
+            supabase
+              ? 'Search VGMC nominations…'
+              : 'Nomination search unavailable'
           }
           value={query}
           onFocus={() => setIsFocused(true)}

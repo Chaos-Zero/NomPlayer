@@ -1,4 +1,4 @@
-# VGMC Taster
+# Nomplayer
 
 A small React/Vite app for loading YouTube videos or playlists into a local playlist, playing them in-page, and saving supported tracks in `localStorage`.
 
@@ -68,10 +68,6 @@ just supabase-pull
 just supabase-migration name=add_some_change
 just supabase-reset
 ```
-
-The current schema lives in:
-
-- [supabase/migrations/20260316130555_init_auth_player_state.sql](/run/media/calzoneb/SSD/My%20Documents/Projects/Web/Websites/VGMC-Taster/supabase/migrations/20260316130555_init_auth_player_state.sql)
 
 To connect this repo to your hosted Supabase project for future pushes:
 

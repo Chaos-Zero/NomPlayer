@@ -266,7 +266,7 @@ export function extractGameFaqsVgmcThreads(html, limit = 8) {
 export async function fetchGameFaqsVgmcThreads(fetchImpl = fetch, limit = 8) {
   const response = await fetchImpl(GAMEFAQS_CONTESTS_BOARD_URL, {
     headers: {
-      'user-agent': 'VGMC-Taster/1.0 (+https://vgmc-taster.pages.dev)',
+      'user-agent': 'Nomplayer/1.0 (+https://vgmc-taster.pages.dev)',
     },
   });
 
