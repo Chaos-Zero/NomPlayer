@@ -16,6 +16,16 @@ function normalizeVideoEntry(entry) {
     thumbnail: typeof entry.thumbnail === 'string' ? entry.thumbnail : '',
     channelTitle:
       typeof entry.channelTitle === 'string' ? entry.channelTitle : '',
+    trackId: typeof entry.trackId === 'string' ? entry.trackId : null,
+    gameTitle: typeof entry.gameTitle === 'string' ? entry.gameTitle : '',
+    trackTitle: typeof entry.trackTitle === 'string' ? entry.trackTitle : '',
+    displayTitle:
+      typeof entry.displayTitle === 'string' ? entry.displayTitle : '',
+    isRetired: Boolean(entry.isRetired),
+    retiredByTournamentName:
+      typeof entry.retiredByTournamentName === 'string'
+        ? entry.retiredByTournamentName
+        : '',
   };
 }
 

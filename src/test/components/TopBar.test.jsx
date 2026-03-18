@@ -7,6 +7,7 @@ import {
 } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import TopBar from '../../components/TopBar.jsx';
+import { searchTrackCatalog } from '../../lib/trackCatalog.js';
 import {
   fetchPlaylistItems,
   parseYouTubeInput,
@@ -18,6 +19,14 @@ vi.mock('../../utils/youtube.js', () => ({
   fetchPlaylistItems: vi.fn(),
   singleVideoEntry: vi.fn(),
 }));
+
+vi.mock('../../lib/trackCatalog.js', async () => {
+  const actual = await vi.importActual('../../lib/trackCatalog.js');
+  return {
+    ...actual,
+    searchTrackCatalog: vi.fn(),
+  };
+});
 
 const originalMatchMedia = window.matchMedia;
 
@@ -148,6 +157,131 @@ describe('TopBar', () => {
     expect(
       screen.getByRole('button', { name: 'Toggle nominations list' }),
     ).toBeInTheDocument();
+  });
+
+  it('shows the permanent catalog search in the desktop header when Supabase is available', () => {
+    renderTopBar({ supabase: {} });
+
+    expect(screen.getByRole('searchbox')).toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Add to playlist' }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('plays a catalog search result from the desktop header search', async () => {
+    vi.useFakeTimers();
+
+    searchTrackCatalog.mockResolvedValue([
+      {
+        videoId: 'g1234567890',
+        trackId: 'track-1',
+        gameTitle: 'Gamma Game',
+        trackTitle: 'Skyline',
+        displayTitle: 'Gamma Game - Skyline',
+        sourceTitle: 'Skyline',
+        sourceChannelTitle: 'Channel G',
+        sourceThumbnailUrl: 'g.jpg',
+        isRetired: false,
+        retiredByTournamentName: '',
+        tournaments: [{ sequenceNumber: 6 }],
+      },
+    ]);
+
+    const onCatalogPlayNow = vi.fn();
+    renderTopBar({
+      supabase: {},
+      onCatalogPlayNow,
+    });
+
+    fireEvent.focus(screen.getByRole('searchbox'));
+    fireEvent.change(screen.getByRole('searchbox'), {
+      target: { value: 'Skyline' },
+    });
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(200);
+    });
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    fireEvent.click(
+      screen.getByRole('option', { name: /Gamma Game - Skyline/i }),
+    );
+
+    expect(onCatalogPlayNow).toHaveBeenCalledWith({
+      videoId: 'g1234567890',
+      title: 'Gamma Game - Skyline',
+      thumbnail: 'g.jpg',
+      channelTitle: 'Channel G',
+      trackId: 'track-1',
+      gameTitle: 'Gamma Game',
+      trackTitle: 'Skyline',
+      displayTitle: 'Gamma Game - Skyline',
+      isRetired: false,
+      retiredByTournamentName: '',
+    });
+  });
+
+  it('adds a catalog search result to the playlist from the header search context menu', async () => {
+    vi.useFakeTimers();
+
+    searchTrackCatalog.mockResolvedValue([
+      {
+        videoId: 'g1234567890',
+        trackId: 'track-1',
+        gameTitle: 'Gamma Game',
+        trackTitle: 'Skyline',
+        displayTitle: 'Gamma Game - Skyline',
+        sourceTitle: 'Skyline',
+        sourceChannelTitle: 'Channel G',
+        sourceThumbnailUrl: 'g.jpg',
+        isRetired: true,
+        retiredByTournamentName: 'VGMC 6',
+        tournaments: [{ sequenceNumber: 6 }],
+      },
+    ]);
+
+    const onAddCatalogToPlaylist = vi.fn();
+    renderTopBar({
+      supabase: {},
+      onAddCatalogToPlaylist,
+    });
+
+    fireEvent.focus(screen.getByRole('searchbox'));
+    fireEvent.change(screen.getByRole('searchbox'), {
+      target: { value: 'Skyline' },
+    });
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(200);
+    });
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    const result = screen.getByRole('option', {
+      name: /Gamma Game - Skyline/i,
+    });
+    fireEvent.contextMenu(result);
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Add to playlist' }));
+
+    expect(onAddCatalogToPlaylist).toHaveBeenCalledWith([
+      {
+        videoId: 'g1234567890',
+        title: 'Gamma Game - Skyline',
+        thumbnail: 'g.jpg',
+        channelTitle: 'Channel G',
+        trackId: 'track-1',
+        gameTitle: 'Gamma Game',
+        trackTitle: 'Skyline',
+        displayTitle: 'Gamma Game - Skyline',
+        isRetired: true,
+        retiredByTournamentName: 'VGMC 6',
+      },
+    ]);
   });
 
   it('hides shuffle and preview buttons from the mobile bottom controls', () => {

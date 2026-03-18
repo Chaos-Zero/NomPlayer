@@ -25,3 +25,6 @@ dist-ssr
 
 # Local environment secrets
 .env
+
+# Local scratch data / generated imports
+tmp/

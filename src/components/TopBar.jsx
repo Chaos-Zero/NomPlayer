@@ -13,6 +13,7 @@ import {
 } from '../utils/youtube.js';
 import useMediaQuery from '../hooks/useMediaQuery.js';
 import ScrollingText from './ScrollingText.jsx';
+import TrackCatalogSearch from './TrackCatalogSearch.jsx';
 import UserMenu from './UserMenu.jsx';
 
 const API_KEY = import.meta.env.VITE_YT_API_KEY || '';
@@ -99,6 +100,9 @@ export default function TopBar({
   onOpenSettings,
   onLogout,
   onLoad,
+  supabase = null,
+  onCatalogPlayNow,
+  onAddCatalogToPlaylist,
   isPlayerPage = true,
   hasMobileDetachedPlayer = false,
   isMobileDetachedPlayerEntering = false,
@@ -154,6 +158,7 @@ export default function TopBar({
     : isMobileLayout
       ? 'Player'
       : 'Go to player';
+  const showDesktopCatalogSearch = !isMobileLayout && Boolean(supabase);
   const clearSuccessFlash = useCallback(() => {
     if (successTimeoutRef.current) {
       window.clearTimeout(successTimeoutRef.current);
@@ -809,57 +814,71 @@ export default function TopBar({
     >
       <div className="topbar-side topbar-left">
         <div className="topbar-load-area">
-          <form
-            ref={formRef}
-            className={`url-form${effectiveInputOpen ? ' open' : ''}${showSuccess ? ' success' : ''}`}
-            onSubmit={handleSubmit}
-          >
-            <div className="url-input-wrap">
-              <input
-                ref={inputRef}
-                className="url-input"
-                type="text"
-                placeholder="Paste a YouTube video or playlist URL…"
-                value={urlValue}
-                onChange={(e) => {
-                  setUrlValue(e.target.value);
-                  setError('');
-                  if (showSuccess) {
-                    clearSuccessFlash();
-                  }
-                }}
-                id="url-input"
+          {showDesktopCatalogSearch ? (
+            <div ref={formRef} className="topbar-catalog-search-slot">
+              <TrackCatalogSearch
+                className="topbar-catalog-search"
+                inputId="topbar-track-search"
+                supabase={supabase}
+                onPlayNow={onCatalogPlayNow}
+                onAddToPlaylist={onAddCatalogToPlaylist}
               />
             </div>
-            <button
-              className={`btn btn-primary url-submit-btn${showSuccess ? ' success' : ''}`}
-              type={effectiveInputOpen ? 'submit' : 'button'}
-              disabled={effectiveInputOpen && !showSuccess && !urlValue.trim()}
-              id="load-btn"
-              aria-label={showSuccess ? 'Load successful' : undefined}
-              onClick={!effectiveInputOpen ? openInput : undefined}
+          ) : (
+            <form
+              ref={formRef}
+              className={`url-form${effectiveInputOpen ? ' open' : ''}${showSuccess ? ' success' : ''}`}
+              onSubmit={handleSubmit}
             >
-              {showSuccess
-                ? '✓'
-                : loading
-                  ? 'Loading…'
-                  : effectiveInputOpen
-                    ? 'Load'
-                    : playerActionLabel}
-            </button>
-            <button
-              className="btn btn-icon url-close-btn"
-              type="button"
-              aria-label="Close add to playlist"
-              onClick={closeInput}
-              tabIndex={effectiveInputOpen ? 0 : -1}
-            >
-              ✕
-            </button>
-          </form>
+              <div className="url-input-wrap">
+                <input
+                  ref={inputRef}
+                  className="url-input"
+                  type="text"
+                  placeholder="Paste a YouTube video or playlist URL…"
+                  value={urlValue}
+                  onChange={(e) => {
+                    setUrlValue(e.target.value);
+                    setError('');
+                    if (showSuccess) {
+                      clearSuccessFlash();
+                    }
+                  }}
+                  id="url-input"
+                />
+              </div>
+              <button
+                className={`btn btn-primary url-submit-btn${showSuccess ? ' success' : ''}`}
+                type={effectiveInputOpen ? 'submit' : 'button'}
+                disabled={
+                  effectiveInputOpen && !showSuccess && !urlValue.trim()
+                }
+                id="load-btn"
+                aria-label={showSuccess ? 'Load successful' : undefined}
+                onClick={!effectiveInputOpen ? openInput : undefined}
+              >
+                {showSuccess
+                  ? '✓'
+                  : loading
+                    ? 'Loading…'
+                    : effectiveInputOpen
+                      ? 'Load'
+                      : playerActionLabel}
+              </button>
+              <button
+                className="btn btn-icon url-close-btn"
+                type="button"
+                aria-label="Close add to playlist"
+                onClick={closeInput}
+                tabIndex={effectiveInputOpen ? 0 : -1}
+              >
+                ✕
+              </button>
+            </form>
+          )}
         </div>
 
-        {error && (
+        {!showDesktopCatalogSearch && error && (
           <span ref={errorRef} className="url-error">
             ⚠ {error}
           </span>
