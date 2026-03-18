@@ -118,6 +118,13 @@ export default function SiteNavigation({
 
   return (
     <nav className="site-nav" aria-label="Primary navigation">
+      <div className="site-nav-logo-wrapper desktop-only">
+        <img
+          src="/Nomplayer_icon.png"
+          className="site-nav-logo"
+          alt="Nomplayer"
+        />
+      </div>
       <div className="site-nav-group">
         {NAV_ITEMS.map((item) => (
           <button

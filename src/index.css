@@ -112,12 +112,26 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   gap: 16px;
-  padding: 18px 12px;
+  padding: 0 12px 18px;
   border-right: 1px solid var(--border);
   background: rgba(10, 10, 15, 0.92);
   backdrop-filter: blur(20px);
+}
+
+.site-nav-logo-wrapper {
+  height: var(--topbar-h);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.site-nav-logo {
+  height: 38px;
+  width: auto;
+  object-fit: contain;
 }
 
 .site-nav-group {
@@ -125,6 +139,8 @@ body {
   display: flex;
   flex-direction: column;
   gap: 12px;
+  margin-top: auto;
+  margin-bottom: auto;
 }
 
 .site-nav-btn {
@@ -1464,6 +1480,25 @@ body {
   border: 0;
 }
 
+/* ─── Visibility Utilities ─── */
+.desktop-only {
+  display: flex !important;
+}
+
+.mobile-only {
+  display: none !important;
+}
+
+@media (max-width: 960px) {
+  .desktop-only {
+    display: none !important;
+  }
+
+  .mobile-only {
+    display: flex !important;
+  }
+}
+
 /* ─── TopBar ─── */
 .topbar-side {
   display: flex;
@@ -1471,6 +1506,11 @@ body {
   min-width: 0;
   position: relative;
   z-index: 1;
+}
+
+.topbar-logo {
+  object-fit: contain;
+  flex-shrink: 0;
 }
 
 .topbar-left {
@@ -2089,9 +2129,9 @@ body {
 }
 
 .mobile-topbar-front.with-detached-player {
-  grid-template-rows:
-    calc(var(--mobile-detached-player-base-visible-height) + 12px)
-    var(--mobile-topbar-shell-h);
+  grid-template-rows: calc(
+      var(--mobile-detached-player-base-visible-height) + 12px
+    ) var(--mobile-topbar-shell-h);
   gap: 0;
   padding: 0 12px;
   background: transparent;
@@ -2571,6 +2611,16 @@ body {
 
   .site-nav {
     display: none;
+  }
+
+  .topbar-logo.mobile-only {
+    position: fixed;
+    top: calc(14px + env(safe-area-inset-top));
+    left: 72px;
+    z-index: 180;
+    height: 44px;
+    width: auto;
+    margin: 0;
   }
 
   .mobile-site-nav-toggle {

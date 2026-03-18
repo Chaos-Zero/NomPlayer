@@ -663,6 +663,11 @@ export default function TopBar({
     return (
       <>
         {mobileCornerActions}
+        <img
+          src="/Nomplayer_icon.png"
+          className="topbar-logo mobile-only"
+          alt="Nomplayer"
+        />
         <div
           ref={topbarRef}
           className={`topbar mobile-layout${effectiveInputOpen ? ' input-open' : ''}${hasMobileDetachedPlayer ? ' mobile-detached-player' : ''}`}
