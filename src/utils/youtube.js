@@ -35,6 +35,20 @@ export function parseYouTubeInput(input) {
   return null;
 }
 
+export function getYouTubeThumbnailUrl(videoId, quality = 'mqdefault') {
+  const normalizedVideoId = typeof videoId === 'string' ? videoId.trim() : '';
+  if (!/^[A-Za-z0-9_-]{11}$/.test(normalizedVideoId)) {
+    return '';
+  }
+
+  const normalizedQuality =
+    typeof quality === 'string' && quality.trim()
+      ? quality.trim()
+      : 'mqdefault';
+
+  return `https://i.ytimg.com/vi/${normalizedVideoId}/${normalizedQuality}.jpg`;
+}
+
 /**
  * Fetch all items from a YouTube playlist via Data API v3.
  * Requires VITE_YT_API_KEY environment variable.
@@ -78,7 +92,7 @@ export async function fetchPlaylistItems(playlistId, apiKey) {
         thumbnail:
           snippet.thumbnails?.medium?.url ||
           snippet.thumbnails?.default?.url ||
-          `https://i.ytimg.com/vi/${videoId}/mqdefault.jpg`,
+          getYouTubeThumbnailUrl(videoId),
         channelTitle: snippet.videoOwnerChannelTitle || '',
       });
     }
@@ -115,7 +129,7 @@ export async function singleVideoEntry(videoId) {
   return {
     videoId,
     title,
-    thumbnail: `https://i.ytimg.com/vi/${videoId}/mqdefault.jpg`,
+    thumbnail: getYouTubeThumbnailUrl(videoId),
     channelTitle: '',
   };
 }

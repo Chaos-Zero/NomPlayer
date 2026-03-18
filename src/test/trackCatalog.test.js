@@ -153,4 +153,27 @@ describe('track catalog helpers', () => {
     expect(result.videoId).toBe('g1234567890');
     expect(result.isRetired).toBe(false);
   });
+
+  it('falls back to the standard YouTube thumbnail when the catalog row has no cached image', () => {
+    expect(
+      mapTrackCatalogEntryToVideo({
+        track_id: 'track-2',
+        game_title: 'Delta Game',
+        track_title: 'Night Drive',
+        display_title: 'Delta Game - Night Drive',
+        is_retired: false,
+        retired_by_tournament_name: null,
+        source_external_id: 'd1234567890',
+        source_url: 'https://youtu.be/d1234567890',
+        submitted_url: 'https://youtu.be/d1234567890',
+        source_title: '',
+        source_channel_title: '',
+        source_thumbnail_url: '',
+        tournaments: [],
+      }),
+    ).toMatchObject({
+      videoId: 'd1234567890',
+      thumbnail: 'https://i.ytimg.com/vi/d1234567890/mqdefault.jpg',
+    });
+  });
 });

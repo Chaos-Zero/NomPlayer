@@ -472,7 +472,7 @@ export default function HomePage({
       accent: 'purple',
     },
     {
-      label: 'Fresh nominations',
+      label: 'New nominations',
       value: isDashboardLoading ? '...' : String(totalVisibleNominationCount),
       accent: 'orange',
     },

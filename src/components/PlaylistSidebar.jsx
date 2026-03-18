@@ -50,6 +50,25 @@ function PlaylistTabIcon() {
   );
 }
 
+function getPlaylistItemDisplay(video) {
+  const hasTrackTitle =
+    typeof video?.trackTitle === 'string' && video.trackTitle.trim();
+  const hasGameTitle =
+    typeof video?.gameTitle === 'string' && video.gameTitle.trim();
+  const hasCatalogMetadata = Boolean(hasTrackTitle || hasGameTitle);
+
+  return {
+    hasCatalogMetadata,
+    primaryTitle:
+      (hasTrackTitle && video.trackTitle) ||
+      (hasCatalogMetadata && video.displayTitle) ||
+      video?.title ||
+      video?.videoId,
+    secondaryTitle:
+      (hasGameTitle && video.gameTitle) || video?.channelTitle || '',
+  };
+}
+
 function PlaylistItem({
   orderNumber,
   video,
@@ -95,6 +114,9 @@ function PlaylistItem({
         ? ' supported'
         : '';
   const supportGlyph = isNominated ? '★' : isSupported ? '♥' : '♡';
+  const { hasCatalogMetadata, primaryTitle, secondaryTitle } =
+    getPlaylistItemDisplay(video);
+  const accessibleTitle = primaryTitle || video.videoId;
 
   return (
     <div
@@ -121,7 +143,7 @@ function PlaylistItem({
         onSelect(video.videoId);
       }}
       aria-label={
-        selectionMode ? `Select ${video.title}` : `Play ${video.title}`
+        selectionMode ? `Select ${accessibleTitle}` : `Play ${accessibleTitle}`
       }
     >
       {selectionMode && (
@@ -129,7 +151,9 @@ function PlaylistItem({
           className={`support-select-toggle${isSelected ? ' active' : ''}`}
           type="button"
           aria-label={
-            isSelected ? `Deselect ${video.title}` : `Select ${video.title}`
+            isSelected
+              ? `Deselect ${accessibleTitle}`
+              : `Select ${accessibleTitle}`
           }
           aria-pressed={isSelected}
           onClick={(event) => {
@@ -157,17 +181,23 @@ function PlaylistItem({
       <div className="playlist-item-info">
         {isActive && !selectionMode ? (
           <ScrollingText
-            className="playlist-item-title-scroll"
-            text={video.title || video.videoId}
+            className={`playlist-item-title-scroll${hasCatalogMetadata ? ' metadata' : ''}`}
+            text={primaryTitle || video.videoId}
             truncateWhenStatic
           />
         ) : (
-          <div className="playlist-item-title">
-            {video.title || video.videoId}
+          <div
+            className={`playlist-item-title${hasCatalogMetadata ? ' metadata' : ''}`}
+          >
+            {primaryTitle || video.videoId}
           </div>
         )}
-        {video.channelTitle && (
-          <div className="playlist-item-meta">{video.channelTitle}</div>
+        {secondaryTitle && (
+          <div
+            className={`playlist-item-meta${hasCatalogMetadata ? ' metadata' : ''}`}
+          >
+            {secondaryTitle}
+          </div>
         )}
       </div>
 

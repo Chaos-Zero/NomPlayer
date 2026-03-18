@@ -47,6 +47,7 @@ import {
   ingestYouTubeTrackSources,
 } from './lib/trackCatalog.js';
 import { getSupabaseClient, isSupabaseConfigured } from './lib/supabase.js';
+import { getYouTubeThumbnailUrl } from './utils/youtube.js';
 
 const PREVIEW_DURATION_MS = 31_000;
 const LOGOUT_TRANSITION_MS = 260;
@@ -994,6 +995,9 @@ export default function App() {
         gameTitle: summary.gameTitle ?? '',
         trackTitle: summary.trackTitle ?? '',
         displayTitle: summary.displayTitle ?? '',
+        sourceTitle: summary.sourceTitle ?? '',
+        sourceChannelTitle: summary.sourceChannelTitle ?? '',
+        sourceThumbnailUrl: summary.sourceThumbnailUrl ?? '',
         isRetired: Boolean(summary.isRetired),
         retiredByTournamentName: summary.retiredByTournamentName ?? '',
       };
@@ -1065,6 +1069,11 @@ export default function App() {
               gameTitle: entry.gameTitle,
               trackTitle: entry.trackTitle,
               displayTitle: entry.displayTitle,
+              sourceTitle: entry.sourceTitle,
+              sourceChannelTitle: entry.sourceChannelTitle,
+              sourceThumbnailUrl:
+                entry.sourceThumbnailUrl ||
+                getYouTubeThumbnailUrl(entry.videoId),
               isRetired: entry.isRetired,
               retiredByTournamentName: entry.retiredByTournamentName,
             },
@@ -1079,6 +1088,9 @@ export default function App() {
             gameTitle: '',
             trackTitle: '',
             displayTitle: '',
+            sourceTitle: '',
+            sourceChannelTitle: '',
+            sourceThumbnailUrl: getYouTubeThumbnailUrl(videoId),
             isRetired: false,
             retiredByTournamentName: '',
           }));
@@ -1153,13 +1165,51 @@ export default function App() {
       .map((videoId) => {
         const video = playlistById.get(videoId);
         if (!video) return null;
+
+        const catalogEntry = catalogTrackByVideoId[video.videoId];
+        const enrichedVideo = catalogEntry
+          ? {
+              ...video,
+              title:
+                video.title ||
+                catalogEntry.sourceTitle ||
+                catalogEntry.displayTitle ||
+                video.videoId,
+              thumbnail:
+                video.thumbnail ||
+                catalogEntry.sourceThumbnailUrl ||
+                getYouTubeThumbnailUrl(video.videoId),
+              channelTitle:
+                video.channelTitle || catalogEntry.sourceChannelTitle || '',
+              trackId: catalogEntry.trackId ?? null,
+              gameTitle: catalogEntry.gameTitle ?? video.gameTitle ?? '',
+              trackTitle: catalogEntry.trackTitle ?? video.trackTitle ?? '',
+              displayTitle:
+                catalogEntry.displayTitle ?? video.displayTitle ?? '',
+              isRetired:
+                typeof video.isRetired === 'boolean'
+                  ? video.isRetired
+                  : Boolean(catalogEntry.isRetired),
+              retiredByTournamentName:
+                video.retiredByTournamentName ||
+                catalogEntry.retiredByTournamentName ||
+                '',
+            }
+          : video;
+
         return {
-          ...video,
+          ...enrichedVideo,
           loadIndex: loadIndexById.get(videoId) ?? 0,
         };
       })
       .filter(Boolean);
-  }, [isShuffleEnabled, playlist, playOrderIds, showOriginalOrder]);
+  }, [
+    catalogTrackByVideoId,
+    isShuffleEnabled,
+    playlist,
+    playOrderIds,
+    showOriginalOrder,
+  ]);
 
   const currentDisplayIndex = transientVideo
     ? null
@@ -1173,37 +1223,49 @@ export default function App() {
   const currentPlaylistVideo =
     playlist.find((video) => video.videoId === currentVideoId) || null;
   const currentVideo = transientVideo || currentPlaylistVideo;
-  const getCatalogTrackForVideo = useCallback((video) => {
-    if (!video?.videoId) {
+  const getCatalogTrackForVideo = useCallback(
+    (video) => {
+      if (!video?.videoId) {
+        return null;
+      }
+
+      const catalogEntry =
+        catalogTrackByVideoId[video.videoId] ||
+        catalogTrackByVideoIdRef.current[video.videoId];
+      if (catalogEntry) {
+        return catalogEntry;
+      }
+
+      if (
+        typeof video.trackId === 'string' ||
+        typeof video.gameTitle === 'string' ||
+        typeof video.trackTitle === 'string' ||
+        typeof video.displayTitle === 'string' ||
+        typeof video.title === 'string' ||
+        typeof video.channelTitle === 'string' ||
+        typeof video.thumbnail === 'string' ||
+        typeof video.retiredByTournamentName === 'string' ||
+        typeof video.isRetired === 'boolean'
+      ) {
+        return {
+          videoId: video.videoId,
+          trackId: video.trackId ?? null,
+          gameTitle: video.gameTitle ?? '',
+          trackTitle: video.trackTitle ?? '',
+          displayTitle: video.displayTitle ?? '',
+          sourceTitle: video.title ?? '',
+          sourceChannelTitle: video.channelTitle ?? '',
+          sourceThumbnailUrl:
+            video.thumbnail || getYouTubeThumbnailUrl(video.videoId),
+          isRetired: Boolean(video.isRetired),
+          retiredByTournamentName: video.retiredByTournamentName ?? '',
+        };
+      }
+
       return null;
-    }
-
-    const catalogEntry = catalogTrackByVideoIdRef.current[video.videoId];
-    if (catalogEntry) {
-      return catalogEntry;
-    }
-
-    if (
-      typeof video.trackId === 'string' ||
-      typeof video.gameTitle === 'string' ||
-      typeof video.trackTitle === 'string' ||
-      typeof video.displayTitle === 'string' ||
-      typeof video.retiredByTournamentName === 'string' ||
-      typeof video.isRetired === 'boolean'
-    ) {
-      return {
-        videoId: video.videoId,
-        trackId: video.trackId ?? null,
-        gameTitle: video.gameTitle ?? '',
-        trackTitle: video.trackTitle ?? '',
-        displayTitle: video.displayTitle ?? '',
-        isRetired: Boolean(video.isRetired),
-        retiredByTournamentName: video.retiredByTournamentName ?? '',
-      };
-    }
-
-    return null;
-  }, []);
+    },
+    [catalogTrackByVideoId],
+  );
   const isVideoRetired = useCallback(
     (video) => Boolean(getCatalogTrackForVideo(video)?.isRetired),
     [getCatalogTrackForVideo],
@@ -1576,6 +1638,17 @@ export default function App() {
 
       return {
         ...video,
+        title:
+          video.title ||
+          catalogEntry.sourceTitle ||
+          catalogEntry.displayTitle ||
+          video.videoId,
+        thumbnail:
+          video.thumbnail ||
+          catalogEntry.sourceThumbnailUrl ||
+          getYouTubeThumbnailUrl(video.videoId),
+        channelTitle:
+          video.channelTitle || catalogEntry.sourceChannelTitle || '',
         trackId: catalogEntry.trackId ?? null,
         gameTitle: catalogEntry.gameTitle ?? video.gameTitle ?? '',
         trackTitle: catalogEntry.trackTitle ?? video.trackTitle ?? '',

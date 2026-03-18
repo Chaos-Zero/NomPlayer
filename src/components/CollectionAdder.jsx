@@ -243,6 +243,7 @@ export default function CollectionAdder({
             onClick={openAdder}
             aria-label={addButtonAriaLabel}
             title={addButtonTitle || addButtonAriaLabel || undefined}
+            tabIndex={isOpen ? -1 : 0}
           >
             {addButtonLabel}
           </button>
@@ -264,12 +265,14 @@ export default function CollectionAdder({
                   clearSuccessFlash();
                 }
               }}
+              tabIndex={isOpen ? 0 : -1}
             />
             <button
               className={`collection-adder-submit${showSuccess ? ' success' : ''}`}
               type="submit"
               disabled={!showSuccess && !urlValue.trim()}
               aria-label={showSuccess ? 'Load successful' : undefined}
+              tabIndex={isOpen ? 0 : -1}
             >
               {showSuccess ? '✓' : loading ? 'Loading…' : 'Load'}
             </button>
@@ -278,6 +281,7 @@ export default function CollectionAdder({
               type="button"
               aria-label={resolvedCloseButtonAriaLabel}
               onClick={closeAdder}
+              tabIndex={isOpen ? 0 : -1}
             >
               ✕
             </button>

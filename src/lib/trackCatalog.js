@@ -1,3 +1,5 @@
+import { getYouTubeThumbnailUrl } from '../utils/youtube.js';
+
 function normalizeCatalogVideo(video) {
   if (!video || typeof video !== 'object') return null;
 
@@ -177,7 +179,9 @@ export function mapTrackCatalogEntryToVideo(entry) {
       normalizedEntry.displayTitle ||
       normalizedEntry.sourceTitle ||
       normalizedEntry.videoId,
-    thumbnail: normalizedEntry.sourceThumbnailUrl,
+    thumbnail:
+      normalizedEntry.sourceThumbnailUrl ||
+      getYouTubeThumbnailUrl(normalizedEntry.videoId),
     channelTitle: normalizedEntry.sourceChannelTitle,
     trackId: normalizedEntry.trackId,
     gameTitle: normalizedEntry.gameTitle,

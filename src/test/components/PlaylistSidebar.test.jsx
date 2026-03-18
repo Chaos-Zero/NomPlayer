@@ -299,6 +299,27 @@ describe('PlaylistSidebar', () => {
     ).toBeInTheDocument();
   });
 
+  it('renders catalog metadata with the track title above the game title', () => {
+    renderSidebar({
+      currentIndex: null,
+      playlist: [
+        {
+          ...video,
+          title: 'Gamma Game - Skyline',
+          channelTitle: 'Channel',
+          gameTitle: 'Gamma Game',
+          trackTitle: 'Skyline',
+          displayTitle: 'Gamma Game - Skyline',
+        },
+      ],
+    });
+
+    expect(screen.getByLabelText('Play Skyline')).toBeInTheDocument();
+    expect(screen.getByText('Skyline')).toBeInTheDocument();
+    expect(screen.getByText('Gamma Game')).toBeInTheDocument();
+    expect(screen.queryByText('Channel')).not.toBeInTheDocument();
+  });
+
   it('highlights retired playlist entries with the retired style', () => {
     renderSidebar({ retiredVideoIds: new Set(['alpha1234567']) });
 
