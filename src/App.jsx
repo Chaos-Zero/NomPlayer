@@ -1,4 +1,11 @@
-import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
+import {
+  startTransition,
+  useState,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+} from 'react';
 import TopBar from './components/TopBar.jsx';
 import VideoPlayer from './components/VideoPlayer.jsx';
 import PlaylistSidebar from './components/PlaylistSidebar.jsx';
@@ -19,6 +26,7 @@ import {
   checkSignupAvailability,
   deriveProfileAvatarUrl,
   deriveProfileUsername,
+  fetchUserTrackListenStatuses,
   fetchUserPlayerState,
   fetchUserProfile,
   hasImportableGuestCollections,
@@ -29,17 +37,23 @@ import {
   normalizeOptionalProfileValue,
   normalizePersistedPlayerState,
   persistLocalGuestPlayerState,
+  recordYouTubeTrackListen,
   saveUserPlayerState,
   upsertUserProfile,
   LEGACY_SUPPORT_STORAGE_KEY,
 } from './lib/playerState.js';
-import { ingestYouTubeTrackSources } from './lib/trackCatalog.js';
+import {
+  fetchTrackCatalogByVideoIds,
+  ingestYouTubeTrackSources,
+} from './lib/trackCatalog.js';
 import { getSupabaseClient, isSupabaseConfigured } from './lib/supabase.js';
 
 const PREVIEW_DURATION_MS = 31_000;
 const LOGOUT_TRANSITION_MS = 260;
 const DISCORD_OAUTH_SEEN_STORAGE_KEY = 'discord_oauth_seen';
 const DISCORD_OAUTH_SILENT_PENDING_KEY = 'discord_oauth_silent_pending';
+const AUTH_SYNC_IDLE_MS = 1800;
+const AUTH_SYNC_STORAGE_KEY_PREFIX = 'yt_auth_sync';
 
 function loadStoredList(storageKey, fallbackKey = null) {
   try {
@@ -123,6 +137,168 @@ function shuffleVideoIds(videoIds, pinnedVideoId = null) {
   }
 
   return pinnedVideoId ? [pinnedVideoId, ...remainingIds] : remainingIds;
+}
+
+function mergeListenedStatuses(previousStatus, incomingStatus) {
+  const nextStatus = { ...previousStatus };
+  let changed = false;
+
+  for (const [videoId, status] of Object.entries(incomingStatus || {})) {
+    const mergedStatus =
+      previousStatus[videoId] === 'complete' || status === 'complete'
+        ? 'complete'
+        : previousStatus[videoId] === 'partial' || status === 'partial'
+          ? 'partial'
+          : null;
+
+    if (!mergedStatus || nextStatus[videoId] === mergedStatus) {
+      continue;
+    }
+
+    nextStatus[videoId] = mergedStatus;
+    changed = true;
+  }
+
+  return changed ? nextStatus : previousStatus;
+}
+
+function createAccountPersistedPlayerState(state) {
+  return createPersistedPlayerState({
+    playlist: state?.playlist,
+    currentVideoId: state?.currentVideoId,
+    shuffleOrderIds: state?.shuffleOrderIds,
+    showOriginalOrder: state?.showOriginalOrder,
+    supportList: state?.supportList,
+    nominationList: state?.nominationList,
+  });
+}
+
+function getAuthSyncStorageKey(userId) {
+  return `${AUTH_SYNC_STORAGE_KEY_PREFIX}:${userId}`;
+}
+
+function normalizeQueuedTrackListenEvent(event) {
+  if (!event || typeof event !== 'object') return null;
+
+  const youtubeVideoId =
+    typeof event.youtubeVideoId === 'string' && event.youtubeVideoId.trim()
+      ? event.youtubeVideoId.trim()
+      : '';
+  const listenEvent =
+    event.listenEvent === 'completed'
+      ? 'completed'
+      : event.listenEvent === 'started'
+        ? 'started'
+        : '';
+  const secondsPlayed =
+    typeof event.secondsPlayed === 'number' &&
+    Number.isFinite(event.secondsPlayed)
+      ? Math.max(0, event.secondsPlayed)
+      : 0;
+
+  if (!youtubeVideoId || !listenEvent) {
+    return null;
+  }
+
+  return {
+    youtubeVideoId,
+    listenEvent,
+    secondsPlayed,
+  };
+}
+
+function buildQueuedListenStatuses(listenEvents) {
+  return (Array.isArray(listenEvents) ? listenEvents : []).reduce(
+    (statusById, event) => {
+      const normalizedEvent = normalizeQueuedTrackListenEvent(event);
+      if (!normalizedEvent) return statusById;
+
+      const nextStatus =
+        normalizedEvent.listenEvent === 'completed' ? 'complete' : 'partial';
+      statusById[normalizedEvent.youtubeVideoId] =
+        statusById[normalizedEvent.youtubeVideoId] === 'complete' ||
+        nextStatus === 'complete'
+          ? 'complete'
+          : 'partial';
+      return statusById;
+    },
+    {},
+  );
+}
+
+function loadPersistedAuthSyncQueue(userId) {
+  if (typeof window === 'undefined' || !userId) {
+    return {
+      playerState: null,
+      listenEvents: [],
+    };
+  }
+
+  try {
+    const storedValue = window.localStorage.getItem(
+      getAuthSyncStorageKey(userId),
+    );
+    if (!storedValue) {
+      return {
+        playerState: null,
+        listenEvents: [],
+      };
+    }
+
+    const parsedValue = JSON.parse(storedValue);
+    const playerState = parsedValue?.playerState
+      ? createAccountPersistedPlayerState(parsedValue.playerState)
+      : null;
+    const listenEvents = Array.isArray(parsedValue?.listenEvents)
+      ? parsedValue.listenEvents
+          .map(normalizeQueuedTrackListenEvent)
+          .filter(Boolean)
+      : [];
+
+    return {
+      playerState,
+      listenEvents,
+    };
+  } catch {
+    return {
+      playerState: null,
+      listenEvents: [],
+    };
+  }
+}
+
+function persistAuthSyncQueue(
+  userId,
+  { playerState = null, listenEvents = [] } = {},
+) {
+  if (typeof window === 'undefined' || !userId) return;
+
+  const normalizedPlayerState = playerState
+    ? createAccountPersistedPlayerState(playerState)
+    : null;
+  const normalizedListenEvents = Array.isArray(listenEvents)
+    ? listenEvents.map(normalizeQueuedTrackListenEvent).filter(Boolean)
+    : [];
+
+  if (!normalizedPlayerState && normalizedListenEvents.length === 0) {
+    window.localStorage.removeItem(getAuthSyncStorageKey(userId));
+    return;
+  }
+
+  window.localStorage.setItem(
+    getAuthSyncStorageKey(userId),
+    JSON.stringify({
+      playerState: normalizedPlayerState,
+      listenEvents: normalizedListenEvents,
+    }),
+  );
+}
+
+function isMissingCatalogTrackError(error) {
+  const message =
+    typeof error?.message === 'string' ? error.message.toLowerCase() : '';
+
+  return error?.code === 'P0002' || message.includes('no catalog track found');
 }
 
 function getAppRedirectPath() {
@@ -255,11 +431,34 @@ export default function App() {
   const playerRevealTimeoutRef = useRef(0);
   const playerRevealFrameRef = useRef(0);
   const logoutTransitionTimeoutRef = useRef(0);
-  const syncTimeoutRef = useRef(0);
+  const guestSyncTimeoutRef = useRef(0);
+  const authSyncFlushTimeoutRef = useRef(0);
+  const authSyncIdleCallbackRef = useRef(0);
+  const authSyncFlushPromiseRef = useRef(null);
+  const flushQueuedAuthSyncRef = useRef(null);
+  const queuedSyncUserIdRef = useRef(null);
+  const queuedPlayerStateRef = useRef(null);
+  const queuedTrackListenEventsRef = useRef([]);
+  const inFlightQueuedPlayerStateRef = useRef(null);
+  const inFlightQueuedTrackListenEventsRef = useRef([]);
+  const currentAccountPlayerStateRef = useRef(null);
+  const currentAccountPlayerStateSerializedRef = useRef('');
   const pendingGuestImportStateRef = useRef(null);
   const pendingPreferredUsernameRef = useRef('');
   const pendingGamefaqsUsernameRef = useRef('');
   const lastSyncedPlayerStateRef = useRef('');
+  const hydrateAuthenticatedUserRef = useRef(null);
+  const loadedListenStatusVideoIdsRef = useRef(new Set());
+  const inFlightListenStatusVideoIdsRef = useRef(new Set());
+  const nonCatalogedListenVideoIdsRef = useRef(new Set());
+  const trackListenSessionRef = useRef({
+    videoId: null,
+    startedPersisted: false,
+    completedPersisted: false,
+  });
+  const [catalogTrackByVideoId, setCatalogTrackByVideoId] = useState({});
+  const catalogTrackByVideoIdRef = useRef({});
+  const catalogLookupPendingVideoIdsRef = useRef(new Set());
   const [authSession, setAuthSession] = useState(null);
   const [userProfile, setUserProfile] = useState(null);
   const [isAuthReady, setIsAuthReady] = useState(!isSupabaseConfigured);
@@ -301,8 +500,18 @@ export default function App() {
       if (playerRevealFrameRef.current) {
         window.cancelAnimationFrame(playerRevealFrameRef.current);
       }
-      if (syncTimeoutRef.current) {
-        window.clearTimeout(syncTimeoutRef.current);
+      if (guestSyncTimeoutRef.current) {
+        window.clearTimeout(guestSyncTimeoutRef.current);
+      }
+      if (authSyncFlushTimeoutRef.current) {
+        window.clearTimeout(authSyncFlushTimeoutRef.current);
+      }
+      if (
+        authSyncIdleCallbackRef.current &&
+        typeof window !== 'undefined' &&
+        typeof window.cancelIdleCallback === 'function'
+      ) {
+        window.cancelIdleCallback(authSyncIdleCallbackRef.current);
       }
     },
     [],
@@ -319,6 +528,10 @@ export default function App() {
   useEffect(() => {
     isPlayingRef.current = isPlaying;
   }, [isPlaying]);
+
+  useEffect(() => {
+    catalogTrackByVideoIdRef.current = catalogTrackByVideoId;
+  }, [catalogTrackByVideoId]);
 
   useEffect(() => {
     nominationListRef.current = nominationList;
@@ -362,6 +575,26 @@ export default function App() {
     ],
   );
 
+  const createAccountPlayerStateSnapshot = useCallback(
+    () =>
+      createAccountPersistedPlayerState({
+        playlist,
+        currentVideoId,
+        shuffleOrderIds,
+        showOriginalOrder,
+        supportList,
+        nominationList,
+      }),
+    [
+      currentVideoId,
+      nominationList,
+      playlist,
+      showOriginalOrder,
+      shuffleOrderIds,
+      supportList,
+    ],
+  );
+
   const applyPersistedPlayerState = useCallback((nextState) => {
     const normalizedState = normalizePersistedPlayerState(nextState);
 
@@ -389,7 +622,7 @@ export default function App() {
   const authUser = authSession?.user ?? null;
 
   const syncCatalogForNominationVideos = useCallback(
-    (videos, { userId = authUser?.id ?? null } = {}) => {
+    (videos, { userId = authUserIdRef.current } = {}) => {
       if (
         !supabase ||
         !userId ||
@@ -403,12 +636,339 @@ export default function App() {
         setAuthError(error.message || 'Failed to sync nomination tracks.');
       });
     },
-    [authUser, supabase],
+    [supabase],
   );
 
   useEffect(() => {
     authUserIdRef.current = authUser?.id ?? null;
   }, [authUser]);
+
+  const cancelQueuedAuthSyncFlush = useCallback(() => {
+    if (authSyncFlushTimeoutRef.current) {
+      window.clearTimeout(authSyncFlushTimeoutRef.current);
+      authSyncFlushTimeoutRef.current = 0;
+    }
+    if (
+      authSyncIdleCallbackRef.current &&
+      typeof window !== 'undefined' &&
+      typeof window.cancelIdleCallback === 'function'
+    ) {
+      window.cancelIdleCallback(authSyncIdleCallbackRef.current);
+      authSyncIdleCallbackRef.current = 0;
+    }
+  }, []);
+
+  const persistQueuedAuthSyncToStorage = useCallback(
+    (userId = queuedSyncUserIdRef.current) => {
+      if (!userId) return;
+
+      const playerStateToPersist =
+        queuedPlayerStateRef.current || inFlightQueuedPlayerStateRef.current;
+      const listenEventsToPersist = [
+        ...inFlightQueuedTrackListenEventsRef.current,
+        ...queuedTrackListenEventsRef.current,
+      ];
+
+      persistAuthSyncQueue(userId, {
+        playerState: playerStateToPersist,
+        listenEvents: listenEventsToPersist,
+      });
+    },
+    [],
+  );
+
+  const scheduleQueuedAuthSyncFlush = useCallback(
+    (delay = AUTH_SYNC_IDLE_MS) => {
+      if (!supabase || !queuedSyncUserIdRef.current) {
+        return;
+      }
+
+      cancelQueuedAuthSyncFlush();
+
+      authSyncFlushTimeoutRef.current = window.setTimeout(() => {
+        authSyncFlushTimeoutRef.current = 0;
+
+        const runFlush = () => {
+          authSyncIdleCallbackRef.current = 0;
+          void flushQueuedAuthSyncRef.current?.();
+        };
+
+        if (
+          typeof window !== 'undefined' &&
+          typeof window.requestIdleCallback === 'function'
+        ) {
+          authSyncIdleCallbackRef.current = window.requestIdleCallback(
+            runFlush,
+            { timeout: AUTH_SYNC_IDLE_MS },
+          );
+          return;
+        }
+
+        runFlush();
+      }, delay);
+    },
+    [cancelQueuedAuthSyncFlush, supabase],
+  );
+
+  const flushQueuedAuthSync = useCallback(
+    async (userId = queuedSyncUserIdRef.current) => {
+      if (!supabase || !userId) {
+        return;
+      }
+
+      if (authSyncFlushPromiseRef.current) {
+        await authSyncFlushPromiseRef.current;
+        return;
+      }
+
+      const queuedPlayerState = queuedPlayerStateRef.current;
+      const queuedListenEvents = [...queuedTrackListenEventsRef.current];
+
+      if (!queuedPlayerState && queuedListenEvents.length === 0) {
+        persistAuthSyncQueue(userId, {
+          playerState: null,
+          listenEvents: [],
+        });
+        return;
+      }
+
+      persistQueuedAuthSyncToStorage(userId);
+      inFlightQueuedPlayerStateRef.current = queuedPlayerState;
+      inFlightQueuedTrackListenEventsRef.current = queuedListenEvents;
+      queuedPlayerStateRef.current = null;
+      queuedTrackListenEventsRef.current = [];
+
+      const flushPromise = (async () => {
+        let unsavedPlayerState = null;
+        const unsentListenEvents = [];
+
+        if (queuedPlayerState) {
+          try {
+            const savedSnapshot = await saveUserPlayerState(
+              supabase,
+              userId,
+              queuedPlayerState,
+            );
+
+            if (authUserIdRef.current === userId) {
+              lastSyncedPlayerStateRef.current = JSON.stringify(savedSnapshot);
+            }
+          } catch (error) {
+            unsavedPlayerState = queuedPlayerState;
+            console.error('Failed to flush queued player state.', error);
+          }
+        }
+
+        for (let index = 0; index < queuedListenEvents.length; index += 1) {
+          const queuedEvent = queuedListenEvents[index];
+
+          try {
+            const result = await recordYouTubeTrackListen(
+              supabase,
+              queuedEvent.youtubeVideoId,
+              queuedEvent.listenEvent,
+              queuedEvent.secondsPlayed,
+            );
+
+            if (authUserIdRef.current === userId && result?.listenStatus) {
+              loadedListenStatusVideoIdsRef.current.add(
+                queuedEvent.youtubeVideoId,
+              );
+              startTransition(() => {
+                setListenedStatusById((previousStatus) =>
+                  mergeListenedStatuses(previousStatus, {
+                    [queuedEvent.youtubeVideoId]: result.listenStatus,
+                  }),
+                );
+              });
+            }
+          } catch (error) {
+            if (isMissingCatalogTrackError(error)) {
+              nonCatalogedListenVideoIdsRef.current.add(
+                queuedEvent.youtubeVideoId,
+              );
+              continue;
+            }
+
+            unsentListenEvents.push(...queuedListenEvents.slice(index));
+            console.error('Failed to flush queued track listen events.', error);
+            break;
+          }
+        }
+
+        authSyncFlushPromiseRef.current = null;
+        inFlightQueuedPlayerStateRef.current = null;
+        inFlightQueuedTrackListenEventsRef.current = [];
+
+        if (queuedSyncUserIdRef.current !== userId) {
+          persistAuthSyncQueue(userId, {
+            playerState: unsavedPlayerState,
+            listenEvents: unsentListenEvents,
+          });
+          return;
+        }
+
+        if (unsavedPlayerState && !queuedPlayerStateRef.current) {
+          queuedPlayerStateRef.current = unsavedPlayerState;
+        }
+        if (unsentListenEvents.length > 0) {
+          queuedTrackListenEventsRef.current = [
+            ...unsentListenEvents,
+            ...queuedTrackListenEventsRef.current,
+          ];
+        }
+
+        if (
+          currentAccountPlayerStateSerializedRef.current &&
+          currentAccountPlayerStateSerializedRef.current !==
+            lastSyncedPlayerStateRef.current
+        ) {
+          queuedPlayerStateRef.current = currentAccountPlayerStateRef.current;
+        }
+
+        persistQueuedAuthSyncToStorage(userId);
+
+        if (
+          queuedPlayerStateRef.current ||
+          queuedTrackListenEventsRef.current.length > 0
+        ) {
+          scheduleQueuedAuthSyncFlush(AUTH_SYNC_IDLE_MS);
+        }
+      })();
+
+      authSyncFlushPromiseRef.current = flushPromise;
+      await flushPromise;
+    },
+    [persistQueuedAuthSyncToStorage, scheduleQueuedAuthSyncFlush, supabase],
+  );
+
+  useEffect(() => {
+    flushQueuedAuthSyncRef.current = flushQueuedAuthSync;
+  }, [flushQueuedAuthSync]);
+
+  useEffect(() => {
+    const nextUserId = authUser?.id ?? null;
+    const previousUserId = queuedSyncUserIdRef.current;
+
+    if (previousUserId && previousUserId !== nextUserId) {
+      persistQueuedAuthSyncToStorage(previousUserId);
+    }
+
+    cancelQueuedAuthSyncFlush();
+    queuedSyncUserIdRef.current = nextUserId;
+    queuedPlayerStateRef.current = null;
+    queuedTrackListenEventsRef.current = [];
+    inFlightQueuedPlayerStateRef.current = null;
+    inFlightQueuedTrackListenEventsRef.current = [];
+
+    if (!nextUserId) {
+      return;
+    }
+
+    const persistedQueue = loadPersistedAuthSyncQueue(nextUserId);
+    queuedPlayerStateRef.current = persistedQueue.playerState;
+    queuedTrackListenEventsRef.current = persistedQueue.listenEvents;
+
+    if (persistedQueue.playerState || persistedQueue.listenEvents.length > 0) {
+      scheduleQueuedAuthSyncFlush(900);
+    }
+  }, [authUser?.id, cancelQueuedAuthSyncFlush, scheduleQueuedAuthSyncFlush]);
+
+  useEffect(() => {
+    if (!authUser?.id) {
+      return undefined;
+    }
+
+    const currentUserId = authUser.id;
+
+    const handleVisibilityChange = () => {
+      persistQueuedAuthSyncToStorage(currentUserId);
+
+      if (document.visibilityState === 'hidden') {
+        cancelQueuedAuthSyncFlush();
+        void flushQueuedAuthSyncRef.current?.(currentUserId);
+      }
+    };
+
+    const handlePageHide = () => {
+      persistQueuedAuthSyncToStorage(currentUserId);
+      cancelQueuedAuthSyncFlush();
+      void flushQueuedAuthSyncRef.current?.(currentUserId);
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('pagehide', handlePageHide);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('pagehide', handlePageHide);
+    };
+  }, [authUser?.id, cancelQueuedAuthSyncFlush, persistQueuedAuthSyncToStorage]);
+
+  useEffect(() => {
+    loadedListenStatusVideoIdsRef.current = new Set();
+    inFlightListenStatusVideoIdsRef.current = new Set();
+    trackListenSessionRef.current = {
+      videoId: null,
+      startedPersisted: false,
+      completedPersisted: false,
+    };
+  }, [authUser?.id]);
+
+  useEffect(() => {
+    if (!supabase || !authUser?.id || !isAuthReady || playlist.length === 0) {
+      return;
+    }
+
+    const requestedVideoIds = [];
+    for (const video of playlist) {
+      const videoId = video.videoId;
+      if (
+        loadedListenStatusVideoIdsRef.current.has(videoId) ||
+        inFlightListenStatusVideoIdsRef.current.has(videoId)
+      ) {
+        continue;
+      }
+      requestedVideoIds.push(videoId);
+    }
+
+    if (requestedVideoIds.length === 0) {
+      return;
+    }
+
+    requestedVideoIds.forEach((videoId) => {
+      inFlightListenStatusVideoIdsRef.current.add(videoId);
+    });
+
+    const userId = authUser.id;
+
+    fetchUserTrackListenStatuses(supabase, requestedVideoIds)
+      .then((remoteStatuses) => {
+        if (authUserIdRef.current !== userId) return;
+
+        requestedVideoIds.forEach((videoId) => {
+          inFlightListenStatusVideoIdsRef.current.delete(videoId);
+          loadedListenStatusVideoIdsRef.current.add(videoId);
+        });
+
+        if (Object.keys(remoteStatuses).length === 0) {
+          return;
+        }
+
+        startTransition(() => {
+          setListenedStatusById((previousStatus) =>
+            mergeListenedStatuses(previousStatus, remoteStatuses),
+          );
+        });
+      })
+      .catch((error) => {
+        requestedVideoIds.forEach((videoId) => {
+          inFlightListenStatusVideoIdsRef.current.delete(videoId);
+        });
+        if (authUserIdRef.current !== userId) return;
+        console.error('Failed to fetch track listen history.', error);
+      });
+  }, [authUser?.id, isAuthReady, playlist, supabase]);
 
   useEffect(() => {
     if (typeof window === 'undefined' || !authUser) return;
@@ -418,6 +978,154 @@ export default function App() {
       window.sessionStorage.removeItem(DISCORD_OAUTH_SILENT_PENDING_KEY);
     }
   }, [authUser]);
+
+  const mergeCatalogTrackSummaries = useCallback((summaries) => {
+    if (!summaries.length) {
+      return {};
+    }
+
+    const updates = {};
+    for (const summary of summaries) {
+      if (!summary?.videoId) continue;
+
+      updates[summary.videoId] = {
+        videoId: summary.videoId,
+        trackId: summary.trackId ?? null,
+        gameTitle: summary.gameTitle ?? '',
+        trackTitle: summary.trackTitle ?? '',
+        displayTitle: summary.displayTitle ?? '',
+        isRetired: Boolean(summary.isRetired),
+        retiredByTournamentName: summary.retiredByTournamentName ?? '',
+      };
+    }
+
+    if (Object.keys(updates).length === 0) {
+      return {};
+    }
+
+    catalogTrackByVideoIdRef.current = {
+      ...catalogTrackByVideoIdRef.current,
+      ...updates,
+    };
+
+    startTransition(() => {
+      setCatalogTrackByVideoId((previousValue) => ({
+        ...previousValue,
+        ...updates,
+      }));
+    });
+
+    return updates;
+  }, []);
+
+  const ensureCatalogEntriesForVideoIds = useCallback(
+    async (videoIds) => {
+      const normalizedVideoIds = Array.from(
+        new Set(
+          Array.isArray(videoIds)
+            ? videoIds.filter(
+                (videoId) =>
+                  typeof videoId === 'string' &&
+                  /^[A-Za-z0-9_-]{11}$/.test(videoId),
+              )
+            : [],
+        ),
+      );
+
+      const knownEntries = catalogTrackByVideoIdRef.current;
+      if (!supabase || normalizedVideoIds.length === 0) {
+        return knownEntries;
+      }
+
+      const missingVideoIds = normalizedVideoIds.filter(
+        (videoId) =>
+          !(videoId in knownEntries) &&
+          !catalogLookupPendingVideoIdsRef.current.has(videoId),
+      );
+
+      if (missingVideoIds.length === 0) {
+        return knownEntries;
+      }
+
+      missingVideoIds.forEach((videoId) => {
+        catalogLookupPendingVideoIdsRef.current.add(videoId);
+      });
+
+      try {
+        const fetchedEntries = await fetchTrackCatalogByVideoIds(
+          supabase,
+          missingVideoIds,
+        );
+        const fetchedById = new Map(
+          fetchedEntries.map((entry) => [
+            entry.videoId,
+            {
+              videoId: entry.videoId,
+              trackId: entry.trackId,
+              gameTitle: entry.gameTitle,
+              trackTitle: entry.trackTitle,
+              displayTitle: entry.displayTitle,
+              isRetired: entry.isRetired,
+              retiredByTournamentName: entry.retiredByTournamentName,
+            },
+          ]),
+        );
+
+        const fallbackEntries = missingVideoIds
+          .filter((videoId) => !fetchedById.has(videoId))
+          .map((videoId) => ({
+            videoId,
+            trackId: null,
+            gameTitle: '',
+            trackTitle: '',
+            displayTitle: '',
+            isRetired: false,
+            retiredByTournamentName: '',
+          }));
+
+        mergeCatalogTrackSummaries([
+          ...fetchedById.values(),
+          ...fallbackEntries,
+        ]);
+        return catalogTrackByVideoIdRef.current;
+      } finally {
+        missingVideoIds.forEach((videoId) => {
+          catalogLookupPendingVideoIdsRef.current.delete(videoId);
+        });
+      }
+    },
+    [mergeCatalogTrackSummaries, supabase],
+  );
+
+  useEffect(() => {
+    const activeCatalogVideoId =
+      transientVideo?.videoId || currentVideoId || null;
+    const requestedVideoIds = [
+      ...new Set(
+        [
+          activeCatalogVideoId,
+          ...playlist.map((video) => video.videoId),
+          ...supportList.map((video) => video.videoId),
+          ...nominationList.map((video) => video.videoId),
+        ].filter(Boolean),
+      ),
+    ];
+
+    if (!requestedVideoIds.length) {
+      return;
+    }
+
+    ensureCatalogEntriesForVideoIds(requestedVideoIds).catch((error) => {
+      console.error('Failed to fetch track catalog metadata.', error);
+    });
+  }, [
+    currentVideoId,
+    ensureCatalogEntriesForVideoIds,
+    nominationList,
+    playlist,
+    supportList,
+    transientVideo?.videoId,
+  ]);
 
   const playOrderIds = useMemo(
     () => resolvePlayOrderIds(playlist, shuffleOrderIds),
@@ -465,31 +1173,84 @@ export default function App() {
   const currentPlaylistVideo =
     playlist.find((video) => video.videoId === currentVideoId) || null;
   const currentVideo = transientVideo || currentPlaylistVideo;
+  const getCatalogTrackForVideo = useCallback((video) => {
+    if (!video?.videoId) {
+      return null;
+    }
+
+    const catalogEntry = catalogTrackByVideoIdRef.current[video.videoId];
+    if (catalogEntry) {
+      return catalogEntry;
+    }
+
+    if (
+      typeof video.trackId === 'string' ||
+      typeof video.gameTitle === 'string' ||
+      typeof video.trackTitle === 'string' ||
+      typeof video.displayTitle === 'string' ||
+      typeof video.retiredByTournamentName === 'string' ||
+      typeof video.isRetired === 'boolean'
+    ) {
+      return {
+        videoId: video.videoId,
+        trackId: video.trackId ?? null,
+        gameTitle: video.gameTitle ?? '',
+        trackTitle: video.trackTitle ?? '',
+        displayTitle: video.displayTitle ?? '',
+        isRetired: Boolean(video.isRetired),
+        retiredByTournamentName: video.retiredByTournamentName ?? '',
+      };
+    }
+
+    return null;
+  }, []);
+  const isVideoRetired = useCallback(
+    (video) => Boolean(getCatalogTrackForVideo(video)?.isRetired),
+    [getCatalogTrackForVideo],
+  );
+  const retiredVideoIds = useMemo(
+    () =>
+      new Set(
+        Object.entries(catalogTrackByVideoId)
+          .filter(([, entry]) => entry?.isRetired)
+          .map(([videoId]) => videoId),
+      ),
+    [catalogTrackByVideoId],
+  );
   const isCurrentVideoSupported = currentVideo
     ? supportList.some((entry) => entry.videoId === currentVideo.videoId)
     : false;
   const isCurrentVideoNominated = currentVideo
     ? nominationList.some((entry) => entry.videoId === currentVideo.videoId)
     : false;
+  const isCurrentVideoRetired = currentVideo
+    ? isVideoRetired(currentVideo)
+    : false;
   const currentSupportLabel = !currentVideo
     ? 'No current video to support'
     : isCurrentVideoNominated
       ? 'Nomination tracks cannot be changed from the player'
-      : isCurrentVideoSupported
-        ? 'Remove from support list'
-        : 'Add to support list';
+      : isCurrentVideoRetired
+        ? 'This song is retired'
+        : isCurrentVideoSupported
+          ? 'Remove from support list'
+          : 'Add to support list';
   const currentSupportTooltip = !currentVideo
     ? 'No current video'
     : isCurrentVideoNominated
       ? 'In Nomination List'
-      : isCurrentVideoSupported
-        ? 'Remove Support'
-        : 'Add to support list';
+      : isCurrentVideoRetired
+        ? 'This song is retired'
+        : isCurrentVideoSupported
+          ? 'Remove Support'
+          : 'Add to support list';
   const currentSupportClassName = isCurrentVideoNominated
     ? ' nominated locked'
-    : isCurrentVideoSupported
-      ? ' supported'
-      : '';
+    : isCurrentVideoRetired
+      ? ' retired-blocked'
+      : isCurrentVideoSupported
+        ? ' supported'
+        : '';
   const currentSupportGlyph = isCurrentVideoNominated
     ? '★'
     : isCurrentVideoSupported
@@ -507,7 +1268,23 @@ export default function App() {
   useEffect(() => {
     if (authUser) return;
 
-    persistLocalGuestPlayerState(createPlayerStateSnapshot());
+    const snapshot = createPlayerStateSnapshot();
+
+    if (guestSyncTimeoutRef.current) {
+      window.clearTimeout(guestSyncTimeoutRef.current);
+    }
+
+    guestSyncTimeoutRef.current = window.setTimeout(() => {
+      guestSyncTimeoutRef.current = 0;
+      persistLocalGuestPlayerState(snapshot);
+    }, 200);
+
+    return () => {
+      if (guestSyncTimeoutRef.current) {
+        window.clearTimeout(guestSyncTimeoutRef.current);
+        guestSyncTimeoutRef.current = 0;
+      }
+    };
   }, [authUser, createPlayerStateSnapshot]);
 
   const ensureUserProfile = useCallback(
@@ -575,9 +1352,26 @@ export default function App() {
         setUserProfile(profile);
         const remoteState = await fetchUserPlayerState(supabase, user.id);
         const normalizedState = normalizePersistedPlayerState(remoteState);
-        applyPersistedPlayerState(normalizedState);
-        lastSyncedPlayerStateRef.current = JSON.stringify(normalizedState);
-        syncCatalogForNominationVideos(normalizedState.nominationList, {
+        const persistedQueue = loadPersistedAuthSyncQueue(user.id);
+        const baseHydratedState = persistedQueue.playerState
+          ? normalizePersistedPlayerState({
+              ...persistedQueue.playerState,
+              listenedStatusById: normalizedState.listenedStatusById,
+            })
+          : normalizedState;
+        const hydratedState = normalizePersistedPlayerState({
+          ...baseHydratedState,
+          listenedStatusById: mergeListenedStatuses(
+            baseHydratedState.listenedStatusById,
+            buildQueuedListenStatuses(persistedQueue.listenEvents),
+          ),
+        });
+
+        applyPersistedPlayerState(hydratedState);
+        lastSyncedPlayerStateRef.current = JSON.stringify(
+          createAccountPersistedPlayerState(normalizedState),
+        );
+        syncCatalogForNominationVideos(hydratedState.nominationList, {
           userId: user.id,
         });
 
@@ -610,6 +1404,10 @@ export default function App() {
   );
 
   useEffect(() => {
+    hydrateAuthenticatedUserRef.current = hydrateAuthenticatedUser;
+  }, [hydrateAuthenticatedUser]);
+
+  useEffect(() => {
     if (!supabase) {
       setIsAuthReady(true);
       return undefined;
@@ -630,7 +1428,7 @@ export default function App() {
         setAuthSession(session);
 
         if (session?.user) {
-          await hydrateAuthenticatedUser(session.user);
+          await hydrateAuthenticatedUserRef.current?.(session.user);
         } else {
           setUserProfile(null);
           setIsAuthReady(true);
@@ -693,7 +1491,7 @@ export default function App() {
 
       window.setTimeout(() => {
         if (!isActive) return;
-        hydrateAuthenticatedUser(session.user, {
+        hydrateAuthenticatedUserRef.current?.(session.user, {
           preferredUsername,
           preferredGamefaqsUsername,
         });
@@ -704,42 +1502,34 @@ export default function App() {
       isActive = false;
       subscription.unsubscribe();
     };
-  }, [hydrateAuthenticatedUser, supabase]);
+  }, [supabase]);
 
   useEffect(() => {
     if (!supabase || !authUser || !isAuthReady) {
       return undefined;
     }
 
-    const snapshot = createPlayerStateSnapshot();
+    const snapshot = createAccountPlayerStateSnapshot();
     const serializedSnapshot = JSON.stringify(snapshot);
+    currentAccountPlayerStateRef.current = snapshot;
+    currentAccountPlayerStateSerializedRef.current = serializedSnapshot;
 
     if (serializedSnapshot === lastSyncedPlayerStateRef.current) {
+      queuedPlayerStateRef.current = null;
       return undefined;
     }
 
-    if (syncTimeoutRef.current) {
-      window.clearTimeout(syncTimeoutRef.current);
-    }
+    queuedPlayerStateRef.current = snapshot;
+    scheduleQueuedAuthSyncFlush(AUTH_SYNC_IDLE_MS);
 
-    syncTimeoutRef.current = window.setTimeout(() => {
-      syncTimeoutRef.current = 0;
-      saveUserPlayerState(supabase, authUser.id, snapshot)
-        .then((savedSnapshot) => {
-          lastSyncedPlayerStateRef.current = JSON.stringify(savedSnapshot);
-        })
-        .catch((error) => {
-          setAuthError(error.message || 'Failed to sync your account data.');
-        });
-    }, 400);
-
-    return () => {
-      if (syncTimeoutRef.current) {
-        window.clearTimeout(syncTimeoutRef.current);
-        syncTimeoutRef.current = 0;
-      }
-    };
-  }, [authUser, createPlayerStateSnapshot, isAuthReady, supabase]);
+    return undefined;
+  }, [
+    authUser,
+    createAccountPlayerStateSnapshot,
+    isAuthReady,
+    scheduleQueuedAuthSyncFlush,
+    supabase,
+  ]);
 
   const handleOpenAuthDialog = useCallback(() => {
     setAuthError('');
@@ -766,6 +1556,77 @@ export default function App() {
       setAppToastMessage('');
     }, 3200);
   }, []);
+
+  const showRetiredSongToast = useCallback(() => {
+    showDefaultAppToast(
+      'This song is retired. It can still be added to the current playlist.',
+    );
+  }, [showDefaultAppToast]);
+
+  const applyCatalogMetadataToVideo = useCallback(
+    (video) => {
+      if (!video?.videoId) {
+        return video;
+      }
+
+      const catalogEntry = getCatalogTrackForVideo(video);
+      if (!catalogEntry) {
+        return video;
+      }
+
+      return {
+        ...video,
+        trackId: catalogEntry.trackId ?? null,
+        gameTitle: catalogEntry.gameTitle ?? video.gameTitle ?? '',
+        trackTitle: catalogEntry.trackTitle ?? video.trackTitle ?? '',
+        displayTitle: catalogEntry.displayTitle ?? video.displayTitle ?? '',
+        isRetired:
+          typeof video.isRetired === 'boolean'
+            ? video.isRetired
+            : Boolean(catalogEntry.isRetired),
+        retiredByTournamentName:
+          video.retiredByTournamentName ||
+          catalogEntry.retiredByTournamentName ||
+          '',
+      };
+    },
+    [getCatalogTrackForVideo],
+  );
+
+  const partitionRetiredVideos = useCallback(
+    async (videos) => {
+      const normalizedVideos = Array.isArray(videos)
+        ? videos.filter(Boolean)
+        : [];
+      if (normalizedVideos.length === 0) {
+        return { allowedVideos: [], retiredVideos: [] };
+      }
+
+      await ensureCatalogEntriesForVideoIds(
+        normalizedVideos.map((video) => video.videoId),
+      );
+
+      const allowedVideos = [];
+      const retiredVideos = [];
+
+      for (const video of normalizedVideos) {
+        const enrichedVideo = applyCatalogMetadataToVideo(video);
+        if (isVideoRetired(enrichedVideo)) {
+          retiredVideos.push(enrichedVideo);
+          continue;
+        }
+
+        allowedVideos.push(enrichedVideo);
+      }
+
+      return { allowedVideos, retiredVideos };
+    },
+    [
+      applyCatalogMetadataToVideo,
+      ensureCatalogEntriesForVideoIds,
+      isVideoRetired,
+    ],
+  );
 
   const handleSignIn = useCallback(
     async ({ email, password }) => {
@@ -1183,29 +2044,100 @@ export default function App() {
     syncCatalogForNominationVideos,
   ]);
 
-  const markVideoCompleted = useCallback((videoId) => {
-    if (!videoId) return;
+  const persistTrackListenEvent = useCallback(
+    (videoId, listenEvent) => {
+      const normalizedVideoId =
+        typeof videoId === 'string' ? videoId.trim() : '';
 
-    setListenedStatusById((previousStatus) => {
-      if (previousStatus[videoId] === 'complete') return previousStatus;
-      return {
-        ...previousStatus,
-        [videoId]: 'complete',
-      };
-    });
-  }, []);
+      if (
+        !supabase ||
+        !authUserIdRef.current ||
+        !normalizedVideoId ||
+        nonCatalogedListenVideoIdsRef.current.has(normalizedVideoId)
+      ) {
+        return;
+      }
 
-  const markVideoStarted = useCallback((videoId) => {
-    if (!videoId) return;
+      const currentSession = trackListenSessionRef.current;
 
-    setListenedStatusById((previousStatus) => {
-      if (previousStatus[videoId]) return previousStatus;
-      return {
-        ...previousStatus,
-        [videoId]: 'partial',
-      };
-    });
-  }, []);
+      if (listenEvent === 'started') {
+        if (
+          currentSession.videoId === normalizedVideoId &&
+          currentSession.startedPersisted &&
+          !currentSession.completedPersisted
+        ) {
+          return;
+        }
+
+        trackListenSessionRef.current = {
+          videoId: normalizedVideoId,
+          startedPersisted: true,
+          completedPersisted: false,
+        };
+      } else if (listenEvent === 'completed') {
+        if (
+          currentSession.videoId === normalizedVideoId &&
+          currentSession.completedPersisted
+        ) {
+          return;
+        }
+
+        trackListenSessionRef.current = {
+          videoId: normalizedVideoId,
+          startedPersisted: true,
+          completedPersisted: true,
+        };
+      } else {
+        return;
+      }
+
+      loadedListenStatusVideoIdsRef.current.add(normalizedVideoId);
+      queuedTrackListenEventsRef.current = [
+        ...queuedTrackListenEventsRef.current,
+        {
+          youtubeVideoId: normalizedVideoId,
+          listenEvent,
+          secondsPlayed: 0,
+        },
+      ];
+      scheduleQueuedAuthSyncFlush(AUTH_SYNC_IDLE_MS);
+    },
+    [scheduleQueuedAuthSyncFlush, supabase],
+  );
+
+  const markVideoCompleted = useCallback(
+    (videoId) => {
+      if (!videoId) return;
+
+      setListenedStatusById((previousStatus) => {
+        if (previousStatus[videoId] === 'complete') return previousStatus;
+        return {
+          ...previousStatus,
+          [videoId]: 'complete',
+        };
+      });
+
+      persistTrackListenEvent(videoId, 'completed');
+    },
+    [persistTrackListenEvent],
+  );
+
+  const markVideoStarted = useCallback(
+    (videoId) => {
+      if (!videoId) return;
+
+      setListenedStatusById((previousStatus) => {
+        if (previousStatus[videoId]) return previousStatus;
+        return {
+          ...previousStatus,
+          [videoId]: 'partial',
+        };
+      });
+
+      persistTrackListenEvent(videoId, 'started');
+    },
+    [persistTrackListenEvent],
+  );
 
   const handleAdvancePreview = useCallback(() => {
     const resolvedPlayOrderIds = resolvePlayOrderIds(
@@ -1395,7 +2327,9 @@ export default function App() {
       shuffleOrderIdsRef.current = [];
       setShuffleOrderIds([]);
       setShowOriginalOrder(false);
-      setListenedStatusById({});
+      if (!authUserIdRef.current) {
+        setListenedStatusById({});
+      }
 
       const resolvedStartVideoId =
         startVideoId && items.some((video) => video.videoId === startVideoId)
@@ -1620,43 +2554,73 @@ export default function App() {
   }, []);
 
   const handleToggleSupportFromPlaylist = useCallback(
-    (video) => {
+    async (video) => {
       if (!video) return;
       if (nominationList.some((entry) => entry.videoId === video.videoId))
         return;
 
+      const { allowedVideos, retiredVideos } = await partitionRetiredVideos([
+        video,
+      ]);
+      if (!allowedVideos.length) {
+        if (retiredVideos.length > 0) {
+          showRetiredSongToast();
+        }
+        return;
+      }
+
+      const [nextVideo] = allowedVideos;
+
       const exists = supportList.some(
-        (entry) => entry.videoId === video.videoId,
+        (entry) => entry.videoId === nextVideo.videoId,
       );
 
       setSupportList((previousList) => {
         if (exists) {
           return previousList.filter(
-            (entry) => entry.videoId !== video.videoId,
+            (entry) => entry.videoId !== nextVideo.videoId,
           );
         }
 
-        return [...previousList, video];
+        return [...previousList, nextVideo];
       });
 
       if (!exists) {
         showSupportToast('Added to Support list');
       }
     },
-    [nominationList, showSupportToast, supportList],
+    [
+      nominationList,
+      partitionRetiredVideos,
+      showRetiredSongToast,
+      showSupportToast,
+      supportList,
+    ],
   );
 
   const handleAddToSupportList = useCallback(
-    (video) => {
+    async (video) => {
       if (!video) return 0;
       if (nominationList.some((entry) => entry.videoId === video.videoId))
         return 0;
+
+      const { allowedVideos, retiredVideos } = await partitionRetiredVideos([
+        video,
+      ]);
+      if (!allowedVideos.length) {
+        if (retiredVideos.length > 0) {
+          showRetiredSongToast();
+        }
+        return 0;
+      }
+
+      const [nextVideo] = allowedVideos;
 
       let addedCount = 0;
       setSupportList((previousList) => {
         const result = appendUniqueVideos(
           previousList,
-          [video],
+          [nextVideo],
           new Set(nominationList.map((entry) => entry.videoId)),
         );
         addedCount = result.addedCount;
@@ -1669,28 +2633,42 @@ export default function App() {
 
       return addedCount;
     },
-    [nominationList, showSupportToast],
+    [
+      nominationList,
+      partitionRetiredVideos,
+      showRetiredSongToast,
+      showSupportToast,
+    ],
   );
 
   const handleAddManyToSupportList = useCallback(
-    (videos) => {
+    async (videos) => {
       if (!videos.length) {
-        return { addedCount: 0, blockedNominationCount: 0 };
+        return {
+          addedCount: 0,
+          blockedNominationCount: 0,
+          blockedRetiredCount: 0,
+        };
       }
+
+      const { allowedVideos, retiredVideos } =
+        await partitionRetiredVideos(videos);
 
       let resultSummary = {
         addedCount: 0,
         blockedNominationCount: 0,
+        blockedRetiredCount: retiredVideos.length,
       };
       setSupportList((previousList) => {
         const result = appendUniqueVideos(
           previousList,
-          videos,
+          allowedVideos,
           new Set(nominationList.map((entry) => entry.videoId)),
         );
         resultSummary = {
           addedCount: result.addedCount,
           blockedNominationCount: result.blockedCount,
+          blockedRetiredCount: retiredVideos.length,
         };
         return result.nextList;
       });
@@ -1705,7 +2683,7 @@ export default function App() {
 
       return resultSummary;
     },
-    [nominationList, showSupportToast],
+    [nominationList, partitionRetiredVideos, showSupportToast],
   );
 
   const handleRemoveFromNominationList = useCallback((videoIdsOrId) => {
@@ -1719,21 +2697,34 @@ export default function App() {
   }, []);
 
   const handleAddManyToNominationList = useCallback(
-    (videos) => {
+    async (videos) => {
       if (!videos.length) {
-        return { addedCount: 0, blockedNominationCount: 0 };
+        return {
+          addedCount: 0,
+          blockedNominationCount: 0,
+          blockedRetiredCount: 0,
+        };
       }
+
+      const { allowedVideos, retiredVideos } =
+        await partitionRetiredVideos(videos);
 
       const nominationResult = appendUniqueVideos(
         nominationListRef.current,
-        videos,
+        allowedVideos,
       );
 
       if (!nominationResult.addedCount) {
-        return { addedCount: 0, blockedNominationCount: 0 };
+        return {
+          addedCount: 0,
+          blockedNominationCount: 0,
+          blockedRetiredCount: retiredVideos.length,
+        };
       }
 
-      const incomingIds = new Set(videos.map((video) => video.videoId));
+      const incomingIds = new Set(
+        nominationResult.addedVideos.map((video) => video.videoId),
+      );
       setSupportList((previousList) =>
         previousList.filter((entry) => !incomingIds.has(entry.videoId)),
       );
@@ -1743,9 +2734,10 @@ export default function App() {
       return {
         addedCount: nominationResult.addedCount,
         blockedNominationCount: 0,
+        blockedRetiredCount: retiredVideos.length,
       };
     },
-    [syncCatalogForNominationVideos],
+    [partitionRetiredVideos, syncCatalogForNominationVideos],
   );
 
   const handleReorderNominationList = useCallback((newOrder) => {
@@ -1803,18 +2795,20 @@ export default function App() {
         setShowOriginalOrder(false);
       }
 
-      setListenedStatusById((previousStatus) => {
-        const hasTrackedIds = videoIds.some(
-          (videoId) => videoId in previousStatus,
-        );
-        if (!hasTrackedIds) return previousStatus;
+      if (!authUserIdRef.current) {
+        setListenedStatusById((previousStatus) => {
+          const hasTrackedIds = videoIds.some(
+            (videoId) => videoId in previousStatus,
+          );
+          if (!hasTrackedIds) return previousStatus;
 
-        const nextStatus = { ...previousStatus };
-        videoIds.forEach((videoId) => {
-          delete nextStatus[videoId];
+          const nextStatus = { ...previousStatus };
+          videoIds.forEach((videoId) => {
+            delete nextStatus[videoId];
+          });
+          return nextStatus;
         });
-        return nextStatus;
-      });
+      }
 
       if (
         transientResumeVideoIdRef.current &&
@@ -1879,13 +2873,35 @@ export default function App() {
 
   const handleQueueFromSupportList = useCallback(
     (videos) => {
-      return appendVideosToPlaylist(videos, { flashResolved: true });
+      return appendVideosToPlaylist(
+        videos.map((video) => applyCatalogMetadataToVideo(video)),
+        { flashResolved: true },
+      );
     },
-    [appendVideosToPlaylist],
+    [appendVideosToPlaylist, applyCatalogMetadataToVideo],
+  );
+
+  const handlePlayCatalogTrack = useCallback(
+    (video) => {
+      const nextVideo = applyCatalogMetadataToVideo(video);
+      appendVideosToPlaylist([nextVideo], {
+        autoplayIfFirst: true,
+        startVideoId: nextVideo.videoId,
+        flashResolved: true,
+      });
+      transientResumeVideoIdRef.current = null;
+      setTransientVideo(null);
+      hasReachedPlaylistEndRef.current = false;
+      markVideoStarted(nextVideo.videoId);
+      setCurrentVideoId(nextVideo.videoId);
+      setIsPlaying(true);
+    },
+    [appendVideosToPlaylist, applyCatalogMetadataToVideo, markVideoStarted],
   );
 
   const handlePlayNowFromSupportList = useCallback(
     (video) => {
+      const nextVideo = applyCatalogMetadataToVideo(video);
       hasReachedPlaylistEndRef.current = false;
       const resolvedPlayOrderIds = resolvePlayOrderIds(
         playlistRef.current,
@@ -1911,10 +2927,10 @@ export default function App() {
         }
       }
 
-      setTransientVideo(video);
+      setTransientVideo(nextVideo);
       setIsPlaying(true);
     },
-    [isPlaying, transientVideo],
+    [applyCatalogMetadataToVideo, isPlaying, transientVideo],
   );
 
   const handleSetIsPlaying = useCallback(
@@ -2269,6 +3285,9 @@ export default function App() {
           isCurrentVideoNominated={isCurrentVideoNominated}
           onToggleCurrentVideoSupport={handleToggleSupportFromPlaylist}
           onLoad={handleLoad}
+          supabase={supabase}
+          onCatalogPlayNow={handlePlayCatalogTrack}
+          onAddCatalogToPlaylist={handleQueueFromSupportList}
           isPlayerPage={isPlayerPage}
           hasMobileDetachedPlayer={isMobileDetachedFooter}
           isMobileDetachedPlayerEntering={
@@ -2340,6 +3359,8 @@ export default function App() {
               onToggleSupport={handleToggleSupportFromPlaylist}
               onAddToSupportList={handleAddToSupportList}
               onRemoveFromPlaylist={handleRemoveFromPlaylist}
+              onAddDirectItems={handleQueueFromSupportList}
+              retiredVideoIds={retiredVideoIds}
             />
             {!effectivePlaylistCollapsed && apiKeyMissing && (
               <div className="api-key-notice">

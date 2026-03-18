@@ -128,6 +128,7 @@ insert into public.track_tournament_appearances (
   tournament_id,
   appearance_label,
   placement,
+  highest_round,
   is_retired_in_tournament,
   notes
 )
@@ -137,6 +138,7 @@ values
     '00000000-0000-0000-0000-000000000001',
     'Main bracket',
     12,
+    'Top 16',
     false,
     'Sample appearance without retirement.'
   ),
@@ -145,6 +147,7 @@ values
     '00000000-0000-0000-0000-000000000001',
     'Main bracket',
     4,
+    'Semifinal',
     false,
     'Reached the latter stages of VGMC 1.'
   ),
@@ -153,6 +156,7 @@ values
     '00000000-0000-0000-0000-000000000002',
     'Retired appearance',
     9,
+    'Top 16',
     true,
     'Retired after its VGMC 2 run.'
   ),
@@ -161,6 +165,7 @@ values
     '00000000-0000-0000-0000-000000000002',
     'Nomination list',
     null,
+    'Nominations',
     false,
     'Metadata still needs curation.'
   )

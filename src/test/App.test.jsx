@@ -465,7 +465,7 @@ describe('App', () => {
     ).toEqual(['Alpha']);
   });
 
-  it('shows a toast when a song is added to the support list', () => {
+  it('shows a toast when a song is added to the support list', async () => {
     render(<App />);
     openPlayerView();
 
@@ -483,8 +483,8 @@ describe('App', () => {
       );
     });
 
-    act(() => {
-      appTestState.playlistSidebarProps.onToggleSupport({
+    await act(async () => {
+      await appTestState.playlistSidebarProps.onToggleSupport({
         videoId: 'alpha1234567',
         title: 'Alpha',
         thumbnail: 'a.jpg',
@@ -494,6 +494,41 @@ describe('App', () => {
 
     expect(screen.getByRole('status')).toHaveTextContent(
       'Added to Support list',
+    );
+  });
+
+  it('blocks retired songs from being added to the support list', async () => {
+    render(<App />);
+    openPlayerView();
+
+    act(() => {
+      appTestState.topBarProps.onLoad(
+        [
+          {
+            videoId: 'alpha1234567',
+            title: 'Alpha',
+            thumbnail: 'a.jpg',
+            channelTitle: '',
+            isRetired: true,
+          },
+        ],
+        { mode: 'append', autoplay: true },
+      );
+    });
+
+    await act(async () => {
+      await appTestState.playlistSidebarProps.onToggleSupport({
+        videoId: 'alpha1234567',
+        title: 'Alpha',
+        thumbnail: 'a.jpg',
+        channelTitle: '',
+        isRetired: true,
+      });
+    });
+
+    expect(appTestState.playlistSidebarProps.supportList).toEqual([]);
+    expect(screen.getByRole('status')).toHaveTextContent(
+      'This song is retired. It can still be added to the current playlist.',
     );
   });
 
@@ -1054,7 +1089,7 @@ describe('App', () => {
     expect(appTestState.videoPlayerProps.video.title).toBe('Beta');
   });
 
-  it('removes a support item when the same song is added to nominations', () => {
+  it('removes a support item when the same song is added to nominations', async () => {
     render(<App />);
     openPlayerView();
 
@@ -1062,8 +1097,8 @@ describe('App', () => {
       appTestState.topBarProps.setShowSupportList(true);
     });
 
-    act(() => {
-      appTestState.supportPanelProps.onAddDirectItems([
+    await act(async () => {
+      await appTestState.supportPanelProps.onAddDirectItems([
         {
           videoId: 'alpha1234567',
           title: 'Alpha',
@@ -1081,8 +1116,8 @@ describe('App', () => {
       appTestState.topBarProps.setShowNominationsList(true);
     });
 
-    act(() => {
-      appTestState.supportPanelProps.onAddDirectItems([
+    await act(async () => {
+      await appTestState.supportPanelProps.onAddDirectItems([
         {
           videoId: 'alpha1234567',
           title: 'Alpha',
@@ -1100,7 +1135,41 @@ describe('App', () => {
     ).toEqual(['Alpha']);
   });
 
-  it('returns a positive add count when a nomination is added directly', () => {
+  it('appends songs added from the playlist sidebar to the current playlist', () => {
+    render(<App />);
+    openPlayerView();
+
+    act(() => {
+      appTestState.topBarProps.onLoad(
+        [
+          {
+            videoId: 'alpha1234567',
+            title: 'Alpha',
+            thumbnail: 'a.jpg',
+            channelTitle: '',
+          },
+        ],
+        { mode: 'append', autoplay: false },
+      );
+    });
+
+    act(() => {
+      appTestState.playlistSidebarProps.onAddDirectItems([
+        {
+          videoId: 'beta12345678',
+          title: 'Beta',
+          thumbnail: 'b.jpg',
+          channelTitle: '',
+        },
+      ]);
+    });
+
+    expect(
+      appTestState.playlistSidebarProps.playlist.map((video) => video.title),
+    ).toEqual(['Alpha', 'Beta']);
+  });
+
+  it('returns a positive add count when a nomination is added directly', async () => {
     render(<App />);
     openPlayerView();
 
@@ -1109,8 +1178,8 @@ describe('App', () => {
     });
 
     let addResult;
-    act(() => {
-      addResult = appTestState.supportPanelProps.onAddDirectItems([
+    await act(async () => {
+      addResult = await appTestState.supportPanelProps.onAddDirectItems([
         {
           videoId: 'alpha1234567',
           title: 'Alpha',
@@ -1123,11 +1192,41 @@ describe('App', () => {
     expect(addResult).toEqual({
       addedCount: 1,
       blockedNominationCount: 0,
+      blockedRetiredCount: 0,
     });
     expect(
       appTestState.playlistSidebarProps.nominationList.map(
         (video) => video.title,
       ),
     ).toEqual(['Alpha']);
+  });
+
+  it('blocks retired songs from being added directly to nominations', async () => {
+    render(<App />);
+    openPlayerView();
+
+    act(() => {
+      appTestState.topBarProps.setShowNominationsList(true);
+    });
+
+    let addResult;
+    await act(async () => {
+      addResult = await appTestState.supportPanelProps.onAddDirectItems([
+        {
+          videoId: 'alpha1234567',
+          title: 'Alpha',
+          thumbnail: 'a.jpg',
+          channelTitle: '',
+          isRetired: true,
+        },
+      ]);
+    });
+
+    expect(addResult).toEqual({
+      addedCount: 0,
+      blockedNominationCount: 0,
+      blockedRetiredCount: 1,
+    });
+    expect(appTestState.playlistSidebarProps.nominationList).toEqual([]);
   });
 });

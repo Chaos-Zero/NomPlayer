@@ -15,6 +15,7 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import CollectionAdder from './CollectionAdder.jsx';
 import ScrollingText from './ScrollingText.jsx';
 import useMediaQuery from '../hooks/useMediaQuery.js';
 
@@ -58,6 +59,7 @@ function PlaylistItem({
   onSelect,
   isSupported,
   isNominated,
+  isRetired,
   onToggleSupport,
   onOpenContextMenu,
   selectionMode,
@@ -73,24 +75,30 @@ function PlaylistItem({
         : null;
   const supportLabel = isNominated
     ? 'Nomination tracks cannot be changed from the playlist'
-    : isSupported
-      ? 'Remove from support list'
-      : 'Add to support list';
+    : isRetired
+      ? 'This song is retired'
+      : isSupported
+        ? 'Remove from support list'
+        : 'Add to support list';
   const supportTooltip = isNominated
     ? 'In Nomination List'
-    : isSupported
-      ? 'Remove Support'
-      : 'Add to support list';
+    : isRetired
+      ? 'This song is retired'
+      : isSupported
+        ? 'Remove Support'
+        : 'Add to support list';
   const starStateClass = isNominated
     ? ' nominated locked'
-    : isSupported
-      ? ' supported'
-      : '';
+    : isRetired
+      ? ' retired-blocked'
+      : isSupported
+        ? ' supported'
+        : '';
   const supportGlyph = isNominated ? '★' : isSupported ? '♥' : '♡';
 
   return (
     <div
-      className={`playlist-item${isActive ? ' active' : ''}${isFlashing ? ' flash' : ''}${isSelected ? ' selected' : ''}`}
+      className={`playlist-item${isActive ? ' active' : ''}${isFlashing ? ' flash' : ''}${isSelected ? ' selected' : ''}${isRetired ? ' retired' : ''}`}
       onClick={() => {
         if (selectionMode) {
           onToggleSelected(video.videoId);
@@ -200,6 +208,7 @@ function SortablePlaylistItem({
   onSelect,
   isSupported,
   isNominated,
+  isRetired,
   onToggleSupport,
   onOpenContextMenu,
 }) {
@@ -241,6 +250,7 @@ function SortablePlaylistItem({
         onSelect={onSelect}
         isSupported={isSupported}
         isNominated={isNominated}
+        isRetired={isRetired}
         onToggleSupport={onToggleSupport}
         onOpenContextMenu={onOpenContextMenu}
         selectionMode={false}
@@ -271,6 +281,8 @@ export default function PlaylistSidebar({
   onToggleSupport,
   onAddToSupportList,
   onRemoveFromPlaylist,
+  onAddDirectItems = () => 0,
+  retiredVideoIds = new Set(),
 }) {
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -523,6 +535,21 @@ export default function PlaylistSidebar({
     );
   }
 
+  function renderAddControl() {
+    return (
+      <div className="playlist-sidebar-add">
+        <CollectionAdder
+          tone="playlist"
+          addButtonLabel="+"
+          addButtonAriaLabel="Add to playlist"
+          addButtonTitle="Add to playlist"
+          onAddDirectItems={onAddDirectItems}
+          compact
+        />
+      </div>
+    );
+  }
+
   if (!playlist.length) {
     return (
       <div
@@ -568,10 +595,11 @@ export default function PlaylistSidebar({
               No playlist loaded
             </div>
             <div style={{ fontSize: 11 }}>
-              Paste a YouTube URL above to get started
+              Use the header search or add a YouTube link to get started
             </div>
           </div>
         )}
+        {!isCollapsed && renderAddControl()}
       </div>
     );
   }
@@ -683,6 +711,7 @@ export default function PlaylistSidebar({
                 onSelect={onSelect}
                 isSupported={supportIds.has(video.videoId)}
                 isNominated={nominationIds.has(video.videoId)}
+                isRetired={retiredVideoIds.has(video.videoId)}
                 onToggleSupport={onToggleSupport}
                 onOpenContextMenu={handleOpenContextMenu}
                 selectionMode={true}
@@ -711,6 +740,7 @@ export default function PlaylistSidebar({
                     onSelect={onSelect}
                     isSupported={supportIds.has(video.videoId)}
                     isNominated={nominationIds.has(video.videoId)}
+                    isRetired={retiredVideoIds.has(video.videoId)}
                     onToggleSupport={onToggleSupport}
                     onOpenContextMenu={handleOpenContextMenu}
                   />
@@ -729,6 +759,7 @@ export default function PlaylistSidebar({
                 onSelect={onSelect}
                 isSupported={supportIds.has(video.videoId)}
                 isNominated={nominationIds.has(video.videoId)}
+                isRetired={retiredVideoIds.has(video.videoId)}
                 onToggleSupport={onToggleSupport}
                 onOpenContextMenu={handleOpenContextMenu}
                 selectionMode={false}
@@ -739,6 +770,7 @@ export default function PlaylistSidebar({
           )}
         </div>
       )}
+      {!isCollapsed && renderAddControl()}
       {contextMenu && (
         <div
           ref={contextMenuRef}

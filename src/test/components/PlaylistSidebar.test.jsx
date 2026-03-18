@@ -1,5 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import PlaylistSidebar from '../../components/PlaylistSidebar.jsx';
 
 const originalMatchMedia = window.matchMedia;
@@ -45,6 +45,8 @@ describe('PlaylistSidebar', () => {
       onToggleSupport: vi.fn(),
       onAddToSupportList: vi.fn(),
       onRemoveFromPlaylist: vi.fn(),
+      onAddDirectItems: vi.fn(() => 1),
+      retiredVideoIds: new Set(),
       ...overrides,
     };
 
@@ -60,6 +62,10 @@ describe('PlaylistSidebar', () => {
     } else {
       delete window.matchMedia;
     }
+  });
+
+  beforeEach(() => {
+    vi.clearAllMocks();
   });
 
   it('adds playlist stars to the support list', () => {
@@ -283,6 +289,20 @@ describe('PlaylistSidebar', () => {
     expect(
       screen.getByRole('button', { name: 'Remove from support list' }),
     ).toHaveClass('supported');
+  });
+
+  it('keeps the playlist add button available in the sidebar', () => {
+    renderSidebar();
+
+    expect(
+      screen.getByRole('button', { name: 'Add to playlist' }),
+    ).toBeInTheDocument();
+  });
+
+  it('highlights retired playlist entries with the retired style', () => {
+    renderSidebar({ retiredVideoIds: new Set(['alpha1234567']) });
+
+    expect(screen.getByLabelText('Play Alpha')).toHaveClass('retired');
   });
 
   it('uses the scrolling title wrapper for the active playlist item', () => {
