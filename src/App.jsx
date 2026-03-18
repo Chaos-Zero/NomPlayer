@@ -930,12 +930,14 @@ export default function App() {
   }, [authUser?.id]);
 
   useEffect(() => {
-    if (!supabase || !authUser?.id || !isAuthReady || playlist.length === 0) {
+    const allVideos = [...playlist, ...supportList, ...nominationList];
+
+    if (!supabase || !authUser?.id || !isAuthReady || allVideos.length === 0) {
       return;
     }
 
     const requestedVideoIds = [];
-    for (const video of playlist) {
+    for (const video of allVideos) {
       const videoId = video.videoId;
       if (
         loadedListenStatusVideoIdsRef.current.has(videoId) ||
@@ -982,7 +984,14 @@ export default function App() {
         if (authUserIdRef.current !== userId) return;
         console.error('Failed to fetch track listen history.', error);
       });
-  }, [authUser?.id, isAuthReady, playlist, supabase]);
+  }, [
+    authUser?.id,
+    isAuthReady,
+    playlist,
+    supportList,
+    nominationList,
+    supabase,
+  ]);
 
   useEffect(() => {
     if (typeof window === 'undefined' || !authUser) return;

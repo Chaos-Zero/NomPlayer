@@ -118,6 +118,12 @@ export function normalizePersistedPlayerState(
       ? rawState.currentVideoId
       : (playlist[0]?.videoId ?? null);
 
+  const trackingIdSet = new Set([
+    ...playlistIdSet,
+    ...supportList.map((video) => video.videoId),
+    ...nominationList.map((video) => video.videoId),
+  ]);
+
   return {
     playlist,
     currentVideoId,
@@ -125,7 +131,7 @@ export function normalizePersistedPlayerState(
     showOriginalOrder: Boolean(rawState?.showOriginalOrder),
     listenedStatusById: normalizeListenedStatus(
       rawState?.listenedStatusById,
-      playlistIdSet,
+      trackingIdSet,
     ),
     supportList,
     nominationList,
