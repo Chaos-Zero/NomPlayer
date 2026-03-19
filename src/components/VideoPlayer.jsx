@@ -419,36 +419,102 @@ export default function VideoPlayer({
             )}
           </div>
 
-          {showMetadata && video.title && (
-            <div className="now-playing-info">
-              <div className="now-playing-main">
-                {isPlaying && <div className="now-playing-dot" />}
-                <div className="now-playing-meta">
-                  <div className="now-playing-title">{video.title}</div>
-                  {videoUrl && (
-                    <a
-                      className="now-playing-link"
-                      href={videoUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      {videoUrl}
-                    </a>
-                  )}
+          {showMetadata &&
+            (video.trackTitle || video.gameTitle || video.title) && (
+              <div className="now-playing-info">
+                <div className="now-playing-main">
+                  <div className="now-playing-meta">
+                    <div className="now-playing-title">
+                      {video.trackTitle || video.gameTitle ? (
+                        <>
+                          {video.gameTitle && (
+                            <div
+                              style={
+                                !video.trackTitle
+                                  ? {
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      gap: '8px',
+                                      fontSize: '11px',
+                                      opacity: 0.8,
+                                      marginBottom: '4px',
+                                    }
+                                  : {
+                                      fontSize: '11px',
+                                      opacity: 0.8,
+                                      marginBottom: '4px',
+                                    }
+                              }
+                            >
+                              {!video.trackTitle && isPlaying && (
+                                <div
+                                  className="now-playing-dot"
+                                  style={{ marginTop: 0 }}
+                                />
+                              )}
+                              <span>{video.gameTitle}</span>
+                            </div>
+                          )}
+                          {video.trackTitle && (
+                            <div
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '8px',
+                              }}
+                            >
+                              {isPlaying && (
+                                <div
+                                  className="now-playing-dot"
+                                  style={{ marginTop: 0 }}
+                                />
+                              )}
+                              <span>{video.trackTitle}</span>
+                            </div>
+                          )}
+                        </>
+                      ) : (
+                        <div
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                          }}
+                        >
+                          {isPlaying && (
+                            <div
+                              className="now-playing-dot"
+                              style={{ marginTop: 0 }}
+                            />
+                          )}
+                          <span>{video.title}</span>
+                        </div>
+                      )}
+                    </div>
+                    {videoUrl && (
+                      <a
+                        className="now-playing-link"
+                        href={videoUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        {videoUrl}
+                      </a>
+                    )}
+                  </div>
+                </div>
+                <div className="now-playing-actions">
+                  <button
+                    className={`btn btn-icon add-to-playlist-btn${isCurrentVideoInPlaylist ? ' hidden' : ''}`}
+                    onClick={() => onAddToPlaylist?.([video])}
+                    title="Add to current playlist"
+                    aria-label="Add to current playlist"
+                  >
+                    <PlaylistPlusIcon />
+                  </button>
                 </div>
               </div>
-              <div className="now-playing-actions">
-                <button
-                  className={`btn btn-icon add-to-playlist-btn${isCurrentVideoInPlaylist ? ' hidden' : ''}`}
-                  onClick={() => onAddToPlaylist?.([video])}
-                  title="Add to current playlist"
-                  aria-label="Add to current playlist"
-                >
-                  <PlaylistPlusIcon />
-                </button>
-              </div>
-            </div>
-          )}
+            )}
         </div>
       </div>
     </div>

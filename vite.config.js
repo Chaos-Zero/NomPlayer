@@ -1,8 +1,13 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
-import { fetchGameFaqsVgmcThreads } from './src/lib/dashboard.js';
+import { fetchGameFaqsThreadsFromRss } from './src/lib/dashboard.js';
+import { loadEnv } from 'vite';
 
 function gameFaqsUpdatesPlugin() {
+  let cachedThreads = null;
+  let lastFetchTime = 0;
+  const CACHE_DURATION = 14400000; // 4 hours in ms
+
   return {
     name: 'gamefaqs-updates-dev-endpoint',
     configureServer(server) {
@@ -14,18 +19,27 @@ function gameFaqsUpdatesPlugin() {
             return;
           }
 
-          const requestUrl = new URL(
-            req.url || '/api/gamefaqs-vgmc-updates',
-            'http://localhost',
-          );
+          const requestUrl = new URL(req.url, 'http://localhost');
           const parsedLimit = Number.parseInt(
             requestUrl.searchParams.get('limit') || '8',
             10,
           );
           const limit = Number.isFinite(parsedLimit) ? parsedLimit : 8;
 
+          const env = loadEnv(server.config.mode, server.config.root);
+          const rssUrl = env.VITE_GAMEFAQS_RSS_URL;
+
           try {
-            const threads = await fetchGameFaqsVgmcThreads(fetch, limit);
+            const now = Date.now();
+            let threads;
+
+            if (cachedThreads && now - lastFetchTime < CACHE_DURATION) {
+              threads = cachedThreads;
+            } else {
+              threads = await fetchGameFaqsThreadsFromRss(rssUrl, limit);
+              cachedThreads = threads;
+              lastFetchTime = now;
+            }
 
             res.statusCode = 200;
             res.setHeader('Content-Type', 'application/json');

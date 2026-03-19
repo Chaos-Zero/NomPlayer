@@ -167,7 +167,18 @@ export default function TopBar({
     : isCurrentVideoSupported
       ? '♥'
       : '♡';
-  const mobileNowPlayingText = currentVideo?.title ?? '';
+  const hasTrackTitle =
+    typeof currentVideo?.trackTitle === 'string' &&
+    currentVideo.trackTitle.trim();
+  const hasGameTitle =
+    typeof currentVideo?.gameTitle === 'string' &&
+    currentVideo.gameTitle.trim();
+  const currentVideoDisplayTitle =
+    hasTrackTitle || hasGameTitle
+      ? `${hasGameTitle ? currentVideo.gameTitle : ''}${hasGameTitle && hasTrackTitle ? ' - ' : ''}${hasTrackTitle ? currentVideo.trackTitle : ''}`
+      : (currentVideo?.title ?? '');
+
+  const mobileNowPlayingText = currentVideoDisplayTitle;
   const playerActionLabel = isPlayerPage
     ? 'Add to playlist'
     : isMobileLayout

@@ -21,6 +21,20 @@ const CONTEXT_MENU_WIDTH = 220;
 const CONTEXT_MENU_HEIGHT = 140;
 const PANEL_CLOSE_MS = 240;
 
+function getPlaylistItemDisplay(video) {
+  const hasTrackTitle =
+    typeof video?.trackTitle === 'string' && video.trackTitle.trim();
+  const hasGameTitle =
+    typeof video?.gameTitle === 'string' && video.gameTitle.trim();
+  const hasCatalogMetadata = Boolean(hasTrackTitle || hasGameTitle);
+
+  return {
+    gameTitle: hasCatalogMetadata ? video.gameTitle : '',
+    trackTitle: hasCatalogMetadata ? video.trackTitle : video.title,
+    hasCatalogMetadata,
+  };
+}
+
 function SupportItem({
   index,
   video,
@@ -35,6 +49,7 @@ function SupportItem({
   removeButtonAriaLabel,
 }) {
   const [imgError, setImgError] = useState(false);
+  const display = getPlaylistItemDisplay(video);
 
   return (
     <div
@@ -51,7 +66,9 @@ function SupportItem({
           className={`support-select-toggle${isSelected ? ' active' : ''}`}
           type="button"
           aria-label={
-            isSelected ? `Deselect ${video.title}` : `Select ${video.title}`
+            isSelected
+              ? `Deselect ${display.trackTitle}`
+              : `Select ${display.trackTitle}`
           }
           aria-pressed={isSelected}
           onClick={(event) => {
@@ -87,7 +104,7 @@ function SupportItem({
         style={{ cursor: selectionMode ? 'pointer' : 'default' }}
         role="button"
         tabIndex={0}
-        aria-label={`${itemAriaPrefix} ${video.title}`}
+        aria-label={`${itemAriaPrefix} ${display.trackTitle}`}
         onClick={() => {
           if (selectionMode) {
             onToggleSelected(video.videoId);
@@ -103,9 +120,27 @@ function SupportItem({
         }}
       >
         <div className="playlist-item-title" style={{ fontSize: 12 }}>
-          {video.title || video.videoId}
+          {display.hasCatalogMetadata ? (
+            <div className="playlist-item-title-meta">
+              {display.gameTitle && (
+                <div
+                  className="meta-game-title"
+                  style={{ fontSize: 11, opacity: 0.8, marginBottom: 2 }}
+                >
+                  {display.gameTitle}
+                </div>
+              )}
+              {display.trackTitle && (
+                <div className="meta-track-title">{display.trackTitle}</div>
+              )}
+            </div>
+          ) : (
+            <div className="playlist-item-title-raw">
+              {display.trackTitle || video.videoId}
+            </div>
+          )}
         </div>
-        {video.channelTitle && (
+        {!display.hasCatalogMetadata && video.channelTitle && (
           <div className="playlist-item-meta">{video.channelTitle}</div>
         )}
       </div>
@@ -205,6 +240,10 @@ export default function FavouritesPanel({
   closeLabel = 'Close support list',
   addButtonLabel = 'Add Supports',
   onAddDirectItems = () => 0,
+  pendingMetadataCount = 0,
+  onOpenMetadataDialog = () => {},
+  onDismissMetadataBanner = () => {},
+  onUpdateMetadata = () => {},
 }) {
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -571,6 +610,28 @@ export default function FavouritesPanel({
         </div>
 
         <div className="fav-panel-footer">
+          {pendingMetadataCount > 0 && (
+            <div className="metadata-banner">
+              <div className="metadata-banner-text">
+                Add metadata to {pendingMetadataCount}{' '}
+                {pendingMetadataCount === 1 ? 'new track' : 'new tracks'}?
+              </div>
+              <div className="metadata-banner-actions">
+                <button
+                  className="metadata-banner-btn yes"
+                  onClick={onOpenMetadataDialog}
+                >
+                  Yes
+                </button>
+                <button
+                  className="metadata-banner-btn no"
+                  onClick={onDismissMetadataBanner}
+                >
+                  No
+                </button>
+              </div>
+            </div>
+          )}
           <CollectionAdder
             tone={tone}
             addButtonLabel={addButtonLabel}
@@ -603,6 +664,17 @@ export default function FavouritesPanel({
               onClick={handleAddToCurrentPlaylist}
             >
               Add to Current Playlist
+            </button>
+            <button
+              className="support-context-menu-item"
+              type="button"
+              role="menuitem"
+              onClick={() => {
+                onUpdateMetadata(contextMenu.videos);
+                setContextMenu(null);
+              }}
+            >
+              Update Metadata
             </button>
             <button
               className="support-context-menu-item danger"

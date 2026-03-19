@@ -13,6 +13,7 @@ import FavouritesPanel from './components/FavouritesPanel.jsx';
 import AuthDialog from './components/AuthDialog.jsx';
 import HomePage from './components/HomePage.jsx';
 import GuestImportDialog from './components/GuestImportDialog.jsx';
+import MetadataEntryDialog from './components/MetadataEntryDialog.jsx';
 import SiteNavigation from './components/SiteNavigation.jsx';
 import ScrollingText from './components/ScrollingText.jsx';
 import UserSettingsDialog from './components/UserSettingsDialog.jsx';
@@ -47,7 +48,7 @@ import {
   ingestYouTubeTrackSources,
 } from './lib/trackCatalog.js';
 import { getSupabaseClient, isSupabaseConfigured } from './lib/supabase.js';
-import { getYouTubeThumbnailUrl } from './utils/youtube.js';
+import { getYouTubeThumbnailUrl, parseYouTubeInput } from './utils/youtube.js';
 
 const PREVIEW_DURATION_MS = 31_000;
 const LOGOUT_TRANSITION_MS = 260;
@@ -431,6 +432,9 @@ export default function App() {
   const [supportToastMessage, setSupportToastMessage] = useState('');
   const [appToastMessage, setAppToastMessage] = useState('');
   const [appToastTone, setAppToastTone] = useState('default');
+  const [tracksNeedingMetadata, setTracksNeedingMetadata] = useState([]);
+  const [manualMetadataTracks, setManualMetadataTracks] = useState(null);
+  const [showMetadataDialog, setShowMetadataDialog] = useState(false);
   const [isDetachedFooterEntering, setIsDetachedFooterEntering] =
     useState(false);
   const [isDetachedFooterPending, setIsDetachedFooterPending] = useState(false);
@@ -448,6 +452,7 @@ export default function App() {
   const guestSyncTimeoutRef = useRef(0);
   const authSyncFlushTimeoutRef = useRef(0);
   const authSyncIdleCallbackRef = useRef(0);
+  const forceImmediateSyncRef = useRef(false);
   const authSyncFlushPromiseRef = useRef(null);
   const flushQueuedAuthSyncRef = useRef(null);
   const queuedSyncUserIdRef = useRef(null);
@@ -886,7 +891,12 @@ export default function App() {
     if (persistedQueue.playerState || persistedQueue.listenEvents.length > 0) {
       scheduleQueuedAuthSyncFlush(900);
     }
-  }, [authUser?.id, cancelQueuedAuthSyncFlush, scheduleQueuedAuthSyncFlush]);
+  }, [
+    authUser?.id,
+    cancelQueuedAuthSyncFlush,
+    persistQueuedAuthSyncToStorage,
+    scheduleQueuedAuthSyncFlush,
+  ]);
 
   useEffect(() => {
     if (!authUser?.id) {
@@ -1144,19 +1154,69 @@ export default function App() {
         ].filter(Boolean),
       ),
     ];
-
-    if (!requestedVideoIds.length) {
-      return;
+    if (requestedVideoIds.length === 0) {
+      return undefined;
     }
 
-    ensureCatalogEntriesForVideoIds(requestedVideoIds).catch((error) => {
-      console.error('Failed to fetch track catalog metadata.', error);
-    });
+    ensureCatalogEntriesForVideoIds(requestedVideoIds)
+      .then((catalog) => {
+        if (!catalog) return;
+
+        const syncItem = (item) => {
+          const meta = catalog[item.videoId];
+          if (!meta) return item;
+
+          const hasNewGame =
+            meta.gameTitle && meta.gameTitle !== item.gameTitle;
+          const hasNewTrack =
+            meta.trackTitle && meta.trackTitle !== item.trackTitle;
+          const hasNewDisplay =
+            meta.displayTitle && meta.displayTitle !== item.displayTitle;
+
+          if (hasNewGame || hasNewTrack || hasNewDisplay) {
+            return {
+              ...item,
+              gameTitle: meta.gameTitle || item.gameTitle,
+              trackTitle: meta.trackTitle || item.trackTitle,
+              displayTitle: meta.displayTitle || item.displayTitle,
+              thumbnail: meta.thumbnail || item.thumbnail,
+            };
+          }
+          return item;
+        };
+
+        setPlaylist((current) => {
+          const next = current.map(syncItem);
+          return JSON.stringify(current) === JSON.stringify(next)
+            ? current
+            : next;
+        });
+        setSupportList((current) => {
+          const next = current.map(syncItem);
+          return JSON.stringify(current) === JSON.stringify(next)
+            ? current
+            : next;
+        });
+        setNominationList((current) => {
+          const next = current.map(syncItem);
+          return JSON.stringify(current) === JSON.stringify(next)
+            ? current
+            : next;
+        });
+      })
+      .catch((error) => {
+        console.error('Failed to resolve track catalog entries:', error);
+      });
+
+    return undefined;
   }, [
     currentVideoId,
     ensureCatalogEntriesForVideoIds,
     nominationList,
     playlist,
+    setNominationList,
+    setPlaylist,
+    setSupportList,
     supportList,
     transientVideo?.videoId,
   ]);
@@ -1607,7 +1667,13 @@ export default function App() {
     }
 
     queuedPlayerStateRef.current = snapshot;
-    scheduleQueuedAuthSyncFlush(AUTH_SYNC_IDLE_MS);
+
+    if (forceImmediateSyncRef.current) {
+      scheduleQueuedAuthSyncFlush(0);
+      forceImmediateSyncRef.current = false;
+    } else {
+      scheduleQueuedAuthSyncFlush(AUTH_SYNC_IDLE_MS);
+    }
 
     return undefined;
   }, [
@@ -2757,12 +2823,36 @@ export default function App() {
         blockedNominationCount: 0,
         blockedRetiredCount: retiredVideos.length,
       };
+
+      const currentCatalog = catalogTrackByVideoIdRef.current;
+
       setSupportList((previousList) => {
         const result = appendUniqueVideos(
           previousList,
           allowedVideos,
           new Set(nominationList.map((entry) => entry.videoId)),
         );
+
+        const newTracksMissingMetadata = result.addedVideos.filter((video) => {
+          const catalogItem = currentCatalog[video.videoId];
+          return (
+            (!catalogItem ||
+              (!catalogItem.gameTitle && !catalogItem.trackTitle)) &&
+            !video.gameTitle &&
+            !video.trackTitle
+          );
+        });
+
+        if (newTracksMissingMetadata.length > 0) {
+          setTracksNeedingMetadata((prev) => {
+            const existingIds = new Set(prev.map((v) => v.videoId));
+            const uniqueNew = newTracksMissingMetadata.filter(
+              (v) => !existingIds.has(v.videoId),
+            );
+            return [...prev, ...uniqueNew];
+          });
+        }
+
         resultSummary = {
           addedCount: result.addedCount,
           blockedNominationCount: result.blockedCount,
@@ -2823,6 +2913,30 @@ export default function App() {
       const incomingIds = new Set(
         nominationResult.addedVideos.map((video) => video.videoId),
       );
+
+      const currentCatalog = catalogTrackByVideoIdRef.current;
+      const newTracksMissingMetadata = nominationResult.addedVideos.filter(
+        (video) => {
+          const catalogItem = currentCatalog[video.videoId];
+          return (
+            (!catalogItem ||
+              (!catalogItem.gameTitle && !catalogItem.trackTitle)) &&
+            !video.gameTitle &&
+            !video.trackTitle
+          );
+        },
+      );
+
+      if (newTracksMissingMetadata.length > 0) {
+        setTracksNeedingMetadata((prev) => {
+          const existingIds = new Set(prev.map((v) => v.videoId));
+          const uniqueNew = newTracksMissingMetadata.filter(
+            (v) => !existingIds.has(v.videoId),
+          );
+          return [...prev, ...uniqueNew];
+        });
+      }
+
       setSupportList((previousList) =>
         previousList.filter((entry) => !incomingIds.has(entry.videoId)),
       );
@@ -2837,6 +2951,121 @@ export default function App() {
     },
     [partitionRetiredVideos, syncCatalogForNominationVideos],
   );
+
+  const handleSaveTrackMetadata = useCallback(
+    async (metadataUpdates) => {
+      const processedUpdates = metadataUpdates.map((update) => {
+        let finalVideoId = update.videoId;
+        let finalUrl = update.currentUrl;
+
+        if (
+          update.videoUrl &&
+          update.videoUrl.trim() &&
+          update.videoUrl !== update.currentUrl
+        ) {
+          const parsed = parseYouTubeInput(update.videoUrl);
+          if (parsed && parsed.videoId) {
+            finalVideoId = parsed.videoId;
+            finalUrl = update.videoUrl;
+          }
+        }
+
+        return {
+          ...update,
+          videoId: finalVideoId,
+          submittedUrl: finalUrl,
+          hasChangedId: finalVideoId !== update.videoId,
+        };
+      });
+
+      mergeCatalogTrackSummaries(processedUpdates);
+
+      // Replace old videoId with new videoId in all lists if it changed
+      processedUpdates.forEach((update) => {
+        if (update.oldVideoId) {
+          const replacer = (list) =>
+            list.map((item) =>
+              item.videoId === update.oldVideoId
+                ? {
+                    ...item,
+                    videoId: update.videoId,
+                    title: `${update.gameTitle} - ${update.trackTitle}`,
+                  }
+                : item,
+            );
+          setSupportList(replacer);
+          setNominationList(replacer);
+          setPlaylist(replacer);
+        }
+      });
+
+      setTracksNeedingMetadata((prev) =>
+        prev.filter(
+          (track) =>
+            !metadataUpdates.some((u) => u.oldVideoId === track.videoId),
+        ),
+      );
+      setManualMetadataTracks(null);
+
+      if (supabase) {
+        try {
+          const savePromises = processedUpdates.map((update) =>
+            supabase.rpc('import_vgmc_catalog_row', {
+              canonical_game_title_input: update.gameTitle,
+              canonical_track_title_input: update.trackTitle,
+              youtube_video_id_input: update.videoId,
+              submitted_url_input: update.submittedUrl,
+              nomination_contest_number: null,
+              is_retired_input: false,
+              retiree_contest_number: null,
+              retiree_placement: null,
+              highest_round_input: null,
+            }),
+          );
+
+          const results = await Promise.all(savePromises);
+          const errors = results.filter((r) => r.error);
+          if (errors.length > 0) {
+            console.error(
+              'Some metadata updates failed to sync to Supabase:',
+              errors,
+            );
+          }
+        } catch (err) {
+          console.error('Failed to sync metadata to Supabase:', err);
+        }
+      }
+
+      forceImmediateSyncRef.current = true;
+      mergeCatalogTrackSummaries(processedUpdates);
+    },
+    [
+      mergeCatalogTrackSummaries,
+      supabase,
+      setSupportList,
+      setNominationList,
+      setPlaylist,
+    ],
+  );
+
+  const handleOpenMetadataUpdate = useCallback((videosOrVideo) => {
+    const videos = Array.isArray(videosOrVideo)
+      ? videosOrVideo
+      : [videosOrVideo];
+    setManualMetadataTracks(
+      videos.map((video) => ({
+        ...video,
+        gameTitle: video.gameTitle || '',
+        trackTitle: video.trackTitle || '',
+      })),
+    );
+    setShowMetadataDialog(true);
+  }, []);
+
+  const handleDismissMetadataDialog = useCallback(() => {
+    setShowMetadataDialog(false);
+    setManualMetadataTracks(null);
+  }, []);
 
   const handleReorderNominationList = useCallback((newOrder) => {
     setNominationList(newOrder);
@@ -3258,6 +3487,19 @@ export default function App() {
     : hasDetachedFooter
       ? 'mini'
       : 'hidden';
+  const currentVideoDisplayTitle = (() => {
+    if (!currentVideo) return '';
+    const hasTrackTitle =
+      typeof currentVideo.trackTitle === 'string' &&
+      currentVideo.trackTitle.trim();
+    const hasGameTitle =
+      typeof currentVideo.gameTitle === 'string' &&
+      currentVideo.gameTitle.trim();
+    if (!hasTrackTitle && !hasGameTitle) return currentVideo.title;
+
+    return `${hasGameTitle ? currentVideo.gameTitle : ''}${hasGameTitle && hasTrackTitle ? ' - ' : ''}${hasTrackTitle ? currentVideo.trackTitle : ''}`;
+  })();
+
   const persistentPlayer = shouldRenderPersistentPlayer ? (
     <div
       className={`player-surface player-surface-${playerPresentation}${hasDetachedFooter ? ' detached-footer' : ''}${isMobileDetachedFooter ? ' mobile-detached-footer' : ''}${isPlaying ? ' playing' : ''}${isDetachedFooterEntering ? ' entering' : ''}${isPlayerRevealing ? ' revealing' : ''}${isLogoutTransitioning ? ' logging-out' : ''}`}
@@ -3293,7 +3535,7 @@ export default function App() {
             </span>
             <ScrollingText
               className="now-playing-footer-title"
-              text={currentVideo.title}
+              text={currentVideoDisplayTitle}
             />
           </div>
 
@@ -3476,6 +3718,10 @@ export default function App() {
               onRemoveFromPlaylist={handleRemoveFromPlaylist}
               onAddDirectItems={handleQueueFromSupportList}
               retiredVideoIds={retiredVideoIds}
+              pendingMetadataCount={tracksNeedingMetadata.length}
+              onOpenMetadataDialog={() => setShowMetadataDialog(true)}
+              onDismissMetadataBanner={() => setTracksNeedingMetadata([])}
+              onUpdateMetadata={handleOpenMetadataUpdate}
             />
             {!effectivePlaylistCollapsed && apiKeyMissing && (
               <div className="api-key-notice">
@@ -3540,6 +3786,10 @@ export default function App() {
           closeLabel="Close support list"
           addButtonLabel="Add Supports"
           onAddDirectItems={handleAddManyToSupportList}
+          pendingMetadataCount={tracksNeedingMetadata.length}
+          onOpenMetadataDialog={() => setShowMetadataDialog(true)}
+          onDismissMetadataBanner={() => setTracksNeedingMetadata([])}
+          onUpdateMetadata={handleOpenMetadataUpdate}
         />
       )}
 
@@ -3566,6 +3816,10 @@ export default function App() {
           closeLabel="Close nominations"
           addButtonLabel="Add Nominations"
           onAddDirectItems={handleAddManyToNominationList}
+          pendingMetadataCount={tracksNeedingMetadata.length}
+          onOpenMetadataDialog={() => setShowMetadataDialog(true)}
+          onDismissMetadataBanner={() => setTracksNeedingMetadata([])}
+          onUpdateMetadata={handleOpenMetadataUpdate}
         />
       )}
 
@@ -3604,6 +3858,15 @@ export default function App() {
         onImport={handleImportGuestCollections}
         onSkip={handleSkipGuestImport}
       />
+
+      {showMetadataDialog && (
+        <MetadataEntryDialog
+          isOpen={showMetadataDialog}
+          onClose={handleDismissMetadataDialog}
+          tracks={manualMetadataTracks || tracksNeedingMetadata}
+          onSave={handleSaveTrackMetadata}
+        />
+      )}
     </div>
   );
 }

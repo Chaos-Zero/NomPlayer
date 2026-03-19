@@ -1,4 +1,4 @@
-import { fetchGameFaqsVgmcThreads } from '../../src/lib/dashboard.js';
+import { fetchGameFaqsThreadsFromRss } from '../../src/lib/dashboard.js';
 
 export async function onRequestGet(context) {
   const requestUrl = new URL(context.request.url);
@@ -8,8 +8,10 @@ export async function onRequestGet(context) {
   );
   const limit = Number.isFinite(parsedLimit) ? parsedLimit : 8;
 
+  const rssUrl = context.env.VITE_GAMEFAQS_RSS_URL;
+
   try {
-    const threads = await fetchGameFaqsVgmcThreads(fetch, limit);
+    const threads = await fetchGameFaqsThreadsFromRss(rssUrl, limit);
 
     return Response.json(
       {
@@ -18,7 +20,7 @@ export async function onRequestGet(context) {
       },
       {
         headers: {
-          'cache-control': 'public, max-age=0, s-maxage=900',
+          'cache-control': 'public, max-age=0, s-maxage=14400',
         },
       },
     );

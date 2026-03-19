@@ -1,10 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import {
   buildDiscoveryCandidates,
-  extractGameFaqsVgmcThreads,
+  fetchGameFaqsThreadsFromRss,
   normalizeNominationDashboardUpdate,
   pickNextDiscoveryCandidate,
 } from '../lib/dashboard.js';
+import { vi } from 'vitest';
 
 describe('dashboard helpers', () => {
   it('normalizes public nomination updates', () => {
@@ -111,14 +112,32 @@ describe('dashboard helpers', () => {
     );
   });
 
-  it('extracts only VGMC threads from the GameFAQs contests board html', () => {
-    const threads = extractGameFaqsVgmcThreads(`
-      <div>
-        <a href="/boards/8-gamefaqs-contests/111-vgmc-summer-thread">VGMC Summer Thread</a>
-        <a href="/boards/8-gamefaqs-contests/222-other-thread">Other Thread</a>
-        <a href="/boards/8-gamefaqs-contests/333-vgmc-finals">VGMC &amp; Finals</a>
-      </div>
-    `);
+  it('extracts only VGMC threads from the GameFAQs RSS feed xml', async () => {
+    const mockXml = `
+      <rss>
+        <channel>
+          <item>
+            <title>VGMC Summer Thread</title>
+            <link>https://gamefaqs.gamespot.com/boards/8-gamefaqs-contests/111-vgmc-summer-thread</link>
+          </item>
+          <item>
+            <title>Other Thread</title>
+            <link>https://gamefaqs.gamespot.com/boards/8-gamefaqs-contests/222-other-thread</link>
+          </item>
+          <item>
+            <title><![CDATA[VGMC & Finals]]></title>
+            <link><![CDATA[https://gamefaqs.gamespot.com/boards/8-gamefaqs-contests/333-vgmc-finals]]></link>
+          </item>
+        </channel>
+      </rss>
+    `;
+
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      text: () => Promise.resolve(mockXml),
+    });
+
+    const threads = await fetchGameFaqsThreadsFromRss('http://test.rss');
 
     expect(threads).toEqual([
       {

@@ -1,6 +1,3 @@
-export const GAMEFAQS_CONTESTS_BOARD_URL =
-  'https://gamefaqs.gamespot.com/boards/8-gamefaqs-contests';
-
 function normalizeVideoEntry(entry) {
   if (!entry || typeof entry !== 'object') return null;
   if (typeof entry.videoId !== 'string' || entry.videoId.trim() === '') {
@@ -223,59 +220,51 @@ function stripTags(value) {
   return value.replace(/<[^>]+>/g, ' ');
 }
 
-export function extractGameFaqsVgmcThreads(html, limit = 8) {
-  if (typeof html !== 'string' || !html.trim()) {
-    return [];
+export async function fetchGameFaqsThreadsFromRss(rssUrl, limit = 8) {
+  if (!rssUrl) return [];
+
+  const response = await fetch(rssUrl);
+
+  if (!response.ok) {
+    throw new Error(`RSS feed responded with ${response.status}`);
   }
 
+  const xml = await response.text();
   const threads = [];
-  const seenUrls = new Set();
-  const threadPattern =
-    /<a[^>]+href="(\/boards\/8-gamefaqs-contests\/\d+-[^"#?]+)"[^>]*>([\s\S]*?)<\/a>/gi;
-  let match;
+  const itemMatches = xml.matchAll(/<item>([\s\S]*?)<\/item>/gi);
 
-  while ((match = threadPattern.exec(html))) {
-    const [, relativeUrl, rawTitle] = match;
-    const title = decodeHtmlEntities(stripTags(rawTitle))
-      .replace(/\s+/g, ' ')
-      .trim();
+  for (const itemMatch of itemMatches) {
+    const itemContent = itemMatch[1];
+    const titleMatch = itemContent.match(
+      /<title>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/title>/i,
+    );
+    const linkMatch = itemContent.match(
+      /<link>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/link>/i,
+    );
 
-    if (!title || !/vgmc/i.test(title)) {
-      continue;
-    }
+    if (titleMatch && linkMatch) {
+      const rawTitle = titleMatch[1];
+      const title = decodeHtmlEntities(stripTags(rawTitle))
+        .replace(/\s+/g, ' ')
+        .trim();
 
-    const url = `https://gamefaqs.gamespot.com${relativeUrl}`;
-    if (seenUrls.has(url)) {
-      continue;
-    }
+      if (!title || !/vgmc/i.test(title)) {
+        continue;
+      }
 
-    seenUrls.add(url);
-    threads.push({
-      title,
-      url,
-    });
+      const url = linkMatch[1].trim();
+      threads.push({
+        title,
+        url,
+      });
 
-    if (threads.length >= limit) {
-      break;
+      if (threads.length >= limit) {
+        break;
+      }
     }
   }
 
   return threads;
-}
-
-export async function fetchGameFaqsVgmcThreads(fetchImpl = fetch, limit = 8) {
-  const response = await fetchImpl(GAMEFAQS_CONTESTS_BOARD_URL, {
-    headers: {
-      'user-agent': 'Nomplayer/1.0 (+https://vgmc-taster.pages.dev)',
-    },
-  });
-
-  if (!response.ok) {
-    throw new Error(`GameFAQs responded with ${response.status}`);
-  }
-
-  const html = await response.text();
-  return extractGameFaqsVgmcThreads(html, limit);
 }
 
 export async function fetchDashboardVgmcUpdates(limit = 8) {

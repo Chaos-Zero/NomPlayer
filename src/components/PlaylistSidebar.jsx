@@ -313,6 +313,10 @@ export default function PlaylistSidebar({
   onRemoveFromPlaylist,
   onAddDirectItems = () => 0,
   retiredVideoIds = new Set(),
+  pendingMetadataCount = 0,
+  onOpenMetadataDialog = () => {},
+  onDismissMetadataBanner = () => {},
+  onUpdateMetadata = () => {},
 }) {
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -568,6 +572,28 @@ export default function PlaylistSidebar({
   function renderAddControl() {
     return (
       <div className="playlist-sidebar-add">
+        {pendingMetadataCount > 0 && (
+          <div className="metadata-banner">
+            <div className="metadata-banner-text">
+              Add metadata to {pendingMetadataCount}{' '}
+              {pendingMetadataCount === 1 ? 'new track' : 'new tracks'}?
+            </div>
+            <div className="metadata-banner-actions">
+              <button
+                className="metadata-banner-btn yes"
+                onClick={onOpenMetadataDialog}
+              >
+                Yes
+              </button>
+              <button
+                className="metadata-banner-btn no"
+                onClick={onDismissMetadataBanner}
+              >
+                No
+              </button>
+            </div>
+          </div>
+        )}
         <CollectionAdder
           tone="playlist"
           addButtonLabel="+"
@@ -646,7 +672,24 @@ export default function PlaylistSidebar({
       window.innerHeight - CONTEXT_MENU_HEIGHT - 8,
     );
 
-    setContextMenu({ left: Math.max(8, left), top: Math.max(8, top), video });
+    if (selectionMode && selectedIdSet.has(video.videoId)) {
+      setContextMenu({
+        left: Math.max(8, left),
+        top: Math.max(8, top),
+        video,
+        videos: selectedVideos,
+        mode: 'multi',
+      });
+      return;
+    }
+
+    setContextMenu({
+      left: Math.max(8, left),
+      top: Math.max(8, top),
+      video,
+      videos: [video],
+      mode: 'single',
+    });
   }
 
   function handleSupport(video) {
@@ -656,6 +699,11 @@ export default function PlaylistSidebar({
 
   function handleRemove(videoId) {
     onRemoveFromPlaylist(videoId);
+    setContextMenu(null);
+  }
+
+  function handleUpdateMetadata(videos) {
+    onUpdateMetadata(videos);
     setContextMenu(null);
   }
 
@@ -820,6 +868,14 @@ export default function PlaylistSidebar({
             }
           >
             Support
+          </button>
+          <button
+            className="playlist-context-menu-item"
+            type="button"
+            role="menuitem"
+            onClick={() => handleUpdateMetadata(contextMenu.videos)}
+          >
+            Update Metadata
           </button>
           <button
             className="playlist-context-menu-item danger"
