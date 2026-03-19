@@ -690,9 +690,9 @@ export default function TopBar({
       <>
         {mobileCornerActions}
         <img
-          src="/Nomplayer_icon.png"
+          src="/NomPlayer_icon.png"
           className="topbar-logo mobile-only"
-          alt="Nomplayer"
+          alt="NomPlayer"
         />
         <div
           ref={topbarRef}

@@ -1,4 +1,4 @@
-# Nomplayer
+# NomPlayer
 
 A small React/Vite app for loading YouTube videos or playlists into a local playlist, playing them in-page, and saving supported tracks in `localStorage`.
 

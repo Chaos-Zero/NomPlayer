@@ -120,9 +120,9 @@ export default function SiteNavigation({
     <nav className="site-nav" aria-label="Primary navigation">
       <div className="site-nav-logo-wrapper desktop-only">
         <img
-          src="/Nomplayer_icon.png"
+          src="/NomPlayer_icon.png"
           className="site-nav-logo"
-          alt="Nomplayer"
+          alt="NomPlayer"
         />
       </div>
       <div className="site-nav-group">

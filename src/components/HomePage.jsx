@@ -533,14 +533,14 @@ export default function HomePage({
       <section className="dashboard-hero" aria-label="Dashboard overview">
         <div className="dashboard-hero-copy">
           <span className="dashboard-hero-badge">Community Dashboard</span>
-          <h1 className="dashboard-hero-title">VGMC Stats</h1>
+          <h1 className="dashboard-hero-title">NomPlayer</h1>
 
           {isMobileLayout && (
             <button
               className={`dashboard-mobile-toggle dashboard-mobile-toggle-hero${mobileCollapsedSections.overview ? ' collapsed' : ''}`}
               type="button"
               aria-expanded={!mobileCollapsedSections.overview}
-              aria-label={`${mobileCollapsedSections.overview ? 'Expand' : 'Collapse'} VGMC Stats overview`}
+              aria-label={`${mobileCollapsedSections.overview ? 'Expand' : 'Collapse'} NomPlayer overview`}
               onClick={() => toggleMobileSection('overview')}
             >
               <span className="dashboard-mobile-toggle-copy">

@@ -50,7 +50,7 @@ describe('HomePage mobile layout', () => {
     );
 
     const overviewToggle = await screen.findByRole('button', {
-      name: 'Collapse VGMC Stats overview',
+      name: 'Collapse NomPlayer overview',
     });
     const discoverToggle = await screen.findByRole('button', {
       name: 'Expand Discover',
