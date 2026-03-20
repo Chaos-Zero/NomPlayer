@@ -17,6 +17,7 @@ import MetadataEntryDialog from './components/MetadataEntryDialog.jsx';
 import SiteNavigation from './components/SiteNavigation.jsx';
 import ScrollingText from './components/ScrollingText.jsx';
 import UserSettingsDialog from './components/UserSettingsDialog.jsx';
+import TrackDatabase from './components/TrackDatabase.jsx';
 import useMediaQuery from './hooks/useMediaQuery.js';
 import {
   clearLocalGuestPlayerState,
@@ -1297,6 +1298,7 @@ export default function App() {
     ? null
     : displayPlaylist.findIndex((video) => video.videoId === currentVideoId);
   const isPlayerPage = activePage === 'player';
+  const isDatabasePage = activePage === 'database';
   const shouldRenderDesktopPlaylistOverlay = !isMobileLayout && !isPlayerPage;
   const effectivePlaylistCollapsed = isPlayerPage
     ? isPlaylistCollapsed
@@ -1696,19 +1698,29 @@ export default function App() {
     setAuthMessage('');
   }, []);
 
-  const showDefaultAppToast = useCallback((message, tone = 'default') => {
-    setAppToastTone(tone);
-    setAppToastMessage(message);
+  const showDefaultAppToast = useCallback(
+    (message, tone = 'default') => {
+      setAppToastTone(tone);
+      setAppToastMessage(message);
 
-    if (appToastTimeoutRef.current) {
-      window.clearTimeout(appToastTimeoutRef.current);
-    }
+      if (appToastTimeoutRef.current) {
+        window.clearTimeout(appToastTimeoutRef.current);
+      }
 
-    appToastTimeoutRef.current = window.setTimeout(() => {
-      appToastTimeoutRef.current = null;
-      setAppToastMessage('');
-    }, 3200);
-  }, []);
+      appToastTimeoutRef.current = window.setTimeout(() => {
+        appToastTimeoutRef.current = null;
+        setAppToastMessage('');
+      }, 3200);
+    },
+    [setAppToastMessage, setAppToastTone],
+  );
+
+  const handleShowDashboardToast = useCallback(
+    (message) => {
+      showDefaultAppToast(message, 'dashboard');
+    },
+    [showDefaultAppToast],
+  );
 
   const showRetiredSongToast = useCallback(() => {
     showDefaultAppToast(
@@ -3007,7 +3019,7 @@ export default function App() {
       );
       setManualMetadataTracks(null);
 
-      if (supabase) {
+      if (supabase && authUser) {
         try {
           const savePromises = processedUpdates.map((update) =>
             supabase.rpc('import_vgmc_catalog_row', {
@@ -3045,6 +3057,7 @@ export default function App() {
       setSupportList,
       setNominationList,
       setPlaylist,
+      authUser,
     ],
   );
 
@@ -3397,6 +3410,7 @@ export default function App() {
     (nextPage) => {
       const shouldAnimateDetachedFooter =
         nextPage !== 'player' &&
+        nextPage !== 'database' &&
         Boolean(currentVideoIdRef.current) &&
         isPlayingRef.current;
       const shouldAnimatePlayerReveal =
@@ -3473,7 +3487,8 @@ export default function App() {
     ],
   );
 
-  const shellIsCollapsed = isPlaylistCollapsed || !isPlayerPage;
+  const shellIsCollapsed =
+    isPlaylistCollapsed || !isPlayerPage || isDatabasePage;
   const shouldRenderPersistentPlayer = isPlayerPage || Boolean(currentVideo);
   const canTogglePlayback = Boolean(transientVideo) || playlist.length > 0;
   const hasDetachedFooter =
@@ -3663,7 +3678,7 @@ export default function App() {
           className={`main-content${isPlayerPage ? ' player-view' : ' home-view'}${!isPlayerPage && isLogoutTransitioning ? ' logout-fade-in' : ''}`}
           id="main-content"
         >
-          {!isPlayerPage && (
+          {!isPlayerPage && !isDatabasePage && (
             <HomePage
               supabase={supabase}
               authUser={authUser}
@@ -3675,6 +3690,17 @@ export default function App() {
               onShowToast={(message) =>
                 showDefaultAppToast(message, 'dashboard')
               }
+            />
+          )}
+
+          {isDatabasePage && (
+            <TrackDatabase
+              supabase={supabase}
+              authUser={authUser}
+              onAddToPlaylist={handleQueueFromSupportList}
+              onPlayNow={handlePlayNowFromSupportList}
+              onShowToast={handleShowDashboardToast}
+              hasPlayer={Boolean(currentVideo)}
             />
           )}
 
@@ -3722,6 +3748,7 @@ export default function App() {
               onOpenMetadataDialog={() => setShowMetadataDialog(true)}
               onDismissMetadataBanner={() => setTracksNeedingMetadata([])}
               onUpdateMetadata={handleOpenMetadataUpdate}
+              authUser={authUser}
             />
             {!effectivePlaylistCollapsed && apiKeyMissing && (
               <div className="api-key-notice">
@@ -3790,6 +3817,7 @@ export default function App() {
           onOpenMetadataDialog={() => setShowMetadataDialog(true)}
           onDismissMetadataBanner={() => setTracksNeedingMetadata([])}
           onUpdateMetadata={handleOpenMetadataUpdate}
+          authUser={authUser}
         />
       )}
 
@@ -3820,6 +3848,7 @@ export default function App() {
           onOpenMetadataDialog={() => setShowMetadataDialog(true)}
           onDismissMetadataBanner={() => setTracksNeedingMetadata([])}
           onUpdateMetadata={handleOpenMetadataUpdate}
+          authUser={authUser}
         />
       )}
 

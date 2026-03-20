@@ -317,6 +317,7 @@ export default function PlaylistSidebar({
   onOpenMetadataDialog = () => {},
   onDismissMetadataBanner = () => {},
   onUpdateMetadata = () => {},
+  authUser = null,
 }) {
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -572,7 +573,7 @@ export default function PlaylistSidebar({
   function renderAddControl() {
     return (
       <div className="playlist-sidebar-add">
-        {pendingMetadataCount > 0 && (
+        {authUser && pendingMetadataCount > 0 && (
           <div className="metadata-banner">
             <div className="metadata-banner-text">
               Add metadata to {pendingMetadataCount}{' '}
@@ -869,14 +870,16 @@ export default function PlaylistSidebar({
           >
             Support
           </button>
-          <button
-            className="playlist-context-menu-item"
-            type="button"
-            role="menuitem"
-            onClick={() => handleUpdateMetadata(contextMenu.videos)}
-          >
-            Update Metadata
-          </button>
+          {authUser && (
+            <button
+              className="playlist-context-menu-item"
+              type="button"
+              role="menuitem"
+              onClick={() => handleUpdateMetadata(contextMenu.videos)}
+            >
+              Update Metadata
+            </button>
+          )}
           <button
             className="playlist-context-menu-item danger"
             type="button"

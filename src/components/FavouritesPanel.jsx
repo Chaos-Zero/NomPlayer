@@ -244,6 +244,7 @@ export default function FavouritesPanel({
   onOpenMetadataDialog = () => {},
   onDismissMetadataBanner = () => {},
   onUpdateMetadata = () => {},
+  authUser = null,
 }) {
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -610,7 +611,7 @@ export default function FavouritesPanel({
         </div>
 
         <div className="fav-panel-footer">
-          {pendingMetadataCount > 0 && (
+          {authUser && pendingMetadataCount > 0 && (
             <div className="metadata-banner">
               <div className="metadata-banner-text">
                 Add metadata to {pendingMetadataCount}{' '}
@@ -665,17 +666,19 @@ export default function FavouritesPanel({
             >
               Add to Current Playlist
             </button>
-            <button
-              className="support-context-menu-item"
-              type="button"
-              role="menuitem"
-              onClick={() => {
-                onUpdateMetadata(contextMenu.videos);
-                setContextMenu(null);
-              }}
-            >
-              Update Metadata
-            </button>
+            {authUser && (
+              <button
+                className="support-context-menu-item"
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  onUpdateMetadata(contextMenu.videos);
+                  setContextMenu(null);
+                }}
+              >
+                Update Metadata
+              </button>
+            )}
             <button
               className="support-context-menu-item danger"
               type="button"

@@ -26,6 +26,19 @@ function MenuIcon() {
   );
 }
 
+function DatabaseIcon() {
+  return (
+    <svg viewBox="0 0 20 20" aria-hidden="true" fill="currentColor">
+      <path d="M3 4.75a.75.75 0 0 1 .75-.75h12.5a.75.75 0 0 1 0 1.5H3.75a.75.75 0 0 1-.75-.75ZM3 8.75a.75.75 0 0 1 .75-.75h8.5a.75.75 0 0 1 0 1.5h-8.5a.75.75 0 0 1-.75-.75ZM3.75 12a.75.75 0 0 0 0 1.5h4.5a.75.75 0 0 0 0-1.5h-4.5Z" />
+      <path
+        fillRule="evenodd"
+        d="M13 10a3 3 0 1 0 0 6 3 3 0 0 0 0-6Zm-4.5 3a4.5 4.5 0 1 1 7.746 3.012l1.974 1.974a.75.75 0 1 1-1.06 1.06l-1.974-1.974A4.5 4.5 0 0 1 8.5 13Z"
+        clipRule="evenodd"
+      />
+    </svg>
+  );
+}
+
 const NAV_ITEMS = [
   {
     id: 'home',
@@ -36,6 +49,11 @@ const NAV_ITEMS = [
     id: 'player',
     label: 'Player',
     Icon: PlayerIcon,
+  },
+  {
+    id: 'database',
+    label: 'Track Database',
+    Icon: DatabaseIcon,
   },
 ];
 

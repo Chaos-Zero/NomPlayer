@@ -28,3 +28,8 @@ dist-ssr
 
 # Local scratch data / generated imports
 tmp/
+public/loading_icon.json
+public/NomPlayer_crumb1.png
+public/NomPlayer_crumb2.png
+public/NomPlayer_crumb3.png
+public/Nomplayer_icon_full.png

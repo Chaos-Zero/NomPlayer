@@ -1,4 +1,4 @@
-import { getYouTubeThumbnailUrl } from '../utils/youtube.js';
+import { getYouTubeThumbnailUrl, parseYouTubeInput } from '../utils/youtube.js';
 
 function normalizeCatalogVideo(video) {
   if (!video || typeof video !== 'object') return null;
@@ -321,4 +321,432 @@ export async function fetchTrackCatalogByVideoIds(supabase, videoIds) {
   return Array.isArray(data)
     ? data.map(normalizeTrackCatalogEntry).filter(Boolean)
     : [];
+}
+
+export async function fetchAllTracks(supabase) {
+  if (!supabase) return [];
+
+  let allData = [];
+  let from = 0;
+  const pageSize = 1000;
+  let hasMore = true;
+
+  while (hasMore) {
+    const { data, error } = await supabase
+      .from('track_catalog')
+      .select(
+        `
+          track_id,
+          game_title,
+          track_title,
+          display_title,
+          is_retired,
+          retired_by_tournament_name,
+          source_external_id,
+          source_url,
+          submitted_url,
+          source_title,
+          source_channel_title,
+          source_thumbnail_url,
+          tournaments
+        `,
+      )
+      .range(from, from + pageSize - 1);
+
+    if (error) {
+      throw error;
+    }
+
+    if (data && data.length > 0) {
+      allData = [...allData, ...data];
+      from += pageSize;
+      hasMore = data.length === pageSize;
+    } else {
+      hasMore = false;
+    }
+  }
+
+  return allData.map(normalizeTrackCatalogEntry).filter(Boolean);
+}
+
+export async function fetchMaxVgmcNumber(supabase) {
+  if (!supabase) return 0;
+  // Sample tracks to find max sequence number
+  const { data, error } = await supabase
+    .from('track_catalog')
+    .select('tournaments')
+    .not('tournaments', 'eq', '[]')
+    .limit(1000);
+
+  if (error || !data) return 24;
+
+  let max = 0;
+  data.forEach((row) => {
+    row.tournaments?.forEach((t) => {
+      if (t.sequence_number > max) max = t.sequence_number;
+      if (t.sequenceNumber > max) max = t.sequenceNumber;
+    });
+  });
+
+  return max || 24;
+}
+export async function fetchPagedTracks(
+  supabase,
+  {
+    offset = 0,
+    limit = 50,
+    searchTerm = '',
+    vgmcFilter = '',
+    viewMode = 'all',
+    userFeedback = {},
+    sortColumn = 'vgmc',
+    sortAsc = true,
+    maxVgmc = 0,
+  } = {},
+) {
+  if (!supabase) return { data: [], totalCount: 0 };
+
+  let query = supabase.from('track_catalog').select(
+    `
+        track_id,
+        game_title,
+        track_title,
+        display_title,
+        is_retired,
+        retired_by_tournament_name,
+        source_external_id,
+        source_url,
+        submitted_url,
+        source_title,
+        source_channel_title,
+        source_thumbnail_url,
+        tournaments
+      `,
+    { count: 'exact' },
+  );
+
+  // Search filter
+  if (searchTerm) {
+    const rawWords = searchTerm
+      .trim()
+      .split(/\s+/)
+      .filter((w) => w.length >= 2);
+    const words = rawWords.map((w) => cleanStr(w)).filter((w) => w.length > 0);
+
+    if (words.length > 0) {
+      // For each word, ensure it matches at least one of the fields (AND logic between words)
+      words.forEach((word) => {
+        query = query.or(
+          `game_title.ilike.%${word}%,track_title.ilike.%${word}%,display_title.ilike.%${word}%`,
+        );
+      });
+    }
+  }
+
+  // VGMC Filter
+  if (vgmcFilter) {
+    if (maxVgmc > 0 && Number(vgmcFilter) === maxVgmc + 1) {
+      // interpreted as "Prospective"
+      query = query.filter('tournaments', 'eq', '[]');
+    } else {
+      query = query.filter(
+        'tournaments',
+        'cs',
+        `[{"sequence_number": ${vgmcFilter}}]`,
+      );
+    }
+  }
+
+  // View Mode Filters
+  if (viewMode === 'prospective') {
+    query = query.filter('tournaments', 'eq', '[]');
+  } else if (viewMode === 'rated' || viewMode === 'unrated') {
+    const ratedIds = Object.keys(userFeedback).filter(
+      (id) => userFeedback[id]?.rating,
+    );
+    if (viewMode === 'rated') {
+      if (ratedIds.length === 0) {
+        return { data: [], totalCount: 0 };
+      }
+      query = query.in('track_id', ratedIds);
+    } else if (viewMode === 'unrated') {
+      if (ratedIds.length > 0) {
+        // Use a filter to exclude rated IDs
+        // Note: Supabase .not('id', 'in', [...]) is the way
+        query = query.not('track_id', 'in', `(${ratedIds.join(',')})`);
+      }
+    }
+  }
+
+  // Sorting logic
+  if (sortColumn === 'vgmc') {
+    query = query
+      .order('tournaments->0->sequence_number', {
+        ascending: sortAsc,
+        nullsFirst: false,
+      })
+      .order('game_title', { ascending: true });
+  } else if (sortColumn === 'game') {
+    query = query.order('game_title', { ascending: sortAsc });
+  } else if (sortColumn === 'track') {
+    query = query.order('track_title', { ascending: sortAsc });
+  } else if (sortColumn === 'rating') {
+    // Handling rating sorting (this might need a join or careful handling if sorting by user feedback)
+    // For now, let's sort by game_title if rating is hard to sort server-side without a join
+    query = query.order('game_title', { ascending: true });
+  } else {
+    query = query.order('game_title', { ascending: true });
+  }
+
+  const { data, error, count } = await query.range(offset, offset + limit - 1);
+
+  if (error) {
+    throw error;
+  }
+
+  return {
+    data: (data || []).map(normalizeTrackCatalogEntry).filter(Boolean),
+    totalCount: count || 0,
+  };
+}
+
+export async function bulkUpdateTracks(supabase, updatesMap) {
+  if (!supabase || !updatesMap || Object.keys(updatesMap).length === 0) {
+    return;
+  }
+
+  const trackIds = Object.keys(updatesMap);
+
+  for (const trackId of trackIds) {
+    const fields = updatesMap[trackId];
+    const trackPayload = {};
+    const sourcePayload = {};
+
+    if (fields.gameTitle !== undefined)
+      trackPayload.canonical_game_title = fields.gameTitle;
+    if (fields.trackTitle !== undefined)
+      trackPayload.canonical_track_title = fields.trackTitle;
+
+    if (fields.sourceUrl !== undefined) {
+      sourcePayload.source_url = fields.sourceUrl;
+      sourcePayload.submitted_url = fields.sourceUrl;
+      const parsed = parseYouTubeInput(fields.sourceUrl);
+      if (parsed?.type === 'video' && parsed.videoId) {
+        sourcePayload.external_id = parsed.videoId;
+      }
+    }
+
+    // 1. Update tracks table
+    if (Object.keys(trackPayload).length > 0) {
+      const { error: trackError } = await supabase
+        .from('tracks')
+        .update({
+          ...trackPayload,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', trackId);
+
+      if (trackError) {
+        console.error(
+          `bulkUpdateTracks: Error updating tracks for ${trackId}:`,
+          trackError,
+        );
+        throw trackError;
+      }
+    }
+
+    // 2. Update track_sources table (only primary source)
+    if (Object.keys(sourcePayload).length > 0) {
+      const { error: sourceError } = await supabase
+        .from('track_sources')
+        .update({
+          ...sourcePayload,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('track_id', trackId)
+        .eq('is_primary', true);
+
+      if (sourceError) {
+        console.warn(
+          `bulkUpdateTracks: Error updating track_sources for ${trackId}:`,
+          sourceError,
+        );
+      }
+    }
+  }
+}
+
+// Smart cleaning: replace brackets with spaces to keep their content, then remove punctuation
+const cleanStr = (str) =>
+  (str || '')
+    .toLowerCase()
+    .replace(/[()[\]{}]/g, ' ') // replace brackets with spaces
+    .replace(/[^a-z0-9\s]/g, '') // remove other punctuation
+    .trim();
+
+export async function findPotentialDuplicates(supabase, track) {
+  if (!supabase || !track) return [];
+
+  const baseTrackTitle = cleanStr(track.trackTitle);
+  const baseGameTitle = cleanStr(track.gameTitle);
+
+  // Split into words, filter out common short words
+  const trackWords = baseTrackTitle.split(/\s+/).filter((w) => w.length >= 2);
+  const gameWords = baseGameTitle.split(/\s+/).filter((w) => w.length >= 2);
+
+  // Build a set of conditions
+  const orConditions = [];
+
+  // 1. Exact Match Pass (Escape quotes for Supabase filter string)
+  const esc = (s) => (s || '').replace(/"/g, '"');
+  orConditions.push(
+    `and(game_title.eq."${esc(track.gameTitle)}",track_title.eq."${esc(track.trackTitle)}")`,
+  );
+
+  // 2. Word-Pairing logic for significant words
+  if (trackWords.length > 0 && gameWords.length > 0) {
+    const topGameWords = gameWords.slice(0, 3);
+    const topTrackWords = trackWords.slice(0, 3);
+
+    topGameWords.forEach((gWord) => {
+      topTrackWords.forEach((tWord) => {
+        orConditions.push(
+          `and(game_title.ilike.%${gWord}%,track_title.ilike.%${tWord}%)`,
+        );
+      });
+    });
+  }
+
+  // 3. Long track title fallback
+  if (baseTrackTitle.length > 12) {
+    orConditions.push(`track_title.ilike.%${baseTrackTitle}%`);
+  }
+
+  if (orConditions.length === 0) return [];
+
+  const { data, error } = await supabase
+    .from('track_catalog')
+    .select('*')
+    .or(orConditions.join(','))
+    .neq('track_id', track.trackId)
+    .limit(40);
+
+  if (error) {
+    console.error('Error finding duplicates:', error);
+    return [];
+  }
+
+  return (data || []).map(normalizeTrackCatalogEntry).filter(Boolean);
+}
+
+export async function mergeTracks(
+  supabase,
+  targetTrack,
+  sourceTracks,
+  finalValues,
+) {
+  if (
+    !supabase ||
+    !targetTrack ||
+    !Array.isArray(sourceTracks) ||
+    sourceTracks.length === 0
+  ) {
+    console.error('mergeTracks: Invalid arguments', {
+      targetTrack,
+      sourceTracks,
+    });
+    return;
+  }
+
+  const sourceIds = sourceTracks.map((s) => s.trackId);
+  console.log('mergeTracks: Starting multi-track merge on base tables', {
+    targetId: targetTrack.trackId,
+    sourceIds,
+    finalValues,
+  });
+
+  // 1. Update main tracks table
+  const { error: trackUpdateError } = await supabase
+    .from('tracks')
+    .update({
+      canonical_game_title: finalValues.gameTitle || targetTrack.gameTitle,
+      canonical_track_title: finalValues.trackTitle || targetTrack.trackTitle,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', targetTrack.trackId);
+
+  if (trackUpdateError) {
+    console.error('mergeTracks: Tracks update failed', trackUpdateError);
+    throw trackUpdateError;
+  }
+
+  // 2. Update primary track source
+  const youtubeData = parseYouTubeInput(
+    finalValues.sourceUrl || targetTrack.sourceUrl,
+  );
+  if (youtubeData?.videoId) {
+    const { error: sourceUpdateError } = await supabase
+      .from('track_sources')
+      .update({
+        external_id: youtubeData.videoId,
+        source_url: `https://www.youtube.com/watch?v=${youtubeData.videoId}`,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('track_id', targetTrack.trackId)
+      .eq('is_primary', true);
+
+    if (sourceUpdateError) {
+      console.warn(
+        'mergeTracks: Source update failed (might not be a primary source for this ID)',
+        sourceUpdateError,
+      );
+      // We don't throw here as the main track was updated, but we'll log it
+    }
+  }
+
+  // 3. Move tournament appearances
+  // For each source track, move its appearances to the target track
+  // If the target already has that tournament, we can either skip or merge notes
+  for (const sourceId of sourceIds) {
+    const { data: appearances, error: fetchError } = await supabase
+      .from('track_tournament_appearances')
+      .select('*')
+      .eq('track_id', sourceId);
+
+    if (!fetchError && appearances) {
+      for (const app of appearances) {
+        // Try to move to target
+        const { error: moveError } = await supabase
+          .from('track_tournament_appearances')
+          .insert({
+            ...app,
+            track_id: targetTrack.trackId,
+            updated_at: new Date().toISOString(),
+          });
+
+        if (moveError && moveError.code === '23505') {
+          // Conflict (already exists for target).
+          // We'll ignore it as the target record is already there.
+          console.log(
+            `mergeTracks: Tournament ${app.tournament_id} already exists for target, skipping move.`,
+          );
+        } else if (moveError) {
+          console.error('mergeTracks: Error moving appearance', moveError);
+        }
+      }
+    }
+  }
+
+  // 4. Delete source tracks (cascading deletes will handle sources/appearances)
+  const { error: deleteError } = await supabase
+    .from('tracks')
+    .delete()
+    .in('id', sourceIds);
+
+  if (deleteError) {
+    console.error('mergeTracks: Delete failed', deleteError);
+    throw deleteError;
+  }
+
+  console.log('mergeTracks: Multi-track merge complete.');
 }
