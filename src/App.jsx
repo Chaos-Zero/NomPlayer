@@ -5,6 +5,8 @@ import {
   useEffect,
   useMemo,
   useRef,
+  lazy,
+  Suspense,
 } from 'react';
 import TopBar from './components/TopBar.jsx';
 import VideoPlayer from './components/VideoPlayer.jsx';
@@ -17,7 +19,7 @@ import MetadataEntryDialog from './components/MetadataEntryDialog.jsx';
 import SiteNavigation from './components/SiteNavigation.jsx';
 import ScrollingText from './components/ScrollingText.jsx';
 import UserSettingsDialog from './components/UserSettingsDialog.jsx';
-import TrackDatabase from './components/TrackDatabase.jsx';
+const TrackDatabase = lazy(() => import('./components/TrackDatabase.jsx'));
 import useMediaQuery from './hooks/useMediaQuery.js';
 import {
   clearLocalGuestPlayerState,
@@ -3694,14 +3696,16 @@ export default function App() {
           )}
 
           {isDatabasePage && (
-            <TrackDatabase
-              supabase={supabase}
-              authUser={authUser}
-              onAddToPlaylist={handleQueueFromSupportList}
-              onPlayNow={handlePlayNowFromSupportList}
-              onShowToast={handleShowDashboardToast}
-              hasPlayer={Boolean(currentVideo)}
-            />
+            <Suspense fallback={null}>
+              <TrackDatabase
+                supabase={supabase}
+                authUser={authUser}
+                onAddToPlaylist={handleQueueFromSupportList}
+                onPlayNow={handlePlayNowFromSupportList}
+                onShowToast={handleShowDashboardToast}
+                hasPlayer={Boolean(currentVideo)}
+              />
+            </Suspense>
           )}
 
           {persistentPlayer}

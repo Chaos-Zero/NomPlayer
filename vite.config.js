@@ -97,6 +97,10 @@ export default defineConfig({
             return 'youtube';
           }
 
+          if (id.includes('@dotlottie/') || id.includes('lottie-react')) {
+            return 'lottie';
+          }
+
           if (id.includes('/react/') || id.includes('/react-dom/')) {
             return 'react-vendor';
           }
