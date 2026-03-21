@@ -415,6 +415,7 @@ export default function App() {
     useState(false);
   const [isPreviewModeEnabled, setIsPreviewModeEnabled] = useState(false);
   const isPlayingRef = useRef(false);
+  const activePageRef = useRef('home');
   const hasReachedPlaylistEndRef = useRef(false);
 
   // Playback
@@ -550,6 +551,10 @@ export default function App() {
   useEffect(() => {
     isPlayingRef.current = isPlaying;
   }, [isPlaying]);
+
+  useEffect(() => {
+    activePageRef.current = activePage;
+  }, [activePage]);
 
   useEffect(() => {
     catalogTrackByVideoIdRef.current = catalogTrackByVideoId;
@@ -3411,7 +3416,7 @@ export default function App() {
     (nextPage) => {
       const shouldAnimateDetachedFooter =
         nextPage !== 'player' &&
-        nextPage !== 'database' &&
+        activePageRef.current === 'player' &&
         Boolean(currentVideoIdRef.current) &&
         isPlayingRef.current;
       const shouldAnimatePlayerReveal =
