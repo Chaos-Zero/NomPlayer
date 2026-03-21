@@ -1,4 +1,3 @@
-import { createPortal } from 'react-dom';
 import {
   useCallback,
   useEffect,
@@ -133,6 +132,7 @@ export default function TopBar({
   const [mobileKeyboardOffset, setMobileKeyboardOffset] = useState(0);
   const [mobileDetachedPlayerVars, setMobileDetachedPlayerVars] = useState({});
   const [error, setError] = useState('');
+  const [isCatalogSearchOpen, setIsCatalogSearchOpen] = useState(false);
   const topbarRef = useRef(null);
   const mobileShellRef = useRef(null);
   const formRef = useRef(null);
@@ -636,46 +636,49 @@ export default function TopBar({
     );
   }
 
-  const mobileCornerActions =
-    isMobileLayout && !isInputOpen && typeof document !== 'undefined'
-      ? createPortal(
-          <div className="mobile-corner-actions">
-            <button
-              className={`mobile-corner-toggle support${showSupportList ? ' active' : ''}`}
-              onClick={() => setShowSupportList((s) => !s)}
-              title={
-                showSupportList ? 'Hide Support List' : 'Show Support List'
-              }
-              aria-label="Toggle support list"
-            >
-              <SupportIcon />
-            </button>
+  const mobileHeaderActions = (
+    <div className="mobile-header-actions">
+      {supabase && (
+        <button
+          className={`btn btn-icon mobile-search-toggle${isCatalogSearchOpen ? ' active' : ''}`}
+          type="button"
+          onClick={() => setIsCatalogSearchOpen((s) => !s)}
+          aria-label="Toggle catalog search"
+          title="Search track catalog"
+        >
+          ⌕
+        </button>
+      )}
+      <button
+        className={`mobile-corner-toggle support${showSupportList ? ' active' : ''}`}
+        onClick={() => setShowSupportList((s) => !s)}
+        title={showSupportList ? 'Hide Support List' : 'Show Support List'}
+        aria-label="Toggle support list"
+      >
+        <SupportIcon />
+      </button>
 
-            <button
-              className={`mobile-corner-toggle nomination${showNominationsList ? ' active' : ''}`}
-              onClick={() => setShowNominationsList((s) => !s)}
-              title={
-                showNominationsList ? 'Hide Nominations' : 'Show Nominations'
-              }
-              aria-label="Toggle nominations list"
-            >
-              ★
-            </button>
+      <button
+        className={`mobile-corner-toggle nomination${showNominationsList ? ' active' : ''}`}
+        onClick={() => setShowNominationsList((s) => !s)}
+        title={showNominationsList ? 'Hide Nominations' : 'Show Nominations'}
+        aria-label="Toggle nominations list"
+      >
+        ★
+      </button>
 
-            <UserMenu
-              compact
-              user={authUser}
-              profile={userProfile}
-              authAvailable={isAuthAvailable}
-              onOpenAuth={onOpenAuthDialog}
-              onOpenSettings={onOpenSettings}
-              onLogout={onLogout}
-              disabled={effectiveInputOpen}
-            />
-          </div>,
-          document.body,
-        )
-      : null;
+      <UserMenu
+        compact
+        user={authUser}
+        profile={userProfile}
+        authAvailable={isAuthAvailable}
+        onOpenAuth={onOpenAuthDialog}
+        onOpenSettings={onOpenSettings}
+        onLogout={onLogout}
+        disabled={effectiveInputOpen}
+      />
+    </div>
+  );
 
   const mobileTopbarStyle = {
     '--mobile-keyboard-offset': `${mobileKeyboardOffset}px`,
@@ -688,12 +691,43 @@ export default function TopBar({
   if (isMobileLayout) {
     return (
       <>
-        {mobileCornerActions}
-        <img
-          src="/NomPlayer_icon.png"
-          className="topbar-logo mobile-only"
-          alt="NomPlayer"
-        />
+        <div
+          className={`mobile-header-bar${isCatalogSearchOpen ? ' search-open' : ''}`}
+        >
+          {isCatalogSearchOpen ? (
+            <div className="mobile-header-search-wrap">
+              <TrackCatalogSearch
+                supabase={supabase}
+                onPlayNow={(video) => {
+                  onCatalogPlayNow?.(video);
+                  setIsCatalogSearchOpen(false);
+                }}
+                onAddToPlaylist={(videos) => {
+                  onAddCatalogToPlaylist?.(videos);
+                  setIsCatalogSearchOpen(false);
+                }}
+                className="mobile-header-catalog-search"
+              />
+              <button
+                className="mobile-search-close-btn"
+                type="button"
+                onClick={() => setIsCatalogSearchOpen(false)}
+                aria-label="Close search"
+              >
+                ✕
+              </button>
+            </div>
+          ) : (
+            <div className="mobile-header-bar-content">
+              <img
+                src="/NomPlayer_icon.png"
+                className="topbar-logo mobile-header-logo"
+                alt="NomPlayer"
+              />
+              {mobileHeaderActions}
+            </div>
+          )}
+        </div>
         <div
           ref={topbarRef}
           className={`topbar mobile-layout${effectiveInputOpen ? ' input-open' : ''}${hasMobileDetachedPlayer ? ' mobile-detached-player' : ''}`}
