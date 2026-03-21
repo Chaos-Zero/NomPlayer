@@ -204,6 +204,7 @@ const TrackRow = memo(
     onSaveRow,
     onDiscardRow,
     onSetExpandedCell,
+    onOpenContextMenu,
     lastElementRef,
   }) => {
     const isDirty = !!pendingChanges;
@@ -218,8 +219,9 @@ const TrackRow = memo(
 
     return (
       <tr
-        className={isSelected ? 'selected' : ''}
+        className={`${isSelected ? 'selected' : ''} ${track.isRetired ? 'retired' : ''}`}
         onClick={() => onRowClick(track)}
+        onContextMenu={(e) => onOpenContextMenu(e, track)}
         ref={lastElementRef}
       >
         <td
@@ -438,7 +440,11 @@ export default function TrackDatabase({
         };
   });
   const [refreshKey, setRefreshKey] = useState(0);
+  const [contextMenu, setContextMenu] = useState(null);
   const resizingRef = useRef(null);
+  const tableWrapperRef = useRef(null);
+  const contextMenuRef = useRef(null);
+  const scrollPositionRef = useRef(0);
   const [selectedTrack, setSelectedTrack] = useState(null);
   const [maxVgmc, setMaxVgmc] = useState(24);
   const [expandedCell, setExpandedCell] = useState(null);
@@ -460,7 +466,6 @@ export default function TrackDatabase({
   }, [isEditMode]);
 
   const loadingIdRef = useRef(0);
-  const tableWrapperRef = useRef(null);
   const observer = useRef();
 
   // Debounce search term
@@ -481,6 +486,75 @@ export default function TrackDatabase({
     init();
   }, [supabase]);
 
+  // Context Menu Lifecycle
+  useEffect(() => {
+    if (!contextMenu) return undefined;
+
+    function handleOutsideInteraction(e) {
+      if (
+        contextMenuRef.current &&
+        !contextMenuRef.current.contains(e.target)
+      ) {
+        setContextMenu(null);
+      }
+    }
+
+    function handleKeyDown(e) {
+      if (e.key === 'Escape') setContextMenu(null);
+    }
+
+    window.addEventListener('mousedown', handleOutsideInteraction);
+    window.addEventListener('keydown', handleKeyDown);
+    // Also close on scroll of the table wrapper
+    const currentWrapper = tableWrapperRef.current;
+    if (currentWrapper) {
+      currentWrapper.addEventListener('scroll', () => setContextMenu(null));
+    }
+
+    return () => {
+      window.removeEventListener('mousedown', handleOutsideInteraction);
+      window.removeEventListener('keydown', handleKeyDown);
+      if (currentWrapper) {
+        currentWrapper.removeEventListener('scroll', () =>
+          setContextMenu(null),
+        );
+      }
+    };
+  }, [contextMenu]);
+
+  // Scroll Restoration
+  useLayoutEffect(() => {
+    if (!loading && scrollPositionRef.current > 0 && tableWrapperRef.current) {
+      tableWrapperRef.current.scrollTop = scrollPositionRef.current;
+      scrollPositionRef.current = 0;
+    }
+  }, [loading, tracks]);
+
+  function handleOpenContextMenu(e, track) {
+    e.preventDefault();
+    e.stopPropagation();
+
+    const x = e.clientX;
+    const y = e.clientY;
+
+    setContextMenu({ x, y, track });
+  }
+
+  function handleCheckDuplicates(track) {
+    if (tableWrapperRef.current) {
+      scrollPositionRef.current = tableWrapperRef.current.scrollTop;
+    }
+    setSelectedTrack(track);
+    setShowDuplicateModal(true);
+    setContextMenu(null);
+  }
+
+  function handleContextEdit(track) {
+    setSelectedTrack(track);
+    setIsEditMode(true);
+    setContextMenu(null);
+  }
+
   // Initial load and feedback fetch
   useEffect(() => {
     const loadInitialData = async () => {
@@ -488,7 +562,9 @@ export default function TrackDatabase({
       const currentLoadingId = ++loadingIdRef.current;
 
       setLoading(true);
+      setTracks([]); // Clear existing tracks to avoid stale data
       setOffset(0);
+      setHasMore(true);
 
       if (tableWrapperRef.current) {
         tableWrapperRef.current.scrollTop = 0;
@@ -568,7 +644,7 @@ export default function TrackDatabase({
 
       setTracks((prev) => [...prev, ...data]);
       setOffset((prev) => prev + PAGE_SIZE);
-      setHasMore(tracks.length + data.length < count);
+      setHasMore(offset + data.length < count);
     } catch (err) {
       if (currentLoadingId !== loadingIdRef.current) return;
       console.error('Error loading more tracks:', err);
@@ -584,7 +660,6 @@ export default function TrackDatabase({
     loading,
     loadingMore,
     hasMore,
-    tracks.length,
     debouncedSearchTerm,
     vgmcFilter,
     viewMode,
@@ -1067,6 +1142,7 @@ export default function TrackDatabase({
                     onSaveRow={handleSaveRow}
                     onDiscardRow={handleDiscardRow}
                     onSetExpandedCell={setExpandedCell}
+                    onOpenContextMenu={handleOpenContextMenu}
                     lastElementRef={isTrigger ? lastElementRef : null}
                   />
                 );
@@ -1086,6 +1162,7 @@ export default function TrackDatabase({
           </aside>
         )}
       </div>
+
       {showDuplicateModal && selectedTrack && (
         <DuplicateReviewModal
           supabase={supabase}
@@ -1098,6 +1175,58 @@ export default function TrackDatabase({
             setSelectedTrack(null);
           }}
         />
+      )}
+
+      {contextMenu && (
+        <div
+          ref={contextMenuRef}
+          className="database-context-menu"
+          style={{ top: contextMenu.y, left: contextMenu.x }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <button
+            className="database-context-menu-item"
+            onClick={() => {
+              onPlayNow?.(contextMenu.track);
+              setContextMenu(null);
+            }}
+          >
+            <PlayIcon /> Play Now
+          </button>
+          <button
+            className="database-context-menu-item"
+            onClick={() => {
+              onAddToPlaylist?.([contextMenu.track]);
+              setContextMenu(null);
+            }}
+          >
+            <PlaylistPlusIcon /> Add to Playlist
+          </button>
+
+          {authUser && (
+            <>
+              <div
+                style={{
+                  height: '1px',
+                  background: 'rgba(255,255,255,0.08)',
+                  margin: '4px 8px',
+                }}
+              />
+              <button
+                className="database-context-menu-item"
+                onClick={() => handleContextEdit(contextMenu.track)}
+              >
+                <EditIcon /> Edit Track
+              </button>
+              <button
+                className="database-context-menu-item"
+                onClick={() => handleCheckDuplicates(contextMenu.track)}
+              >
+                <MergeIcon /> Check for Duplicates
+              </button>
+            </>
+          )}
+        </div>
       )}
     </div>
   );
