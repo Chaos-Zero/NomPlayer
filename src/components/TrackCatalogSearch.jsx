@@ -4,6 +4,14 @@ import {
   mapTrackCatalogEntryToVideo,
   searchTrackCatalog,
 } from '../lib/trackCatalog.js';
+import {
+  lastSearchError,
+  lastSearchQuery,
+  lastSearchResults,
+  setLastSearchError,
+  setLastSearchQuery,
+  setLastSearchResults,
+} from '../utils/searchPersistence.js';
 
 const SEARCH_RESULTS_LIMIT = 10;
 const CONTEXT_MENU_WIDTH = 180;
@@ -37,16 +45,47 @@ export default function TrackCatalogSearch({
   onAddToPlaylist,
   className = '',
   inputId = 'track-catalog-search',
+  value,
+  onValueChange,
+  results: externalResults,
+  onResultsChange,
+  error: externalError,
+  onErrorChange,
+  autoFocus,
 }) {
-  const [query, setQuery] = useState('');
-  const [results, setResults] = useState([]);
-  const [error, setError] = useState('');
-  const [isFocused, setIsFocused] = useState(false);
+  const [localQuery, setLocalQuery] = useState(lastSearchQuery);
+  const query = value !== undefined ? value : localQuery;
+  const setQuery = onValueChange || setLocalQuery;
+
+  const [localResults, setLocalResults] = useState(lastSearchResults);
+  const results =
+    externalResults !== undefined ? externalResults : localResults;
+  const setResults = onResultsChange || setLocalResults;
+
+  const [localError, setLocalError] = useState(lastSearchError);
+  const error = externalError !== undefined ? externalError : localError;
+  const setError = onErrorChange || setLocalError;
+
+  const [isFocused, setIsFocused] = useState(autoFocus || false);
   const [contextMenu, setContextMenu] = useState(null);
   const [settledQuery, setSettledQuery] = useState('');
   const wrapperRef = useRef(null);
+  const inputRef = useRef(null);
   const contextMenuRef = useRef(null);
   const requestIdRef = useRef(0);
+
+  useEffect(() => {
+    if (autoFocus) {
+      inputRef.current?.focus();
+    }
+  }, [autoFocus]);
+
+  useEffect(() => {
+    setLastSearchQuery(query);
+    setLastSearchResults(results);
+    setLastSearchError(error);
+  }, [query, results, error]);
+
   const deferredQuery = useDeferredValue(query.trim());
   const canSearch = Boolean(supabase) && deferredQuery.length >= 2;
   const loading = canSearch && deferredQuery !== settledQuery;
@@ -114,24 +153,14 @@ export default function TrackCatalogSearch({
     return () => {
       window.clearTimeout(timeoutId);
     };
-  }, [canSearch, deferredQuery, supabase]);
-
-  function resetSearch() {
-    setQuery('');
-    setResults([]);
-    setError('');
-    setSettledQuery('');
-    setContextMenu(null);
-  }
+  }, [canSearch, deferredQuery, setError, setResults, supabase]);
 
   async function handlePlayNow(result) {
     await onPlayNow?.(result.video);
-    resetSearch();
   }
 
   async function handleAddToPlaylist(result) {
     await onAddToPlaylist?.([result.video]);
-    resetSearch();
   }
 
   function handleOpenContextMenu(event, result) {
@@ -166,8 +195,9 @@ export default function TrackCatalogSearch({
       >
         <input
           id={inputId}
+          ref={inputRef}
           className="playlist-search-input"
-          type="search"
+          type="text"
           placeholder={
             supabase
               ? 'Search VGMC nominations…'
@@ -195,9 +225,24 @@ export default function TrackCatalogSearch({
           autoComplete="off"
           spellCheck="false"
         />
-        <div className="playlist-search-indicator" aria-hidden="true">
-          {loading ? '…' : '⌕'}
-        </div>
+        <button
+          className="playlist-search-indicator"
+          type="button"
+          onClick={() => {
+            if (query) {
+              setQuery('');
+              setResults([]);
+              setSettledQuery('');
+              setError('');
+              inputRef.current?.focus();
+            }
+          }}
+          aria-label={query ? 'Clear search' : 'Search'}
+          title={query ? 'Clear search' : undefined}
+          tabIndex={query ? 0 : -1}
+        >
+          {loading ? '…' : query ? '✕' : '⌕'}
+        </button>
       </div>
 
       {shouldShowResults && (

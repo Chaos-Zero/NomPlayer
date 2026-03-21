@@ -13,6 +13,11 @@ import {
 import useMediaQuery from '../hooks/useMediaQuery.js';
 import ScrollingText from './ScrollingText.jsx';
 import TrackCatalogSearch from './TrackCatalogSearch.jsx';
+import {
+  lastSearchQuery,
+  lastSearchResults,
+  lastSearchError,
+} from '../utils/searchPersistence.js';
 import UserMenu from './UserMenu.jsx';
 
 const API_KEY = import.meta.env.VITE_YT_API_KEY || '';
@@ -133,6 +138,15 @@ export default function TopBar({
   const [mobileDetachedPlayerVars, setMobileDetachedPlayerVars] = useState({});
   const [error, setError] = useState('');
   const [isCatalogSearchOpen, setIsCatalogSearchOpen] = useState(false);
+  const [mobileSearchQuery, setMobileSearchQuery] = useState(
+    lastSearchQuery || '',
+  );
+  const [mobileSearchResults, setMobileSearchResults] = useState(
+    lastSearchResults || [],
+  );
+  const [mobileSearchError, setMobileSearchError] = useState(
+    lastSearchError || '',
+  );
   const topbarRef = useRef(null);
   const mobileShellRef = useRef(null);
   const formRef = useRef(null);
@@ -640,13 +654,18 @@ export default function TopBar({
     <div className="mobile-header-actions">
       {supabase && (
         <button
-          className={`btn btn-icon mobile-search-toggle${isCatalogSearchOpen ? ' active' : ''}`}
+          className={`btn btn-icon mobile-search-toggle${isCatalogSearchOpen ? ' active' : ''}${mobileSearchQuery ? ' with-query' : ''}`}
           type="button"
-          onClick={() => setIsCatalogSearchOpen((s) => !s)}
+          onClick={() => setIsCatalogSearchOpen(true)}
           aria-label="Toggle catalog search"
           title="Search track catalog"
         >
-          ⌕
+          <span className="mobile-search-icon-fixed">⌕</span>
+          {mobileSearchQuery && (
+            <span className="mobile-search-query-preview">
+              {mobileSearchQuery}
+            </span>
+          )}
         </button>
       )}
       <button
@@ -694,39 +713,43 @@ export default function TopBar({
         <div
           className={`mobile-header-bar${isCatalogSearchOpen ? ' search-open' : ''}`}
         >
-          {isCatalogSearchOpen ? (
-            <div className="mobile-header-search-wrap">
-              <TrackCatalogSearch
-                supabase={supabase}
-                onPlayNow={(video) => {
-                  onCatalogPlayNow?.(video);
-                  setIsCatalogSearchOpen(false);
-                }}
-                onAddToPlaylist={(videos) => {
-                  onAddCatalogToPlaylist?.(videos);
-                  setIsCatalogSearchOpen(false);
-                }}
-                className="mobile-header-catalog-search"
-              />
-              <button
-                className="mobile-search-close-btn"
-                type="button"
-                onClick={() => setIsCatalogSearchOpen(false)}
-                aria-label="Close search"
-              >
-                ✕
-              </button>
-            </div>
-          ) : (
-            <div className="mobile-header-bar-content">
-              <img
-                src="/NomPlayer_icon.png"
-                className="topbar-logo mobile-header-logo"
-                alt="NomPlayer"
-              />
-              {mobileHeaderActions}
-            </div>
-          )}
+          <div className="mobile-header-search-wrap">
+            <TrackCatalogSearch
+              supabase={supabase}
+              onPlayNow={(video) => {
+                onCatalogPlayNow?.(video);
+                setIsCatalogSearchOpen(false);
+              }}
+              onAddToPlaylist={(videos) => {
+                onAddCatalogToPlaylist?.(videos);
+                setIsCatalogSearchOpen(false);
+              }}
+              className="mobile-header-catalog-search"
+              autoFocus={isCatalogSearchOpen}
+              value={mobileSearchQuery}
+              onValueChange={setMobileSearchQuery}
+              results={mobileSearchResults}
+              onResultsChange={setMobileSearchResults}
+              error={mobileSearchError}
+              onErrorChange={setMobileSearchError}
+            />
+            <button
+              className="mobile-search-close-btn"
+              type="button"
+              onClick={() => setIsCatalogSearchOpen(false)}
+              aria-label="Close search"
+            >
+              ✕
+            </button>
+          </div>
+          <div className="mobile-header-bar-content">
+            <img
+              src="/NomPlayer_icon.png"
+              className="topbar-logo mobile-header-logo"
+              alt="NomPlayer"
+            />
+            {mobileHeaderActions}
+          </div>
         </div>
         <div
           ref={topbarRef}

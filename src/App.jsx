@@ -3226,19 +3226,18 @@ export default function App() {
   const handlePlayCatalogTrack = useCallback(
     (video) => {
       const nextVideo = applyCatalogMetadataToVideo(video);
-      appendVideosToPlaylist([nextVideo], {
-        autoplayIfFirst: true,
-        startVideoId: nextVideo.videoId,
-        flashResolved: true,
-      });
-      transientResumeVideoIdRef.current = null;
-      setTransientVideo(null);
+
+      // If we are playing from the playlist, remember where to resume
+      if (!transientVideo && currentVideoIdRef.current) {
+        transientResumeVideoIdRef.current = currentVideoIdRef.current;
+      }
+
+      setTransientVideo(nextVideo);
+      setIsPlaying(true);
       hasReachedPlaylistEndRef.current = false;
       markVideoStarted(nextVideo.videoId);
-      setCurrentVideoId(nextVideo.videoId);
-      setIsPlaying(true);
     },
-    [appendVideosToPlaylist, applyCatalogMetadataToVideo, markVideoStarted],
+    [applyCatalogMetadataToVideo, markVideoStarted, transientVideo],
   );
 
   const handlePlayNowFromSupportList = useCallback(
