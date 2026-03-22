@@ -746,20 +746,22 @@ export default function TopBar({
             </button>
           </div>
           <div className="mobile-header-bar-content">
-            <button
-              className={`btn btn-icon mobile-header-menu-btn${isMenuOpen ? ' active' : ''}`}
-              type="button"
-              onClick={onToggleMenu}
-              aria-label="Toggle navigation menu"
-              aria-expanded={isMenuOpen}
-            >
-              <MenuIcon />
-            </button>
-            <img
-              src="/NomPlayer_icon.png"
-              className="topbar-logo mobile-header-logo"
-              alt="NomPlayer"
-            />
+            <div className="mobile-header-left">
+              <button
+                className={`btn btn-icon mobile-header-menu-btn${isMenuOpen ? ' active' : ''}`}
+                type="button"
+                onClick={onToggleMenu}
+                aria-label="Toggle navigation menu"
+                aria-expanded={isMenuOpen}
+              >
+                <MenuIcon />
+              </button>
+              <img
+                src="/NomPlayer_icon.png"
+                className="topbar-logo mobile-header-logo"
+                alt="NomPlayer"
+              />
+            </div>
             {mobileHeaderActions}
           </div>
         </div>

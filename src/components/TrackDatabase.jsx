@@ -18,6 +18,7 @@ import {
 } from '../lib/feedback.js';
 import DuplicateReviewModal from './DuplicateReviewModal.jsx';
 import { DotLottiePlayer } from '@dotlottie/react-player';
+import useMediaQuery from '../hooks/useMediaQuery.js';
 
 const PAGE_SIZE = 150;
 const VIEW_MODES = [
@@ -452,6 +453,14 @@ export default function TrackDatabase({
   const [pendingChanges, setPendingChanges] = useState({});
   const [isSaving, setIsSaving] = useState(false);
   const [showDuplicateModal, setShowDuplicateModal] = useState(false);
+  const [controlsOffset, setControlsOffset] = useState(0);
+
+  const isMobileLayout = useMediaQuery('(max-width: 960px)');
+
+  const toolbarRef = useRef(null);
+  const leftZoneRef = useRef(null);
+  const centerZoneRef = useRef(null);
+  const rightZoneRef = useRef(null);
 
   // ESC key listener to exit Edit Mode
   useEffect(() => {
@@ -521,6 +530,90 @@ export default function TrackDatabase({
       }
     };
   }, [contextMenu]);
+
+  // Centering logic for the toolbar action buttons
+  useLayoutEffect(() => {
+    if (isMobileLayout) {
+      setControlsOffset(0);
+      return undefined;
+    }
+
+    const toolbarNode = toolbarRef.current;
+    const leftNode = leftZoneRef.current;
+    const centerNode = centerZoneRef.current;
+    const rightNode = rightZoneRef.current;
+    if (!toolbarNode || !leftNode || !centerNode || !rightNode)
+      return undefined;
+
+    const collisionPadding = 18;
+    let frameId = 0;
+
+    function measure() {
+      const toolbarRect = toolbarNode.getBoundingClientRect();
+      const leftRect = leftNode.getBoundingClientRect();
+      const centerRect = centerNode.getBoundingClientRect();
+      const rightRect = rightNode.getBoundingClientRect();
+
+      // We want to center relative to the app-shell (which spans TopBar width)
+      const shellNode = toolbarNode.closest('.app-shell');
+      if (!shellNode) return;
+      const shellRect = shellNode.getBoundingClientRect();
+
+      const shellCenter = shellRect.left + shellRect.width / 2;
+      const toolbarCenter = toolbarRect.left + toolbarRect.width / 2;
+      const baseAlignOffset = shellCenter - toolbarCenter;
+
+      const occupiedLeft = leftRect.right + collisionPadding;
+      const occupiedRight = rightRect.left - collisionPadding;
+
+      const targetCenter = toolbarCenter + baseAlignOffset;
+      const minPossibleCenter = occupiedLeft + centerRect.width / 2;
+      const maxPossibleCenter = occupiedRight - centerRect.width / 2;
+
+      let nextOffset = 0;
+      if (minPossibleCenter <= maxPossibleCenter) {
+        const finalCenter = Math.min(
+          maxPossibleCenter,
+          Math.max(minPossibleCenter, targetCenter),
+        );
+        nextOffset = finalCenter - toolbarCenter;
+      } else {
+        const overlapLeft = minPossibleCenter - targetCenter;
+        const overlapRight = targetCenter - maxPossibleCenter;
+        nextOffset = overlapLeft >= overlapRight ? overlapLeft : -overlapRight;
+      }
+
+      setControlsOffset((prev) =>
+        Math.abs(prev - nextOffset) < 0.5 ? prev : nextOffset,
+      );
+    }
+
+    function scheduleMeasure() {
+      window.cancelAnimationFrame(frameId);
+      frameId = window.requestAnimationFrame(measure);
+    }
+
+    scheduleMeasure();
+
+    const resizeObserver = new ResizeObserver(scheduleMeasure);
+    resizeObserver.observe(toolbarNode);
+    resizeObserver.observe(leftNode);
+    resizeObserver.observe(centerNode);
+    resizeObserver.observe(rightNode);
+
+    const shellNode = toolbarNode.closest('.app-shell');
+    if (shellNode) {
+      resizeObserver.observe(shellNode);
+    }
+
+    window.addEventListener('resize', scheduleMeasure);
+
+    return () => {
+      window.cancelAnimationFrame(frameId);
+      resizeObserver.disconnect();
+      window.removeEventListener('resize', scheduleMeasure);
+    };
+  }, [isMobileLayout]);
 
   // Scroll Restoration
   useLayoutEffect(() => {
@@ -865,8 +958,8 @@ export default function TrackDatabase({
     <div
       className={`database-container ${showSidebar ? 'sidebar-open' : ''} ${hasPlayer ? 'has-footer-player' : ''}`}
     >
-      <header className="database-toolbar">
-        <div className="toolbar-left">
+      <header className="database-toolbar" ref={toolbarRef}>
+        <div className="toolbar-left" ref={leftZoneRef}>
           <div className="track-count">Total Tracks: {totalCount}</div>
           <div className="view-selector">
             <select
@@ -897,7 +990,11 @@ export default function TrackDatabase({
           </div>
         </div>
 
-        <div className="toolbar-center">
+        <div
+          className="toolbar-center"
+          ref={centerZoneRef}
+          style={{ '--toolbar-controls-offset': `${controlsOffset}px` }}
+        >
           {isEditMode ? (
             <button
               className="btn btn-playback review-duplicates"
@@ -931,9 +1028,15 @@ export default function TrackDatabase({
           )}
         </div>
 
-        <div className="toolbar-right">
+        <div className="toolbar-right" ref={rightZoneRef}>
           <div className="search-box">
-            <span className="search-icon">🔍</span>
+            <span
+              className="search-icon"
+              onClick={() => searchTerm && setSearchTerm('')}
+              style={{ cursor: searchTerm ? 'pointer' : 'default' }}
+            >
+              {searchTerm ? '✕' : '🔍'}
+            </span>
             <input
               type="text"
               placeholder="Search games and tracks..."
