@@ -36,7 +36,9 @@ function openPlayerView() {
     return;
   }
 
-  fireEvent.click(screen.getByRole('button', { name: 'Open navigation menu' }));
+  fireEvent.click(
+    screen.getByRole('button', { name: 'Toggle navigation menu' }),
+  );
   fireEvent.click(screen.getByRole('menuitem', { name: 'Player' }));
 }
 
@@ -44,7 +46,15 @@ vi.mock('../components/TopBar.jsx', () => ({
   default: function MockTopBar(props) {
     appTestState.topBarProps = props;
     return (
-      <div data-testid="topbar-mock">{props.mobileDetachedPlayer ?? null}</div>
+      <div data-testid="topbar-mock">
+        <button
+          onClick={props.onToggleMenu}
+          aria-label="Toggle navigation menu"
+        >
+          Menu
+        </button>
+        {props.mobileDetachedPlayer ?? null}
+      </div>
     );
   },
 }));
@@ -138,7 +148,7 @@ describe('App', () => {
     render(<App />);
 
     fireEvent.click(
-      screen.getByRole('button', { name: 'Open navigation menu' }),
+      screen.getByRole('button', { name: 'Toggle navigation menu' }),
     );
 
     expect(screen.getByRole('menuitem', { name: 'Home' })).toBeInTheDocument();
@@ -249,7 +259,7 @@ describe('App', () => {
     });
 
     fireEvent.click(
-      screen.getByRole('button', { name: 'Open navigation menu' }),
+      screen.getByRole('button', { name: 'Toggle navigation menu' }),
     );
     fireEvent.click(screen.getByRole('menuitem', { name: 'Home' }));
 

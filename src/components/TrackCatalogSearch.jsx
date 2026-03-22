@@ -198,6 +198,7 @@ export default function TrackCatalogSearch({
           ref={inputRef}
           className="playlist-search-input"
           type="text"
+          role="searchbox"
           placeholder={
             supabase
               ? 'Search VGMC nominations…'
