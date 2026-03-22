@@ -25,6 +25,7 @@ const VIEW_MODES = [
   { id: 'all', label: 'All Tracks' },
   { id: 'rated', label: 'Rated Only' },
   { id: 'unrated', label: 'Unrated Only' },
+  { id: 'retired', label: 'Retired Only' },
 ];
 
 function PlayIcon() {
@@ -959,43 +960,45 @@ export default function TrackDatabase({
     <div
       className={`database-container ${showSidebar ? 'sidebar-open' : ''} ${hasPlayer ? 'has-footer-player' : ''}`}
     >
-      <header className="database-toolbar" ref={toolbarRef}>
+      <header
+        className="database-toolbar"
+        ref={toolbarRef}
+        style={{ '--toolbar-controls-offset': `${controlsOffset}px` }}
+      >
         <div className="toolbar-left" ref={leftZoneRef}>
           <div className="track-count">Total Tracks: {totalCount}</div>
-          <div className="view-selector">
-            <select
-              value={viewMode}
-              onChange={(e) => setViewMode(e.target.value)}
-              aria-label="Filter by view"
-            >
-              {VIEW_MODES.map((mode) => (
-                <option key={mode.id} value={mode.id}>
-                  {mode.label}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="filter-box">
-            <select
-              value={vgmcFilter}
-              onChange={(e) => setVgmcFilter(e.target.value)}
-            >
-              <option value="">All VGMCs</option>
-              {Array.from({ length: maxVgmc }, (_, i) => i + 1).map((num) => (
-                <option key={num} value={num}>
-                  VGMC {num}
-                </option>
-              ))}
-              <option value={maxVgmc + 1}>VGMC {maxVgmc + 1}</option>
-            </select>
+          <div className="toolbar-filters">
+            <div className="view-selector">
+              <select
+                value={viewMode}
+                onChange={(e) => setViewMode(e.target.value)}
+                aria-label="Filter by view"
+              >
+                {VIEW_MODES.map((mode) => (
+                  <option key={mode.id} value={mode.id}>
+                    {mode.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="filter-box">
+              <select
+                value={vgmcFilter}
+                onChange={(e) => setVgmcFilter(e.target.value)}
+              >
+                <option value="">All VGMCs</option>
+                {Array.from({ length: maxVgmc }, (_, i) => i + 1).map((num) => (
+                  <option key={num} value={num}>
+                    VGMC {num}
+                  </option>
+                ))}
+                <option value={maxVgmc + 1}>VGMC {maxVgmc + 1}</option>
+              </select>
+            </div>
           </div>
         </div>
 
-        <div
-          className="toolbar-center"
-          ref={centerZoneRef}
-          style={{ '--toolbar-controls-offset': `${controlsOffset}px` }}
-        >
+        <div className="toolbar-center" ref={centerZoneRef}>
           {isEditMode ? (
             <button
               className="btn btn-playback review-duplicates"

@@ -471,11 +471,11 @@ export async function fetchPagedTracks(
       query = query.in('track_id', ratedIds);
     } else if (viewMode === 'unrated') {
       if (ratedIds.length > 0) {
-        // Use a filter to exclude rated IDs
-        // Note: Supabase .not('id', 'in', [...]) is the way
         query = query.not('track_id', 'in', `(${ratedIds.join(',')})`);
       }
     }
+  } else if (viewMode === 'retired') {
+    query = query.filter('is_retired', 'eq', true);
   }
 
   // Sorting logic

@@ -2365,7 +2365,7 @@ body {
 }
 
 .mobile-header-bar {
-  position: fixed;
+  position: sticky;
   top: 0;
   left: 0;
   right: 0;
@@ -3197,11 +3197,25 @@ body {
   .app-shell,
   .app-shell.playlist-collapsed {
     grid-template-columns: 1fr;
-    grid-template-rows: 1fr auto;
+    grid-template-rows: calc(64px + env(safe-area-inset-top)) 1fr auto;
+    height: 100dvh;
+    display: grid !important;
+  }
+
+  .mobile-header-bar {
+    grid-row: 1;
+    grid-column: 1;
+  }
+
+  .main-content {
+    grid-row: 2 !important;
+    grid-column: 1;
+    min-height: 0;
+    overflow: hidden;
   }
 
   .topbar {
-    grid-row: 2;
+    grid-row: 3 !important;
     grid-column: 1;
     min-height: 112px;
     padding: 10px 12px calc(10px + env(safe-area-inset-bottom));
@@ -6230,7 +6244,7 @@ button.playlist-search-indicator:hover {
    ========================================================================== */
 
 .database-container {
-  height: calc(100vh - var(--topbar-h));
+  height: 100%;
   display: flex;
   flex-direction: column;
   background: var(--bg-deep);
@@ -6264,6 +6278,24 @@ button.playlist-search-indicator:hover {
   gap: 1.25rem;
 }
 
+.toolbar-left,
+.toolbar-right {
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: calc(50% - 130px);
+}
+
+.toolbar-filters {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.toolbar-left {
+  justify-content: flex-start;
+  flex-wrap: nowrap;
+}
+
 .toolbar-center {
   position: absolute;
   left: 50%;
@@ -6280,6 +6312,11 @@ button.playlist-search-indicator:hover {
   justify-content: flex-end;
 }
 
+.view-selector,
+.filter-box {
+  min-width: 0;
+}
+
 .view-selector select,
 .filter-box select {
   background: var(--bg-deep);
@@ -6290,6 +6327,8 @@ button.playlist-search-indicator:hover {
   font-weight: 600;
   cursor: pointer;
   outline: none;
+  max-width: 100%;
+  text-overflow: ellipsis;
 }
 
 .view-selector select:hover,
@@ -6302,27 +6341,44 @@ button.playlist-search-indicator:hover {
   color: var(--text-muted);
   font-weight: 500;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
 }
 
 .search-box {
   display: flex;
   align-items: center;
-  background: var(--bg-deep);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 0.25rem 0.6rem;
-  gap: 0.5rem;
+  background:
+    linear-gradient(180deg, rgba(8, 17, 36, 0.94), rgba(10, 15, 27, 0.98)),
+    rgba(18, 18, 26, 0.96);
+  border: 1px solid var(--accent-dim);
+  border-radius: 16px;
+  padding: 8px 14px;
+  gap: 12px;
   flex: 1;
   max-width: 400px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.22);
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s;
 }
 
 .search-box:focus-within {
-  border-color: var(--accent);
+  border-color: var(--accent-light);
+  box-shadow:
+    0 0 0 1px var(--accent-dim),
+    0 8px 20px rgba(124, 58, 237, 0.2);
 }
 
 .search-icon {
   user-select: none;
   transition: color 0.2s;
+  color: var(--text-secondary);
+  font-size: 1.1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .search-box:hover .search-icon,
@@ -6336,7 +6392,7 @@ button.playlist-search-indicator:hover {
   color: var(--text-primary);
   outline: none;
   width: 100%;
-  font-size: 0.875rem;
+  font-size: 1rem;
 }
 
 .sidebar-toggle {
@@ -6922,23 +6978,69 @@ body.is-resizing .resize-handle {
 }
 
 /* Mobile Adjustments */
-@media (max-width: 768px) {
+@media (max-width: 960px) {
   .database-toolbar {
     padding: 0.75rem 1rem;
-    flex-wrap: wrap;
-    position: relative;
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    grid-template-rows: auto auto;
+    gap: 0.75rem 0.5rem;
     height: auto;
+    justify-content: stretch;
   }
 
-  .toolbar-inline {
-    flex-wrap: wrap;
-    gap: 0.75rem;
+  .toolbar-left,
+  .toolbar-right {
+    display: contents;
+  }
+
+  .toolbar-center {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 0.5rem;
+    position: static;
+    transform: none;
+    grid-column: 2;
+    grid-row: 2;
+    width: 100%;
+  }
+
+  /* Row 1 */
+  .track-count {
+    grid-column: 1;
+    grid-row: 1;
+    align-self: center;
   }
 
   .search-box {
-    max-width: none;
-    order: 3;
+    grid-column: 2;
+    grid-row: 1;
     width: 100%;
+    margin: 0;
+    max-width: 400px;
+    justify-self: end;
+  }
+
+  .toolbar-right .btn-playback.edit-mode {
+    grid-column: 3;
+    grid-row: 1;
+    align-self: center;
+  }
+
+  /* Row 2 */
+  .toolbar-filters {
+    grid-column: 1;
+    grid-row: 2;
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+  }
+
+  .sidebar-toggle {
+    grid-column: 3;
+    grid-row: 2;
+    align-self: center;
   }
 
   .community-sidebar {
