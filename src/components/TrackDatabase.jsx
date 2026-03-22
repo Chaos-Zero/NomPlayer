@@ -701,6 +701,7 @@ export default function TrackDatabase({
     };
 
     loadInitialData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     supabase,
     authUser,
