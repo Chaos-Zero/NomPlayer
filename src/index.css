@@ -2837,6 +2837,16 @@ body {
     box-shadow: 0 0 14px rgba(124, 58, 237, 0.18);
   }
 
+  .mobile-header-menu-btn {
+    margin-right: -4px;
+    color: var(--text-secondary);
+  }
+
+  .mobile-header-menu-btn svg {
+    width: 24px;
+    height: 24px;
+  }
+
   .mobile-header-bar-action .collection-icon {
     width: 21px;
     height: 21px;

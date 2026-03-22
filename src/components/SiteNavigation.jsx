@@ -16,12 +16,18 @@ function PlayerIcon() {
   );
 }
 
-function MenuIcon() {
+export function MenuIcon() {
   return (
-    <svg viewBox="0 0 20 20" aria-hidden="true">
-      <path d="M4 5.75h12" />
+    <svg
+      viewBox="0 0 20 20"
+      aria-hidden="true"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+    >
+      <path d="M4 6h12" />
       <path d="M4 10h12" />
-      <path d="M4 14.25h12" />
+      <path d="M4 14h12" />
     </svg>
   );
 }
@@ -62,7 +68,6 @@ export default function SiteNavigation({
   onNavigate,
   isMobile = false,
   isMenuOpen = false,
-  onToggleMenu,
   onCloseMenu,
 }) {
   const menuRef = useRef(null);
@@ -95,17 +100,6 @@ export default function SiteNavigation({
   if (isMobile) {
     return (
       <>
-        <button
-          className={`mobile-site-nav-toggle${isMenuOpen ? ' active' : ''}`}
-          type="button"
-          onClick={onToggleMenu}
-          aria-label="Open navigation menu"
-          aria-expanded={isMenuOpen}
-          aria-controls="mobile-site-nav-menu"
-        >
-          <MenuIcon />
-        </button>
-
         <div
           ref={menuRef}
           id="mobile-site-nav-menu"

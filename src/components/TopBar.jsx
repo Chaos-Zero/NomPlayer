@@ -13,6 +13,7 @@ import {
 import useMediaQuery from '../hooks/useMediaQuery.js';
 import ScrollingText from './ScrollingText.jsx';
 import TrackCatalogSearch from './TrackCatalogSearch.jsx';
+import { MenuIcon } from './SiteNavigation.jsx';
 import {
   lastSearchQuery,
   lastSearchResults,
@@ -127,6 +128,8 @@ export default function TopBar({
   isMobileDetachedPlayerEntering = false,
   isMobileDetachedPlayerExiting = false,
   onNavigateToPlayer,
+  isMenuOpen = false,
+  onToggleMenu,
 }) {
   const isMobileLayout = useMediaQuery('(max-width: 960px)');
   const [urlValue, setUrlValue] = useState('');
@@ -743,6 +746,15 @@ export default function TopBar({
             </button>
           </div>
           <div className="mobile-header-bar-content">
+            <button
+              className={`btn btn-icon mobile-header-menu-btn${isMenuOpen ? ' active' : ''}`}
+              type="button"
+              onClick={onToggleMenu}
+              aria-label="Toggle navigation menu"
+              aria-expanded={isMenuOpen}
+            >
+              <MenuIcon />
+            </button>
             <img
               src="/NomPlayer_icon.png"
               className="topbar-logo mobile-header-logo"

@@ -3678,6 +3678,10 @@ export default function App() {
           onOpenAuthDialog={handleOpenAuthDialog}
           onOpenSettings={handleOpenSettings}
           onLogout={handleLogout}
+          isMenuOpen={isMobileNavOpen}
+          onToggleMenu={() =>
+            setIsMobileNavOpen((previousValue) => !previousValue)
+          }
         />
 
         <main
