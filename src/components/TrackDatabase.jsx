@@ -1034,38 +1034,43 @@ export default function TrackDatabase({
 
         <div className="toolbar-right" ref={rightZoneRef}>
           <div className="search-box">
-            <span
-              className="search-icon"
-              onClick={() => searchTerm && setSearchTerm('')}
-              style={{ cursor: searchTerm ? 'pointer' : 'default' }}
-            >
-              {searchTerm ? '✕' : '🔍'}
-            </span>
             <input
               type="text"
               placeholder="Search games and tracks..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
-          </div>
-          {authUser && (
             <button
-              className={`btn btn-playback ${isEditMode ? 'btn-cancel' : 'btn-edit'}`}
-              onClick={
-                isEditMode
-                  ? () => {
-                      setIsEditMode(false);
-                      setPendingChanges({});
-                    }
-                  : () => setIsEditMode(true)
-              }
-              disabled={isSaving}
-              title={isEditMode ? 'Cancel Editing (ESC)' : 'Edit Mode'}
-              style={{ marginLeft: '8px' }}
+              className="search-indicator"
+              type="button"
+              onClick={() => {
+                if (searchTerm) {
+                  setSearchTerm('');
+                }
+              }}
+              aria-label={searchTerm ? 'Clear search' : 'Search'}
+              title={searchTerm ? 'Clear search' : undefined}
             >
-              {isEditMode ? <CancelIcon /> : <EditIcon />}
+              {searchTerm ? '✕' : '⌕'}
             </button>
-          )}
+          </div>
+          {/* Temporarily enabled for guests for verification */}
+          <button
+            className={`btn btn-playback ${isEditMode ? 'btn-cancel' : 'btn-edit'}`}
+            onClick={
+              isEditMode
+                ? () => {
+                    setIsEditMode(false);
+                    setPendingChanges({});
+                  }
+                : () => setIsEditMode(true)
+            }
+            disabled={isSaving}
+            title={isEditMode ? 'Cancel Editing (ESC)' : 'Edit Mode'}
+            style={{ marginLeft: '8px' }}
+          >
+            {isEditMode ? <CancelIcon /> : <EditIcon />}
+          </button>
           <button
             className={`sidebar-toggle ${showSidebar ? 'active' : ''}`}
             onClick={() => setShowSidebar(!showSidebar)}

@@ -59,6 +59,7 @@ const DISCORD_OAUTH_SEEN_STORAGE_KEY = 'discord_oauth_seen';
 const DISCORD_OAUTH_SILENT_PENDING_KEY = 'discord_oauth_silent_pending';
 const AUTH_SYNC_IDLE_MS = 1800;
 const AUTH_SYNC_STORAGE_KEY_PREFIX = 'yt_auth_sync';
+const THEME_STORAGE_KEY = 'nom-theme';
 
 function loadStoredList(storageKey, fallbackKey = null) {
   try {
@@ -383,6 +384,9 @@ export default function App() {
   }
   const initialPlayerState = initialPlayerStateRef.current;
   const [activePage, setActivePage] = useState('home');
+  const [theme, setTheme] = useState(
+    () => localStorage.getItem(THEME_STORAGE_KEY) || 'dark',
+  );
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
   const [
     suppressPlaylistRestoreTransition,
@@ -448,6 +452,19 @@ export default function App() {
   const supportToastTimeoutRef = useRef(null);
   const appToastTimeoutRef = useRef(null);
   const restoreTransitionFrameRef = useRef(0);
+
+  useEffect(() => {
+    if (theme === 'light') {
+      document.documentElement.classList.add('theme-light');
+    } else {
+      document.documentElement.classList.remove('theme-light');
+    }
+    localStorage.setItem(THEME_STORAGE_KEY, theme);
+  }, [theme]);
+
+  const handleToggleTheme = useCallback(() => {
+    setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'));
+  }, []);
   const detachedFooterTimeoutRef = useRef(0);
   const detachedFooterFrameRef = useRef(0);
   const playerRevealTimeoutRef = useRef(0);
@@ -3611,6 +3628,8 @@ export default function App() {
         className={`app-shell${shellIsCollapsed ? ' playlist-collapsed' : ''}${isPlayerPage ? '' : ' home-view'}${suppressPlaylistRestoreTransition ? ' playlist-transitionless' : ''}`}
       >
         <TopBar
+          theme={theme}
+          onToggleTheme={handleToggleTheme}
           isPlaying={isPlaying}
           setIsPlaying={handleSetIsPlaying}
           onPrev={handlePrev}

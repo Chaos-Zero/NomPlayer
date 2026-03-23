@@ -429,6 +429,7 @@ export default function VideoPlayer({
                         <>
                           {video.gameTitle && (
                             <div
+                              className="now-playing-subtitle"
                               style={
                                 !video.trackTitle
                                   ? {
@@ -436,12 +437,10 @@ export default function VideoPlayer({
                                       alignItems: 'center',
                                       gap: '8px',
                                       fontSize: '11px',
-                                      opacity: 0.8,
                                       marginBottom: '4px',
                                     }
                                   : {
                                       fontSize: '11px',
-                                      opacity: 0.8,
                                       marginBottom: '4px',
                                     }
                               }

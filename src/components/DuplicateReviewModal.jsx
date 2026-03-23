@@ -634,7 +634,7 @@ export default function DuplicateReviewModal({
           left: 0;
           right: 0;
           bottom: 0;
-          background: rgba(0, 0, 0, 0.85);
+          background: var(--bg-overlay, rgba(0, 0, 0, 0.85));
           display: flex;
           justify-content: center;
           align-items: center;
@@ -655,7 +655,7 @@ export default function DuplicateReviewModal({
           background: var(--bg-surface);
           border: 1px solid var(--border);
           border-radius: 16px;
-          box-shadow: 0 32px 64px rgba(0, 0, 0, 0.5);
+          box-shadow: var(--shadow-lg);
           color: var(--text-base);
         }
         .modal-header {
@@ -664,7 +664,7 @@ export default function DuplicateReviewModal({
           display: flex;
           justify-content: space-between;
           align-items: center;
-          background: rgba(255, 255, 255, 0.02);
+          background: var(--bg-surface-header, rgba(255, 255, 255, 0.02));
         }
         .modal-title-group {
           display: flex;
@@ -674,9 +674,7 @@ export default function DuplicateReviewModal({
           font-size: 1.25rem;
           margin: 0;
           font-weight: 600;
-          background: linear-gradient(135deg, #fff 0%, #aaa 100%);
-          -webkit-background-clip: text;
-          -webkit-text-fill-color: transparent;
+          color: var(--text-primary);
         }
         .btn-close {
           background: none;
@@ -689,7 +687,7 @@ export default function DuplicateReviewModal({
           transition: color 0.2s;
         }
         .btn-close:hover {
-          color: white;
+          color: var(--text-primary);
         }
         .modal-body {
           padding: 0;
@@ -727,7 +725,7 @@ export default function DuplicateReviewModal({
           font-size: 1.75rem;
           margin-bottom: 12px;
           font-weight: 700;
-          color: white;
+          color: var(--text-primary);
         }
         .confirmation-view p {
           color: var(--text-muted);
@@ -735,7 +733,7 @@ export default function DuplicateReviewModal({
           font-size: 1.1rem;
         }
         .confirm-summary-box {
-          background: rgba(255, 255, 255, 0.03);
+          background: var(--bg-surface-dim, rgba(255, 255, 255, 0.03));
           border: 1px solid var(--border);
           border-radius: 16px;
           padding: 32px;
@@ -758,7 +756,7 @@ export default function DuplicateReviewModal({
         }
         .summary-value {
           font-size: 1rem;
-          color: var(--text-base);
+          color: var(--text-primary);
           word-break: break-all;
         }
         .summary-value.highlight {
@@ -773,7 +771,7 @@ export default function DuplicateReviewModal({
         }
         .list-item {
           font-size: 0.95rem;
-          color: #ff9999;
+          color: var(--text-danger, #ff6b6b);
         }
         .summary-divider {
           height: 1px;
@@ -797,10 +795,10 @@ export default function DuplicateReviewModal({
           background: var(--bg-surface);
         }
         .grid-row:hover {
-          background: rgba(255, 255, 255, 0.01);
+          background: var(--bg-surface-hover, rgba(255, 255, 255, 0.01));
         }
         .header-row {
-          background: rgba(255, 255, 255, 0.03);
+          background: var(--bg-surface-dim, rgba(255, 255, 255, 0.03));
           position: sticky;
           top: 0;
           z-index: 10;
@@ -825,7 +823,7 @@ export default function DuplicateReviewModal({
           text-transform: uppercase;
           letter-spacing: 0.05em;
           font-weight: 700;
-          background: #16161c; /* Solid color to prevent transparency while scrolling */
+          background: var(--bg-sidebar, #16161c);
         }
         .track-column {
           width: 350px;
@@ -833,11 +831,11 @@ export default function DuplicateReviewModal({
           border-right: 1px solid var(--border);
         }
         .current-column {
-          background: rgba(var(--accent-color-rgb), 0.03);
-          box-shadow: inset 0 0 40px rgba(var(--accent-color-rgb), 0.02);
+          background: rgba(var(--accent-rgb), 0.03);
+          box-shadow: inset 0 0 40px rgba(var(--accent-rgb), 0.02);
         }
         .custom-column {
-          background: rgba(255, 255, 255, 0.015);
+          background: var(--bg-surface-custom, rgba(255, 255, 255, 0.015));
         }
 
         /* Selection Controls */
@@ -848,7 +846,7 @@ export default function DuplicateReviewModal({
           gap: 8px;
         }
         .badge {
-          background: var(--accent-color);
+          background: var(--accent);
           color: white;
           padding: 2px 8px;
           border-radius: 4px;
@@ -903,13 +901,13 @@ export default function DuplicateReviewModal({
         .include-checkbox input[type='checkbox'] {
           margin-top: 4px;
           cursor: pointer;
-          accent-color: var(--accent-color);
+          accent-color: var(--accent);
         }
         .custom-input {
-          background: rgba(255, 255, 255, 0.05);
+          background: var(--bg-input, rgba(255, 255, 255, 0.05));
           border: 1px solid var(--border);
           border-radius: 6px;
-          color: white;
+          color: var(--text-primary);
           padding: 6px 10px;
           font-size: 0.9rem;
           width: 100%;
@@ -917,13 +915,13 @@ export default function DuplicateReviewModal({
         }
         .custom-input:focus {
           outline: none;
-          border-color: var(--accent-color);
-          background: rgba(255, 255, 255, 0.08);
+          border-color: var(--accent);
+          background: var(--bg-input-focus, rgba(255, 255, 255, 0.08));
         }
         .btn-play-mini {
-          background: rgba(var(--accent-color-rgb), 0.1);
-          color: var(--accent-color);
-          border: 1px solid rgba(var(--accent-color-rgb), 0.2);
+          background: rgba(var(--accent-rgb), 0.1);
+          color: var(--accent);
+          border: 1px solid rgba(var(--accent-rgb), 0.2);
           padding: 6px;
           border-radius: 50%;
           display: flex;
@@ -934,7 +932,7 @@ export default function DuplicateReviewModal({
           flex-shrink: 0;
         }
         .btn-play-mini:hover:not(:disabled) {
-          background: var(--accent-color);
+          background: var(--accent);
           color: white;
           transform: scale(1.1);
         }
@@ -946,7 +944,7 @@ export default function DuplicateReviewModal({
           background: rgba(255, 68, 68, 0.12);
           padding: 1px 4px;
           border-radius: 3px;
-          color: #ff9999;
+          color: var(--text-danger, #ff6b6b);
         }
         .disabled {
           opacity: 0.4;
@@ -975,7 +973,7 @@ export default function DuplicateReviewModal({
           display: flex;
           justify-content: flex-end;
           gap: 16px;
-          background: rgba(255, 255, 255, 0.02);
+          background: var(--bg-surface-header, rgba(255, 255, 255, 0.02));
         }
         .btn {
           padding: 10px 24px;
@@ -986,25 +984,25 @@ export default function DuplicateReviewModal({
           transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
         }
         .save-btn {
-          background: var(--accent-color);
+          background: var(--accent);
           color: white;
           border: none;
-          box-shadow: 0 4px 12px rgba(var(--accent-color-rgb), 0.3);
+          box-shadow: 0 4px 12px rgba(var(--accent-rgb), 0.3);
         }
         .save-btn:hover:not(:disabled) {
           filter: brightness(1.1);
           transform: translateY(-1px);
-          box-shadow: 0 6px 16px rgba(var(--accent-color-rgb), 0.4);
+          box-shadow: 0 6px 16px rgba(var(--accent-rgb), 0.4);
         }
         .cancel-btn {
-          background: rgba(255, 255, 255, 0.05);
+          background: var(--bg-input, rgba(255, 255, 255, 0.05));
           color: var(--text-base);
-          border: 1px solid var(--border-focus); /* More visible border */
-          box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+          border: 1px solid var(--border);
+          box-shadow: var(--shadow-sm);
         }
         .cancel-btn:hover:not(:disabled) {
-          background: rgba(255, 255, 255, 0.1);
-          border-color: white;
+          background: var(--bg-input-focus, rgba(255, 255, 255, 0.1));
+          border-color: var(--text-primary);
         }
         .btn:disabled {
           opacity: 0.5;
@@ -1026,8 +1024,8 @@ export default function DuplicateReviewModal({
         .spinner {
           width: 32px;
           height: 32px;
-          border: 3px solid rgba(var(--accent-color-rgb), 0.1);
-          border-top: 3px solid var(--accent-color);
+          border: 3px solid rgba(var(--accent-rgb), 0.1);
+          border-top: 3px solid var(--accent);
           border-radius: 50%;
           animation: spin 0.8s linear infinite;
         }
@@ -1041,7 +1039,7 @@ export default function DuplicateReviewModal({
           font-size: 2.5rem;
         }
         .error-state p {
-          color: #ff6b6b;
+          color: var(--text-danger, #ff6b6b);
         }
         .merge-summary {
           padding: 28px;
@@ -1054,8 +1052,8 @@ export default function DuplicateReviewModal({
           letter-spacing: 0.05em;
         }
         .summary-banner {
-          background: rgba(var(--accent-color-rgb), 0.08);
-          border-left: 4px solid var(--accent-color);
+          background: rgba(var(--accent-rgb), 0.08);
+          border-left: 4px solid var(--accent);
           padding: 16px 20px;
           border-radius: 8px;
           font-size: 0.9rem;
