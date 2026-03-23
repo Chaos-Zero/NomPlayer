@@ -656,7 +656,7 @@ export default function TrackDatabase({
       const currentLoadingId = ++loadingIdRef.current;
 
       setLoading(true);
-      setTracks([]); // Clear existing tracks to avoid stale data
+      // Removed setTracks([]) to keep existing tracks visible during filter/search update
       setOffset(0);
       setHasMore(true);
 
@@ -940,22 +940,6 @@ export default function TrackDatabase({
     });
   };
 
-  if (loading && tracks.length === 0) {
-    return (
-      <div className="database-loading-container">
-        <div className="lottie-player-container">
-          <DotLottiePlayer
-            src="/loading_icon.lottie"
-            autoplay
-            loop
-            style={{ width: '200px', height: '200px' }}
-          />
-        </div>
-        <div className="database-loading-text">Loading track database...</div>
-      </div>
-    );
-  }
-
   return (
     <div
       className={`database-container ${showSidebar ? 'sidebar-open' : ''} ${hasPlayer ? 'has-footer-player' : ''}`}
@@ -1083,6 +1067,25 @@ export default function TrackDatabase({
 
       <div className="database-main-content">
         <main className="table-wrapper" ref={tableWrapperRef}>
+          {loading && (
+            <div
+              className={`database-loading-overlay ${tracks.length === 0 ? 'initial' : ''}`}
+            >
+              <div className="lottie-player-container">
+                <DotLottiePlayer
+                  src="/loading_icon.lottie"
+                  autoplay
+                  loop
+                  style={{ width: '120px', height: '120px' }}
+                />
+              </div>
+              <div className="database-loading-text">
+                {tracks.length === 0
+                  ? 'Loading track database...'
+                  : 'Updating results...'}
+              </div>
+            </div>
+          )}
           <table
             className={`database-table ${loading ? 'is-loading' : ''}`}
             style={{

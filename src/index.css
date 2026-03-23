@@ -7218,7 +7218,6 @@ body.is-resizing .resize-handle {
     from {
       transform: translateY(100%);
     }
-
     to {
       transform: translateY(0);
     }
@@ -7237,5 +7236,55 @@ body.is-resizing .resize-handle {
   .playlist-drag-edge {
     background: var(--border);
     opacity: 0.3;
+  }
+}
+
+/* ─── Database View Loading UX ─── */
+.database-main-content {
+  position: relative;
+}
+
+.database-loading-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: rgba(10, 10, 15, 0.4);
+  backdrop-filter: blur(2px);
+  gap: 12px;
+  animation: fadeIn 0.3s ease;
+}
+
+.database-loading-overlay.initial {
+  background: var(--bg-base);
+  backdrop-filter: none;
+}
+
+.database-loading-text {
+  color: var(--text-primary);
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  opacity: 0.8;
+}
+
+.database-table {
+  transition: opacity 0.4s ease;
+}
+
+.database-table.is-loading {
+  opacity: 0.25;
+  pointer-events: none;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
   }
 }
