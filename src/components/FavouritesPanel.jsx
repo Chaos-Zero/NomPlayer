@@ -43,6 +43,7 @@ function SupportItem({
   selectionMode,
   isSelected,
   onToggleSelected,
+  onOpenSupportDropdown,
   itemAriaPrefix,
   removeButtonTitle,
   removeButtonAriaLabel,
@@ -151,11 +152,25 @@ function SupportItem({
           }}
         >
           {tone === 'support' && (
-            <span
-              className={`support-tier-icon level-${video.supportLevel || 1}`}
+            <button
+              className={`support-tier-icon-btn level-${video.supportLevel || 1}`}
+              onClick={(event) => {
+                event.stopPropagation();
+                const rect = event.currentTarget.getBoundingClientRect();
+                onOpenSupportDropdown(video, {
+                  top: rect.top,
+                  left: rect.left + rect.width / 2,
+                });
+              }}
+              aria-label="Change support level"
+              title="Change support level"
               style={{
                 fontSize: '14px',
                 opacity: 0.8,
+                background: 'none',
+                border: 'none',
+                padding: 0,
+                cursor: 'pointer',
                 color:
                   video.supportLevel === 2
                     ? 'var(--support-pink)'
@@ -165,7 +180,7 @@ function SupportItem({
               }}
             >
               {video.supportLevel === 3 ? '🔒' : '♥'}
-            </span>
+            </button>
           )}
           <button
             className="fav-remove-btn"
@@ -189,6 +204,7 @@ function SortableSupportItem({
   onRemove,
   onDoubleQueue,
   onOpenContextMenu,
+  onOpenSupportDropdown,
   itemAriaPrefix,
   removeButtonTitle,
   removeButtonAriaLabel,
@@ -234,6 +250,7 @@ function SortableSupportItem({
         itemAriaPrefix={itemAriaPrefix}
         removeButtonTitle={removeButtonTitle}
         removeButtonAriaLabel={removeButtonAriaLabel}
+        onOpenSupportDropdown={onOpenSupportDropdown}
         tone={tone}
       />
     </div>
@@ -267,6 +284,7 @@ export default function FavouritesPanel({
   onOpenMetadataDialog = () => {},
   onDismissMetadataBanner = () => {},
   onUpdateMetadata = () => {},
+  onOpenSupportDropdown = () => {},
   authUser = null,
 }) {
   const sensors = useSensors(
@@ -600,6 +618,7 @@ export default function FavouritesPanel({
                 isSelected={selectedIdSet.has(video.videoId)}
                 onToggleSelected={handleToggleSelected}
                 onToggleSupport={onToggleSupport}
+                onOpenSupportDropdown={onOpenSupportDropdown}
                 itemAriaPrefix={itemAriaPrefix}
                 removeButtonTitle={removeButtonTitle}
                 removeButtonAriaLabel={removeButtonAriaLabel}
@@ -624,6 +643,7 @@ export default function FavouritesPanel({
                     onDoubleQueue={handleDoubleQueue}
                     onOpenContextMenu={handleOpenContextMenu}
                     onToggleSupport={onToggleSupport}
+                    onOpenSupportDropdown={onOpenSupportDropdown}
                     itemAriaPrefix={itemAriaPrefix}
                     removeButtonTitle={removeButtonTitle}
                     removeButtonAriaLabel={removeButtonAriaLabel}

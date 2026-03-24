@@ -421,26 +421,20 @@ export default function VideoPlayer({
                       disabled={isNominated}
                       onClick={(event) => {
                         event.stopPropagation();
-                        onToggleSupport(video);
+                        if (!isSupported) {
+                          onToggleSupport(video);
+                          const rect =
+                            event.currentTarget.getBoundingClientRect();
+                          onOpenSupportDropdown(video, {
+                            top: rect.top,
+                            left: rect.left + rect.width / 2,
+                          });
+                        } else {
+                          onToggleSupport(video);
+                        }
                       }}
                     >
                       {supportGlyph}
-                    </button>
-                    <button
-                      className="item-fav-arrow-btn"
-                      style={{ height: '32px', color: 'white' }}
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        const rect =
-                          event.currentTarget.getBoundingClientRect();
-                        onOpenSupportDropdown(video, {
-                          top: rect.top,
-                          left: rect.left + rect.width / 2,
-                        });
-                      }}
-                      disabled={!isSupported || isNominated}
-                    >
-                      ▾
                     </button>
                   </div>
                 </div>

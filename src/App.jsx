@@ -2837,63 +2837,6 @@ export default function App() {
     ],
   );
 
-  const handleAddToSupportList = useCallback(
-    async (video) => {
-      if (!video) return 0;
-      if (nominationList.some((entry) => entry.videoId === video.videoId))
-        return 0;
-
-      const { allowedVideos, retiredVideos } = await partitionRetiredVideos([
-        video,
-      ]);
-      if (!allowedVideos.length) {
-        if (retiredVideos.length > 0) {
-          showRetiredSongToast();
-        }
-        return 0;
-      }
-
-      const [nextVideo] = allowedVideos;
-
-      let addedCount = 0;
-      let addedVideos = [];
-      setSupportList((previousList) => {
-        const result = appendUniqueVideos(
-          previousList,
-          [nextVideo],
-          new Set(nominationList.map((entry) => entry.videoId)),
-        );
-        addedCount = result.addedCount;
-        addedVideos = result.addedVideos;
-        return result.nextList;
-      });
-
-      if (authUser && addedVideos.length > 0) {
-        addedVideos.forEach((v) => {
-          if (v.trackId) {
-            saveTrackSupport(supabase, authUser.id, v, 1).catch((error) => {
-              console.error('Failed to sync added support item to DB:', error);
-            });
-          }
-        });
-      }
-
-      if (addedCount > 0) {
-        showSupportToast('Added to Support list');
-      }
-
-      return addedCount;
-    },
-    [
-      nominationList,
-      partitionRetiredVideos,
-      showRetiredSongToast,
-      showSupportToast,
-      authUser,
-      supabase,
-    ],
-  );
-
   const handleAddManyToSupportList = useCallback(
     async (videos) => {
       if (!videos.length) {
@@ -3648,7 +3591,22 @@ export default function App() {
             <button
               className={`btn btn-icon detached-footer-support-btn${currentSupportClassName}`}
               type="button"
-              onClick={() => handleToggleSupportFromPlaylist(currentVideo)}
+              onClick={(event) => {
+                if (!isCurrentVideoSupported) {
+                  handleToggleSupportFromPlaylist(currentVideo);
+                  const rect = event.currentTarget.getBoundingClientRect();
+                  setSupportLevelDropdown({
+                    video: currentVideo,
+                    position: {
+                      top: rect.top,
+                      left: rect.left + rect.width / 2,
+                    },
+                    direction: 'up',
+                  });
+                } else {
+                  handleToggleSupportFromPlaylist(currentVideo);
+                }
+              }}
               title={currentSupportTooltip}
               aria-label={currentSupportLabel}
               disabled={!currentVideo || isCurrentVideoNominated}
@@ -3828,9 +3786,8 @@ export default function App() {
               listenedStatusById={listenedStatusById}
               onToggleSupport={handleToggleSupportFromPlaylist}
               onOpenSupportDropdown={(video, position) =>
-                setSupportLevelDropdown({ video, position })
+                setSupportLevelDropdown({ video, position, direction: 'down' })
               }
-              onAddToSupportList={handleAddToSupportList}
               onRemoveFromPlaylist={handleRemoveFromPlaylist}
               onAddDirectItems={handleQueueFromSupportList}
               retiredVideoIds={retiredVideoIds}
@@ -3908,6 +3865,9 @@ export default function App() {
           onOpenMetadataDialog={() => setShowMetadataDialog(true)}
           onDismissMetadataBanner={() => setTracksNeedingMetadata([])}
           onUpdateMetadata={handleOpenMetadataUpdate}
+          onOpenSupportDropdown={(video, position) =>
+            setSupportLevelDropdown({ video, position, direction: 'down' })
+          }
           authUser={authUser}
         />
       )}
@@ -3993,6 +3953,7 @@ export default function App() {
         <SupportLevelDropdown
           video={supportLevelDropdown.video}
           position={supportLevelDropdown.position}
+          direction={supportLevelDropdown.direction}
           currentLevel={supportLevelDropdown.video?.supportLevel || 1}
           onClose={() => setSupportLevelDropdown(null)}
           onSelect={(level) => {

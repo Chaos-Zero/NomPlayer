@@ -5,6 +5,7 @@ export default function SupportLevelDropdown({
   onClose,
   currentLevel = 1,
   position = { top: 0, left: 0 },
+  direction = 'down',
 }) {
   const menuRef = useRef(null);
 
@@ -46,7 +47,10 @@ export default function SupportLevelDropdown({
         top: position.top,
         left: position.left,
         zIndex: 1000,
-        transform: 'translate(-50%, 8px)',
+        transform:
+          direction === 'up'
+            ? 'translate(-50%, calc(-100% - 8px))'
+            : 'translate(-50%, 8px)',
       }}
     >
       <div

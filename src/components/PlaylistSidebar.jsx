@@ -226,7 +226,14 @@ function PlaylistItem({
             className={`item-fav-btn${starStateClass}`}
             onClick={(event) => {
               event.stopPropagation();
-              onToggleSupport(video);
+              if (!isSupported) {
+                onToggleSupport(video);
+              }
+              const rect = event.currentTarget.getBoundingClientRect();
+              onOpenSupportDropdown(video, {
+                top: rect.top,
+                left: rect.left + rect.width / 2,
+              });
             }}
             aria-label={supportLabel}
             title={supportTooltip}
@@ -234,24 +241,6 @@ function PlaylistItem({
           >
             {supportGlyph}
           </button>
-          {isSupported && !isNominated && !isRetired && (
-            <button
-              className="item-fav-arrow-btn"
-              type="button"
-              onClick={(event) => {
-                event.stopPropagation();
-                const rect = event.currentTarget.getBoundingClientRect();
-                onOpenSupportDropdown(video, {
-                  top: rect.top,
-                  left: rect.left + rect.width / 2,
-                });
-              }}
-              aria-label="Change support level"
-              title="Support Level"
-            >
-              ▾
-            </button>
-          )}
         </div>
       </div>
     </div>
@@ -342,7 +331,6 @@ export default function PlaylistSidebar({
   nominationList = [],
   listenedStatusById = {},
   onToggleSupport,
-  onAddToSupportList,
   onRemoveFromPlaylist,
   onAddDirectItems = () => 0,
   retiredVideoIds = new Set(),
@@ -733,11 +721,6 @@ export default function PlaylistSidebar({
     onOpenSupportDropdown(video, position);
   }
 
-  function handleSupport(video) {
-    onAddToSupportList(video);
-    setContextMenu(null);
-  }
-
   function handleRemove(videoId) {
     onRemoveFromPlaylist(videoId);
     setContextMenu(null);
@@ -870,9 +853,15 @@ export default function PlaylistSidebar({
                     listenedStatus={listenedStatusById[video.videoId] || null}
                     onSelect={onSelect}
                     isSupported={supportIds.has(video.videoId)}
+                    supportLevel={
+                      supportList.find(
+                        (entry) => entry.videoId === video.videoId,
+                      )?.supportLevel || 1
+                    }
                     isNominated={nominationIds.has(video.videoId)}
                     isRetired={retiredVideoIds.has(video.videoId)}
                     onToggleSupport={onToggleSupport}
+                    onOpenSupportDropdown={handleOpenSupportDropdown}
                     onOpenContextMenu={handleOpenContextMenu}
                   />
                 ))}
@@ -889,9 +878,14 @@ export default function PlaylistSidebar({
                 listenedStatus={listenedStatusById[video.videoId] || null}
                 onSelect={onSelect}
                 isSupported={supportIds.has(video.videoId)}
+                supportLevel={
+                  supportList.find((entry) => entry.videoId === video.videoId)
+                    ?.supportLevel || 1
+                }
                 isNominated={nominationIds.has(video.videoId)}
                 isRetired={retiredVideoIds.has(video.videoId)}
                 onToggleSupport={onToggleSupport}
+                onOpenSupportDropdown={handleOpenSupportDropdown}
                 onOpenContextMenu={handleOpenContextMenu}
                 selectionMode={false}
                 isSelected={false}
@@ -910,18 +904,82 @@ export default function PlaylistSidebar({
           style={{ top: contextMenu.top, left: contextMenu.left }}
           onClick={(event) => event.stopPropagation()}
         >
-          <button
-            className="playlist-context-menu-item"
-            type="button"
-            role="menuitem"
-            onClick={() => handleSupport(contextMenu.video)}
-            disabled={
-              supportIds.has(contextMenu.video.videoId) ||
-              nominationIds.has(contextMenu.video.videoId)
-            }
-          >
-            Support
-          </button>
+          {!supportIds.has(contextMenu.video.videoId) &&
+            !nominationIds.has(contextMenu.video.videoId) && (
+              <button
+                className="playlist-context-menu-item"
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  onToggleSupport(contextMenu.video, 1);
+                  setContextMenu(null);
+                }}
+              >
+                Support
+              </button>
+            )}
+          {supportIds.has(contextMenu.video.videoId) && (
+            <>
+              <button
+                className="playlist-context-menu-item"
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  onToggleSupport(contextMenu.video, 1);
+                  setContextMenu(null);
+                }}
+              >
+                <span style={{ color: 'var(--gold)', marginRight: 8 }}>♥</span>{' '}
+                Set Standard Support
+              </button>
+              <button
+                className="playlist-context-menu-item"
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  onToggleSupport(contextMenu.video, 2);
+                  setContextMenu(null);
+                }}
+              >
+                <span style={{ color: 'var(--support-pink)', marginRight: 8 }}>
+                  ♥
+                </span>{' '}
+                Set High Support
+              </button>
+              <button
+                className="playlist-context-menu-item"
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  onToggleSupport(contextMenu.video, 3);
+                  setContextMenu(null);
+                }}
+              >
+                <span style={{ color: 'var(--support-gold)', marginRight: 8 }}>
+                  🔒
+                </span>{' '}
+                Set Definite Support
+              </button>
+              <div
+                style={{
+                  height: '1px',
+                  background: 'var(--border)',
+                  margin: '4px 0',
+                }}
+              />
+              <button
+                className="playlist-context-menu-item danger"
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  onToggleSupport(contextMenu.video, 0);
+                  setContextMenu(null);
+                }}
+              >
+                Remove Support
+              </button>
+            </>
+          )}
           {authUser && (
             <button
               className="playlist-context-menu-item"
