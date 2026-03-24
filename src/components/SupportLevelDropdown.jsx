@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState, useLayoutEffect } from 'react';
 
 export default function SupportLevelDropdown({
   onSelect,
@@ -8,6 +8,38 @@ export default function SupportLevelDropdown({
   direction = 'down',
 }) {
   const menuRef = useRef(null);
+  const [offset, setOffset] = useState({ x: 0, y: 0 });
+
+  useLayoutEffect(() => {
+    if (menuRef.current) {
+      const rect = menuRef.current.getBoundingClientRect();
+      const winW = window.innerWidth;
+      const winH = window.innerHeight;
+      const margin = 8;
+
+      let dx = 0;
+      let dy = 0;
+
+      if (rect.right > winW - margin) {
+        dx = winW - margin - rect.right;
+      } else if (rect.left < margin) {
+        dx = margin - rect.left;
+      }
+
+      if (rect.bottom > winH - margin) {
+        dy = winH - margin - rect.bottom;
+      } else if (rect.top < margin) {
+        dy = margin - rect.top;
+      }
+
+      if (dx !== offset.x || dy !== offset.y) {
+        requestAnimationFrame(() => {
+          setOffset({ x: dx, y: dy });
+        });
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [position, direction]);
 
   useEffect(() => {
     function handlePointerDown(event) {
@@ -49,8 +81,8 @@ export default function SupportLevelDropdown({
         zIndex: 1000,
         transform:
           direction === 'up'
-            ? 'translate(-50%, calc(-100% - 8px))'
-            : 'translate(-50%, 8px)',
+            ? `translate(calc(-50% + ${offset.x}px), calc(-100% - 8px + ${offset.y}px))`
+            : `translate(calc(-50% + ${offset.x}px), calc(8px + ${offset.y}px))`,
       }}
     >
       <div

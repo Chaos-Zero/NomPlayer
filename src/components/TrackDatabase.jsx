@@ -6,6 +6,7 @@ import {
   useLayoutEffect,
   memo,
 } from 'react';
+import { ContextMenuPortal } from './ContextMenuPortal';
 import {
   fetchPagedTracks,
   fetchMaxVgmcNumber,
@@ -445,7 +446,6 @@ export default function TrackDatabase({
   const [contextMenu, setContextMenu] = useState(null);
   const resizingRef = useRef(null);
   const tableWrapperRef = useRef(null);
-  const contextMenuRef = useRef(null);
   const scrollPositionRef = useRef(0);
   const [selectedTrack, setSelectedTrack] = useState(null);
   const [maxVgmc, setMaxVgmc] = useState(24);
@@ -497,40 +497,6 @@ export default function TrackDatabase({
   }, [supabase]);
 
   // Context Menu Lifecycle
-  useEffect(() => {
-    if (!contextMenu) return undefined;
-
-    function handleOutsideInteraction(e) {
-      if (
-        contextMenuRef.current &&
-        !contextMenuRef.current.contains(e.target)
-      ) {
-        setContextMenu(null);
-      }
-    }
-
-    function handleKeyDown(e) {
-      if (e.key === 'Escape') setContextMenu(null);
-    }
-
-    window.addEventListener('mousedown', handleOutsideInteraction);
-    window.addEventListener('keydown', handleKeyDown);
-    // Also close on scroll of the table wrapper
-    const currentWrapper = tableWrapperRef.current;
-    if (currentWrapper) {
-      currentWrapper.addEventListener('scroll', () => setContextMenu(null));
-    }
-
-    return () => {
-      window.removeEventListener('mousedown', handleOutsideInteraction);
-      window.removeEventListener('keydown', handleKeyDown);
-      if (currentWrapper) {
-        currentWrapper.removeEventListener('scroll', () =>
-          setContextMenu(null),
-        );
-      }
-    };
-  }, [contextMenu]);
 
   // Centering logic for the toolbar action buttons
   useLayoutEffect(() => {
@@ -1293,11 +1259,11 @@ export default function TrackDatabase({
       )}
 
       {contextMenu && (
-        <div
-          ref={contextMenuRef}
+        <ContextMenuPortal
+          x={contextMenu.x}
+          y={contextMenu.y}
+          onClose={() => setContextMenu(null)}
           className="database-context-menu"
-          style={{ top: contextMenu.y, left: contextMenu.x }}
-          onClick={(e) => e.stopPropagation()}
         >
           <button
             className="database-context-menu-item"
@@ -1341,7 +1307,7 @@ export default function TrackDatabase({
               </button>
             </>
           )}
-        </div>
+        </ContextMenuPortal>
       )}
     </div>
   );

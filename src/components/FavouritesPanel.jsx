@@ -15,10 +15,9 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import { ContextMenuPortal } from './ContextMenuPortal';
 import CollectionAdder from './CollectionAdder.jsx';
 
-const CONTEXT_MENU_WIDTH = 220;
-const CONTEXT_MENU_HEIGHT = 140;
 const PANEL_CLOSE_MS = 240;
 
 function getPlaylistItemDisplay(video) {
@@ -297,7 +296,6 @@ export default function FavouritesPanel({
   const [selectedIds, setSelectedIds] = useState([]);
   const [contextMenu, setContextMenu] = useState(null);
   const [toastMessage, setToastMessage] = useState('');
-  const contextMenuRef = useRef(null);
   const toastTimeoutRef = useRef(null);
 
   const selectedIdSet = useMemo(() => new Set(selectedIds), [selectedIds]);
@@ -314,35 +312,6 @@ export default function FavouritesPanel({
     },
     [],
   );
-
-  useEffect(() => {
-    if (!contextMenu) return undefined;
-
-    function closeContextMenu() {
-      setContextMenu(null);
-    }
-
-    function handlePointerDown(event) {
-      if (contextMenuRef.current?.contains(event.target)) return;
-      closeContextMenu();
-    }
-
-    function handleKeyDown(event) {
-      if (event.key === 'Escape') {
-        closeContextMenu();
-      }
-    }
-
-    window.addEventListener('pointerdown', handlePointerDown);
-    window.addEventListener('keydown', handleKeyDown);
-    window.addEventListener('scroll', closeContextMenu, true);
-
-    return () => {
-      window.removeEventListener('pointerdown', handlePointerDown);
-      window.removeEventListener('keydown', handleKeyDown);
-      window.removeEventListener('scroll', closeContextMenu, true);
-    };
-  }, [contextMenu]);
 
   useEffect(() => {
     if (isOpen) return undefined;
@@ -405,18 +374,9 @@ export default function FavouritesPanel({
   }
 
   function openContextMenu(event, videos, mode) {
-    const left = Math.min(
-      event.clientX,
-      window.innerWidth - CONTEXT_MENU_WIDTH - 8,
-    );
-    const top = Math.min(
-      event.clientY,
-      window.innerHeight - CONTEXT_MENU_HEIGHT - 8,
-    );
-
     setContextMenu({
-      left: Math.max(8, left),
-      top: Math.max(8, top),
+      left: event.clientX,
+      top: event.clientY,
       videos,
       mode,
     });
@@ -686,12 +646,11 @@ export default function FavouritesPanel({
         </div>
 
         {contextMenu && isOpen && (
-          <div
-            ref={contextMenuRef}
+          <ContextMenuPortal
+            x={contextMenu.left}
+            y={contextMenu.top}
+            onClose={() => setContextMenu(null)}
             className="support-context-menu"
-            role="menu"
-            style={{ top: contextMenu.top, left: contextMenu.left }}
-            onClick={(event) => event.stopPropagation()}
           >
             {contextMenu.mode === 'single' && (
               <button
@@ -786,7 +745,7 @@ export default function FavouritesPanel({
             >
               {contextRemoveLabel}
             </button>
-          </div>
+          </ContextMenuPortal>
         )}
       </div>
     </>

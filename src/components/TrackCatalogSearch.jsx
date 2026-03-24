@@ -1,4 +1,5 @@
 import { useDeferredValue, useEffect, useRef, useState } from 'react';
+import { ContextMenuPortal } from './ContextMenuPortal';
 import {
   getTrackCatalogTournamentSummary,
   mapTrackCatalogEntryToVideo,
@@ -14,8 +15,6 @@ import {
 } from '../utils/searchPersistence.js';
 
 const SEARCH_RESULTS_LIMIT = 10;
-const CONTEXT_MENU_WIDTH = 180;
-const CONTEXT_MENU_HEIGHT = 96;
 
 function getSearchResultLabel(result) {
   if (result.gameTitle && result.trackTitle) {
@@ -71,7 +70,6 @@ export default function TrackCatalogSearch({
   const [settledQuery, setSettledQuery] = useState('');
   const wrapperRef = useRef(null);
   const inputRef = useRef(null);
-  const contextMenuRef = useRef(null);
   const requestIdRef = useRef(0);
 
   useEffect(() => {
@@ -92,15 +90,13 @@ export default function TrackCatalogSearch({
   const visibleError = canSearch && deferredQuery === settledQuery ? error : '';
   const visibleResults =
     canSearch && deferredQuery === settledQuery ? results : [];
-  const visibleContextMenu = isFocused ? contextMenu : null;
   const shouldShowResults =
     isFocused && canSearch && (loading || deferredQuery === settledQuery);
 
   useEffect(() => {
-    if (!shouldShowResults && !visibleContextMenu) return undefined;
+    if (!shouldShowResults && !contextMenu) return undefined;
 
     function handlePointerDown(event) {
-      if (contextMenuRef.current?.contains(event.target)) return;
       if (wrapperRef.current?.contains(event.target)) return;
       setIsFocused(false);
       setContextMenu(null);
@@ -122,7 +118,7 @@ export default function TrackCatalogSearch({
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('scroll', handlePointerDown, true);
     };
-  }, [shouldShowResults, visibleContextMenu]);
+  }, [shouldShowResults, contextMenu]);
 
   useEffect(() => {
     requestIdRef.current += 1;
@@ -166,18 +162,9 @@ export default function TrackCatalogSearch({
   function handleOpenContextMenu(event, result) {
     event.preventDefault();
 
-    const left = Math.min(
-      event.clientX,
-      window.innerWidth - CONTEXT_MENU_WIDTH - 8,
-    );
-    const top = Math.min(
-      event.clientY,
-      window.innerHeight - CONTEXT_MENU_HEIGHT - 8,
-    );
-
     setContextMenu({
-      left: Math.max(8, left),
-      top: Math.max(8, top),
+      left: event.clientX,
+      top: event.clientY,
       result,
     });
   }
@@ -276,22 +263,21 @@ export default function TrackCatalogSearch({
         </div>
       )}
 
-      {visibleContextMenu && (
-        <div
-          ref={contextMenuRef}
+      {contextMenu && isFocused && (
+        <ContextMenuPortal
+          x={contextMenu.left}
+          y={contextMenu.top}
+          onClose={() => setContextMenu(null)}
           className="playlist-context-menu"
-          role="menu"
-          style={{
-            top: visibleContextMenu.top,
-            left: visibleContextMenu.left,
-          }}
-          onClick={(event) => event.stopPropagation()}
         >
           <button
             className="playlist-context-menu-item"
             type="button"
             role="menuitem"
-            onClick={() => handlePlayNow(visibleContextMenu.result)}
+            onClick={() => {
+              handlePlayNow(contextMenu.result);
+              setContextMenu(null);
+            }}
           >
             Play now
           </button>
@@ -299,11 +285,14 @@ export default function TrackCatalogSearch({
             className="playlist-context-menu-item"
             type="button"
             role="menuitem"
-            onClick={() => handleAddToPlaylist(visibleContextMenu.result)}
+            onClick={() => {
+              handleAddToPlaylist(contextMenu.result);
+              setContextMenu(null);
+            }}
           >
             Add to playlist
           </button>
-        </div>
+        </ContextMenuPortal>
       )}
     </div>
   );

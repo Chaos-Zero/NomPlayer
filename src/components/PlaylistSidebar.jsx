@@ -15,12 +15,10 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import { ContextMenuPortal } from './ContextMenuPortal';
 import CollectionAdder from './CollectionAdder.jsx';
 import ScrollingText from './ScrollingText.jsx';
 import useMediaQuery from '../hooks/useMediaQuery.js';
-
-const CONTEXT_MENU_WIDTH = 180;
-const CONTEXT_MENU_HEIGHT = 96;
 
 function FastForwardIcon() {
   return (
@@ -353,7 +351,6 @@ export default function PlaylistSidebar({
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState([]);
   const [contextMenu, setContextMenu] = useState(null);
-  const contextMenuRef = useRef(null);
   const collapseGestureRef = useRef(null);
   const supportIds = useMemo(
     () => new Set(supportList.map((entry) => entry.videoId)),
@@ -378,35 +375,6 @@ export default function PlaylistSidebar({
     [playlist, selectedIdSet],
   );
   const canReorder = !selectionMode && (!isShuffleEnabled || showOriginalOrder);
-
-  useEffect(() => {
-    if (!contextMenu) return undefined;
-
-    function closeContextMenu() {
-      setContextMenu(null);
-    }
-
-    function handlePointerDown(event) {
-      if (contextMenuRef.current?.contains(event.target)) return;
-      closeContextMenu();
-    }
-
-    function handleKeyDown(event) {
-      if (event.key === 'Escape') {
-        closeContextMenu();
-      }
-    }
-
-    window.addEventListener('pointerdown', handlePointerDown);
-    window.addEventListener('keydown', handleKeyDown);
-    window.addEventListener('scroll', closeContextMenu, true);
-
-    return () => {
-      window.removeEventListener('pointerdown', handlePointerDown);
-      window.removeEventListener('keydown', handleKeyDown);
-      window.removeEventListener('scroll', closeContextMenu, true);
-    };
-  }, [contextMenu]);
 
   useEffect(() => {
     function clearGesture() {
@@ -688,19 +656,10 @@ export default function PlaylistSidebar({
   function handleOpenContextMenu(event, video) {
     event.preventDefault();
 
-    const left = Math.min(
-      event.clientX,
-      window.innerWidth - CONTEXT_MENU_WIDTH - 8,
-    );
-    const top = Math.min(
-      event.clientY,
-      window.innerHeight - CONTEXT_MENU_HEIGHT - 8,
-    );
-
     if (selectionMode && selectedIdSet.has(video.videoId)) {
       setContextMenu({
-        left: Math.max(8, left),
-        top: Math.max(8, top),
+        left: event.clientX,
+        top: event.clientY,
         video,
         videos: selectedVideos,
         mode: 'multi',
@@ -709,8 +668,8 @@ export default function PlaylistSidebar({
     }
 
     setContextMenu({
-      left: Math.max(8, left),
-      top: Math.max(8, top),
+      left: event.clientX,
+      top: event.clientY,
       video,
       videos: [video],
       mode: 'single',
@@ -897,12 +856,11 @@ export default function PlaylistSidebar({
       )}
       {!isCollapsed && renderAddControl()}
       {contextMenu && (
-        <div
-          ref={contextMenuRef}
+        <ContextMenuPortal
+          x={contextMenu.left}
+          y={contextMenu.top}
+          onClose={() => setContextMenu(null)}
           className="playlist-context-menu"
-          role="menu"
-          style={{ top: contextMenu.top, left: contextMenu.left }}
-          onClick={(event) => event.stopPropagation()}
         >
           {!supportIds.has(contextMenu.video.videoId) &&
             !nominationIds.has(contextMenu.video.videoId) && (
@@ -998,7 +956,7 @@ export default function PlaylistSidebar({
           >
             Remove from Playlist
           </button>
-        </div>
+        </ContextMenuPortal>
       )}
     </div>
   );
