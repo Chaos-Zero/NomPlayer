@@ -645,21 +645,8 @@ export async function mergeTracks(
   sourceTracks,
   finalValues,
 ) {
-  if (
-    !supabase ||
-    !targetTrack ||
-    !Array.isArray(sourceTracks) ||
-    sourceTracks.length === 0
-  ) {
-    console.error('mergeTracks: Invalid arguments', {
-      targetTrack,
-      sourceTracks,
-    });
-    return;
-  }
-
-  const sourceIds = sourceTracks.map((s) => s.trackId);
-  console.log('mergeTracks: Starting multi-track merge on base tables', {
+  const sourceIds = (sourceTracks || []).map((s) => s.trackId);
+  console.log('mergeTracks: Starting update/merge on base tables', {
     targetId: targetTrack.trackId,
     sourceIds,
     finalValues,
@@ -704,48 +691,83 @@ export async function mergeTracks(
     }
   }
 
-  // 3. Move tournament appearances
-  // For each source track, move its appearances to the target track
-  // If the target already has that tournament, we can either skip or merge notes
-  for (const sourceId of sourceIds) {
-    const { data: appearances, error: fetchError } = await supabase
-      .from('track_tournament_appearances')
-      .select('*')
-      .eq('track_id', sourceId);
+  // 3. Handle tournaments
+  if (
+    finalValues.tournaments !== undefined &&
+    finalValues.tournaments !== null
+  ) {
+    // Custom tournament list provided (comma-separated sequence numbers)
+    const numbers = finalValues.tournaments
+      .split(',')
+      .map((s) => parseInt(s.trim(), 10))
+      .filter((n) => !isNaN(n));
 
-    if (!fetchError && appearances) {
-      for (const app of appearances) {
-        // Try to move to target
-        const { error: moveError } = await supabase
-          .from('track_tournament_appearances')
-          .insert({
-            ...app,
-            track_id: targetTrack.trackId,
-            updated_at: new Date().toISOString(),
-          });
+    // a. Fetch all tournament IDs for these numbers
+    const { data: tournaments, error: tError } = await supabase
+      .from('tournaments')
+      .select('id, sequence_number')
+      .in('sequence_number', numbers);
 
-        if (moveError && moveError.code === '23505') {
-          // Conflict (already exists for target).
-          // We'll ignore it as the target record is already there.
-          console.log(
-            `mergeTracks: Tournament ${app.tournament_id} already exists for target, skipping move.`,
-          );
-        } else if (moveError) {
-          console.error('mergeTracks: Error moving appearance', moveError);
+    if (tError) {
+      console.error('mergeTracks: Failed to fetch tournaments', tError);
+    } else {
+      // b. Clear existing appearances for target track
+      await supabase
+        .from('track_tournament_appearances')
+        .delete()
+        .eq('track_id', targetTrack.trackId);
+
+      // c. Insert new appearances
+      if (tournaments.length > 0) {
+        const inserts = tournaments.map((t) => ({
+          track_id: targetTrack.trackId,
+          tournament_id: t.id,
+          updated_at: new Date().toISOString(),
+        }));
+        await supabase.from('track_tournament_appearances').insert(inserts);
+      }
+    }
+  } else {
+    // Standard behavior: Move tournament appearances from sources to target
+    for (const sourceId of sourceIds) {
+      const { data: appearances, error: fetchError } = await supabase
+        .from('track_tournament_appearances')
+        .select('*')
+        .eq('track_id', sourceId);
+
+      if (!fetchError && appearances) {
+        for (const app of appearances) {
+          const { error: moveError } = await supabase
+            .from('track_tournament_appearances')
+            .insert({
+              ...app,
+              track_id: targetTrack.trackId,
+              updated_at: new Date().toISOString(),
+            });
+
+          if (moveError && moveError.code === '23505') {
+            console.log(
+              `mergeTracks: Tournament ${app.tournament_id} already exists for target, skipping move.`,
+            );
+          } else if (moveError) {
+            console.error('mergeTracks: Error moving appearance', moveError);
+          }
         }
       }
     }
   }
 
   // 4. Delete source tracks (cascading deletes will handle sources/appearances)
-  const { error: deleteError } = await supabase
-    .from('tracks')
-    .delete()
-    .in('id', sourceIds);
+  if (sourceIds.length > 0) {
+    const { error: deleteError } = await supabase
+      .from('tracks')
+      .delete()
+      .in('id', sourceIds);
 
-  if (deleteError) {
-    console.error('mergeTracks: Delete failed', deleteError);
-    throw deleteError;
+    if (deleteError) {
+      console.error('mergeTracks: Delete failed', deleteError);
+      throw deleteError;
+    }
   }
 
   console.log('mergeTracks: Multi-track merge complete.');

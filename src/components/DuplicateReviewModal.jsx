@@ -1,5 +1,9 @@
 import { useState, useEffect } from 'react';
-import { findPotentialDuplicates, mergeTracks } from '../lib/trackCatalog.js';
+import {
+  findPotentialDuplicates,
+  mergeTracks,
+  fetchPagedTracks,
+} from '../lib/trackCatalog.js';
 
 function PlayIcon() {
   return (
@@ -22,12 +26,17 @@ export default function DuplicateReviewModal({
   onPlayNow,
   onClose,
   onMerged,
+  maxVgmc = 50, // Default if not provided
 }) {
   const [duplicates, setDuplicates] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isConfirming, setIsConfirming] = useState(false);
   const [error, setError] = useState(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [showSearch, setShowSearch] = useState(false);
 
   // Track which candidate IDs are selected for merging
   const [includedSourceIds, setIncludedSourceIds] = useState(new Set());
@@ -37,6 +46,7 @@ export default function DuplicateReviewModal({
     gameTitle: '',
     trackTitle: '',
     sourceUrl: '',
+    tournaments: '',
   });
 
   // Which track ID's value is chosen for each field (or 'custom')
@@ -44,6 +54,7 @@ export default function DuplicateReviewModal({
     gameTitle: 'selected',
     trackTitle: 'selected',
     sourceUrl: 'selected',
+    tournaments: 'selected',
   });
 
   useEffect(() => {
@@ -81,6 +92,16 @@ export default function DuplicateReviewModal({
           setDuplicates(sorted);
           // By default, do NOT include any duplicates - user must opt-in
           setIncludedSourceIds(new Set());
+
+          // Initialize custom from selected track
+          const currentTours = (selectedTrack.tournaments || [])
+            .map((t) => t.sequenceNumber)
+            .filter((n) => n > 0)
+            .join(', ');
+          setCustomValues((prev) => ({
+            ...prev,
+            tournaments: currentTours,
+          }));
         }
       })
       .catch((err) => {
@@ -121,10 +142,55 @@ export default function DuplicateReviewModal({
   };
 
   const handleSaveInitiate = () => {
-    if (includedSourceIds.size === 0) {
-      setError('Please select at least one duplicate track to merge.');
+    const hasDuplicates = includedSourceIds.size > 0;
+    const hasCustomOverride = Object.values(selectedValues).some(
+      (v) => v === 'custom',
+    );
+
+    if (!hasDuplicates && !hasCustomOverride) {
+      setError(
+        'Please select at least one duplicate track to merge, or use the custom column to update metadata.',
+      );
       return;
     }
+
+    // Validate Custom Tournaments if selected
+    if (selectedValues.tournaments === 'custom') {
+      const input = customValues.tournaments.trim();
+      if (!input) {
+        // Allowed to be empty if everything is removed?
+      } else {
+        const parts = input.split(',').map((p) => p.trim());
+        const nums = [];
+
+        for (const p of parts) {
+          if (!/^\d+$/.test(p)) {
+            setError(`Invalid VGMC number: "${p}". Only numbers are allowed.`);
+            return;
+          }
+          const n = parseInt(p, 10);
+          if (n > maxVgmc) {
+            setError(
+              `VGMC number ${n} exceeds maximum allowed number ${maxVgmc}.`,
+            );
+            return;
+          }
+          if (nums.includes(n)) {
+            setError(`Duplicate VGMC number: ${n}.`);
+            return;
+          }
+          nums.push(n);
+        }
+
+        // Check order
+        const sorted = [...nums].sort((a, b) => a - b);
+        if (nums.some((n, i) => n !== sorted[i])) {
+          setError('VGMC numbers must be in ascending order (e.g. 1, 5, 20).');
+          return;
+        }
+      }
+    }
+
     setError(null);
     setIsConfirming(true);
   };
@@ -147,6 +213,10 @@ export default function DuplicateReviewModal({
       gameTitle: getVal('gameTitle'),
       trackTitle: getVal('trackTitle'),
       sourceUrl: getVal('sourceUrl'),
+      tournaments:
+        selectedValues.tournaments === 'custom'
+          ? customValues.tournaments
+          : null,
     };
 
     setIsSaving(true);
@@ -162,6 +232,39 @@ export default function DuplicateReviewModal({
       setIsSaving(false);
       setIsConfirming(false);
     }
+  };
+
+  const handleSearch = async () => {
+    if (!searchQuery.trim() || !supabase) return;
+    setIsSearching(true);
+    setError(null);
+    try {
+      // Use fetchPagedTracks for a robust search
+      const { data } = await fetchPagedTracks(supabase, {
+        searchTerm: searchQuery,
+        limit: 10,
+      });
+      // Filter out the current track and already listed duplicates
+      const filtered = data.filter(
+        (t) =>
+          t.trackId !== selectedTrack.trackId &&
+          !duplicates.some((d) => d.trackId === t.trackId),
+      );
+      setSearchResults(filtered);
+    } catch (err) {
+      console.error('Search error:', err);
+      setError('Failed to search database.');
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  const handleAddManualDuplicate = (track) => {
+    setDuplicates((prev) => [track, ...prev]);
+    setIncludedSourceIds((prev) => new Set(prev).add(track.trackId));
+    setSearchResults([]);
+    setSearchQuery('');
+    setShowSearch(false);
   };
 
   if (!selectedTrack) return null;
@@ -204,12 +307,71 @@ export default function DuplicateReviewModal({
           <div className="modal-title-group">
             <h2>Interactive Merge Duplicates</h2>
           </div>
-          <button className="btn-close" onClick={onClose}>
-            ✕
-          </button>
+          <div className="modal-actions-group">
+            <button
+              className={`btn-search-db ${showSearch ? 'active' : ''}`}
+              onClick={() => setShowSearch(!showSearch)}
+              title="Search database for a specific track to merge"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                width="16"
+                height="16"
+                fill="currentColor"
+              >
+                <path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z" />
+              </svg>
+              Search Database
+            </button>
+            <button className="btn-close" onClick={onClose}>
+              ✕
+            </button>
+          </div>
         </div>
 
         <div className="modal-body">
+          {showSearch && (
+            <div className="search-overlay-container">
+              <div className="search-bar">
+                <input
+                  type="text"
+                  placeholder="Search by game or track title..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                  autoFocus
+                />
+                <button
+                  className="btn btn-primary"
+                  onClick={handleSearch}
+                  disabled={isSearching}
+                >
+                  {isSearching ? 'Searching...' : 'Search'}
+                </button>
+              </div>
+
+              {searchResults.length > 0 && (
+                <div className="search-results-list">
+                  {searchResults.map((track) => (
+                    <div
+                      key={track.trackId}
+                      className="search-result-item"
+                      onClick={() => handleAddManualDuplicate(track)}
+                    >
+                      <div className="result-info">
+                        <span className="result-track">{track.trackTitle}</span>
+                        <span className="result-game">{track.gameTitle}</span>
+                      </div>
+                      <button className="btn btn-secondary btn-sm">Add</button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {searchResults.length === 0 && searchQuery && !isSearching && (
+                <div className="search-no-results">No tracks found.</div>
+              )}
+            </div>
+          )}
           {loading ? (
             <div className="loading-state">
               <div className="spinner"></div>
@@ -223,10 +385,15 @@ export default function DuplicateReviewModal({
           ) : isConfirming ? (
             <div className="confirmation-view">
               <div className="confirm-icon">🧪</div>
-              <h3>Confirm Merge Action</h3>
+              <h3>
+                {includedSourceIds.size > 0
+                  ? 'Confirm Merge Action'
+                  : 'Confirm Metadata Update'}
+              </h3>
               <p>
-                You are about to merge the following tracks. This action cannot
-                be undone.
+                {includedSourceIds.size > 0
+                  ? 'You are about to merge the following tracks. This action cannot be undone.'
+                  : 'You are about to update the metadata for this track.'}
               </p>
 
               <div className="confirm-summary-box">
@@ -236,16 +403,18 @@ export default function DuplicateReviewModal({
                     {selectedTrack.trackTitle} (ID: {selectedTrack.trackId})
                   </span>
                 </div>
-                <div className="summary-item">
-                  <span className="summary-label">Deleting Match(es):</span>
-                  <div className="summary-list">
-                    {sourceTracks.map((t) => (
-                      <div key={t.trackId} className="list-item">
-                        • {t.trackTitle} (ID: {t.trackId})
-                      </div>
-                    ))}
+                {includedSourceIds.size > 0 && (
+                  <div className="summary-item">
+                    <span className="summary-label">Deleting Match(es):</span>
+                    <div className="summary-list">
+                      {sourceTracks.map((t) => (
+                        <div key={t.trackId} className="list-item">
+                          • {t.trackTitle} (ID: {t.trackId})
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                </div>
+                )}
                 <div className="summary-divider"></div>
                 <div className="summary-item">
                   <span className="summary-label">Final Game:</span>
@@ -586,7 +755,31 @@ export default function DuplicateReviewModal({
                     ))}
 
                     <div className="grid-cell track-column custom-column">
-                      <div className="tournament-list dim">N/A</div>
+                      <label className="radio-value full-height">
+                        <input
+                          type="radio"
+                          name="tournaments"
+                          value="custom"
+                          checked={selectedValues.tournaments === 'custom'}
+                          onChange={() =>
+                            handleValueChange('tournaments', 'custom')
+                          }
+                        />
+                        <textarea
+                          className="custom-input custom-textarea"
+                          placeholder="Numbers e.g. 1, 5, 20"
+                          value={customValues.tournaments}
+                          onChange={(e) =>
+                            handleCustomValueChange(
+                              'tournaments',
+                              e.target.value,
+                            )
+                          }
+                          onClick={() =>
+                            handleValueChange('tournaments', 'custom')
+                          }
+                        />
+                      </label>
                     </div>
                   </div>
                 </div>
@@ -615,13 +808,21 @@ export default function DuplicateReviewModal({
             className="btn btn-primary save-btn"
             onClick={isConfirming ? handleFinalMerge : handleSaveInitiate}
             disabled={
-              isSaving || loading || (duplicates.length === 0 && !isConfirming)
+              isSaving ||
+              loading ||
+              (duplicates.length === 0 &&
+                !isConfirming &&
+                !Object.values(selectedValues).some((v) => v === 'custom'))
             }
           >
             {isSaving
-              ? 'Merging Tracks...'
+              ? includedSourceIds.size > 0
+                ? 'Merging Tracks...'
+                : 'Updating Track...'
               : isConfirming
-                ? 'Confirm & Merge'
+                ? includedSourceIds.size > 0
+                  ? 'Confirm & Merge'
+                  : 'Confirm & Update'
                 : 'Save Changes'}
           </button>
         </div>
@@ -676,6 +877,34 @@ export default function DuplicateReviewModal({
           font-weight: 600;
           color: var(--text-primary);
         }
+        .modal-actions-group {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+        }
+        .btn-search-db {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          background: var(--bg-surface-dim, rgba(255, 255, 255, 0.05));
+          border: 1px solid var(--border);
+          color: var(--text-primary);
+          padding: 6px 14px;
+          border-radius: 20px;
+          font-size: 0.85rem;
+          font-weight: 500;
+          cursor: pointer;
+          transition: all 0.2s;
+        }
+        .btn-search-db:hover {
+          background: var(--bg-surface-hover, rgba(255, 255, 255, 0.1));
+          border-color: var(--accent-light);
+        }
+        .btn-search-db.active {
+          background: var(--accent-light);
+          color: white;
+          border-color: var(--accent-light);
+        }
         .btn-close {
           background: none;
           border: none;
@@ -696,6 +925,81 @@ export default function DuplicateReviewModal({
           background: var(--bg-base);
           display: flex;
           flex-direction: column;
+          position: relative;
+        }
+
+        /* Search Styles */
+        .search-overlay-container {
+          padding: 16px 28px;
+          background: var(--bg-surface-header, rgba(0, 0, 0, 0.2));
+          border-bottom: 1px solid var(--border);
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+        }
+        .search-bar {
+          display: flex;
+          gap: 12px;
+        }
+        .search-bar input {
+          flex: 1;
+          background: var(--bg-input, rgba(0, 0, 0, 0.2));
+          border: 1px solid var(--border);
+          border-radius: 8px;
+          padding: 8px 14px;
+          color: var(--text-primary);
+          font-size: 0.95rem;
+        }
+        .search-bar input:focus {
+          outline: none;
+          border-color: var(--accent-light);
+          box-shadow: 0 0 0 2px rgba(var(--accent-rgb, 100, 100, 255), 0.2);
+        }
+        .search-results-list {
+          max-height: 200px;
+          overflow-y: auto;
+          background: var(--bg-surface-dim, rgba(255, 255, 255, 0.03));
+          border-radius: 8px;
+          border: 1px solid var(--border);
+        }
+        .search-result-item {
+          padding: 10px 16px;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          cursor: pointer;
+          transition: background 0.2s;
+          border-bottom: 1px solid var(--border);
+        }
+        .search-result-item:last-child {
+          border-bottom: none;
+        }
+        .search-result-item:hover {
+          background: var(--bg-surface-hover, rgba(255, 255, 255, 0.05));
+        }
+        .result-info {
+          display: flex;
+          flex-direction: column;
+          gap: 2px;
+        }
+        .result-track {
+          font-weight: 600;
+          color: var(--text-primary);
+          font-size: 0.9rem;
+        }
+        .result-game {
+          font-size: 0.75rem;
+          color: var(--text-muted);
+        }
+        .search-no-results {
+          padding: 8px;
+          text-align: center;
+          color: var(--text-muted);
+          font-size: 0.85rem;
+        }
+        .btn-sm {
+          padding: 4px 10px;
+          font-size: 0.75rem;
         }
 
         /* Confirmation View */
@@ -917,6 +1221,15 @@ export default function DuplicateReviewModal({
           outline: none;
           border-color: var(--accent);
           background: var(--bg-input-focus, rgba(255, 255, 255, 0.08));
+        }
+        .custom-textarea {
+          resize: none;
+          min-height: 44px;
+          height: 100%;
+          font-family: inherit;
+        }
+        .last-row {
+          border-bottom: none;
         }
         .btn-play-mini {
           background: rgba(var(--accent-rgb), 0.1);

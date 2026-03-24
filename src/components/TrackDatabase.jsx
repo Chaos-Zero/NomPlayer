@@ -1250,6 +1250,7 @@ export default function TrackDatabase({
           selectedTrack={selectedTrack}
           hasPlayer={hasPlayer}
           onPlayNow={onPlayNow}
+          maxVgmc={maxVgmc}
           onClose={() => setShowDuplicateModal(false)}
           onMerged={() => {
             setRefreshKey((prev) => prev + 1);
