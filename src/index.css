@@ -22,6 +22,8 @@
   --danger: #ef4444;
   --gold: #f59e0b;
   --gold-glow: rgba(245, 158, 11, 0.3);
+  --support-pink: #f472b6;
+  --support-gold: #f59e0b;
   --radius-sm: 8px;
   --radius-md: 12px;
   --radius-lg: 16px;
@@ -4665,6 +4667,47 @@ button.playlist-search-indicator:hover {
   opacity: 0.65;
 }
 
+.item-fav-container {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: var(--radius-sm);
+  transition: all var(--transition);
+}
+
+.item-fav-container:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.item-fav-arrow-btn {
+  width: 16px;
+  height: 28px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--text-muted);
+  font-size: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition);
+  opacity: 0;
+  padding: 0;
+  margin-right: 2px;
+}
+
+.item-fav-container:hover .item-fav-arrow-btn,
+.item-fav-btn.supported + .item-fav-arrow-btn,
+.item-fav-btn.nominated + .item-fav-arrow-btn {
+  opacity: 0.6;
+}
+
+.item-fav-arrow-btn:hover {
+  opacity: 1 !important;
+  color: var(--gold);
+}
+
 .playlist-item:hover .item-fav-btn:not(.supported):not(.nominated) {
   opacity: 1;
   color: var(--gold);
@@ -4713,6 +4756,16 @@ button.playlist-search-indicator:hover {
   opacity: 1;
   color: var(--gold);
 }
+.item-fav-btn.supported.level-2,
+.collection-icon.level-2,
+.player-overlay-chip.support.level-2 {
+  color: var(--support-pink);
+}
+.item-fav-btn.supported.level-3,
+.collection-icon.level-3,
+.player-overlay-chip.support.level-3 {
+  color: var(--support-gold);
+}
 
 .item-fav-btn.nominated {
   opacity: 1;
@@ -4720,9 +4773,9 @@ button.playlist-search-indicator:hover {
   text-shadow: 0 0 10px rgba(157, 95, 240, 0.16);
 }
 
-.playlist-item:hover .item-fav-btn.supported,
-.playlist-item.active .item-fav-btn.supported,
-.playlist-item.flash .item-fav-btn.supported {
+.playlist-item:hover .item-fav-btn.supported:not(.level-2):not(.level-3),
+.playlist-item.active .item-fav-btn.supported:not(.level-2):not(.level-3),
+.playlist-item.flash .item-fav-btn.supported:not(.level-2):not(.level-3) {
   color: var(--gold);
 }
 

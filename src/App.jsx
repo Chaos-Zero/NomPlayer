@@ -19,6 +19,7 @@ import MetadataEntryDialog from './components/MetadataEntryDialog.jsx';
 import SiteNavigation from './components/SiteNavigation.jsx';
 import ScrollingText from './components/ScrollingText.jsx';
 import UserSettingsDialog from './components/UserSettingsDialog.jsx';
+import SupportLevelDropdown from './components/SupportLevelDropdown.jsx';
 const TrackDatabase = lazy(() => import('./components/TrackDatabase.jsx'));
 import useMediaQuery from './hooks/useMediaQuery.js';
 import {
@@ -43,6 +44,7 @@ import {
   persistLocalGuestPlayerState,
   recordYouTubeTrackListen,
   saveUserPlayerState,
+  saveTrackSupport,
   upsertUserProfile,
   LEGACY_SUPPORT_STORAGE_KEY,
 } from './lib/playerState.js';
@@ -114,8 +116,8 @@ function appendUniqueVideos(list, videos, blockedIds = new Set()) {
     nextList: addedCount > 0 ? nextList : list,
     addedCount,
     addedVideos,
-    blockedCount: blockedVideoIds.size,
-    duplicateCount: duplicateVideoIds.size,
+    blockedVideoIds: [...blockedVideoIds],
+    duplicateVideoIds: [...duplicateVideoIds],
   };
 }
 
@@ -507,6 +509,7 @@ export default function App() {
   const [authMessage, setAuthMessage] = useState('');
   const [authError, setAuthError] = useState('');
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [supportLevelDropdown, setSupportLevelDropdown] = useState(null);
   const [isSettingsSubmitting, setIsSettingsSubmitting] = useState(false);
   const [settingsError, setSettingsError] = useState('');
   const [settingsNotice, setSettingsNotice] = useState('');
@@ -1387,9 +1390,10 @@ export default function App() {
       ),
     [catalogTrackByVideoId],
   );
-  const isCurrentVideoSupported = currentVideo
-    ? supportList.some((entry) => entry.videoId === currentVideo.videoId)
-    : false;
+  const currentVideoSupportEntry = currentVideo
+    ? supportList.find((entry) => entry.videoId === currentVideo.videoId)
+    : null;
+  const isCurrentVideoSupported = Boolean(currentVideoSupportEntry);
   const isCurrentVideoNominated = currentVideo
     ? nominationList.some((entry) => entry.videoId === currentVideo.videoId)
     : false;
@@ -2754,7 +2758,7 @@ export default function App() {
   }, []);
 
   const handleToggleSupportFromPlaylist = useCallback(
-    async (video) => {
+    async (video, level = null) => {
       if (!video) return;
       if (nominationList.some((entry) => entry.videoId === video.videoId))
         return;
@@ -2776,17 +2780,50 @@ export default function App() {
       );
 
       setSupportList((previousList) => {
-        if (exists) {
+        if (level === 0) {
           return previousList.filter(
             (entry) => entry.videoId !== nextVideo.videoId,
           );
         }
 
-        return [...previousList, nextVideo];
+        if (exists) {
+          if (level !== null) {
+            return previousList.map((entry) =>
+              entry.videoId === nextVideo.videoId
+                ? { ...entry, supportLevel: level }
+                : entry,
+            );
+          }
+          return previousList.filter(
+            (entry) => entry.videoId !== nextVideo.videoId,
+          );
+        }
+
+        const videoToAdd = {
+          ...nextVideo,
+          supportLevel: level !== null ? level : 1,
+        };
+        return [...previousList, videoToAdd];
       });
 
-      if (!exists) {
-        showSupportToast('Added to Support list');
+      const isRemoving = level === 0 || (exists && level === null);
+      if (!isRemoving) {
+        showSupportToast(
+          level === 2
+            ? 'Added to High Support'
+            : level === 3
+              ? 'Added to Definite Support'
+              : 'Added to Support list',
+        );
+      }
+
+      if (authUser && nextVideo.trackId) {
+        const nextLevel = isRemoving ? 0 : level !== null ? level : 1;
+        saveTrackSupport(supabase, authUser.id, nextVideo, nextLevel).catch(
+          (error) => {
+            console.error('Failed to sync support level to DB:', error);
+          },
+        );
       }
     },
     [
@@ -2795,6 +2832,8 @@ export default function App() {
       showRetiredSongToast,
       showSupportToast,
       supportList,
+      authUser,
+      supabase,
     ],
   );
 
@@ -2817,6 +2856,7 @@ export default function App() {
       const [nextVideo] = allowedVideos;
 
       let addedCount = 0;
+      let addedVideos = [];
       setSupportList((previousList) => {
         const result = appendUniqueVideos(
           previousList,
@@ -2824,8 +2864,19 @@ export default function App() {
           new Set(nominationList.map((entry) => entry.videoId)),
         );
         addedCount = result.addedCount;
+        addedVideos = result.addedVideos;
         return result.nextList;
       });
+
+      if (authUser && addedVideos.length > 0) {
+        addedVideos.forEach((v) => {
+          if (v.trackId) {
+            saveTrackSupport(supabase, authUser.id, v, 1).catch((error) => {
+              console.error('Failed to sync added support item to DB:', error);
+            });
+          }
+        });
+      }
 
       if (addedCount > 0) {
         showSupportToast('Added to Support list');
@@ -2838,6 +2889,8 @@ export default function App() {
       partitionRetiredVideos,
       showRetiredSongToast,
       showSupportToast,
+      authUser,
+      supabase,
     ],
   );
 
@@ -3557,6 +3610,9 @@ export default function App() {
         isPreviewModeEnabled={isPreviewModeEnabled}
         onTogglePreview={handleTogglePreviewMode}
         isSupported={isCurrentVideoSupported}
+        onOpenSupportDropdown={(video, position) =>
+          setSupportLevelDropdown({ video, position })
+        }
         isNominated={isCurrentVideoNominated}
         onToggleSupport={handleToggleSupportFromPlaylist}
         isCurrentVideoInPlaylist={isCurrentVideoInPlaylist}
@@ -3771,6 +3827,9 @@ export default function App() {
               nominationList={nominationList}
               listenedStatusById={listenedStatusById}
               onToggleSupport={handleToggleSupportFromPlaylist}
+              onOpenSupportDropdown={(video, position) =>
+                setSupportLevelDropdown({ video, position })
+              }
               onAddToSupportList={handleAddToSupportList}
               onRemoveFromPlaylist={handleRemoveFromPlaylist}
               onAddDirectItems={handleQueueFromSupportList}
@@ -3831,6 +3890,7 @@ export default function App() {
           onPlayNow={handlePlayNowFromSupportList}
           onAddToPlaylist={handleQueueFromSupportList}
           onRemove={handleRemoveFromSupportList}
+          onToggleSupport={handleToggleSupportFromPlaylist}
           title="Support list"
           titleIcon="🤝"
           tone="support"
@@ -3862,6 +3922,7 @@ export default function App() {
           onPlayNow={handlePlayNowFromSupportList}
           onAddToPlaylist={handleQueueFromSupportList}
           onRemove={handleRemoveFromNominationList}
+          onToggleSupport={handleToggleSupportFromPlaylist}
           title="Nominations"
           titleIcon="★"
           tone="nomination"
@@ -3925,6 +3986,19 @@ export default function App() {
           onClose={handleDismissMetadataDialog}
           tracks={manualMetadataTracks || tracksNeedingMetadata}
           onSave={handleSaveTrackMetadata}
+        />
+      )}
+
+      {supportLevelDropdown && (
+        <SupportLevelDropdown
+          video={supportLevelDropdown.video}
+          position={supportLevelDropdown.position}
+          currentLevel={supportLevelDropdown.video?.supportLevel || 1}
+          onClose={() => setSupportLevelDropdown(null)}
+          onSelect={(level) => {
+            handleToggleSupportFromPlaylist(supportLevelDropdown.video, level);
+            setSupportLevelDropdown(null);
+          }}
         />
       )}
     </div>

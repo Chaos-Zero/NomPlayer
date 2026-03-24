@@ -77,9 +77,11 @@ function PlaylistItem({
   listenedStatus,
   onSelect,
   isSupported,
+  supportLevel,
   isNominated,
   isRetired,
   onToggleSupport,
+  onOpenSupportDropdown,
   onOpenContextMenu,
   selectionMode,
   isSelected,
@@ -111,9 +113,15 @@ function PlaylistItem({
     : isRetired
       ? ' retired-blocked'
       : isSupported
-        ? ' supported'
+        ? ` supported level-${supportLevel}`
         : '';
-  const supportGlyph = isNominated ? '★' : isSupported ? '♥' : '♡';
+  const supportGlyph = isNominated
+    ? '★'
+    : isSupported
+      ? supportLevel === 3
+        ? '🔒'
+        : '♥'
+      : '♡';
   const { hasCatalogMetadata, primaryTitle, secondaryTitle } =
     getPlaylistItemDisplay(video);
   const accessibleTitle = primaryTitle || video.videoId;
@@ -212,18 +220,38 @@ function PlaylistItem({
             <path d="M3.5 8.5 6.6 11.6 12.5 4.9" />
           </svg>
         </span>
-        <button
-          className={`item-fav-btn${starStateClass}`}
-          onClick={(event) => {
-            event.stopPropagation();
-            onToggleSupport(video);
-          }}
-          title={supportTooltip}
-          aria-label={supportLabel}
-          disabled={isNominated}
-        >
-          {supportGlyph}
-        </button>
+        <div className="item-fav-container">
+          <button
+            className={`item-fav-btn${starStateClass}`}
+            onClick={(event) => {
+              event.stopPropagation();
+              onToggleSupport(video);
+            }}
+            aria-label={supportLabel}
+            title={supportTooltip}
+            disabled={isNominated || isRetired}
+          >
+            {supportGlyph}
+          </button>
+          {isSupported && !isNominated && !isRetired && (
+            <button
+              className="item-fav-arrow-btn"
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation();
+                const rect = event.currentTarget.getBoundingClientRect();
+                onOpenSupportDropdown(video, {
+                  top: rect.top,
+                  left: rect.left + rect.width / 2,
+                });
+              }}
+              aria-label="Change support level"
+              title="Support Level"
+            >
+              ▾
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -237,9 +265,11 @@ function SortablePlaylistItem({
   listenedStatus,
   onSelect,
   isSupported,
+  supportLevel,
   isNominated,
   isRetired,
   onToggleSupport,
+  onOpenSupportDropdown,
   onOpenContextMenu,
 }) {
   const {
@@ -279,9 +309,11 @@ function SortablePlaylistItem({
         listenedStatus={listenedStatus}
         onSelect={onSelect}
         isSupported={isSupported}
+        supportLevel={supportLevel}
         isNominated={isNominated}
         isRetired={isRetired}
         onToggleSupport={onToggleSupport}
+        onOpenSupportDropdown={onOpenSupportDropdown}
         onOpenContextMenu={onOpenContextMenu}
         selectionMode={false}
         isSelected={false}
@@ -313,11 +345,14 @@ export default function PlaylistSidebar({
   onRemoveFromPlaylist,
   onAddDirectItems = () => 0,
   retiredVideoIds = new Set(),
+  isDesktopOverlayPlaylistOpen = false,
+  onToggleDesktopOverlay,
   pendingMetadataCount = 0,
   onOpenMetadataDialog = () => {},
   onDismissMetadataBanner = () => {},
   onUpdateMetadata = () => {},
   authUser = null,
+  onOpenSupportDropdown,
 }) {
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -693,6 +728,10 @@ export default function PlaylistSidebar({
     });
   }
 
+  function handleOpenSupportDropdown(video, position) {
+    onOpenSupportDropdown(video, position);
+  }
+
   function handleSupport(video) {
     onAddToSupportList(video);
     setContextMenu(null);
@@ -735,6 +774,13 @@ export default function PlaylistSidebar({
           aria-hidden="true"
         />
       )}
+      {isDesktopOverlayPlaylistOpen && (
+        <div
+          className="playlist-overlay-backdrop desktop-only"
+          onClick={() => onToggleDesktopOverlay?.(false)}
+        />
+      )}
+
       {!isCollapsed && renderHeader()}
       {!isCollapsed && (
         <div
@@ -789,9 +835,14 @@ export default function PlaylistSidebar({
                 listenedStatus={listenedStatusById[video.videoId] || null}
                 onSelect={onSelect}
                 isSupported={supportIds.has(video.videoId)}
+                supportLevel={
+                  supportList.find((entry) => entry.videoId === video.videoId)
+                    ?.supportLevel || 1
+                }
                 isNominated={nominationIds.has(video.videoId)}
                 isRetired={retiredVideoIds.has(video.videoId)}
                 onToggleSupport={onToggleSupport}
+                onOpenSupportDropdown={handleOpenSupportDropdown}
                 onOpenContextMenu={handleOpenContextMenu}
                 selectionMode={true}
                 isSelected={selectedIdSet.has(video.videoId)}

@@ -86,6 +86,8 @@ export default function VideoPlayer({
   isSupported = false,
   isNominated = false,
   onToggleSupport,
+  onOpenSupportDropdown,
+  supportLevel = 1,
   isCurrentVideoInPlaylist = false,
   onAddToPlaylist,
   variant = 'full',
@@ -115,9 +117,15 @@ export default function VideoPlayer({
   const supportClassName = isNominated
     ? ' nominated locked'
     : isSupported
-      ? ' supported'
+      ? ` supported level-${supportLevel}`
       : '';
-  const supportGlyph = isNominated ? '★' : isSupported ? '♥' : '♡';
+  const supportGlyph = isNominated
+    ? '★'
+    : isSupported
+      ? supportLevel === 3
+        ? '🔒'
+        : '♥'
+      : '♡';
 
   const clearRestorePauseGuard = useCallback(() => {
     restorePauseGuardUntilRef.current = 0;
@@ -404,16 +412,37 @@ export default function VideoPlayer({
                   >
                     <FastForwardIcon />
                   </button>
-                  <button
-                    className={`player-overlay-chip support${supportClassName}`}
-                    type="button"
-                    onClick={() => onToggleSupport?.(video)}
-                    aria-label={supportLabel}
-                    title={supportTooltip}
-                    disabled={isNominated}
-                  >
-                    {supportGlyph}
-                  </button>
+                  <div className="item-fav-container">
+                    <button
+                      className={`player-overlay-chip support${supportClassName}`}
+                      type="button"
+                      aria-label={supportLabel}
+                      title={supportTooltip}
+                      disabled={isNominated}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        onToggleSupport(video);
+                      }}
+                    >
+                      {supportGlyph}
+                    </button>
+                    <button
+                      className="item-fav-arrow-btn"
+                      style={{ height: '32px', color: 'white' }}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        const rect =
+                          event.currentTarget.getBoundingClientRect();
+                        onOpenSupportDropdown(video, {
+                          top: rect.top,
+                          left: rect.left + rect.width / 2,
+                        });
+                      }}
+                      disabled={!isSupported || isNominated}
+                    >
+                      ▾
+                    </button>
+                  </div>
                 </div>
               </div>
             )}

@@ -26,6 +26,12 @@ function normalizeVideoEntry(entry) {
       typeof entry.retiredByTournamentName === 'string'
         ? entry.retiredByTournamentName
         : '',
+    supportLevel:
+      typeof entry.supportLevel === 'number' &&
+      entry.supportLevel >= 1 &&
+      entry.supportLevel <= 3
+        ? entry.supportLevel
+        : 1,
   };
 }
 
@@ -596,7 +602,7 @@ export async function recordYouTubeTrackListen(
   const normalizedVideoId =
     typeof youtubeVideoId === 'string' ? youtubeVideoId.trim() : '';
 
-  const { data, error } = await supabase.rpc('record_youtube_track_listen', {
+  const { error } = await supabase.rpc('record_youtube_track_listen', {
     youtube_video_id: normalizedVideoId,
     listen_event: listenEvent,
     seconds_played: secondsPlayed,
@@ -608,6 +614,46 @@ export async function recordYouTubeTrackListen(
 
   return normalizeTrackListenStatusRow({
     youtube_video_id: normalizedVideoId,
-    ...data,
   });
+}
+
+export async function fetchUserTrackSupports(supabase, userId) {
+  const { data, error } = await supabase
+    .from('track_supports')
+    .select('track_id, level')
+    .eq('user_id', userId);
+
+  if (error) {
+    throw error;
+  }
+
+  return (data || []).reduce((acc, row) => {
+    acc[row.track_id] = row.level;
+    return acc;
+  }, {});
+}
+
+export async function saveTrackSupport(supabase, userId, video, level) {
+  if (!video.trackId) return; // Only sync cataloged tracks
+
+  if (level === 0) {
+    // Remove support
+    const { error } = await supabase
+      .from('track_supports')
+      .delete()
+      .eq('track_id', video.trackId)
+      .eq('user_id', userId);
+    if (error) throw error;
+  } else {
+    const { error } = await supabase.from('track_supports').upsert(
+      {
+        track_id: video.trackId,
+        user_id: userId,
+        level,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: 'track_id,user_id' },
+    );
+    if (error) throw error;
+  }
 }

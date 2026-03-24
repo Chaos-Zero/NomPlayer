@@ -36,7 +36,6 @@ function getPlaylistItemDisplay(video) {
 }
 
 function SupportItem({
-  index,
   video,
   onRemove,
   onDoubleQueue,
@@ -47,6 +46,7 @@ function SupportItem({
   itemAriaPrefix,
   removeButtonTitle,
   removeButtonAriaLabel,
+  tone,
 }) {
   const [imgError, setImgError] = useState(false);
   const display = getPlaylistItemDisplay(video);
@@ -77,10 +77,6 @@ function SupportItem({
           }}
         />
       )}
-
-      <div className="list-entry-number support-list-number" aria-hidden="true">
-        {index + 1}
-      </div>
 
       {video.thumbnail && !imgError ? (
         <img
@@ -146,24 +142,49 @@ function SupportItem({
       </div>
 
       {!selectionMode && (
-        <button
-          className="fav-remove-btn"
-          onClick={(event) => {
-            event.stopPropagation();
-            onRemove(video.videoId);
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px',
+            paddingRight: '12px',
           }}
-          title={removeButtonTitle}
-          aria-label={removeButtonAriaLabel}
         >
-          ✕
-        </button>
+          {tone === 'support' && (
+            <span
+              className={`support-tier-icon level-${video.supportLevel || 1}`}
+              style={{
+                fontSize: '14px',
+                opacity: 0.8,
+                color:
+                  video.supportLevel === 2
+                    ? 'var(--support-pink)'
+                    : video.supportLevel === 3
+                      ? 'var(--support-gold)'
+                      : 'var(--gold)',
+              }}
+            >
+              {video.supportLevel === 3 ? '🔒' : '♥'}
+            </span>
+          )}
+          <button
+            className="fav-remove-btn"
+            onClick={(event) => {
+              event.stopPropagation();
+              onRemove(video.videoId);
+            }}
+            title={removeButtonTitle}
+            aria-label={removeButtonAriaLabel}
+          >
+            ✕
+          </button>
+        </div>
       )}
     </div>
   );
 }
 
 function SortableSupportItem({
-  index,
   video,
   onRemove,
   onDoubleQueue,
@@ -171,6 +192,7 @@ function SortableSupportItem({
   itemAriaPrefix,
   removeButtonTitle,
   removeButtonAriaLabel,
+  tone,
 }) {
   const {
     attributes,
@@ -202,7 +224,6 @@ function SortableSupportItem({
         ⠿
       </div>
       <SupportItem
-        index={index}
         video={video}
         onRemove={onRemove}
         onDoubleQueue={onDoubleQueue}
@@ -213,6 +234,7 @@ function SortableSupportItem({
         itemAriaPrefix={itemAriaPrefix}
         removeButtonTitle={removeButtonTitle}
         removeButtonAriaLabel={removeButtonAriaLabel}
+        tone={tone}
       />
     </div>
   );
@@ -225,6 +247,7 @@ export default function FavouritesPanel({
   onPlayNow,
   onAddToPlaylist,
   onRemove,
+  onToggleSupport,
   isOpen = true,
   onExited,
   title = 'Support list',
@@ -566,10 +589,9 @@ export default function FavouritesPanel({
               <div className="fav-hint">{emptyHint}</div>
             </div>
           ) : selectionMode ? (
-            supportList.map((video, index) => (
+            supportList.map((video) => (
               <SupportItem
                 key={video.videoId}
-                index={index}
                 video={video}
                 onRemove={onRemove}
                 onDoubleQueue={handleDoubleQueue}
@@ -577,9 +599,11 @@ export default function FavouritesPanel({
                 selectionMode={true}
                 isSelected={selectedIdSet.has(video.videoId)}
                 onToggleSelected={handleToggleSelected}
+                onToggleSupport={onToggleSupport}
                 itemAriaPrefix={itemAriaPrefix}
                 removeButtonTitle={removeButtonTitle}
                 removeButtonAriaLabel={removeButtonAriaLabel}
+                tone={tone}
               />
             ))
           ) : (
@@ -592,17 +616,18 @@ export default function FavouritesPanel({
                 items={supportList.map((entry) => entry.videoId)}
                 strategy={verticalListSortingStrategy}
               >
-                {supportList.map((video, index) => (
+                {supportList.map((video) => (
                   <SortableSupportItem
                     key={video.videoId}
-                    index={index}
                     video={video}
                     onRemove={onRemove}
                     onDoubleQueue={handleDoubleQueue}
                     onOpenContextMenu={handleOpenContextMenu}
+                    onToggleSupport={onToggleSupport}
                     itemAriaPrefix={itemAriaPrefix}
                     removeButtonTitle={removeButtonTitle}
                     removeButtonAriaLabel={removeButtonAriaLabel}
+                    tone={tone}
                   />
                 ))}
               </SortableContext>
@@ -666,6 +691,60 @@ export default function FavouritesPanel({
             >
               Add to Current Playlist
             </button>
+            <div
+              style={{
+                height: '1px',
+                background: 'var(--border)',
+                margin: '4px 0',
+              }}
+            />
+            <button
+              className="support-context-menu-item"
+              type="button"
+              role="menuitem"
+              onClick={() => {
+                contextMenu.videos.forEach((v) => onToggleSupport(v, 1));
+                setContextMenu(null);
+              }}
+            >
+              <span style={{ color: 'var(--gold)', marginRight: 8 }}>♥</span>{' '}
+              Set Standard Support
+            </button>
+            <button
+              className="support-context-menu-item"
+              type="button"
+              role="menuitem"
+              onClick={() => {
+                contextMenu.videos.forEach((v) => onToggleSupport(v, 2));
+                setContextMenu(null);
+              }}
+            >
+              <span style={{ color: 'var(--support-pink)', marginRight: 8 }}>
+                ♥
+              </span>{' '}
+              Set High Support
+            </button>
+            <button
+              className="support-context-menu-item"
+              type="button"
+              role="menuitem"
+              onClick={() => {
+                contextMenu.videos.forEach((v) => onToggleSupport(v, 3));
+                setContextMenu(null);
+              }}
+            >
+              <span style={{ color: 'var(--support-gold)', marginRight: 8 }}>
+                🔒
+              </span>{' '}
+              Set Definite Support
+            </button>
+            <div
+              style={{
+                height: '1px',
+                background: 'var(--border)',
+                margin: '4px 0',
+              }}
+            />
             {authUser && (
               <button
                 className="support-context-menu-item"

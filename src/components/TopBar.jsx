@@ -113,8 +113,13 @@ function PlaylistPlusIcon() {
 
 function SupportIcon() {
   return (
-    <svg className="collection-icon" viewBox="0 0 20 20" aria-hidden="true">
-      <path d="M10 16.35 8.95 15.39C4.58 11.43 2 9.08 2 6.19 2 3.84 3.84 2 6.19 2c1.33 0 2.6.62 3.41 1.68A4.39 4.39 0 0 1 13.81 2C16.16 2 18 3.84 18 6.19c0 2.89-2.58 5.24-6.95 9.21L10 16.35Z" />
+    <svg
+      className="collection-icon"
+      viewBox="0 0 20 20"
+      aria-hidden="true"
+      fill="currentColor"
+    >
+      <path d="M9.653 16.915a.75.75 0 0 1-.306-.06l-.004-.002-.007-.003-.016-.009a4.54 4.54 0 0 1-.21-.129 11.77 11.77 0 0 1-1.567-1.16 18.303 18.303 0 0 1-3.208-3.483C2.88 9.892 2 8.117 2 6.5 2 4.015 3.985 2 6.5 2c1.447 0 2.71.68 3.5 1.726.79-1.046 2.053-1.726 3.5-1.726 2.515 0 4.5 2.015 4.5 4.5 0 1.617-.88 3.392-2.331 5.564a18.301 18.301 0 0 1-3.208 3.483c-.563.446-1.1.815-1.567 1.16a4.39 4.39 0 0 1-.226.138l-.01.006-.003.002z" />
     </svg>
   );
 }
@@ -196,6 +201,7 @@ export default function TopBar({
   const inputRef = useRef(null);
   const activeRequestRef = useRef(0);
   const successTimeoutRef = useRef(null);
+
   const effectiveInputOpen = isPlayerPage && isInputOpen;
   const currentSupportLabel = !currentVideo
     ? 'No current video to support'
@@ -701,17 +707,12 @@ export default function TopBar({
           title="Search track catalog"
         >
           <span className="mobile-search-icon-fixed">⌕</span>
-          {mobileSearchQuery && (
-            <span className="mobile-search-query-preview">
-              {mobileSearchQuery}
-            </span>
-          )}
         </button>
       )}
       <button
         className={`mobile-corner-toggle support${showSupportList ? ' active' : ''}`}
         onClick={() => setShowSupportList((s) => !s)}
-        title={showSupportList ? 'Hide Support List' : 'Show Support List'}
+        title={showSupportList ? 'Hide Support' : 'Show Support'}
         aria-label="Toggle support list"
       >
         <SupportIcon />
@@ -1057,10 +1058,11 @@ export default function TopBar({
       <div ref={rightZoneRef} className="topbar-side topbar-right">
         <button
           className={`collection-toggle-btn support${showSupportList ? ' active' : ''}`}
+          type="button"
+          title={showSupportList ? 'Hide Support' : 'Show Support'}
+          aria-label={showSupportList ? 'Hide Support' : 'Show Support'}
+          disabled={!currentVideo || isCurrentVideoNominated}
           onClick={() => setShowSupportList((s) => !s)}
-          title={showSupportList ? 'Hide Support List' : 'Show Support List'}
-          id="support-toggle-btn"
-          aria-label="Toggle support list"
         >
           <SupportIcon />
         </button>
