@@ -128,6 +128,7 @@ export default function UserSettingsDialog({
           <label className="auth-dialog-field">
             <span>Username</span>
             <input
+              key={profile?.username || 'new'}
               name="username"
               type="text"
               defaultValue={getDisplayProfileName(
@@ -149,6 +150,7 @@ export default function UserSettingsDialog({
           <label className="auth-dialog-field">
             <span>GameFAQs Username</span>
             <input
+              key={profile?.gamefaqs_username || 'new'}
               name="gamefaqs_username"
               type="text"
               defaultValue={profile?.gamefaqs_username || ''}

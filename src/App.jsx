@@ -1494,7 +1494,10 @@ export default function App() {
       if (!supabase || !user) return null;
 
       const existingProfile = await fetchUserProfile(supabase, user.id);
-      const nextUsername = deriveProfileUsername(user, preferredUsername);
+      const nextUsername = deriveProfileUsername(
+        user,
+        preferredUsername || existingProfile?.username || '',
+      );
       const nextGamefaqsUsername = normalizeOptionalProfileValue(
         preferredGamefaqsUsername || existingProfile?.gamefaqs_username || '',
       );
