@@ -803,7 +803,7 @@ export default function TopBar({
                 <MenuIcon />
               </button>
               <img
-                src="/NomPlayer_icon.png"
+                src="/NomPlayer_icon_backup.png"
                 className="topbar-logo mobile-header-logo"
                 alt="NomPlayer"
               />
