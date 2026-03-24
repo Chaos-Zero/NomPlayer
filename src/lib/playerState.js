@@ -602,7 +602,7 @@ export async function recordYouTubeTrackListen(
   const normalizedVideoId =
     typeof youtubeVideoId === 'string' ? youtubeVideoId.trim() : '';
 
-  const { error } = await supabase.rpc('record_youtube_track_listen', {
+  const { data, error } = await supabase.rpc('record_youtube_track_listen', {
     youtube_video_id: normalizedVideoId,
     listen_event: listenEvent,
     seconds_played: secondsPlayed,
@@ -614,6 +614,7 @@ export async function recordYouTubeTrackListen(
 
   return normalizeTrackListenStatusRow({
     youtube_video_id: normalizedVideoId,
+    ...data,
   });
 }
 

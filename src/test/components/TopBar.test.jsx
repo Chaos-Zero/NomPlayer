@@ -152,7 +152,7 @@ describe('TopBar', () => {
       screen.getByRole('button', { name: 'Preview mode' }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole('button', { name: 'Toggle support list' }),
+      screen.getByRole('button', { name: 'Show Support' }),
     ).toBeInTheDocument();
     expect(
       screen.getByRole('button', { name: 'Toggle nominations list' }),

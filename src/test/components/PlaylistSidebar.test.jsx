@@ -45,6 +45,7 @@ describe('PlaylistSidebar', () => {
       onToggleSupport: vi.fn(),
       onAddToSupportList: vi.fn(),
       onRemoveFromPlaylist: vi.fn(),
+      onOpenSupportDropdown: vi.fn(),
       onAddDirectItems: vi.fn(() => 1),
       retiredVideoIds: new Set(),
       ...overrides,
@@ -78,14 +79,14 @@ describe('PlaylistSidebar', () => {
     expect(props.onToggleSupport).toHaveBeenCalledWith(video);
   });
 
-  it('removes support tracks when their playlist star is clicked again', () => {
+  it('opens the support dropdown when the playlist star is clicked on a supported item', () => {
     const { props } = renderSidebar({ supportList: [{ ...video }] });
 
     fireEvent.click(
       screen.getByRole('button', { name: 'Remove from support list' }),
     );
 
-    expect(props.onToggleSupport).toHaveBeenCalledWith(video);
+    expect(props.onOpenSupportDropdown).toHaveBeenCalled();
   });
 
   it('shows a context menu with support and remove actions on right click', () => {
@@ -95,7 +96,7 @@ describe('PlaylistSidebar', () => {
 
     fireEvent.pointerDown(screen.getByRole('menuitem', { name: 'Support' }));
     fireEvent.click(screen.getByRole('menuitem', { name: 'Support' }));
-    expect(props.onAddToSupportList).toHaveBeenCalledWith(video);
+    expect(props.onToggleSupport).toHaveBeenCalledWith(video, 1);
 
     fireEvent.contextMenu(screen.getByLabelText('Play Alpha'));
     fireEvent.pointerDown(
@@ -107,7 +108,7 @@ describe('PlaylistSidebar', () => {
     expect(props.onRemoveFromPlaylist).toHaveBeenCalledWith(video.videoId);
   });
 
-  it('disables the context menu support action when the song is already supported', () => {
+  it('shows tiered support options in the context menu when the song is already supported', () => {
     const video = {
       videoId: 'alpha1234567',
       title: 'Alpha',
@@ -118,7 +119,18 @@ describe('PlaylistSidebar', () => {
 
     fireEvent.contextMenu(screen.getByLabelText('Play Alpha'));
 
-    expect(screen.getByRole('menuitem', { name: 'Support' })).toBeDisabled();
+    expect(
+      screen.queryByRole('menuitem', { name: 'Support' }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole('menuitem', { name: /Set Standard Support/ }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('menuitem', { name: /Set High Support/ }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('menuitem', { name: /Set Definite Support/ }),
+    ).toBeInTheDocument();
   });
 
   it('locks nomination tracks from the playlist star and support menu action', () => {
@@ -132,7 +144,12 @@ describe('PlaylistSidebar', () => {
 
     fireEvent.contextMenu(screen.getByLabelText('Play Alpha'));
 
-    expect(screen.getByRole('menuitem', { name: 'Support' })).toBeDisabled();
+    expect(
+      screen.queryByRole('menuitem', { name: 'Support' }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('menuitem', { name: /Set Standard Support/ }),
+    ).not.toBeInTheDocument();
   });
 
   it('applies a transient flash class separately from the active class', () => {

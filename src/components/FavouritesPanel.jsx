@@ -35,6 +35,7 @@ function getPlaylistItemDisplay(video) {
 }
 
 function SupportItem({
+  orderNumber,
   video,
   onRemove,
   onDoubleQueue,
@@ -76,6 +77,12 @@ function SupportItem({
             onToggleSelected(video.videoId);
           }}
         />
+      )}
+
+      {orderNumber != null && (
+        <div className="list-entry-number" aria-hidden="true">
+          {orderNumber}
+        </div>
       )}
 
       {video.thumbnail && !imgError ? (
@@ -199,6 +206,7 @@ function SupportItem({
 }
 
 function SortableSupportItem({
+  orderNumber,
   video,
   onRemove,
   onDoubleQueue,
@@ -239,6 +247,7 @@ function SortableSupportItem({
         ⠿
       </div>
       <SupportItem
+        orderNumber={orderNumber}
         video={video}
         onRemove={onRemove}
         onDoubleQueue={onDoubleQueue}
@@ -567,9 +576,10 @@ export default function FavouritesPanel({
               <div className="fav-hint">{emptyHint}</div>
             </div>
           ) : selectionMode ? (
-            supportList.map((video) => (
+            supportList.map((video, index) => (
               <SupportItem
                 key={video.videoId}
+                orderNumber={index + 1}
                 video={video}
                 onRemove={onRemove}
                 onDoubleQueue={handleDoubleQueue}
@@ -595,9 +605,10 @@ export default function FavouritesPanel({
                 items={supportList.map((entry) => entry.videoId)}
                 strategy={verticalListSortingStrategy}
               >
-                {supportList.map((video) => (
+                {supportList.map((video, index) => (
                   <SortableSupportItem
                     key={video.videoId}
+                    orderNumber={index + 1}
                     video={video}
                     onRemove={onRemove}
                     onDoubleQueue={handleDoubleQueue}
