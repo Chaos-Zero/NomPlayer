@@ -1039,7 +1039,7 @@ export default function TrackDatabase({
             >
               <div className="lottie-player-container">
                 <DotLottiePlayer
-                  src="/loading_icon.lottie"
+                  src="/loading.lottie"
                   autoplay
                   loop
                   style={{ width: '144px', height: '144px' }}
