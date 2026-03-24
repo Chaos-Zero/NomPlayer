@@ -39,6 +39,8 @@ vi.mock('../../lib/trackCatalog.js', () => ({
   fetchPagedTracks: vi.fn(async () => ({ data: [], totalCount: 100 })),
   mapTrackCatalogEntryToVideo: vi.fn((entry) => ({ ...entry })),
   fetchRandomUnplacedVgmcTrack: vi.fn(async () => null),
+  fetchMaxVgmcNumber: vi.fn(async () => 24),
+  fetchTrackCatalogByVideoIds: vi.fn(async () => []),
 }));
 
 describe('HomePage mobile layout', () => {
