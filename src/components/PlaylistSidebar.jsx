@@ -175,6 +175,17 @@ function PlaylistItem({
         {orderNumber}
       </div>
 
+      <span
+        className={`item-status-tick${listenedStatus ? ` ${listenedStatus}` : ' empty'}`}
+        aria-hidden={!tickLabel}
+        aria-label={tickLabel || undefined}
+        title={tickLabel || undefined}
+      >
+        <svg viewBox="0 0 16 16" aria-hidden="true">
+          <path d="M3.5 8.5 6.6 11.6 12.5 4.9" />
+        </svg>
+      </span>
+
       {video.thumbnail && !imgError ? (
         <img
           className="playlist-thumb"
@@ -210,16 +221,6 @@ function PlaylistItem({
       </div>
 
       <div className="playlist-item-actions">
-        <span
-          className={`item-status-tick${listenedStatus ? ` ${listenedStatus}` : ' empty'}`}
-          aria-hidden={!tickLabel}
-          aria-label={tickLabel || undefined}
-          title={tickLabel || undefined}
-        >
-          <svg viewBox="0 0 16 16" aria-hidden="true">
-            <path d="M3.5 8.5 6.6 11.6 12.5 4.9" />
-          </svg>
-        </span>
         <div className="item-fav-container">
           <button
             className={`item-fav-btn${starStateClass}`}
