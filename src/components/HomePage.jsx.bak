@@ -12,11 +12,6 @@ import {
   getDisplayProfileName,
   parseStoredProfileUsername,
 } from '../lib/playerState.js';
-import {
-  fetchPagedTracks,
-  mapTrackCatalogEntryToVideo,
-  fetchRandomUnplacedVgmcTrack,
-} from '../lib/trackCatalog.js';
 
 const DASHBOARD_REFRESH_LIMIT = 8;
 const MOBILE_DASHBOARD_COLLAPSE_DEFAULTS = {
@@ -271,9 +266,6 @@ export default function HomePage({
   const [isDashboardLoading, setIsDashboardLoading] = useState(true);
   const [isUpdatesLoading, setIsUpdatesLoading] = useState(true);
   const [featuredDiscoveryId, setFeaturedDiscoveryId] = useState(null);
-  const [dbUnlistenedCount, setDbUnlistenedCount] = useState(null);
-  const [prospectiveFallbackTrack, setProspectiveFallbackTrack] =
-    useState(null);
   const [mobileCollapsedSections, setMobileCollapsedSections] = useState(
     MOBILE_DASHBOARD_COLLAPSE_DEFAULTS,
   );
@@ -392,47 +384,6 @@ export default function HomePage({
     };
   }, []);
 
-  useEffect(() => {
-    let isActive = true;
-
-    async function loadExtraHomeData() {
-      if (!supabase) return;
-
-      try {
-        const { totalCount } = await fetchPagedTracks(supabase, { limit: 1 });
-        const listenedCount = Object.values(listenedStatusById || {}).filter(
-          (status) => status === 'complete' || status === 'partial',
-        ).length;
-
-        if (isActive) {
-          setDbUnlistenedCount(Math.max(0, totalCount - listenedCount));
-        }
-
-        const excludeIds = Object.keys(listenedStatusById || {});
-        const unplacedTrack = await fetchRandomUnplacedVgmcTrack(
-          supabase,
-          excludeIds,
-        );
-
-        if (isActive && unplacedTrack) {
-          const mappedTrack = mapTrackCatalogEntryToVideo(unplacedTrack);
-          setProspectiveFallbackTrack({
-            ...mappedTrack,
-            isVgmcUnplaced: true,
-          });
-        }
-      } catch {
-        // Ignore error
-      }
-    }
-
-    loadExtraHomeData();
-
-    return () => {
-      isActive = false;
-    };
-  }, [supabase, listenedStatusById]);
-
   const handleQueueVideos = useCallback(
     (videos, emptyMessage) => {
       if (!videos?.length) {
@@ -498,43 +449,19 @@ export default function HomePage({
     [onPlayNow, showActionNotice],
   );
 
-  const handleFindNewSong = useCallback(async () => {
+  const handleFindNewSong = useCallback(() => {
     const nextCandidate = pickNextDiscoveryCandidate(
       discoveryCandidates,
       activeFeaturedDiscoveryId,
     );
 
-    if (nextCandidate) {
-      setFeaturedDiscoveryId(nextCandidate.videoId);
+    if (!nextCandidate) {
+      showActionNotice('No fresh nomination picks are available right now.');
       return;
     }
 
-    const excludeIds = Object.keys(listenedStatusById || {});
-    if (supabase) {
-      try {
-        const unplacedTrack = await fetchRandomUnplacedVgmcTrack(
-          supabase,
-          excludeIds,
-        );
-        if (unplacedTrack) {
-          const mappedTrack = mapTrackCatalogEntryToVideo(unplacedTrack);
-          setProspectiveFallbackTrack({ ...mappedTrack, isVgmcUnplaced: true });
-          showActionNotice('Showcasing a random unplaced VGMC track!');
-          return;
-        }
-      } catch {
-        showActionNotice('Failed to fetch a random unplaced track.');
-      }
-    }
-
-    showActionNotice('No fresh nomination picks are available right now.');
-  }, [
-    activeFeaturedDiscoveryId,
-    discoveryCandidates,
-    showActionNotice,
-    listenedStatusById,
-    supabase,
-  ]);
+    setFeaturedDiscoveryId(nextCandidate.videoId);
+  }, [activeFeaturedDiscoveryId, discoveryCandidates, showActionNotice]);
 
   const dashboardStats = [
     {
@@ -550,9 +477,14 @@ export default function HomePage({
       accent: 'orange',
     },
     {
-      label: 'Songs in the DB unlistened',
-      value: dbUnlistenedCount === null ? '...' : String(dbUnlistenedCount),
+      label: 'Discovery picks',
+      value: String(discoveryCandidates.length),
       accent: 'blue',
+    },
+    {
+      label: 'VGMC threads',
+      value: isUpdatesLoading ? '...' : String(vgmcThreads.length),
+      accent: 'pink',
     },
   ];
 
@@ -704,45 +636,6 @@ export default function HomePage({
                     type="button"
                     onClick={() =>
                       handleAddDiscoveryCandidate(featuredDiscoveryCandidate)
-                    }
-                  >
-                    Add to current playlist
-                  </button>
-                </div>
-              </div>
-            </article>
-          ) : prospectiveFallbackTrack ? (
-            <article className="dashboard-feature-card dashboard-feature-card-hero">
-              <img
-                className="dashboard-feature-thumb"
-                src={prospectiveFallbackTrack.thumbnail}
-                alt=""
-                loading="lazy"
-              />
-
-              <div className="dashboard-feature-copy">
-                <span className="dashboard-feature-kicker">VGMC Unplaced</span>
-                <h2 className="dashboard-feature-title">
-                  {prospectiveFallbackTrack.title}
-                </h2>
-                <p className="dashboard-feature-meta">
-                  {prospectiveFallbackTrack.gameTitle || 'Unknown Game'}
-                </p>
-                <div className="dashboard-feature-actions">
-                  <button
-                    className="dashboard-action-btn dashboard-action-btn-muted"
-                    type="button"
-                    onClick={() =>
-                      handlePlayDiscoveryCandidate(prospectiveFallbackTrack)
-                    }
-                  >
-                    Listen now
-                  </button>
-                  <button
-                    className="dashboard-action-btn"
-                    type="button"
-                    onClick={() =>
-                      handleAddDiscoveryCandidate(prospectiveFallbackTrack)
                     }
                   >
                     Add to current playlist

@@ -750,3 +750,47 @@ export async function mergeTracks(
 
   console.log('mergeTracks: Multi-track merge complete.');
 }
+
+export async function fetchRandomUnplacedVgmcTrack(
+  supabase,
+  excludeVideoIds = [],
+) {
+  if (!supabase) return null;
+
+  let from = 0;
+  const pageSize = 200;
+  let hasMore = true;
+
+  while (hasMore) {
+    const { data, error } = await supabase
+      .from('track_catalog')
+      .select('*')
+      .not('tournaments', 'eq', '[]')
+      .range(from, from + pageSize - 1);
+
+    if (error || !data || data.length === 0) {
+      break;
+    }
+
+    const candidates = data.filter((entry) => {
+      const vid = entry.source_external_id || entry.videoId;
+      if (vid && excludeVideoIds.includes(vid)) return false;
+
+      const tournaments = entry.tournaments || [];
+      if (!Array.isArray(tournaments) || tournaments.length === 0) return false;
+
+      // Unplaced means all recorded tournament appearances have no valid placement
+      return tournaments.every((t) => !t.placement || t.placement <= 0);
+    });
+
+    if (candidates.length > 0) {
+      const randomEntry =
+        candidates[Math.floor(Math.random() * candidates.length)];
+      return normalizeTrackCatalogEntry(randomEntry);
+    }
+
+    from += pageSize;
+  }
+
+  return null;
+}

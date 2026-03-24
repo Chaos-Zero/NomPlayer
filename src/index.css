@@ -306,7 +306,241 @@
   color: var(--danger) !important;
 }
 
-/* ─── Reset ─── */
+/* ─── Light mode: Dashboard / HomePage ─── */
+
+.theme-light .dashboard-hero {
+  background:
+    radial-gradient(
+      circle at top right,
+      rgba(56, 189, 248, 0.12),
+      transparent 28%
+    ),
+    radial-gradient(
+      circle at bottom left,
+      rgba(236, 72, 153, 0.08),
+      transparent 34%
+    ),
+    linear-gradient(
+      135deg,
+      rgba(236, 240, 255, 0.98),
+      rgba(248, 238, 255, 0.94) 46%,
+      rgba(240, 244, 255, 0.96)
+    );
+  box-shadow: none;
+}
+
+.theme-light .dashboard-hero::before {
+  background:
+    linear-gradient(90deg, rgba(100, 100, 180, 0.04) 1px, transparent 1px),
+    linear-gradient(rgba(100, 100, 180, 0.04) 1px, transparent 1px);
+}
+
+.theme-light .dashboard-hero-badge {
+  border-color: rgba(56, 189, 248, 0.4);
+  background: rgba(56, 189, 248, 0.1);
+  color: rgba(2, 100, 171, 0.9);
+}
+
+.theme-light .dashboard-hero-title {
+  color: rgba(18, 18, 42, 0.96);
+}
+
+.theme-light .dashboard-hero-description {
+  color: rgba(40, 40, 80, 0.78);
+}
+
+.theme-light .dashboard-stat-card {
+  border-color: rgba(0, 0, 0, 0.08);
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.theme-light .dashboard-stat-card-purple {
+  background:
+    linear-gradient(180deg, rgba(124, 58, 237, 0.14), transparent),
+    rgba(255, 255, 255, 0.7);
+}
+
+.theme-light .dashboard-stat-card-orange {
+  background:
+    linear-gradient(180deg, rgba(245, 158, 11, 0.12), transparent),
+    rgba(255, 255, 255, 0.7);
+}
+
+.theme-light .dashboard-stat-card-blue {
+  background:
+    linear-gradient(180deg, rgba(56, 189, 248, 0.12), transparent),
+    rgba(255, 255, 255, 0.7);
+}
+
+.theme-light .dashboard-stat-value {
+  color: rgba(18, 18, 42, 0.92);
+}
+
+.theme-light .dashboard-stat-label {
+  color: rgba(40, 40, 80, 0.7);
+}
+
+.theme-light .dashboard-chip {
+  background: rgba(0, 0, 0, 0.06);
+  border-color: rgba(0, 0, 0, 0.12);
+  color: rgba(30, 30, 60, 0.86);
+}
+
+.theme-light .dashboard-chip-warm {
+  background: rgba(245, 158, 11, 0.1);
+  border-color: rgba(245, 158, 11, 0.3);
+  color: rgba(146, 64, 14, 0.9);
+}
+
+.theme-light .dashboard-link-btn,
+.theme-light .dashboard-action-btn,
+.theme-light .dashboard-inline-btn {
+  border-color: rgba(0, 0, 0, 0.12);
+  background: rgba(255, 255, 255, 0.88);
+  color: var(--text-primary);
+}
+
+.theme-light .dashboard-link-btn:hover,
+.theme-light .dashboard-action-btn:hover,
+.theme-light .dashboard-inline-btn:hover {
+  border-color: rgba(124, 58, 237, 0.4);
+  background: rgba(255, 255, 255, 0.98);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+}
+
+.theme-light .dashboard-action-btn,
+.theme-light .dashboard-inline-btn-primary {
+  background: linear-gradient(
+    135deg,
+    rgba(124, 58, 237, 0.78),
+    rgba(88, 28, 135, 0.72)
+  );
+  border-color: rgba(124, 58, 237, 0.4);
+  color: #fff;
+  box-shadow: 0 2px 10px rgba(124, 58, 237, 0.2);
+}
+
+.theme-light .dashboard-action-btn-muted {
+  background: rgba(245, 158, 11, 0.1);
+  border-color: rgba(245, 158, 11, 0.3);
+  color: rgba(146, 64, 14, 0.9);
+}
+
+.theme-light .dashboard-pane-shell {
+  background: rgba(255, 255, 255, 0.6);
+  border-color: rgba(0, 0, 0, 0.07);
+}
+
+.theme-light .dashboard-pane-title {
+  color: var(--text-primary);
+}
+
+.theme-light .dashboard-pane-copy,
+.theme-light .dashboard-update-subtitle,
+.theme-light .dashboard-discovery-meta,
+.theme-light .dashboard-feature-meta,
+.theme-light .dashboard-thread-meta {
+  color: rgba(40, 40, 80, 0.72);
+}
+
+.theme-light .dashboard-update-song-row {
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.theme-light .dashboard-update-song-title {
+  color: var(--text-primary);
+}
+
+.theme-light .dashboard-update-song-index {
+  background: rgba(124, 58, 237, 0.1);
+  color: rgba(88, 28, 135, 0.9);
+}
+
+.theme-light .dashboard-feature-card-hero {
+  background:
+    linear-gradient(
+      180deg,
+      rgba(248, 248, 255, 0.98),
+      rgba(240, 238, 255, 0.94)
+    ),
+    rgba(245, 245, 255, 0.9);
+}
+
+.theme-light .dashboard-feature-kicker {
+  color: rgba(2, 100, 171, 0.8);
+}
+
+.theme-light .dashboard-feature-title {
+  color: var(--text-primary);
+}
+
+.theme-light .dashboard-message {
+  background: rgba(0, 0, 0, 0.04);
+  border-color: rgba(0, 0, 0, 0.08);
+  color: var(--text-secondary);
+}
+
+.theme-light .dashboard-mobile-toggle {
+  border-color: rgba(0, 0, 0, 0.1);
+  background: rgba(255, 255, 255, 0.8);
+  color: var(--text-primary);
+}
+
+.theme-light .dashboard-mobile-toggle-summary {
+  color: var(--text-secondary);
+}
+
+.theme-light .dashboard-thread-item {
+  color: var(--text-primary);
+}
+
+.theme-light .dashboard-thread-item:hover {
+  background: rgba(0, 0, 0, 0.04);
+  border-color: rgba(0, 0, 0, 0.12);
+}
+
+.theme-light .dashboard-thread-icon {
+  background: rgba(124, 58, 237, 0.1);
+  color: rgba(88, 28, 135, 0.9);
+}
+
+/* ─── Light mode: Toasts ─── */
+
+.theme-light .app-toast,
+.theme-light .fav-panel-toast,
+.theme-light .collection-adder-toast {
+  background: rgba(255, 255, 255, 0.97);
+  color: var(--text-primary);
+  box-shadow:
+    0 8px 24px rgba(0, 0, 0, 0.14),
+    0 1px 4px rgba(0, 0, 0, 0.08);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.theme-light .app-toast.support-toast {
+  border-color: rgba(245, 158, 11, 0.4);
+  box-shadow:
+    0 8px 24px rgba(0, 0, 0, 0.12),
+    0 0 12px rgba(245, 158, 11, 0.1);
+}
+
+.theme-light .app-toast.logout-toast {
+  border-color: rgba(124, 58, 237, 0.36);
+  box-shadow:
+    0 8px 24px rgba(0, 0, 0, 0.12),
+    0 0 12px rgba(124, 58, 237, 0.1);
+}
+
+.theme-light .app-toast.dashboard-toast {
+  border-color: rgba(185, 28, 28, 0.3);
+  background:
+    linear-gradient(135deg, rgba(254, 226, 226, 0.6), rgba(255, 255, 255, 0)),
+    rgba(255, 255, 255, 0.97);
+  box-shadow:
+    0 8px 24px rgba(0, 0, 0, 0.12),
+    0 0 12px rgba(185, 28, 28, 0.08);
+}
+
 *,
 *::before,
 *::after {
@@ -603,9 +837,20 @@ body {
   line-height: 1.6;
 }
 
+.home-shell.dashboard-home-shell {
+  padding: 0;
+  padding-bottom: 292px;
+}
+
 .dashboard-home-shell {
   display: flex;
   flex-direction: column;
+  gap: 0;
+}
+
+.dashboard-home-shell .dashboard-flow {
+  padding: 24px;
+  padding-bottom: 0;
   gap: 24px;
 }
 
@@ -615,8 +860,6 @@ body {
   grid-template-columns: minmax(0, 1.15fr) minmax(320px, 0.85fr);
   gap: 24px;
   padding: 28px;
-  border-radius: 34px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
   background:
     radial-gradient(
       circle at top right,

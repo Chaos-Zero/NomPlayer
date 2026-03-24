@@ -493,6 +493,7 @@ export default function App() {
   const loadedListenStatusVideoIdsRef = useRef(new Set());
   const inFlightListenStatusVideoIdsRef = useRef(new Set());
   const nonCatalogedListenVideoIdsRef = useRef(new Set());
+  const didFullListenStatusFetchRef = useRef(false);
   const trackListenSessionRef = useRef({
     videoId: null,
     startedPersisted: false,
@@ -960,6 +961,7 @@ export default function App() {
   useEffect(() => {
     loadedListenStatusVideoIdsRef.current = new Set();
     inFlightListenStatusVideoIdsRef.current = new Set();
+    didFullListenStatusFetchRef.current = false;
     trackListenSessionRef.current = {
       videoId: null,
       startedPersisted: false,
@@ -968,42 +970,58 @@ export default function App() {
   }, [authUser?.id]);
 
   useEffect(() => {
-    const allVideos = [...playlist, ...supportList, ...nominationList];
-
-    if (!supabase || !authUser?.id || !isAuthReady || allVideos.length === 0) {
+    if (!supabase || !authUser?.id || !isAuthReady) {
       return;
     }
-
-    const requestedVideoIds = [];
-    for (const video of allVideos) {
-      const videoId = video.videoId;
-      if (
-        loadedListenStatusVideoIdsRef.current.has(videoId) ||
-        inFlightListenStatusVideoIdsRef.current.has(videoId)
-      ) {
-        continue;
-      }
-      requestedVideoIds.push(videoId);
-    }
-
-    if (requestedVideoIds.length === 0) {
-      return;
-    }
-
-    requestedVideoIds.forEach((videoId) => {
-      inFlightListenStatusVideoIdsRef.current.add(videoId);
-    });
 
     const userId = authUser.id;
+    const shouldDoFullFetch = !didFullListenStatusFetchRef.current;
 
-    fetchUserTrackListenStatuses(supabase, requestedVideoIds)
+    const allVideos = [...playlist, ...supportList, ...nominationList];
+    const requestedVideoIds = [];
+
+    if (shouldDoFullFetch) {
+      didFullListenStatusFetchRef.current = true;
+    } else {
+      for (const video of allVideos) {
+        const videoId = video.videoId;
+        if (
+          loadedListenStatusVideoIdsRef.current.has(videoId) ||
+          inFlightListenStatusVideoIdsRef.current.has(videoId)
+        ) {
+          continue;
+        }
+        requestedVideoIds.push(videoId);
+      }
+
+      if (requestedVideoIds.length === 0) {
+        return;
+      }
+
+      requestedVideoIds.forEach((videoId) => {
+        inFlightListenStatusVideoIdsRef.current.add(videoId);
+      });
+    }
+
+    const fetchPromise = shouldDoFullFetch
+      ? fetchUserTrackListenStatuses(supabase, null)
+      : fetchUserTrackListenStatuses(supabase, requestedVideoIds);
+
+    fetchPromise
       .then((remoteStatuses) => {
         if (authUserIdRef.current !== userId) return;
 
-        requestedVideoIds.forEach((videoId) => {
-          inFlightListenStatusVideoIdsRef.current.delete(videoId);
-          loadedListenStatusVideoIdsRef.current.add(videoId);
-        });
+        if (!shouldDoFullFetch) {
+          requestedVideoIds.forEach((videoId) => {
+            inFlightListenStatusVideoIdsRef.current.delete(videoId);
+            loadedListenStatusVideoIdsRef.current.add(videoId);
+          });
+        } else {
+          // If full fetch, mark all currently tracked IDs as loaded
+          allVideos.forEach((video) => {
+            loadedListenStatusVideoIdsRef.current.add(video.videoId);
+          });
+        }
 
         if (Object.keys(remoteStatuses).length === 0) {
           return;
@@ -1016,9 +1034,11 @@ export default function App() {
         });
       })
       .catch((error) => {
-        requestedVideoIds.forEach((videoId) => {
-          inFlightListenStatusVideoIdsRef.current.delete(videoId);
-        });
+        if (!shouldDoFullFetch) {
+          requestedVideoIds.forEach((videoId) => {
+            inFlightListenStatusVideoIdsRef.current.delete(videoId);
+          });
+        }
         if (authUserIdRef.current !== userId) return;
         console.error('Failed to fetch track listen history.', error);
       });
@@ -2622,6 +2642,9 @@ export default function App() {
     if (!isPlaying) return;
 
     if (transientVideo) {
+      if (!isPreviewModeEnabled) {
+        markVideoCompleted(transientVideo.videoId);
+      }
       const resumeVideoId = transientResumeVideoIdRef.current;
       transientResumeVideoIdRef.current = null;
       setTransientVideo(null);
@@ -3288,8 +3311,9 @@ export default function App() {
 
       setTransientVideo(nextVideo);
       setIsPlaying(true);
+      markVideoStarted(nextVideo.videoId);
     },
-    [applyCatalogMetadataToVideo, isPlaying, transientVideo],
+    [applyCatalogMetadataToVideo, isPlaying, transientVideo, markVideoStarted],
   );
 
   const handleSetIsPlaying = useCallback(
@@ -3340,7 +3364,9 @@ export default function App() {
       if (nextIsPlaying) {
         hasReachedPlaylistEndRef.current = false;
 
-        if (!transientVideo && currentVideoIdRef.current) {
+        if (transientVideo) {
+          markVideoStarted(transientVideo.videoId);
+        } else if (currentVideoIdRef.current) {
           markVideoStarted(currentVideoIdRef.current);
         }
       }

@@ -35,6 +35,12 @@ vi.mock('../../lib/dashboard.js', async () => {
   };
 });
 
+vi.mock('../../lib/trackCatalog.js', () => ({
+  fetchPagedTracks: vi.fn(async () => ({ data: [], totalCount: 100 })),
+  mapTrackCatalogEntryToVideo: vi.fn((entry) => ({ ...entry })),
+  fetchRandomUnplacedVgmcTrack: vi.fn(async () => null),
+}));
+
 describe('HomePage mobile layout', () => {
   it('collapses secondary sections by default on mobile and lets them expand', async () => {
     render(

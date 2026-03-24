@@ -1042,7 +1042,7 @@ export default function TrackDatabase({
                   src="/loading_icon.lottie"
                   autoplay
                   loop
-                  style={{ width: '120px', height: '120px' }}
+                  style={{ width: '144px', height: '144px' }}
                 />
               </div>
               <div className="database-loading-text">
