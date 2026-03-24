@@ -16,6 +16,8 @@ import {
   fetchPagedTracks,
   mapTrackCatalogEntryToVideo,
   fetchRandomUnplacedVgmcTrack,
+  fetchTrackCatalogByVideoIds,
+  fetchMaxVgmcNumber,
 } from '../lib/trackCatalog.js';
 
 const DASHBOARD_REFRESH_LIMIT = 8;
@@ -277,6 +279,8 @@ export default function HomePage({
   const [mobileCollapsedSections, setMobileCollapsedSections] = useState(
     MOBILE_DASHBOARD_COLLAPSE_DEFAULTS,
   );
+  const [maxVgmcNumber, setMaxVgmcNumber] = useState(24);
+  const [discoveryMetadataById, setDiscoveryMetadataById] = useState({});
 
   const currentPlaylistIds = useMemo(
     () => new Set(currentPlaylist.map((video) => video.videoId)),
@@ -418,6 +422,7 @@ export default function HomePage({
           const mappedTrack = mapTrackCatalogEntryToVideo(unplacedTrack);
           setProspectiveFallbackTrack({
             ...mappedTrack,
+            tournaments: unplacedTrack.tournaments || [],
             isVgmcUnplaced: true,
           });
         }
@@ -432,6 +437,49 @@ export default function HomePage({
       isActive = false;
     };
   }, [supabase, listenedStatusById]);
+
+  useEffect(() => {
+    let isActive = true;
+    async function loadMaxVgmc() {
+      if (!supabase) return;
+      try {
+        const maxVal = await fetchMaxVgmcNumber(supabase);
+        if (isActive) setMaxVgmcNumber(maxVal);
+      } catch (err) {
+        console.error('Failed to fetch max VGMC:', err);
+      }
+    }
+    loadMaxVgmc();
+    return () => {
+      isActive = false;
+    };
+  }, [supabase]);
+
+  useEffect(() => {
+    let isActive = true;
+    async function enrichDiscoveryMetadata() {
+      if (!supabase || discoveryCandidates.length === 0) return;
+      try {
+        const videoIds = discoveryCandidates.map((c) => c.videoId);
+        const metadataList = await fetchTrackCatalogByVideoIds(
+          supabase,
+          videoIds,
+        );
+        if (!isActive) return;
+        const metaMap = {};
+        metadataList.forEach((track) => {
+          metaMap[track.videoId] = track;
+        });
+        setDiscoveryMetadataById(metaMap);
+      } catch (err) {
+        console.error('Failed to enrich discovery metadata:', err);
+      }
+    }
+    enrichDiscoveryMetadata();
+    return () => {
+      isActive = false;
+    };
+  }, [supabase, discoveryCandidates]);
 
   const handleQueueVideos = useCallback(
     (videos, emptyMessage) => {
@@ -518,7 +566,11 @@ export default function HomePage({
         );
         if (unplacedTrack) {
           const mappedTrack = mapTrackCatalogEntryToVideo(unplacedTrack);
-          setProspectiveFallbackTrack({ ...mappedTrack, isVgmcUnplaced: true });
+          setProspectiveFallbackTrack({
+            ...mappedTrack,
+            tournaments: unplacedTrack.tournaments || [],
+            isVgmcUnplaced: true,
+          });
           showActionNotice('Showcasing a random unplaced VGMC track!');
           return;
         }
@@ -550,7 +602,7 @@ export default function HomePage({
       accent: 'orange',
     },
     {
-      label: 'Songs in the DB unlistened',
+      label: authUser ? 'VGMC songs remaining' : 'VGMC Nominations',
       value: dbUnlistenedCount === null ? '...' : String(dbUnlistenedCount),
       accent: 'blue',
     },
@@ -677,18 +729,25 @@ export default function HomePage({
               />
 
               <div className="dashboard-feature-copy">
-                <span className="dashboard-feature-kicker">Listen now</span>
+                <span className="dashboard-feature-kicker">New Nomination</span>
                 <h2 className="dashboard-feature-title">
-                  {featuredDiscoveryCandidate.title}
+                  {discoveryMetadataById[featuredDiscoveryCandidate.videoId]
+                    ? `${discoveryMetadataById[featuredDiscoveryCandidate.videoId].gameTitle} - ${discoveryMetadataById[featuredDiscoveryCandidate.videoId].trackTitle}`
+                    : featuredDiscoveryCandidate.title}
                 </h2>
-                <p className="dashboard-feature-meta">
-                  Nominated by{' '}
-                  {featuredDiscoveryCandidate.nominators
-                    .map((nominator) =>
-                      getDisplayProfileName(nominator.username),
-                    )
-                    .join(', ')}
-                </p>
+                <div className="dashboard-feature-meta">
+                  <p className="dashboard-feature-meta-vgmc">
+                    VGMC {maxVgmcNumber + 1}
+                  </p>
+                  <p className="dashboard-feature-meta-nominators">
+                    Nominated by{' '}
+                    {featuredDiscoveryCandidate.nominators
+                      .map((nominator) =>
+                        getDisplayProfileName(nominator.username),
+                      )
+                      .join(', ')}
+                  </p>
+                </div>
                 <div className="dashboard-feature-actions">
                   <button
                     className="dashboard-action-btn dashboard-action-btn-muted"
@@ -723,11 +782,27 @@ export default function HomePage({
               <div className="dashboard-feature-copy">
                 <span className="dashboard-feature-kicker">VGMC Unplaced</span>
                 <h2 className="dashboard-feature-title">
-                  {prospectiveFallbackTrack.title}
+                  {prospectiveFallbackTrack.gameTitle &&
+                  prospectiveFallbackTrack.trackTitle
+                    ? `${prospectiveFallbackTrack.gameTitle} - ${prospectiveFallbackTrack.trackTitle}`
+                    : prospectiveFallbackTrack.title}
                 </h2>
-                <p className="dashboard-feature-meta">
-                  {prospectiveFallbackTrack.gameTitle || 'Unknown Game'}
-                </p>
+                <div className="dashboard-feature-meta">
+                  <p className="dashboard-feature-meta-vgmc">
+                    {(() => {
+                      const sequenceNumbers = [
+                        ...new Set(
+                          (prospectiveFallbackTrack.tournaments || [])
+                            .map((t) => t.sequenceNumber || t.sequence_number)
+                            .filter((n) => Number.isInteger(n)),
+                        ),
+                      ].sort((a, b) => a - b);
+                      return sequenceNumbers.length > 0
+                        ? `VGMC ${sequenceNumbers.join(', ')}`
+                        : 'VGMC Unplaced';
+                    })()}
+                  </p>
+                </div>
                 <div className="dashboard-feature-actions">
                   <button
                     className="dashboard-action-btn dashboard-action-btn-muted"
