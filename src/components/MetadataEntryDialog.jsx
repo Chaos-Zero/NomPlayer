@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import YouTubeIcon from './YouTubeIcon.jsx';
 
 export default function MetadataEntryDialog({
   tracks,
@@ -131,6 +132,21 @@ export default function MetadataEntryDialog({
                         handleChange(index, 'videoUrl', e.target.value)
                       }
                     />
+                  </div>
+                  <div className="metadata-input-group">
+                    <a
+                      href={`https://www.youtube.com/results?search_query=${encodeURIComponent(
+                        `${track.gameTitle} OST ${track.trackTitle}`.trim() ||
+                          track.title,
+                      )}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="metadata-search-btn"
+                      title="Search YouTube for this track"
+                    >
+                      <YouTubeIcon className="metadata-search-icon" />
+                      <span className="metadata-search-text">Search OST</span>
+                    </a>
                   </div>
                 </div>
               </div>

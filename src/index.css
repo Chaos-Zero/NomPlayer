@@ -6678,6 +6678,55 @@ button.playlist-search-indicator:hover {
   box-shadow: 0 0 0 4px var(--accent-dim);
 }
 
+.metadata-search-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 100%;
+  padding: 0 16px;
+  background: rgba(124, 58, 237, 0.15);
+  border: 1px solid rgba(124, 58, 237, 0.3);
+  border-radius: var(--radius-md);
+  color: #c4b5fd; /* Soft violet */
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all var(--transition);
+  white-space: nowrap;
+}
+
+.metadata-search-icon {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  transition: all var(--transition);
+}
+
+.metadata-search-btn:hover .metadata-search-icon {
+  transform: scale(1.1);
+  color: #ff0000;
+}
+
+.metadata-search-btn:hover {
+  background: rgba(124, 58, 237, 0.25);
+  border-color: var(--accent);
+  color: var(--white);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(124, 58, 237, 0.2);
+}
+
+.theme-light .metadata-search-btn {
+  background: rgba(124, 58, 237, 0.08);
+  border-color: rgba(124, 58, 237, 0.25);
+  color: #6d28d9;
+}
+
+.theme-light .metadata-search-btn:hover {
+  background: rgba(124, 58, 237, 0.15);
+  color: #4c1d95;
+}
+
 .metadata-dialog-footer {
   padding: 20px 24px;
   border-top: 1px solid var(--border);
