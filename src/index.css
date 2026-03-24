@@ -248,6 +248,26 @@
   color: #ffffff !important;
 }
 
+.theme-light .mobile-now-playing-inline {
+  color: var(--text-primary) !important;
+}
+
+.theme-light .mobile-topbar-back {
+  background: var(--bg-panel) !important;
+}
+
+.theme-light .mobile-site-nav-toggle {
+  background: var(--bg-surface) !important;
+}
+
+.theme-light .mobile-site-nav-menu {
+  background: var(--bg-panel) !important;
+}
+
+.theme-light .playlist-sidebar {
+  background: var(--bg-panel) !important;
+}
+
 .theme-light .auth-dialog-message {
   color: var(--text-secondary) !important;
 }
@@ -1455,7 +1475,7 @@ body {
 }
 
 .theme-light .scrolling-text-track {
-  color: #000000;
+  color: var(--text-primary) !important;
 }
 
 .scrolling-text-track.truncate-static:not(.marquee) {
@@ -3552,14 +3572,14 @@ body {
     height: 100%;
     border-radius: 0;
     border-left: none;
-    background: rgba(18, 18, 26, 0.98);
+    background: var(--bg-panel);
     background-clip: padding-box;
     box-shadow: -18px 0 42px rgba(0, 0, 0, 0.34);
     overflow: visible;
   }
 
   .playlist-sidebar.collapsed {
-    background: rgba(18, 18, 26, 0.98);
+    background: var(--bg-panel);
     overflow: visible;
   }
 
