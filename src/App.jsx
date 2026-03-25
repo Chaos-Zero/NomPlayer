@@ -54,9 +54,12 @@ import {
   ingestYouTubeTrackSources,
 } from './lib/trackCatalog.js';
 import { getSupabaseClient, isSupabaseConfigured } from './lib/supabase.js';
-import { getYouTubeThumbnailUrl, parseYouTubeInput } from './utils/youtube.js';
+import {
+  getYouTubeThumbnailUrl,
+  parseYouTubeInput,
+  singleVideoEntry,
+} from './utils/youtube.js';
 
-const PREVIEW_DURATION_MS = 31_000;
 const LOGOUT_TRANSITION_MS = 260;
 const DISCORD_OAUTH_SEEN_STORAGE_KEY = 'discord_oauth_seen';
 const DISCORD_OAUTH_SILENT_PENDING_KEY = 'discord_oauth_silent_pending';
@@ -427,6 +430,7 @@ export default function App() {
 
   // Playback
   const [isPlaying, setIsPlaying] = useState(false);
+  const [previewCountdown, setPreviewCountdown] = useState(30);
 
   // Support list
   const [supportList, setSupportList] = useState(
@@ -1223,14 +1227,25 @@ export default function App() {
             meta.trackTitle && meta.trackTitle !== item.trackTitle;
           const hasNewDisplay =
             meta.displayTitle && meta.displayTitle !== item.displayTitle;
+          const hasNewTrackId = meta.trackId && meta.trackId !== item.trackId;
+          const hasNewThumbnail =
+            meta.sourceThumbnailUrl &&
+            meta.sourceThumbnailUrl !== item.thumbnail;
 
-          if (hasNewGame || hasNewTrack || hasNewDisplay) {
+          if (
+            hasNewGame ||
+            hasNewTrack ||
+            hasNewDisplay ||
+            hasNewTrackId ||
+            hasNewThumbnail
+          ) {
             return {
               ...item,
+              trackId: meta.trackId || item.trackId,
               gameTitle: meta.gameTitle || item.gameTitle,
               trackTitle: meta.trackTitle || item.trackTitle,
               displayTitle: meta.displayTitle || item.displayTitle,
-              thumbnail: meta.thumbnail || item.thumbnail,
+              thumbnail: meta.sourceThumbnailUrl || item.thumbnail,
             };
           }
           return item;
@@ -1304,16 +1319,16 @@ export default function App() {
           ? {
               ...video,
               title:
-                video.title ||
-                catalogEntry.sourceTitle ||
                 catalogEntry.displayTitle ||
+                catalogEntry.sourceTitle ||
+                video.title ||
                 video.videoId,
               thumbnail:
-                video.thumbnail ||
                 catalogEntry.sourceThumbnailUrl ||
+                video.thumbnail ||
                 getYouTubeThumbnailUrl(video.videoId),
               channelTitle:
-                video.channelTitle || catalogEntry.sourceChannelTitle || '',
+                catalogEntry.sourceChannelTitle || video.channelTitle || '',
               trackId: catalogEntry.trackId ?? null,
               gameTitle: catalogEntry.gameTitle ?? video.gameTitle ?? '',
               trackTitle: catalogEntry.trackTitle ?? video.trackTitle ?? '',
@@ -1435,22 +1450,6 @@ export default function App() {
         : isCurrentVideoSupported
           ? 'Remove from support list'
           : 'Add to support list';
-  const handleOpenExportModal = useCallback((tracks) => {
-    setExportTracks(tracks);
-    setIsExportModalOpen(true);
-  }, []);
-
-  const handleCreateYTPlaylist = useCallback((tracks) => {
-    // To be implemented later
-    alert(
-      `YouTube Playlist functionality for ${tracks.length} tracks coming soon!`,
-    );
-  }, []);
-
-  const handleRequestCloseExportModal = useCallback(() => {
-    setIsExportModalOpen(false);
-  }, []);
-
   const currentSupportTooltip = !currentVideo
     ? 'No current video'
     : isCurrentVideoNominated
@@ -1797,6 +1796,41 @@ export default function App() {
       'This song is retired. It can still be added to the current playlist.',
     );
   }, [showDefaultAppToast]);
+
+  const handleOpenExportModal = useCallback((tracks) => {
+    setExportTracks(tracks);
+    setIsExportModalOpen(true);
+  }, []);
+
+  const handleCreateYTPlaylist = useCallback(
+    (tracks) => {
+      const videoIds = tracks
+        .map((t) => t.videoId || t.id)
+        .filter((id) => id && id.length === 11);
+
+      if (videoIds.length === 0) {
+        showDefaultAppToast('No valid YouTube videos to export.', 'dashboard');
+        return;
+      }
+
+      if (videoIds.length > 50) {
+        showDefaultAppToast(
+          'YouTube limited to first 50 tracks for temporary playlists.',
+          'dashboard',
+        );
+      }
+
+      const limitedIds = videoIds.slice(0, 50);
+      const url = `https://www.youtube.com/watch_videos?video_ids=${limitedIds.join(',')}`;
+
+      window.open(url, '_blank');
+    },
+    [showDefaultAppToast],
+  );
+
+  const handleRequestCloseExportModal = useCallback(() => {
+    setIsExportModalOpen(false);
+  }, []);
 
   const applyCatalogMetadataToVideo = useCallback(
     (video) => {
@@ -2422,15 +2456,25 @@ export default function App() {
   }, [markVideoStarted, transientVideo]);
 
   useEffect(() => {
-    if (!isPreviewModeEnabled || !isPlaying || !currentVideo?.videoId)
+    if (!isPreviewModeEnabled) {
+      setPreviewCountdown(30);
       return undefined;
+    }
 
-    const timeoutId = window.setTimeout(() => {
-      handleAdvancePreview();
-    }, PREVIEW_DURATION_MS);
+    if (!isPlaying || !currentVideo?.videoId) return undefined;
+
+    const intervalId = window.setInterval(() => {
+      setPreviewCountdown((prev) => {
+        if (prev <= 1) {
+          handleAdvancePreview();
+          return 30;
+        }
+        return prev - 1;
+      });
+    }, 1000);
 
     return () => {
-      window.clearTimeout(timeoutId);
+      window.clearInterval(intervalId);
     };
   }, [
     currentVideo?.videoId,
@@ -2438,6 +2482,12 @@ export default function App() {
     isPlaying,
     isPreviewModeEnabled,
   ]);
+
+  useEffect(() => {
+    if (isPreviewModeEnabled) {
+      setPreviewCountdown(30);
+    }
+  }, [currentVideoId, isPreviewModeEnabled]);
 
   const appendVideosToPlaylist = useCallback(
     (videos, options = {}) => {
@@ -3031,6 +3081,7 @@ export default function App() {
 
   const handleSaveTrackMetadata = useCallback(
     async (metadataUpdates) => {
+      // 1. Process updates and identify YouTube ID changes
       const processedUpdates = metadataUpdates.map((update) => {
         let finalVideoId = update.videoId;
         let finalUrl = update.currentUrl;
@@ -3055,50 +3106,73 @@ export default function App() {
         };
       });
 
-      mergeCatalogTrackSummaries(processedUpdates);
-
-      // Replace old videoId with new videoId in all lists if it changed
-      processedUpdates.forEach((update) => {
-        if (update.oldVideoId) {
-          const replacer = (list) =>
-            list.map((item) =>
-              item.videoId === update.oldVideoId
-                ? {
-                    ...item,
-                    videoId: update.videoId,
-                    title: `${update.gameTitle} - ${update.trackTitle}`,
-                  }
-                : item,
-            );
-          setSupportList(replacer);
-          setNominationList(replacer);
-          setPlaylist(replacer);
-        }
-      });
-
-      setTracksNeedingMetadata((prev) =>
-        prev.filter(
-          (track) =>
-            !metadataUpdates.some((u) => u.oldVideoId === track.videoId),
-        ),
+      // 2. Fetch fresh YouTube metadata for any track where the ID changed
+      const updatesWithYouTubeMeta = await Promise.all(
+        processedUpdates.map(async (update) => {
+          if (update.hasChangedId) {
+            try {
+              const ytMeta = await singleVideoEntry(update.videoId);
+              return {
+                ...update,
+                title: ytMeta.title,
+                channelTitle: ytMeta.channelTitle,
+                thumbnail: ytMeta.thumbnail,
+              };
+            } catch (err) {
+              console.error(
+                'Failed to fetch YouTube metadata for',
+                update.videoId,
+                err,
+              );
+            }
+          }
+          return update;
+        }),
       );
-      setManualMetadataTracks(null);
+
+      // 3. Update the catalog cache overlay
+      mergeCatalogTrackSummaries(updatesWithYouTubeMeta);
+
+      const trackIdByVideoId = {};
 
       if (supabase && authUser) {
         try {
-          const savePromises = processedUpdates.map((update) =>
-            supabase.rpc('import_vgmc_catalog_row', {
-              canonical_game_title_input: update.gameTitle,
-              canonical_track_title_input: update.trackTitle,
-              youtube_video_id_input: update.videoId,
-              submitted_url_input: update.submittedUrl,
-              nomination_contest_number: null,
-              is_retired_input: false,
-              retiree_contest_number: null,
-              retiree_placement: null,
-              highest_round_input: null,
-            }),
+          // 4. Ingest YouTube metadata first to ensure track_sources entries exist
+          const ingestResult = await ingestYouTubeTrackSources(
+            supabase,
+            updatesWithYouTubeMeta,
           );
+          if (Array.isArray(ingestResult)) {
+            ingestResult.forEach((row) => {
+              if (row.youtube_video_id) {
+                trackIdByVideoId[row.youtube_video_id] = row.track_id;
+              }
+            });
+          }
+
+          // 5. Call internal RPC for VGMC metadata
+          const savePromises = updatesWithYouTubeMeta.map(async (update) => {
+            const { data: trackId, error } = await supabase.rpc(
+              'import_vgmc_catalog_row',
+              {
+                canonical_game_title_input: update.gameTitle,
+                canonical_track_title_input: update.trackTitle,
+                youtube_video_id_input: update.videoId,
+                submitted_url_input: update.submittedUrl,
+                nomination_contest_number: null,
+                is_retired_input: false,
+                retiree_contest_number: null,
+                retiree_placement: null,
+                highest_round_input: null,
+              },
+            );
+
+            if (trackId && !error) {
+              trackIdByVideoId[update.videoId] = trackId;
+            }
+
+            return { error };
+          });
 
           const results = await Promise.all(savePromises);
           const errors = results.filter((r) => r.error);
@@ -3113,8 +3187,49 @@ export default function App() {
         }
       }
 
+      // 6. Update local state lists with comprehensive metadata
+      const applyUpdatesToList = (list) => {
+        let nextList = [...list];
+        updatesWithYouTubeMeta.forEach((update) => {
+          const trackId = trackIdByVideoId[update.videoId] || update.trackId;
+          nextList = nextList.map((item) => {
+            const isMatch = update.oldVideoId
+              ? item.videoId === update.oldVideoId
+              : item.videoId === update.videoId;
+
+            if (isMatch) {
+              return {
+                ...item,
+                videoId: update.videoId,
+                trackId: trackId || item.trackId,
+                gameTitle: update.gameTitle,
+                trackTitle: update.trackTitle,
+                displayTitle: `${update.gameTitle} - ${update.trackTitle}`,
+                title: update.title || item.title,
+                thumbnail: update.thumbnail || item.thumbnail,
+                channelTitle: update.channelTitle || item.channelTitle,
+              };
+            }
+            return item;
+          });
+        });
+        return nextList;
+      };
+
+      setSupportList(applyUpdatesToList);
+      setNominationList(applyUpdatesToList);
+      setPlaylist(applyUpdatesToList);
+
+      setTracksNeedingMetadata((prev) =>
+        prev.filter(
+          (track) =>
+            !metadataUpdates.some((u) => u.oldVideoId === track.videoId),
+        ),
+      );
+      setManualMetadataTracks(null);
+
       forceImmediateSyncRef.current = true;
-      mergeCatalogTrackSummaries(processedUpdates);
+      mergeCatalogTrackSummaries(updatesWithYouTubeMeta);
     },
     [
       mergeCatalogTrackSummaries,
@@ -3736,6 +3851,7 @@ export default function App() {
           isShuffleEnabled={isShuffleEnabled}
           onShuffle={handleShufflePlaylist}
           isPreviewModeEnabled={isPreviewModeEnabled}
+          previewCountdown={previewCountdown}
           onTogglePreview={handleTogglePreviewMode}
           currentVideo={currentVideo}
           isCurrentVideoSupported={isCurrentVideoSupported}

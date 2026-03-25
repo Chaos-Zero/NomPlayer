@@ -18,7 +18,7 @@ import { CSS } from '@dnd-kit/utilities';
 import { ContextMenuPortal } from './ContextMenuPortal';
 import CollectionAdder from './CollectionAdder.jsx';
 import ExportIcon from './ExportIcon.jsx';
-import YTPlaylistIcon from './YTPlaylistIcon.jsx';
+import YouTubeIcon from './YouTubeIcon.jsx';
 import ScrollingText from './ScrollingText.jsx';
 import useMediaQuery from '../hooks/useMediaQuery.js';
 
@@ -571,7 +571,7 @@ export default function PlaylistSidebar({
                 title="Create YT Playlist"
                 aria-label="Create YT Playlist"
               >
-                <YTPlaylistIcon />
+                <YouTubeIcon />
               </button>
               <button
                 className={`fav-panel-action-btn${selectionMode ? ' active' : ''}`}

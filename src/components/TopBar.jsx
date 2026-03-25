@@ -133,6 +133,39 @@ function FastForwardIcon({ className = 'collection-icon' }) {
   );
 }
 
+function StopwatchIcon({ countdown = 30, className = 'transport-icon' }) {
+  return (
+    <svg className={className} viewBox="0 0 20 20" aria-hidden="true">
+      <circle
+        cx="10"
+        cy="11.2"
+        r="8.3"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.2"
+      />
+      <path
+        d="M10 2.9V1.4M7.8 1.4H12.2M15.8 5.4L16.8 4.4"
+        stroke="currentColor"
+        strokeWidth="1.2"
+        strokeLinecap="round"
+      />
+      <text
+        x="10"
+        y="11.7"
+        textAnchor="middle"
+        dominantBaseline="middle"
+        fontSize="10"
+        fontWeight="900"
+        fill="currentColor"
+        style={{ fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.3px' }}
+      >
+        {countdown}
+      </text>
+    </svg>
+  );
+}
+
 export default function TopBar({
   theme,
   onToggleTheme,
@@ -148,6 +181,7 @@ export default function TopBar({
   isShuffleEnabled = false,
   onShuffle,
   isPreviewModeEnabled = false,
+  previewCountdown = 30,
   onTogglePreview,
   currentVideo = null,
   isCurrentVideoSupported = false,
@@ -661,7 +695,10 @@ export default function TopBar({
           tabIndex={hidden ? -1 : 0}
         >
           {isMobileLayout && isPreviewModeEnabled ? (
-            <FastForwardIcon className="transport-icon transport-icon-preview" />
+            <StopwatchIcon
+              countdown={previewCountdown}
+              className="transport-icon transport-icon-preview"
+            />
           ) : isPlaying ? (
             <PauseIcon />
           ) : (
@@ -689,7 +726,10 @@ export default function TopBar({
             aria-pressed={isPreviewModeEnabled}
             tabIndex={hidden ? -1 : 0}
           >
-            <FastForwardIcon />
+            <StopwatchIcon
+              countdown={previewCountdown}
+              className="transport-icon transport-icon-preview"
+            />
           </button>
         )}
       </div>

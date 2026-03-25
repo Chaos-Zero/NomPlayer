@@ -18,7 +18,7 @@ import { CSS } from '@dnd-kit/utilities';
 import { ContextMenuPortal } from './ContextMenuPortal';
 import CollectionAdder from './CollectionAdder.jsx';
 import ExportIcon from './ExportIcon.jsx';
-import YTPlaylistIcon from './YTPlaylistIcon.jsx';
+import YouTubeIcon from './YouTubeIcon.jsx';
 
 const PANEL_CLOSE_MS = 240;
 
@@ -542,7 +542,7 @@ export default function FavouritesPanel({
                   title="Create YT Playlist"
                   aria-label="Create YT Playlist"
                 >
-                  <YTPlaylistIcon />
+                  <YouTubeIcon />
                 </button>
                 <button
                   className={`fav-panel-action-btn${selectionMode ? ' active' : ''}`}
