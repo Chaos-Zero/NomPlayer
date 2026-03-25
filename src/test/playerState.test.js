@@ -15,7 +15,55 @@ import {
   recordYouTubeTrackListen,
   mergeGuestCollectionsIntoPlayerState,
   persistLocalGuestPlayerState,
+  recordTrackHistory,
+  getTrackHistory,
+  clearTrackHistory,
+  HISTORY_STORAGE_KEY,
 } from '../lib/playerState.js';
+
+describe('playback history', () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  it('records tracks into history and limits to 200 items', () => {
+    const track1 = { videoId: 'v1', title: 'Track 1' };
+    const track2 = { videoId: 'v2', title: 'Track 2' };
+
+    recordTrackHistory(track1);
+    let history = getTrackHistory();
+    expect(history).toHaveLength(1);
+    expect(history[0].videoId).toBe('v1');
+
+    recordTrackHistory(track2);
+    history = getTrackHistory();
+    expect(history).toHaveLength(2);
+    expect(history[0].videoId).toBe('v2'); // Newest first
+
+    // Test deduplication: move track1 to top
+    recordTrackHistory(track1);
+    history = getTrackHistory();
+    expect(history).toHaveLength(2);
+    expect(history[0].videoId).toBe('v1');
+
+    // Test limit
+    for (let i = 0; i < 210; i++) {
+      recordTrackHistory({ videoId: `video-${i}`, title: `Track ${i}` });
+    }
+    history = getTrackHistory();
+    expect(history).toHaveLength(200);
+    expect(history[0].videoId).toBe('video-209');
+  });
+
+  it('clears playback history from localStorage', () => {
+    recordTrackHistory({ videoId: 'v1', title: 'Track 1' });
+    expect(getTrackHistory()).toHaveLength(1);
+
+    clearTrackHistory();
+    expect(getTrackHistory()).toHaveLength(0);
+    expect(localStorage.getItem(HISTORY_STORAGE_KEY)).toBeNull();
+  });
+});
 
 describe('playerState guest import helpers', () => {
   beforeEach(() => {

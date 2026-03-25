@@ -399,6 +399,7 @@ export async function fetchPagedTracks(
     vgmcFilter = '',
     viewMode = 'all',
     userFeedback = {},
+    listenedStatusById = {},
     sortColumn = 'vgmc',
     sortAsc = true,
     maxVgmc = 0,
@@ -476,6 +477,14 @@ export async function fetchPagedTracks(
     }
   } else if (viewMode === 'retired') {
     query = query.filter('is_retired', 'eq', true);
+  } else if (viewMode === 'history_recovery') {
+    const partialVideoIds = Object.keys(listenedStatusById).filter(
+      (id) => listenedStatusById[id] === 'partial',
+    );
+    if (partialVideoIds.length === 0) {
+      return { data: [], totalCount: 0 };
+    }
+    query = query.in('source_external_id', partialVideoIds);
   }
 
   // Sorting logic
@@ -490,6 +499,8 @@ export async function fetchPagedTracks(
     query = query.order('game_title', { ascending: sortAsc });
   } else if (sortColumn === 'track') {
     query = query.order('track_title', { ascending: sortAsc });
+  } else if (sortColumn === 'submissions') {
+    query = query.order('tournament_count', { ascending: sortAsc });
   } else if (sortColumn === 'rating') {
     // Handling rating sorting (this might need a join or careful handling if sorting by user feedback)
     // For now, let's sort by game_title if rating is hard to sort server-side without a join

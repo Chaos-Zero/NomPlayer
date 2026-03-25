@@ -25,6 +25,8 @@ import useMediaQuery from '../hooks/useMediaQuery.js';
 const PAGE_SIZE = 150;
 const VIEW_MODES = [
   { id: 'all', label: 'All Tracks' },
+  { id: 'most_submitted', label: 'Most Submitted' },
+  { id: 'history_recovery', label: 'History Recovery' },
   { id: 'rated', label: 'Rated Only' },
   { id: 'unrated', label: 'Unrated Only' },
   { id: 'retired', label: 'Retired Only' },
@@ -412,6 +414,7 @@ export default function TrackDatabase({
   onPlayNow,
   onShowToast,
   hasPlayer,
+  listenedStatusById = {},
 }) {
   const [tracks, setTracks] = useState([]);
   const [userFeedback, setUserFeedback] = useState({});
@@ -646,6 +649,7 @@ export default function TrackDatabase({
           viewMode,
           authUserId: authUser?.id,
           userFeedback: feedback,
+          listenedStatusById,
           sortColumn,
           sortAsc,
           maxVgmc,
@@ -697,6 +701,7 @@ export default function TrackDatabase({
         viewMode,
         authUserId: authUser?.id,
         userFeedback: userFeedback,
+        listenedStatusById,
         sortColumn,
         sortAsc,
         maxVgmc,
@@ -726,6 +731,7 @@ export default function TrackDatabase({
     vgmcFilter,
     viewMode,
     userFeedback,
+    listenedStatusById,
     sortColumn,
     sortAsc,
     maxVgmc,
@@ -922,7 +928,18 @@ export default function TrackDatabase({
             <div className="view-selector">
               <select
                 value={viewMode}
-                onChange={(e) => setViewMode(e.target.value)}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setViewMode(val);
+                  if (val === 'most_submitted') {
+                    setSortColumn('submissions');
+                    setSortAsc(false);
+                  } else if (sortColumn === 'submissions') {
+                    // Reset to default sort if we were in most submitted
+                    setSortColumn('vgmc');
+                    setSortAsc(true);
+                  }
+                }}
                 aria-label="Filter by view"
               >
                 {VIEW_MODES.map((mode) => (

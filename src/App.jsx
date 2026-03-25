@@ -48,6 +48,9 @@ import {
   saveUserPlayerState,
   saveTrackSupport,
   upsertUserProfile,
+  recordTrackHistory,
+  getTrackHistory,
+  clearTrackHistory,
   LEGACY_SUPPORT_STORAGE_KEY,
 } from './lib/playerState.js';
 import {
@@ -2425,8 +2428,23 @@ export default function App() {
       });
 
       persistTrackListenEvent(videoId, 'started');
+
+      const video =
+        playlistRef.current.find((v) => v.videoId === videoId) ||
+        (transientVideo?.videoId === videoId ? transientVideo : null);
+
+      if (video) {
+        const catalogEntry = getCatalogTrackForVideo(video);
+        recordTrackHistory({
+          videoId: video.videoId,
+          title: video.title || catalogEntry?.sourceTitle || '',
+          trackTitle: catalogEntry?.trackTitle || video.trackTitle || '',
+          gameTitle: catalogEntry?.gameTitle || video.gameTitle || '',
+          trackId: catalogEntry?.trackId || video.trackId || null,
+        });
+      }
     },
-    [persistTrackListenEvent],
+    [persistTrackListenEvent, getCatalogTrackForVideo, transientVideo],
   );
 
   const handleAdvancePreview = useCallback(() => {
@@ -3922,6 +3940,7 @@ export default function App() {
                 onPlayNow={handlePlayNowFromSupportList}
                 onShowToast={handleShowDashboardToast}
                 hasPlayer={Boolean(currentVideo)}
+                listenedStatusById={listenedStatusById}
               />
             </Suspense>
           )}
@@ -4132,6 +4151,9 @@ export default function App() {
         notice={settingsNotice}
         onClose={() => setIsSettingsOpen(false)}
         onSave={handleSaveSettings}
+        onPlayTrack={handlePlayCatalogTrack}
+        getTrackHistory={getTrackHistory}
+        onClearHistory={clearTrackHistory}
       />
 
       <GuestImportDialog

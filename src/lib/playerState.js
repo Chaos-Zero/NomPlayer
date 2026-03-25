@@ -2,8 +2,10 @@ export const PLAYER_STATE_STORAGE_KEY = 'yt_player_state';
 export const SUPPORT_LIST_STORAGE_KEY = 'yt_support_list';
 export const NOMINATION_LIST_STORAGE_KEY = 'yt_nominations_list';
 export const CUSTOM_PLAYLISTS_STORAGE_KEY = 'yt_custom_playlists';
+export const HISTORY_STORAGE_KEY = 'yt_playback_history';
 export const LEGACY_SUPPORT_STORAGE_KEY = 'yt_favourites';
 export const DISCORD_USERNAME_PREFIX = 'dc:';
+const MAX_HISTORY_LENGTH = 200;
 
 function normalizeVideoEntry(entry) {
   if (!entry || typeof entry !== 'object') return null;
@@ -678,4 +680,48 @@ export async function saveTrackSupport(supabase, userId, video, level) {
     );
     if (error) throw error;
   }
+}
+
+export function recordTrackHistory(track) {
+  if (!track || !track.videoId) return;
+
+  try {
+    const rawHistory = localStorage.getItem(HISTORY_STORAGE_KEY);
+    let history = rawHistory ? JSON.parse(rawHistory) : [];
+
+    // Remove existing entry of the same track to move it to the top
+    history = history.filter((item) => item.videoId !== track.videoId);
+
+    // Add to the beginning
+    history.unshift({
+      videoId: track.videoId,
+      title: track.title,
+      trackTitle: track.trackTitle,
+      gameTitle: track.gameTitle,
+      trackId: track.trackId,
+      timestamp: new Date().toISOString(),
+    });
+
+    // Limit to 200
+    if (history.length > MAX_HISTORY_LENGTH) {
+      history = history.slice(0, MAX_HISTORY_LENGTH);
+    }
+
+    localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(history));
+  } catch (err) {
+    console.error('Failed to record track history:', err);
+  }
+}
+
+export function getTrackHistory() {
+  try {
+    const rawHistory = localStorage.getItem(HISTORY_STORAGE_KEY);
+    return rawHistory ? JSON.parse(rawHistory) : [];
+  } catch {
+    return [];
+  }
+}
+
+export function clearTrackHistory() {
+  localStorage.removeItem(HISTORY_STORAGE_KEY);
 }
