@@ -85,14 +85,8 @@ export default function UserSettingsDialog({
   notice = '',
   onClose,
   onSave,
-  onPlayTrack,
-  getTrackHistory,
-  onClearHistory,
 }) {
   if (!isOpen || !user) return null;
-
-  const history =
-    typeof getTrackHistory === 'function' ? getTrackHistory() : [];
 
   function handleSubmit(event) {
     event.preventDefault();
@@ -187,55 +181,6 @@ export default function UserSettingsDialog({
               {isSubmitting ? 'Saving…' : 'Save settings'}
             </button>
           </form>
-
-          <div className="settings-history-section">
-            <div className="settings-history-header">
-              <h3>Playback History</h3>
-              {history.length > 0 && (
-                <button
-                  className="btn btn-text btn-clear-history"
-                  type="button"
-                  onClick={() => {
-                    if (confirm('Clear your playback history?')) {
-                      onClearHistory?.();
-                    }
-                  }}
-                >
-                  Clear History
-                </button>
-              )}
-            </div>
-            {history.length === 0 ? (
-              <p className="settings-history-empty">No history recorded yet.</p>
-            ) : (
-              <div className="settings-history-list">
-                {history.map((item, index) => (
-                  <button
-                    key={`${item.videoId}-${item.timestamp}`}
-                    className="settings-history-item"
-                    type="button"
-                    onClick={() => {
-                      onPlayTrack?.(item);
-                      onClose?.();
-                    }}
-                    title={`Play ${item.trackTitle || item.title}`}
-                  >
-                    <span className="history-item-index">{index + 1}</span>
-                    <div className="history-item-meta">
-                      <span className="history-item-title">
-                        {item.trackTitle || item.title}
-                      </span>
-                      {item.gameTitle && (
-                        <span className="history-item-game">
-                          {item.gameTitle}
-                        </span>
-                      )}
-                    </div>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
         </div>
       </div>
     </div>

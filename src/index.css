@@ -5612,7 +5612,7 @@ button.playlist-search-indicator:hover {
 
 .settings-avatar-inline {
   display: flex;
-  align-items: flex-start;
+  align-items: stretch;
   gap: 14px;
 }
 
@@ -5699,14 +5699,14 @@ button.playlist-search-indicator:hover {
 }
 
 .settings-dialog {
-  max-width: 800px;
+  max-width: 540px;
   width: 90%;
 }
 
 .settings-dialog-content {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
   padding: 8px 0;
 }
 
@@ -5726,10 +5726,9 @@ button.playlist-search-indicator:hover {
 
 .settings-history-header {
   display: flex;
-  align-items: center;
+  align-items: baseline;
   justify-content: space-between;
-  padding-bottom: 8px;
-  border-bottom: 1px solid var(--border);
+  padding-bottom: 4px;
 }
 
 .settings-history-header h3 {

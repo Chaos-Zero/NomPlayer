@@ -301,7 +301,7 @@ export default function DuplicateReviewModal({
     >
       <div
         className="modal-content diff-modal"
-        onClick={(e) => e.stopPropagation()}
+        onClick={(ev) => ev.stopPropagation()}
       >
         <div className="modal-header">
           <div className="modal-title-group">
@@ -337,8 +337,8 @@ export default function DuplicateReviewModal({
                   type="text"
                   placeholder="Search by game or track title..."
                   value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                  onChange={(ev) => setSearchQuery(ev.target.value)}
+                  onKeyDown={(ev) => ev.key === 'Enter' && handleSearch()}
                   autoFocus
                 />
                 <button
@@ -549,8 +549,11 @@ export default function DuplicateReviewModal({
                           className="custom-input"
                           placeholder="Game Title"
                           value={customValues.gameTitle}
-                          onChange={(e) =>
-                            handleCustomValueChange('gameTitle', e.target.value)
+                          onChange={(ev) =>
+                            handleCustomValueChange(
+                              'gameTitle',
+                              ev.target.value,
+                            )
                           }
                           onClick={() =>
                             handleValueChange('gameTitle', 'custom')
@@ -623,10 +626,10 @@ export default function DuplicateReviewModal({
                           className="custom-input"
                           placeholder="Song Title"
                           value={customValues.trackTitle}
-                          onChange={(e) =>
+                          onChange={(ev) =>
                             handleCustomValueChange(
                               'trackTitle',
-                              e.target.value,
+                              ev.target.value,
                             )
                           }
                           onClick={() =>
@@ -723,8 +726,11 @@ export default function DuplicateReviewModal({
                           className="custom-input"
                           placeholder="URL"
                           value={customValues.sourceUrl}
-                          onChange={(e) =>
-                            handleCustomValueChange('sourceUrl', e.target.value)
+                          onChange={(ev) =>
+                            handleCustomValueChange(
+                              'sourceUrl',
+                              ev.target.value,
+                            )
                           }
                           onClick={() =>
                             handleValueChange('sourceUrl', 'custom')
@@ -769,10 +775,10 @@ export default function DuplicateReviewModal({
                           className="custom-input custom-textarea"
                           placeholder="Numbers e.g. 1, 5, 20"
                           value={customValues.tournaments}
-                          onChange={(e) =>
+                          onChange={(ev) =>
                             handleCustomValueChange(
                               'tournaments',
-                              e.target.value,
+                              ev.target.value,
                             )
                           }
                           onClick={() =>

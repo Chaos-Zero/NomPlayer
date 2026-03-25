@@ -4,7 +4,6 @@ import {
   DndContext,
   closestCenter,
   KeyboardSensor,
-  PointerSensor,
   useSensor,
   useSensors,
   DragOverlay,
@@ -25,8 +24,43 @@ import { ContextMenuPortal } from './ContextMenuPortal';
 
 function PlaylistPlusIcon() {
   return (
-    <svg viewBox="0 0 24 24" fill="currentColor">
+    <svg
+      className="transport-icon"
+      viewBox="0 0 24 24"
+      aria-hidden="true"
+      fill="currentColor"
+    >
       <path d="M14 10H2v2h12v-2zm0-4H2v2h12V6zm4 8v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zM2 16h8v-2H2v2z" />
+    </svg>
+  );
+}
+
+function PlayIcon() {
+  return (
+    <svg
+      className="transport-icon"
+      viewBox="0 0 20 20"
+      aria-hidden="true"
+      fill="currentColor"
+    >
+      <path d="M6.25 4.67V15.33C6.25 15.91 6.89 16.27 7.39 15.96L15.75 10.63C16.22 10.33 16.22 9.67 15.75 9.37L7.39 4.04C6.89 3.73 6.25 4.09 6.25 4.67Z" />
+    </svg>
+  );
+}
+
+function TrashIcon() {
+  return (
+    <svg
+      className="transport-icon"
+      viewBox="0 0 20 20"
+      aria-hidden="true"
+      fill="currentColor"
+    >
+      <path
+        fillRule="evenodd"
+        d="M8.75 3A.75.75 0 0 0 8 3.75V4H4.75a.75.75 0 0 0 0 1.5h10.5a.75.75 0 0 0 0-1.5H12v-.25A.75.75 0 0 0 11.25 3h-2.5ZM5 6.5a.75.75 0 0 1 .75-.75h8.5a.75.75 0 0 1 .75.75v11a2.25 2.25 0 0 1-2.25 2.25h-5A2.25 2.25 0 0 1 5 17.5v-11Z"
+        clipRule="evenodd"
+      />
     </svg>
   );
 }
@@ -51,6 +85,20 @@ function CloseIcon() {
   return (
     <svg viewBox="0 0 20 20" fill="currentColor">
       <path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z" />
+    </svg>
+  );
+}
+
+function EditIcon() {
+  return (
+    <svg
+      className="transport-icon"
+      viewBox="0 0 20 20"
+      fill="currentColor"
+      aria-hidden="true"
+    >
+      <path d="M5.433 13.917l1.262-3.155A4 4 0 017.58 9.42l6.92-6.918a2.121 2.121 0 013 3l-6.92 6.918c-.383.383-.84.685-1.343.886l-3.154 1.262a.5.5 0 01-.65-.65z" />
+      <path d="M3.5 5.75c0-.69.56-1.25 1.25-1.25H10A.75.75 0 0010 3H4.75A2.75 2.75 0 002 5.75v9.5A2.75 2.75 0 004.75 18h9.5A2.75 2.75 0 0017 15.25V10a.75.75 0 00-1.5 0v5.25c0 .69-.56 1.25-1.25 1.25h-9.5c-.69 0-1.25-.56-1.25-1.25v-9.5z" />
     </svg>
   );
 }
@@ -118,8 +166,8 @@ function TrackInfoPanel({
       ? `VGMC ${track.tournaments[0].sequence_number}`
       : 'New to VGMC';
 
-  const handleCommentChange = (e) => {
-    const val = e.target.value;
+  const handleCommentChange = (ev) => {
+    const val = ev.target.value;
     setLocalComment(val);
     onUpdateComment(track.videoId, val);
   };
@@ -159,10 +207,10 @@ function TrackInfoPanel({
               <select
                 className="workspace-info-rating-select"
                 value={personalFeedback.rating || ''}
-                onChange={(e) =>
+                onChange={(ev) =>
                   onUpdateRating(
                     track.videoId,
-                    parseInt(e.target.value) || null,
+                    parseInt(ev.target.value) || null,
                   )
                 }
               >
@@ -346,8 +394,8 @@ function WorkspaceColumn({
     !id.startsWith('peer-') &&
     id !== 'new-nominations';
 
-  const handleAdd = (e) => {
-    e.preventDefault();
+  const handleAdd = (ev) => {
+    ev.preventDefault();
     if (!addUrl.trim()) return;
     onAddByUrl?.(addUrl);
     setAddUrl('');
@@ -368,7 +416,7 @@ function WorkspaceColumn({
               <select
                 className="workspace-playlist-select"
                 value={activePlaylistId || ''}
-                onChange={(e) => onSelectPlaylist?.(e.target.value)}
+                onChange={(ev) => onSelectPlaylist?.(ev.target.value)}
               >
                 {playlists.map((pl) => (
                   <option key={pl.id} value={pl.id}>
@@ -433,7 +481,7 @@ function WorkspaceColumn({
               type="text"
               placeholder="Paste YouTube link to add track..."
               value={addUrl}
-              onChange={(e) => setAddUrl(e.target.value)}
+              onChange={(ev) => setAddUrl(ev.target.value)}
             />
             <button type="submit" title="Add track">
               <svg viewBox="0 0 20 20" fill="currentColor">
@@ -490,6 +538,7 @@ export default function Workspaces({
   onShowToast,
   authUser,
   supabase,
+  onUpdateMetadata,
 }) {
   const [focusedListId, setFocusedListId] = useState(null);
   const [activeCustomPlaylistId, setActiveCustomPlaylistId] = useState(null);
@@ -845,10 +894,25 @@ export default function Workspaces({
       return;
     }
     e.preventDefault();
+    // Determine which list this video belongs to
+    let sourceListId = activeCustomPlaylistId;
+    if (nominationList.some((v) => v.videoId === video.videoId))
+      sourceListId = 'nominations';
+    else if (supportList.some((v) => v.videoId === video.videoId))
+      sourceListId = 'support';
+    else if (playlist.some((v) => v.videoId === video.videoId))
+      sourceListId = 'current';
+    else if (
+      peerColumns.some((pl) =>
+        pl.videos?.some((v) => v.videoId === video.videoId),
+      )
+    )
+      sourceListId = 'peer';
     setContextMenu({
       x: e.clientX,
       y: e.clientY,
       video,
+      sourceListId,
     });
   };
 
@@ -860,7 +924,8 @@ export default function Workspaces({
   };
 
   const handleAddTrackToPlaylist = (video) => {
-    onAddToPlaylist(video);
+    onAddToPlaylist([video]);
+    onShowToast('Track added to playlist');
     closeContextMenu();
   };
 
@@ -1291,57 +1356,61 @@ export default function Workspaces({
             x={contextMenu.x}
             y={contextMenu.y}
             onClose={closeContextMenu}
-            className="db-context-menu"
+            className="database-context-menu"
           >
-            <div
-              className="context-menu-item"
+            <button
+              className="database-context-menu-item"
               onClick={() => handlePlayNow(contextMenu.video)}
             >
-              <svg viewBox="0 0 20 20" fill="currentColor">
-                <path d="M6.25 4.67V15.33C6.25 15.91 6.89 16.27 7.39 15.96L15.75 10.63C16.22 10.33 16.22 9.67 15.75 9.37L7.39 4.04C6.89 3.73 6.25 4.09 6.25 4.67Z" />
-              </svg>
+              <PlayIcon />
               <span>Play Now</span>
-            </div>
-            <div
-              className="context-menu-item"
-              onClick={() => handleAddTrackToPlaylist(contextMenu.video)}
-            >
-              <svg viewBox="0 0 24 24" fill="currentColor">
-                <path d="M14 10H2v2h12v-2zm0-4H2v2h12V6zm4 8v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zM2 16h8v-2H2v2z" />
-              </svg>
-              <span>Add to Playlist</span>
-            </div>
-            <div className="context-menu-separator" />
-            <div
-              className="context-menu-item danger"
+            </button>
+            {contextMenu.sourceListId !== 'current' && (
+              <button
+                className="database-context-menu-item"
+                onClick={() => {
+                  handleAddTrackToPlaylist(contextMenu.video);
+                  closeContextMenu();
+                }}
+              >
+                <PlaylistPlusIcon />
+                <span>Add to Playlist</span>
+              </button>
+            )}
+            <button
+              className="database-context-menu-item"
               onClick={() => {
-                const listId = String(
-                  nominationList.some(
-                    (v) => v.videoId === contextMenu.video.videoId,
-                  )
-                    ? 'nominations'
-                    : supportList.some(
-                          (v) => v.videoId === contextMenu.video.videoId,
-                        )
-                      ? 'support'
-                      : playlist.some(
-                            (v) => v.videoId === contextMenu.video.videoId,
-                          )
-                        ? 'current'
-                        : activeCustomPlaylistId,
-                );
-                handleRemoveTrack(listId, contextMenu.video.videoId);
+                onUpdateMetadata?.(contextMenu.video);
+                closeContextMenu();
               }}
             >
-              <svg viewBox="0 0 20 20" fill="currentColor">
-                <path
-                  fillRule="evenodd"
-                  d="M8.75 3A.75.75 0 0 0 8 3.75V4H4.75a.75.75 0 0 0 0 1.5h10.5a.75.75 0 0 0 0-1.5H12v-.25A.75.75 0 0 0 11.25 3h-2.5ZM5 6.5a.75.75 0 0 1 .75-.75h8.5a.75.75 0 0 1 .75.75v11a2.25 2.25 0 0 1-2.25 2.25h-5A2.25 2.25 0 0 1 5 17.5v-11Z"
-                  clipRule="evenodd"
-                />
-              </svg>
-              <span>Remove from List</span>
-            </div>
+              <EditIcon />
+              <span>Update Metadata</span>
+            </button>
+            {contextMenu.sourceListId !== 'nominations' &&
+              contextMenu.sourceListId !== 'peer' && (
+                <>
+                  <div
+                    style={{
+                      height: '1px',
+                      background: 'rgba(255,255,255,0.08)',
+                      margin: '4px 8px',
+                    }}
+                  />
+                  <button
+                    className="database-context-menu-item danger"
+                    onClick={() => {
+                      handleRemoveTrack(
+                        contextMenu.sourceListId,
+                        contextMenu.video.videoId,
+                      );
+                    }}
+                  >
+                    <TrashIcon />
+                    <span>Remove from List</span>
+                  </button>
+                </>
+              )}
           </ContextMenuPortal>
         )}
 

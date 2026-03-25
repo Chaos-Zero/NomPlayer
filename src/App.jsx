@@ -20,6 +20,7 @@ import SiteNavigation from './components/SiteNavigation.jsx';
 import Workspaces from './components/Workspaces.jsx';
 import ScrollingText from './components/ScrollingText.jsx';
 import UserSettingsDialog from './components/UserSettingsDialog.jsx';
+import ListeningHistoryDialog from './components/ListeningHistoryDialog.jsx';
 import SupportLevelDropdown from './components/SupportLevelDropdown.jsx';
 import ExportVgmcModal from './components/ExportVgmcModal.jsx';
 const TrackDatabase = lazy(() => import('./components/TrackDatabase.jsx'));
@@ -522,6 +523,7 @@ export default function App() {
   const [authMessage, setAuthMessage] = useState('');
   const [authError, setAuthError] = useState('');
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [supportLevelDropdown, setSupportLevelDropdown] = useState(null);
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [exportTracks, setExportTracks] = useState([]);
@@ -2259,6 +2261,10 @@ export default function App() {
     }
   }, [applyPersistedPlayerState, currentVideo, supabase]);
 
+  const handleOpenHistory = useCallback(() => {
+    setIsHistoryOpen(true);
+  }, []);
+
   const handleOpenSettings = useCallback(() => {
     setSettingsError('');
     setSettingsNotice('');
@@ -3902,6 +3908,7 @@ export default function App() {
           userProfile={userProfile}
           isAuthAvailable={isSupabaseConfigured}
           onOpenAuthDialog={handleOpenAuthDialog}
+          onOpenHistory={handleOpenHistory}
           onOpenSettings={handleOpenSettings}
           onLogout={handleLogout}
           isMenuOpen={isMobileNavOpen}
@@ -3962,6 +3969,7 @@ export default function App() {
               onShowToast={handleShowDashboardToast}
               authUser={authUser}
               supabase={supabase}
+              onUpdateMetadata={handleOpenMetadataUpdate}
             />
           )}
 
@@ -4151,6 +4159,11 @@ export default function App() {
         notice={settingsNotice}
         onClose={() => setIsSettingsOpen(false)}
         onSave={handleSaveSettings}
+      />
+
+      <ListeningHistoryDialog
+        isOpen={isHistoryOpen}
+        onClose={() => setIsHistoryOpen(false)}
         onPlayTrack={handlePlayCatalogTrack}
         getTrackHistory={getTrackHistory}
         onClearHistory={clearTrackHistory}

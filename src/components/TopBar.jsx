@@ -193,6 +193,7 @@ export default function TopBar({
   userProfile = null,
   isAuthAvailable = false,
   onOpenAuthDialog,
+  onOpenHistory,
   onOpenSettings,
   onLogout,
   onLoad,
@@ -782,6 +783,7 @@ export default function TopBar({
         profile={userProfile}
         authAvailable={isAuthAvailable}
         onOpenAuth={onOpenAuthDialog}
+        onOpenHistory={onOpenHistory}
         onOpenSettings={onOpenSettings}
         onLogout={onLogout}
         disabled={effectiveInputOpen}
@@ -1131,6 +1133,7 @@ export default function TopBar({
           profile={userProfile}
           authAvailable={isAuthAvailable}
           onOpenAuth={onOpenAuthDialog}
+          onOpenHistory={onOpenHistory}
           onOpenSettings={onOpenSettings}
           onLogout={onLogout}
         />

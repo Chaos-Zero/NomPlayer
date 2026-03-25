@@ -16,6 +16,7 @@ export default function UserMenu({
   profile,
   authAvailable = false,
   onOpenAuth,
+  onOpenHistory,
   onOpenSettings,
   onLogout,
   disabled = false,
@@ -102,6 +103,17 @@ export default function UserMenu({
                   <span className="user-menu-email">{secondaryLabel}</span>
                 )}
               </div>
+              <button
+                className="user-menu-item"
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  setIsOpen(false);
+                  onOpenHistory?.();
+                }}
+              >
+                History
+              </button>
               <button
                 className="user-menu-item"
                 type="button"
