@@ -1611,10 +1611,10 @@ body {
   grid-template-columns: var(--footer-player-w) minmax(0, 1fr) auto;
   align-items: center;
   gap: 24px;
-  z-index: 90;
-  opacity: 0;
-  transform: translateY(40px);
-  pointer-events: none;
+  z-index: 110;
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
   transition:
     opacity 0.22s ease,
     transform 0.34s cubic-bezier(0.16, 1, 0.3, 1),
@@ -1622,10 +1622,15 @@ body {
     box-shadow var(--transition);
 }
 
+.player-surface.detached-footer:not(.playing) {
+  opacity: 0;
+  transform: translateY(40px);
+  pointer-events: none;
+}
+
 .player-surface.detached-footer.playing {
   opacity: 1;
   transform: translateY(0);
-  pointer-events: auto;
 }
 
 .player-surface.detached-footer.playing.entering {

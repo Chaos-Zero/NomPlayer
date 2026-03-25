@@ -3699,6 +3699,7 @@ export default function App() {
 
   const persistentPlayer = shouldRenderPersistentPlayer ? (
     <div
+      key="persistent-player-surface"
       className={`player-surface player-surface-${playerPresentation}${hasDetachedFooter ? ' detached-footer' : ''}${isMobileDetachedFooter ? ' mobile-detached-footer' : ''}${isPlaying ? ' playing' : ''}${isDetachedFooterEntering ? ' entering' : ''}${isPlayerRevealing ? ' revealing' : ''}${isLogoutTransitioning ? ' logging-out' : ''}`}
     >
       <VideoPlayer
