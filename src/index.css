@@ -5323,6 +5323,19 @@ button.playlist-search-indicator:hover {
   color: var(--accent-light);
 }
 
+.fav-panel-action-btn.icon-only {
+  width: 32px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.fav-panel-action-btn.icon-only svg {
+  width: 16px;
+  height: 16px;
+}
+
 .fav-panel-action-btn.selection-accent {
   background: var(--info-dim);
   border-color: rgba(59, 130, 246, 0.42);

@@ -20,6 +20,7 @@ import SiteNavigation from './components/SiteNavigation.jsx';
 import ScrollingText from './components/ScrollingText.jsx';
 import UserSettingsDialog from './components/UserSettingsDialog.jsx';
 import SupportLevelDropdown from './components/SupportLevelDropdown.jsx';
+import ExportVgmcModal from './components/ExportVgmcModal.jsx';
 const TrackDatabase = lazy(() => import('./components/TrackDatabase.jsx'));
 import useMediaQuery from './hooks/useMediaQuery.js';
 import {
@@ -511,6 +512,8 @@ export default function App() {
   const [authError, setAuthError] = useState('');
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [supportLevelDropdown, setSupportLevelDropdown] = useState(null);
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+  const [exportTracks, setExportTracks] = useState([]);
   const [isSettingsSubmitting, setIsSettingsSubmitting] = useState(false);
   const [settingsError, setSettingsError] = useState('');
   const [settingsNotice, setSettingsNotice] = useState('');
@@ -1432,6 +1435,22 @@ export default function App() {
         : isCurrentVideoSupported
           ? 'Remove from support list'
           : 'Add to support list';
+  const handleOpenExportModal = useCallback((tracks) => {
+    setExportTracks(tracks);
+    setIsExportModalOpen(true);
+  }, []);
+
+  const handleCreateYTPlaylist = useCallback((tracks) => {
+    // To be implemented later
+    alert(
+      `YouTube Playlist functionality for ${tracks.length} tracks coming soon!`,
+    );
+  }, []);
+
+  const handleRequestCloseExportModal = useCallback(() => {
+    setIsExportModalOpen(false);
+  }, []);
+
   const currentSupportTooltip = !currentVideo
     ? 'No current video'
     : isCurrentVideoNominated
@@ -3744,6 +3763,8 @@ export default function App() {
           onToggleMenu={() =>
             setIsMobileNavOpen((previousValue) => !previousValue)
           }
+          onExport={handleOpenExportModal}
+          onSavePlaylist={handleCreateYTPlaylist}
         />
 
         <main
@@ -3825,6 +3846,8 @@ export default function App() {
               onDismissMetadataBanner={() => setTracksNeedingMetadata([])}
               onUpdateMetadata={handleOpenMetadataUpdate}
               authUser={authUser}
+              onExport={handleOpenExportModal}
+              onSavePlaylist={handleCreateYTPlaylist}
             />
             {!effectivePlaylistCollapsed && apiKeyMissing && (
               <div className="api-key-notice">
@@ -3898,6 +3921,8 @@ export default function App() {
             setSupportLevelDropdown({ video, position, direction: 'down' })
           }
           authUser={authUser}
+          onExport={handleOpenExportModal}
+          onSavePlaylist={handleCreateYTPlaylist}
         />
       )}
 
@@ -3930,6 +3955,8 @@ export default function App() {
           onDismissMetadataBanner={() => setTracksNeedingMetadata([])}
           onUpdateMetadata={handleOpenMetadataUpdate}
           authUser={authUser}
+          onExport={handleOpenExportModal}
+          onSavePlaylist={handleCreateYTPlaylist}
         />
       )}
 
@@ -3991,6 +4018,12 @@ export default function App() {
           }}
         />
       )}
+
+      <ExportVgmcModal
+        isOpen={isExportModalOpen}
+        tracks={exportTracks}
+        onClose={handleRequestCloseExportModal}
+      />
     </div>
   );
 }

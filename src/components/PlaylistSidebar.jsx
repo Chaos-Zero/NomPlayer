@@ -17,6 +17,8 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import { ContextMenuPortal } from './ContextMenuPortal';
 import CollectionAdder from './CollectionAdder.jsx';
+import ExportIcon from './ExportIcon.jsx';
+import YTPlaylistIcon from './YTPlaylistIcon.jsx';
 import ScrollingText from './ScrollingText.jsx';
 import useMediaQuery from '../hooks/useMediaQuery.js';
 
@@ -340,6 +342,8 @@ export default function PlaylistSidebar({
   onUpdateMetadata = () => {},
   authUser = null,
   onOpenSupportDropdown,
+  onExport,
+  onSavePlaylist,
 }) {
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -538,13 +542,45 @@ export default function PlaylistSidebar({
             </>
           )}
           {playlist.length > 0 && (
-            <button
-              className={`fav-panel-action-btn${selectionMode ? ' active' : ''}`}
-              type="button"
-              onClick={handleToggleSelectionMode}
-            >
-              {selectionMode ? 'Done' : 'Select'}
-            </button>
+            <>
+              <button
+                className="fav-panel-action-btn icon-only"
+                type="button"
+                onClick={() =>
+                  onExport?.(
+                    selectionMode && selectedVideos.length > 0
+                      ? selectedVideos
+                      : playlist,
+                  )
+                }
+                title="Export for VGMC"
+                aria-label="Export for VGMC"
+              >
+                <ExportIcon />
+              </button>
+              <button
+                className="fav-panel-action-btn icon-only"
+                type="button"
+                onClick={() =>
+                  onSavePlaylist?.(
+                    selectionMode && selectedVideos.length > 0
+                      ? selectedVideos
+                      : playlist,
+                  )
+                }
+                title="Create YT Playlist"
+                aria-label="Create YT Playlist"
+              >
+                <YTPlaylistIcon />
+              </button>
+              <button
+                className={`fav-panel-action-btn${selectionMode ? ' active' : ''}`}
+                type="button"
+                onClick={handleToggleSelectionMode}
+              >
+                {selectionMode ? 'Done' : 'Select'}
+              </button>
+            </>
           )}
           {showMobileHeaderClose && (
             <button
