@@ -144,6 +144,24 @@
   color: var(--text-secondary) !important;
 }
 
+.theme-light .playlist-search-results {
+  background: var(--bg-panel) !important;
+  border-color: var(--border) !important;
+  box-shadow: var(--shadow-lg) !important;
+}
+
+.theme-light .playlist-search-result {
+  color: var(--text-primary) !important;
+}
+
+.theme-light .playlist-search-result:hover {
+  background: var(--bg-surface-hover) !important;
+}
+
+.theme-light .playlist-search-status {
+  color: var(--text-muted) !important;
+}
+
 .theme-light .playlist-collapse-tab {
   background: #ffffff !important;
 }
@@ -2639,9 +2657,9 @@ body {
 }
 
 .mobile-topbar-front.with-detached-player {
-  grid-template-rows: calc(
-      var(--mobile-detached-player-base-visible-height) + 12px
-    ) var(--mobile-topbar-shell-h);
+  grid-template-rows:
+    calc(var(--mobile-detached-player-base-visible-height) + 12px)
+    var(--mobile-topbar-shell-h);
   gap: 0;
   padding: 0 12px;
   background: transparent;

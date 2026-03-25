@@ -212,7 +212,7 @@ describe('PlaylistSidebar', () => {
 
     expect(headerMain).toHaveTextContent('Playlist');
     expect(headerMain).toHaveTextContent('1 videos');
-    expect(headerActions?.children).toHaveLength(1);
+    expect(headerActions?.children).toHaveLength(3);
     expect(screen.getByRole('button', { name: 'Select' })).toBeInTheDocument();
   });
 
