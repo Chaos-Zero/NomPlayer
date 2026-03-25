@@ -6,6 +6,7 @@ import {
   useLayoutEffect,
   memo,
 } from 'react';
+import { getDisplayProfileName } from '../lib/playerState.js';
 import { ContextMenuPortal } from './ContextMenuPortal';
 import {
   fetchPagedTracks,
@@ -171,7 +172,7 @@ function CommunityFeedbackPanel({ track, supabase, onClose }) {
             <div key={index} className="community-feedback-item">
               <div className="feedback-user">
                 <span className="username">
-                  {item.profiles?.username || 'Anonymous'}
+                  {getDisplayProfileName(item.profiles?.username, 'Anonymous')}
                 </span>
                 {item.rating && (
                   <span className="rating-badge">{item.rating}/10</span>

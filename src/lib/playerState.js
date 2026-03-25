@@ -1,6 +1,7 @@
 export const PLAYER_STATE_STORAGE_KEY = 'yt_player_state';
 export const SUPPORT_LIST_STORAGE_KEY = 'yt_support_list';
 export const NOMINATION_LIST_STORAGE_KEY = 'yt_nominations_list';
+export const CUSTOM_PLAYLISTS_STORAGE_KEY = 'yt_custom_playlists';
 export const LEGACY_SUPPORT_STORAGE_KEY = 'yt_favourites';
 export const DISCORD_USERNAME_PREFIX = 'dc:';
 
@@ -32,6 +33,7 @@ function normalizeVideoEntry(entry) {
       entry.supportLevel <= 3
         ? entry.supportLevel
         : 1,
+    comment: typeof entry.comment === 'string' ? entry.comment : '',
   };
 }
 
@@ -141,6 +143,19 @@ export function normalizePersistedPlayerState(
     ),
     supportList,
     nominationList,
+
+    customPlaylists: Array.isArray(rawState?.customPlaylists)
+      ? rawState.customPlaylists
+          .map((pl) => ({
+            id:
+              typeof pl.id === 'string'
+                ? pl.id
+                : `pl-${Math.random().toString(36).slice(2, 11)}`,
+            name: typeof pl.name === 'string' ? pl.name : 'Untitled Playlist',
+            videos: normalizeVideoList(pl.videos),
+          }))
+          .filter((pl) => pl.videos.length >= 0)
+      : [],
   };
 }
 
@@ -160,6 +175,10 @@ export function persistLocalGuestPlayerState(state) {
     NOMINATION_LIST_STORAGE_KEY,
     JSON.stringify(snapshot.nominationList),
   );
+  localStorage.setItem(
+    CUSTOM_PLAYLISTS_STORAGE_KEY,
+    JSON.stringify(snapshot.customPlaylists),
+  );
   localStorage.removeItem(LEGACY_SUPPORT_STORAGE_KEY);
 
   return snapshot;
@@ -169,6 +188,7 @@ export function clearLocalGuestPlayerState() {
   localStorage.removeItem(PLAYER_STATE_STORAGE_KEY);
   localStorage.removeItem(SUPPORT_LIST_STORAGE_KEY);
   localStorage.removeItem(NOMINATION_LIST_STORAGE_KEY);
+  localStorage.removeItem(CUSTOM_PLAYLISTS_STORAGE_KEY);
   localStorage.removeItem(LEGACY_SUPPORT_STORAGE_KEY);
 }
 
@@ -286,6 +306,7 @@ export function mergeGuestCollectionsIntoPlayerState(
     listenedStatusById: baseState.listenedStatusById,
     supportList: nextSupportList,
     nominationList: nextNominationList,
+    customPlaylists: baseState.customPlaylists,
   });
 }
 

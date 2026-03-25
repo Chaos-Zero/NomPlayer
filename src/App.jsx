@@ -17,6 +17,7 @@ import HomePage from './components/HomePage.jsx';
 import GuestImportDialog from './components/GuestImportDialog.jsx';
 import MetadataEntryDialog from './components/MetadataEntryDialog.jsx';
 import SiteNavigation from './components/SiteNavigation.jsx';
+import Workspaces from './components/Workspaces.jsx';
 import ScrollingText from './components/ScrollingText.jsx';
 import UserSettingsDialog from './components/UserSettingsDialog.jsx';
 import SupportLevelDropdown from './components/SupportLevelDropdown.jsx';
@@ -444,6 +445,9 @@ export default function App() {
   const nominationListRef = useRef(initialPlayerState.nominationList);
   const [showNominationsList, setShowNominationsList] = useState(false);
   const [renderNominationsList, setRenderNominationsList] = useState(false);
+  const [customPlaylists, setCustomPlaylists] = useState(
+    initialPlayerState.customPlaylists || [],
+  );
   const [supportToastMessage, setSupportToastMessage] = useState('');
   const [appToastMessage, setAppToastMessage] = useState('');
   const [appToastTone, setAppToastTone] = useState('default');
@@ -620,13 +624,14 @@ export default function App() {
         nominationList,
       }),
     [
-      currentVideoId,
-      listenedStatusById,
-      nominationList,
       playlist,
-      showOriginalOrder,
+      currentVideoId,
       shuffleOrderIds,
+      showOriginalOrder,
+      listenedStatusById,
       supportList,
+      nominationList,
+      customPlaylists,
     ],
   );
 
@@ -641,12 +646,13 @@ export default function App() {
         nominationList,
       }),
     [
-      currentVideoId,
-      nominationList,
       playlist,
-      showOriginalOrder,
+      currentVideoId,
       shuffleOrderIds,
+      showOriginalOrder,
       supportList,
+      nominationList,
+      customPlaylists,
     ],
   );
 
@@ -671,6 +677,7 @@ export default function App() {
     setListenedStatusById(normalizedState.listenedStatusById);
     setSupportList(normalizedState.supportList);
     setNominationList(normalizedState.nominationList);
+    setCustomPlaylists(normalizedState.customPlaylists || []);
     setIsPlaying(false);
   }, []);
 
@@ -1364,6 +1371,7 @@ export default function App() {
     : displayPlaylist.findIndex((video) => video.videoId === currentVideoId);
   const isPlayerPage = activePage === 'player';
   const isDatabasePage = activePage === 'database';
+  const isWorkspacesPage = activePage === 'workspaces';
   const shouldRenderDesktopPlaylistOverlay = !isMobileLayout && !isPlayerPage;
   const effectivePlaylistCollapsed = isPlayerPage
     ? isPlaylistCollapsed
@@ -3670,7 +3678,7 @@ export default function App() {
   );
 
   const shellIsCollapsed =
-    isPlaylistCollapsed || !isPlayerPage || isDatabasePage;
+    isPlaylistCollapsed || !isPlayerPage || isDatabasePage || isWorkspacesPage;
   const shouldRenderPersistentPlayer = isPlayerPage || Boolean(currentVideo);
   const canTogglePlayback = Boolean(transientVideo) || playlist.length > 0;
   const hasDetachedFooter =
@@ -3885,10 +3893,10 @@ export default function App() {
         />
 
         <main
-          className={`main-content${isPlayerPage ? ' player-view' : ' home-view'}${!isPlayerPage && isLogoutTransitioning ? ' logout-fade-in' : ''}`}
+          className={`main-content${isPlayerPage ? ' player-view' : isDatabasePage || isWorkspacesPage ? ' home-view' : ' home-view'}${isWorkspacesPage ? ' workspaces-view' : ''}${!isPlayerPage && isLogoutTransitioning ? ' logout-fade-in' : ''}`}
           id="main-content"
         >
-          {!isPlayerPage && !isDatabasePage && (
+          {!isPlayerPage && !isDatabasePage && !isWorkspacesPage && (
             <HomePage
               supabase={supabase}
               authUser={authUser}
@@ -3914,6 +3922,26 @@ export default function App() {
                 hasPlayer={Boolean(currentVideo)}
               />
             </Suspense>
+          )}
+
+          {activePage === 'workspaces' && (
+            <Workspaces
+              playlist={playlist}
+              supportList={supportList}
+              nominationList={nominationList}
+              customPlaylists={customPlaylists}
+              onUpdatePlaylist={setPlaylist}
+              onUpdateSupportList={setSupportList}
+              onUpdateNominationList={setNominationList}
+              onUpdateCustomPlaylists={setCustomPlaylists}
+              onPlayNow={(video) => handlePlayNowFromSupportList(video)}
+              onAddToPlaylist={(videos) => handleQueueFromSupportList(videos)}
+              onRemoveFromPlaylist={handleRemoveFromPlaylist}
+              onToggleSupport={handleToggleSupportFromPlaylist}
+              onShowToast={handleShowDashboardToast}
+              authUser={authUser}
+              supabase={supabase}
+            />
           )}
 
           {persistentPlayer}

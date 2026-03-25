@@ -36,7 +36,7 @@ function getPlaylistItemDisplay(video) {
   };
 }
 
-function SupportItem({
+export function SupportItem({
   orderNumber,
   video,
   onRemove,
@@ -190,26 +190,29 @@ function SupportItem({
               {video.supportLevel === 3 ? '🔒' : '♥'}
             </button>
           )}
-          <button
-            className="fav-remove-btn"
-            onClick={(event) => {
-              event.stopPropagation();
-              onRemove(video.videoId);
-            }}
-            title={removeButtonTitle}
-            aria-label={removeButtonAriaLabel}
-          >
-            ✕
-          </button>
+          {onRemove && (
+            <button
+              className="fav-remove-btn"
+              onClick={(event) => {
+                event.stopPropagation();
+                onRemove(video.videoId);
+              }}
+              title={removeButtonTitle}
+              aria-label={removeButtonAriaLabel}
+            >
+              ✕
+            </button>
+          )}
         </div>
       )}
     </div>
   );
 }
 
-function SortableSupportItem({
+export function SortableSupportItem({
   orderNumber,
   video,
+  uniqueId,
   onRemove,
   onDoubleQueue,
   onOpenContextMenu,
@@ -226,7 +229,7 @@ function SortableSupportItem({
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: video.videoId });
+  } = useSortable({ id: uniqueId || video.videoId });
 
   const style = {
     transform: CSS.Transform.toString(transform),
