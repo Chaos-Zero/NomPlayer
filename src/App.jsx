@@ -622,6 +622,7 @@ export default function App() {
         listenedStatusById,
         supportList,
         nominationList,
+        customPlaylists,
       }),
     [
       playlist,
@@ -644,6 +645,7 @@ export default function App() {
         showOriginalOrder,
         supportList,
         nominationList,
+        customPlaylists,
       }),
     [
       playlist,
