@@ -29,6 +29,8 @@ const VIEW_MODES = [
   { id: 'history_recovery', label: 'History Recovery' },
   { id: 'rated', label: 'Rated Only' },
   { id: 'unrated', label: 'Unrated Only' },
+  { id: 'unplaced', label: 'Unplaced' },
+  { id: 'placed', label: 'Appeared Previously' },
   { id: 'retired', label: 'Retired Only' },
 ];
 
@@ -214,14 +216,43 @@ const TrackRow = memo(
     lastElementRef,
   }) => {
     const isDirty = !!pendingChanges;
-    const vgmcNums =
-      track.tournaments.length > 0
-        ? track.tournaments.map((t) => t.sequenceNumber).join(', ')
-        : '-';
+    const vgmcElements = track.tournaments.map((t, i) => {
+      const hasResult = t.placement || t.highestRound;
+      let displayValue = t.sequenceNumber;
+
+      return (
+        <span key={i}>
+          <span
+            className={`vgmc-number ${hasResult ? 'has-result' : 'no-result'}`}
+          >
+            {displayValue}
+          </span>
+          {i < track.tournaments.length - 1 ? (
+            <span className="vgmc-comma">, </span>
+          ) : (
+            ''
+          )}
+        </span>
+      );
+    });
+
     const placements = track.tournaments
-      .map((t) => (t.placement ? `#${t.placement}` : ''))
+      .map((t) => {
+        if (t.highestRound) {
+          return `${t.sequenceNumber}-R${t.highestRound}`;
+        }
+        if (t.placement) {
+          return `${t.sequenceNumber}-#${t.placement}`;
+        }
+        return null;
+      })
       .filter(Boolean)
-      .join(', ');
+      .map((text, i, arr) => (
+        <span key={i}>
+          {text}
+          {i < arr.length - 1 ? ', ' : ''}
+        </span>
+      ));
 
     return (
       <tr
@@ -250,7 +281,7 @@ const TrackRow = memo(
             maxWidth: columnWidths.vgmc,
           }}
         >
-          {vgmcNums}
+          {track.tournaments.length > 0 ? vgmcElements : '-'}
         </td>
         <td
           className={`col-game ${expandedCellCol === 'game' ? 'expanded-cell' : ''}`}
@@ -626,7 +657,7 @@ export default function TrackDatabase({
       const currentLoadingId = ++loadingIdRef.current;
 
       setLoading(true);
-      // Removed setTracks([]) to keep existing tracks visible during filter/search update
+      setTracks([]);
       setOffset(0);
       setHasMore(true);
 

@@ -3970,6 +3970,8 @@ export default function App() {
               authUser={authUser}
               supabase={supabase}
               onUpdateMetadata={handleOpenMetadataUpdate}
+              onExport={handleOpenExportModal}
+              onSavePlaylist={handleCreateYTPlaylist}
             />
           )}
 

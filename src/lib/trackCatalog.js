@@ -59,15 +59,18 @@ function normalizeTournamentRows(value) {
               ? entry.appearanceLabel
               : '',
         placement:
-          Number.isInteger(entry.placement) && entry.placement > 0
-            ? entry.placement
-            : null,
+          typeof entry.placement === 'string' && entry.placement.trim()
+            ? entry.placement.trim()
+            : Number.isInteger(entry.placement) && entry.placement > 0
+              ? String(entry.placement)
+              : null,
         highestRound:
-          typeof entry.highest_round === 'string'
-            ? entry.highest_round
-            : typeof entry.highestRound === 'string'
-              ? entry.highestRound
-              : '',
+          typeof entry.highest_round === 'string' && entry.highest_round.trim()
+            ? entry.highest_round.trim()
+            : typeof entry.highestRound === 'string' &&
+                entry.highestRound.trim()
+              ? entry.highestRound.trim()
+              : null,
         isRetired:
           typeof entry.is_retired === 'boolean'
             ? entry.is_retired
@@ -475,6 +478,10 @@ export async function fetchPagedTracks(
         query = query.not('track_id', 'in', `(${ratedIds.join(',')})`);
       }
     }
+  } else if (viewMode === 'unplaced') {
+    query = query.filter('has_result', 'eq', false);
+  } else if (viewMode === 'placed') {
+    query = query.filter('has_result', 'eq', true);
   } else if (viewMode === 'retired') {
     query = query.filter('is_retired', 'eq', true);
   } else if (viewMode === 'history_recovery') {

@@ -1,4 +1,10 @@
-import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import React, {
+  useState,
+  useMemo,
+  useCallback,
+  useEffect,
+  useRef,
+} from 'react';
 import { getDisplayProfileName } from '../lib/playerState.js';
 import {
   DndContext,
@@ -21,6 +27,8 @@ import { CSS } from '@dnd-kit/utilities';
 import { PointerSensor as CorePointerSensor } from '@dnd-kit/core';
 import { SortableSupportItem, SupportItem } from './FavouritesPanel';
 import { ContextMenuPortal } from './ContextMenuPortal';
+import ExportIcon from './ExportIcon.jsx';
+import YouTubeIcon from './YouTubeIcon.jsx';
 
 function PlaylistPlusIcon() {
   return (
@@ -161,9 +169,11 @@ function TrackInfoPanel({
     (f) => f.user_id !== authUser?.id,
   );
 
+  const trackTournaments = communityData.tournaments || track.tournaments || [];
+
   const vgmcStatus =
-    track.tournaments?.length > 0
-      ? `VGMC ${track.tournaments[0].sequence_number}`
+    trackTournaments.length > 0
+      ? `VGMC ${trackTournaments[0].sequence_number}`
       : 'New to VGMC';
 
   const handleCommentChange = (ev) => {
@@ -171,6 +181,17 @@ function TrackInfoPanel({
     setLocalComment(val);
     onUpdateComment(track.videoId, val);
   };
+
+  // Split title if it contains " - "
+  const fullTitle = track.displayTitle || track.title || '';
+  let songTitle = fullTitle;
+  let gameTitle = track.gameTitle || track.channelTitle || '';
+
+  if (fullTitle.includes(' - ')) {
+    const parts = fullTitle.split(' - ');
+    gameTitle = parts[0].trim();
+    songTitle = parts.slice(1).join(' - ').trim();
+  }
 
   return (
     <div className="workspace-info-panel">
@@ -189,10 +210,8 @@ function TrackInfoPanel({
             className="workspace-info-img"
           />
           <div className="workspace-info-titles">
-            <h2>{track.displayTitle || track.title}</h2>
-            <p className="workspace-info-game">
-              {track.gameTitle || track.channelTitle}
-            </p>
+            <h2>{songTitle}</h2>
+            <p className="workspace-info-game">{gameTitle}</p>
             <span className="workspace-info-vgmc-badge">{vgmcStatus}</span>
           </div>
         </div>
@@ -378,6 +397,8 @@ function WorkspaceColumn({
   canAddAll = false,
   onAddAll = null,
   isReadOnly = false,
+  onExport,
+  onSavePlaylist,
 }) {
   const [addUrl, setAddUrl] = useState('');
   const { setNodeRef } = useDroppable({
@@ -405,6 +426,7 @@ function WorkspaceColumn({
     <div
       ref={setNodeRef}
       className={`workspace-column ${isFocused ? 'focused' : ''}`}
+      data-column-id={id}
     >
       <div
         className="workspace-column-header"
@@ -444,6 +466,24 @@ function WorkspaceColumn({
             >
               <PlaylistPlusIcon />
             </button>
+          )}
+          {videos && videos.length > 0 && (
+            <>
+              <button
+                className="workspace-column-btn"
+                onClick={() => onExport?.(videos)}
+                title="Export for VGMC"
+              >
+                <ExportIcon />
+              </button>
+              <button
+                className="workspace-column-btn"
+                onClick={() => onSavePlaylist?.(videos)}
+                title="Create YouTube Playlist"
+              >
+                <YouTubeIcon />
+              </button>
+            </>
           )}
           {isFocused ? (
             <button
@@ -539,6 +579,8 @@ export default function Workspaces({
   authUser,
   supabase,
   onUpdateMetadata,
+  onExport,
+  onSavePlaylist,
 }) {
   const [focusedListId, setFocusedListId] = useState(null);
   const [activeCustomPlaylistId, setActiveCustomPlaylistId] = useState(null);
@@ -549,6 +591,7 @@ export default function Workspaces({
   });
   const [isLoadingCommunity, setIsLoadingCommunity] = useState(false);
   const [dragButton, setDragButton] = useState(0);
+  const gridRef = useRef(null);
 
   // Initialize active custom playlist if not set
   useEffect(() => {
@@ -566,73 +609,6 @@ export default function Workspaces({
     );
   }, [customPlaylists, activeCustomPlaylistId]);
 
-  // Find the currently selected track object
-  const selectedTrack = useMemo(() => {
-    if (!selectedTrackId) return null;
-    let track = null;
-    [
-      nominationList,
-      supportList,
-      playlist,
-      ...(activeCustomPlaylist ? [activeCustomPlaylist.videos] : []),
-    ].some((list) => {
-      track = list.find((v) => v.videoId === selectedTrackId);
-      return !!track;
-    });
-    return track;
-  }, [
-    selectedTrackId,
-    nominationList,
-    supportList,
-    playlist,
-    activeCustomPlaylist,
-  ]);
-
-  // Fetch community data when selection changes
-  useEffect(() => {
-    if (!selectedTrackId || !supabase) {
-      setCommunityData({ feedback: [], supports: {} });
-      return;
-    }
-
-    let active = true;
-    setIsLoadingCommunity(true);
-
-    const fetchData = async () => {
-      try {
-        // Fetch feedback (all users)
-        const { data: feedbackData } = await supabase
-          .from('track_user_feedback')
-          .select('*, profiles(username)')
-          .eq('track_id', selectedTrackId || '') // This might need track uuid if using trackId
-          .order('updated_at', { ascending: false });
-
-        // Fetch support counts by level
-        const { data: supportData } = await supabase
-          .from('track_supports')
-          .select('level')
-          .eq('track_id', selectedTrackId || '');
-
-        if (active) {
-          const supports = (supportData || []).reduce((acc, curr) => {
-            acc[curr.level] = (acc[curr.level] || 0) + 1;
-            return acc;
-          }, {});
-          setCommunityData({ feedback: feedbackData || [], supports });
-        }
-      } catch (err) {
-        console.error('Error fetching community data:', err);
-      } finally {
-        if (active) setIsLoadingCommunity(false);
-      }
-    };
-
-    fetchData();
-    return () => {
-      active = false;
-    };
-  }, [selectedTrackId, supabase]);
-
   const [activeVideo, setActiveVideo] = useState(null);
 
   const sensors = useSensors(
@@ -649,13 +625,13 @@ export default function Workspaces({
   const [peerColumns, setPeerColumns] = useState([]);
   const [allPeerLists, setAllPeerLists] = useState([]);
   const [showNewNominations, setShowNewNominations] = useState(false);
-  const [newNominations, setNewNominations] = useState([]);
 
   useEffect(() => {
     const fetchPeerLists = async () => {
       if (!supabase) return;
       const { data, error } = await supabase.rpc(
         'get_dashboard_nomination_lists',
+        { limit_count: 20 },
       );
       if (!error && data) {
         setAllPeerLists(data);
@@ -663,58 +639,44 @@ export default function Workspaces({
     };
     fetchPeerLists();
   }, [supabase]);
+  // Derived New Nominations from overall community lists
+  const newNominations = useMemo(() => {
+    if (!allPeerLists) return [];
 
-  useEffect(() => {
-    if (!showNewNominations || !supabase) return;
-    const fetchNewNominations = async () => {
-      // Find tracks with no tournament appearances
-      const { data, error } = await supabase
-        .from('tracks')
-        .select(
-          `
-          id,
-          canonical_game_title,
-          canonical_track_title,
-          track_sources (
-            provider,
-            external_id,
-            cached_thumbnail_url,
-            cached_title,
-            cached_channel_title
-          ),
-          track_tournament_appearances (
-            tournament_id
-          )
-        `,
-        )
-        .eq('is_retired', false);
+    const allNoms = [];
+    const seenIds = new Set();
 
-      if (!error && data) {
-        const unfiltered = data.filter(
-          (t) => t.track_tournament_appearances.length === 0,
-        );
-        const mapped = unfiltered
-          .map((t) => {
-            const primary =
-              t.track_sources.find((s) => s.provider === 'youtube') ||
-              t.track_sources[0];
-            return {
-              videoId: primary?.external_id,
-              title: t.canonical_track_title || primary?.cached_title,
-              displayTitle: t.canonical_track_title,
-              gameTitle: t.canonical_game_title,
-              channelTitle: primary?.cached_channel_title,
-              thumbnail: primary?.cached_thumbnail_url,
-              comment: '',
-              tournaments: [],
-            };
-          })
-          .filter((t) => t.videoId);
-        setNewNominations(mapped);
-      }
-    };
-    fetchNewNominations();
-  }, [showNewNominations, supabase]);
+    // Collect all unique nominations from peers
+    allPeerLists.forEach((peer) => {
+      (peer.nominations || []).forEach((n) => {
+        // Map to frontend format if needed (though RPC should already provide it)
+        const videoId = n.videoId || n.video_id || n.id;
+        if (videoId && !seenIds.has(videoId)) {
+          seenIds.add(videoId);
+          allNoms.push({
+            ...n,
+            videoId,
+            title: n.title || n.track_title || n.canonical_track_title,
+            gameTitle: n.gameTitle || n.game_title || n.canonical_game_title,
+            channelTitle: n.channelTitle || n.game_title,
+            thumbnail:
+              n.thumbnail ||
+              n.cached_thumbnail_url ||
+              `https://i.ytimg.com/vi/${videoId}/mqdefault.jpg`,
+          });
+        }
+      });
+    });
+
+    // Filter out tracks already in our current views
+    const myTrackIds = new Set([
+      ...nominationList.map((t) => t.videoId),
+      ...supportList.map((t) => t.videoId),
+      ...playlist.map((t) => t.videoId),
+    ]);
+
+    return allNoms.filter((n) => !myTrackIds.has(n.videoId));
+  }, [allPeerLists, nominationList, supportList, playlist]);
 
   const togglePeerList = (user) => {
     if (peerColumns.some((c) => c.user_id === user.user_id)) {
@@ -724,8 +686,17 @@ export default function Workspaces({
         ...peerColumns,
         {
           ...user,
-          videos: user.nominations.map((n) => ({
+          videos: (user.nominations || []).map((n) => ({
             ...n,
+            videoId: n.videoId || n.video_id || n.id,
+            title: n.title || n.track_title || n.canonical_track_title,
+            channelTitle:
+              n.channelTitle || n.game_title || n.canonical_game_title,
+            thumbnail:
+              n.thumbnail ||
+              n.cached_thumbnail_url ||
+              n.sourceThumbnailUrl ||
+              `https://i.ytimg.com/vi/${n.videoId || n.video_id || n.id}/mqdefault.jpg`,
             comment: n.comment || '',
           })),
         },
@@ -780,8 +751,12 @@ export default function Workspaces({
       supportList,
       playlist,
       ...(activeCustomPlaylist ? [activeCustomPlaylist.videos] : []),
+      newNominations,
+      ...peerColumns.map((c) => c.videos),
     ].some((list) => {
-      video = list.find((v) => v.videoId === videoId);
+      video = (list || []).find(
+        (v) => v.videoId === videoId || v.id === videoId,
+      );
       return !!video;
     });
     setActiveVideo(video);
@@ -1054,6 +1029,132 @@ export default function Workspaces({
 
   const [showCurrentPlaylist, setShowCurrentPlaylist] = useState(true);
 
+  // Find the currently selected track object from ALL visible lists
+  const selectedTrack = useMemo(() => {
+    if (!selectedTrackId) return null;
+    let track = null;
+    [
+      nominationList,
+      supportList,
+      playlist,
+      ...(activeCustomPlaylist ? [activeCustomPlaylist.videos] : []),
+      newNominations,
+      ...peerColumns.map((c) => c.videos),
+    ].some((list) => {
+      track = (list || []).find(
+        (v) => v.videoId === selectedTrackId || v.id === selectedTrackId,
+      );
+      return !!track;
+    });
+    return track;
+  }, [
+    selectedTrackId,
+    nominationList,
+    supportList,
+    playlist,
+    activeCustomPlaylist,
+    newNominations,
+    peerColumns,
+  ]);
+
+  // Fetch community data when selection changes
+  useEffect(() => {
+    if (!selectedTrackId || !supabase) {
+      setCommunityData({ feedback: [], supports: {}, tournaments: [] });
+      return;
+    }
+
+    let active = true;
+    setIsLoadingCommunity(true);
+
+    const fetchData = async () => {
+      try {
+        // Fetch track metadata from catalog for tournament info
+        const { data: catalogData } = await supabase
+          .from('track_catalog')
+          .select('tournaments')
+          .eq('source_external_id', selectedTrackId)
+          .single();
+
+        // Fetch feedback (all users)
+        const { data: feedbackData } = await supabase
+          .from('track_user_feedback')
+          .select('*, profiles(username)')
+          .eq('track_id', selectedTrackId || '')
+          .order('updated_at', { ascending: false });
+
+        // Fetch support counts by level
+        const { data: supportData } = await supabase
+          .from('track_supports')
+          .select('level')
+          .eq('track_id', selectedTrackId || '');
+
+        if (active) {
+          const supports = (supportData || []).reduce((acc, curr) => {
+            acc[curr.level] = (acc[curr.level] || 0) + 1;
+            return acc;
+          }, {});
+          setCommunityData({
+            feedback: feedbackData || [],
+            supports,
+            tournaments: catalogData?.tournaments || [],
+          });
+        }
+      } catch (err) {
+        console.error('Error fetching community data:', err);
+      } finally {
+        if (active) setIsLoadingCommunity(false);
+      }
+    };
+
+    fetchData();
+    return () => {
+      active = false;
+    };
+  }, [selectedTrackId, supabase]);
+
+  // Track active column IDs to detect specific additions
+  const activeColumnIds = useMemo(() => {
+    const ids = ['nominations', 'support'];
+    if (showCurrentPlaylist) ids.push('current');
+    if (showNewNominations) ids.push('new-nominations');
+    peerColumns.forEach((col) => ids.push(`peer-${col.user_id}`));
+    if (activeCustomPlaylist) ids.push(activeCustomPlaylist.id);
+    return ids;
+  }, [
+    showCurrentPlaylist,
+    showNewNominations,
+    peerColumns,
+    activeCustomPlaylist,
+  ]);
+
+  const prevActiveColumnIdsRef = useRef([]);
+
+  // Auto-scroll when new columns are added
+  useEffect(() => {
+    const prevIds = prevActiveColumnIdsRef.current;
+    const newIds = activeColumnIds.filter((id) => !prevIds.includes(id));
+    prevActiveColumnIdsRef.current = activeColumnIds;
+
+    // We only want to scroll if there's exactly one new ID (representing a user action)
+    // and if it's not the initial render (prevIds.length > 0)
+    if (newIds.length > 0 && prevIds.length > 0) {
+      const scrollId = newIds[newIds.length - 1]; // Target the latest added one
+      // Provide a small delay for DOM to update and layout to settle
+      const timeoutId = setTimeout(() => {
+        if (gridRef.current) {
+          const element = gridRef.current.querySelector(
+            `[data-column-id="${scrollId}"]`,
+          );
+          if (element) {
+            element.scrollIntoView({ behavior: 'smooth', inline: 'center' });
+          }
+        }
+      }, 100);
+      return () => clearTimeout(timeoutId);
+    }
+  }, [activeColumnIds]);
+
   return (
     <div
       className={`workspaces-container ${focusedListId ? 'has-focused' : ''} ${selectedTrackId ? 'has-selection' : ''}`}
@@ -1078,6 +1179,17 @@ export default function Workspaces({
                 onClick={() => setShowNewNominations(!showNewNominations)}
               >
                 New Nominations
+              </button>
+            </div>
+            <div className="toolbar-separator" />
+            <div className="toolbar-group">
+              <button
+                className="toolbar-toggle"
+                onClick={handleCreatePlaylist}
+                title="Create a new custom playlist"
+              >
+                <PlaylistPlusIcon />
+                New Playlist
               </button>
             </div>
             <div className="toolbar-separator" />
@@ -1108,12 +1220,6 @@ export default function Workspaces({
               </select>
             </div>
           </div>
-          <button
-            className="workspace-action-btn primary"
-            onClick={handleCreatePlaylist}
-          >
-            <span>New Playlist</span>
-          </button>
         </div>
       </div>
 
@@ -1124,7 +1230,7 @@ export default function Workspaces({
         onDragEnd={handleDragEnd}
       >
         <div className="workspaces-layout">
-          <div className="workspaces-grid">
+          <div ref={gridRef} className="workspaces-grid">
             <WorkspaceColumn
               id="nominations"
               title="Nominations"
@@ -1150,6 +1256,8 @@ export default function Workspaces({
               onContextMenu={handleContextMenu}
               canAddAll={true}
               onAddAll={() => handleAddAllToCurrent(nominationList)}
+              onExport={onExport}
+              onSavePlaylist={onSavePlaylist}
             />
 
             <WorkspaceColumn
@@ -1177,6 +1285,8 @@ export default function Workspaces({
               onContextMenu={handleContextMenu}
               canAddAll={true}
               onAddAll={() => handleAddAllToCurrent(supportList)}
+              onExport={onExport}
+              onSavePlaylist={onSavePlaylist}
             />
 
             {showCurrentPlaylist && (
@@ -1201,6 +1311,8 @@ export default function Workspaces({
                 onContextMenu={handleContextMenu}
                 canClose={true}
                 onClose={() => setShowCurrentPlaylist(false)}
+                onExport={onExport}
+                onSavePlaylist={onSavePlaylist}
               />
             )}
 
@@ -1227,6 +1339,8 @@ export default function Workspaces({
                 canAddAll={true}
                 onAddAll={() => handleAddAllToCurrent(newNominations)}
                 isReadOnly={true}
+                onExport={onExport}
+                onSavePlaylist={onSavePlaylist}
               />
             )}
 
@@ -1262,6 +1376,8 @@ export default function Workspaces({
                 canAddAll={true}
                 onAddAll={() => handleAddAllToCurrent(col.videos)}
                 isReadOnly={true}
+                onExport={onExport}
+                onSavePlaylist={onSavePlaylist}
               />
             ))}
 
@@ -1310,6 +1426,8 @@ export default function Workspaces({
                     ),
                   );
                 }}
+                onExport={onExport}
+                onSavePlaylist={onSavePlaylist}
               />
             )}
           </div>
