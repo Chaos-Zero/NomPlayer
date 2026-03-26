@@ -91,9 +91,11 @@ export function buildDiscoveryCandidates(
     listenedStatusById = {},
     excludeUserId = null,
     limit = 8,
+    ignoreFilterVideoIds = [],
   } = {},
 ) {
   const aggregated = new Map();
+  const ignoreSet = new Set(ignoreFilterVideoIds || []);
 
   for (const update of nominationUpdates) {
     if (!update || (excludeUserId && update.userId === excludeUserId)) {
@@ -102,8 +104,11 @@ export function buildDiscoveryCandidates(
 
     for (const nomination of update.nominations) {
       if (!nomination?.videoId) continue;
-      if (currentPlaylistIds.has(nomination.videoId)) continue;
-      if (listenedStatusById[nomination.videoId] === 'complete') continue;
+
+      if (!ignoreSet.has(nomination.videoId)) {
+        if (currentPlaylistIds.has(nomination.videoId)) continue;
+        if (listenedStatusById[nomination.videoId] === 'complete') continue;
+      }
 
       const existing = aggregated.get(nomination.videoId);
       if (!existing) {

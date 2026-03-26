@@ -141,35 +141,29 @@ function TrackInfoPanel({
   onUpdateComment,
   onUpdateRating,
 }) {
-  const [localComment, setLocalComment] = useState(track?.comment || '');
+  const [localComment, setLocalComment] = useState('');
 
-  if (!track) {
+  // No long use useEffect to sync localComment; handled by key on instantiation
+
+  const personalFeedback = useMemo(() => {
+    if (!track || !communityData.feedback) return { rating: null, note: '' };
     return (
-      <div className="workspace-info-panel empty">
-        <div className="workspace-info-placeholder">
-          <div className="placeholder-icon">
-            <svg viewBox="0 0 24 24" fill="currentColor">
-              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" />
-            </svg>
-          </div>
-          <h3>No Track Selected</h3>
-          <p>
-            Click a track in any list to view detailed metadata, ratings, and
-            community support.
-          </p>
-        </div>
-      </div>
+      communityData.feedback.find((f) => f.user_id === authUser?.id) || {
+        rating: null,
+        note: '',
+      }
     );
-  }
+  }, [track, communityData.feedback, authUser?.id]);
 
-  const personalFeedback = communityData.feedback.find(
-    (f) => f.user_id === authUser?.id,
-  ) || { rating: null, note: '' };
-  const peerFeedback = communityData.feedback.filter(
-    (f) => f.user_id !== authUser?.id,
-  );
+  const peerFeedback = useMemo(() => {
+    if (!track || !communityData.feedback) return [];
+    return communityData.feedback.filter((f) => f.user_id !== authUser?.id);
+  }, [track, communityData.feedback, authUser?.id]);
 
-  const trackTournaments = communityData.tournaments || track.tournaments || [];
+  const trackTournaments = useMemo(() => {
+    if (!track) return [];
+    return communityData.tournaments || track.tournaments || [];
+  }, [track, communityData.tournaments]);
 
   const vgmcStatus =
     trackTournaments.length > 0
@@ -183,9 +177,9 @@ function TrackInfoPanel({
   };
 
   // Split title if it contains " - "
-  const fullTitle = track.displayTitle || track.title || '';
+  const fullTitle = track?.displayTitle || track?.title || '';
   let songTitle = fullTitle;
-  let gameTitle = track.gameTitle || track.channelTitle || '';
+  let gameTitle = track?.gameTitle || track?.channelTitle || '';
 
   if (fullTitle.includes(' - ')) {
     const parts = fullTitle.split(' - ');
@@ -194,118 +188,130 @@ function TrackInfoPanel({
   }
 
   return (
-    <div className="workspace-info-panel">
-      <div className="workspace-info-header">
-        <button
-          className="workspace-info-close"
-          onClick={onClose}
-          title="Deselect track"
-        >
-          ✕
-        </button>
-        <div className="workspace-info-hero">
-          <img
-            src={track.thumbnail || track.sourceThumbnailUrl}
-            alt=""
-            className="workspace-info-img"
-          />
-          <div className="workspace-info-titles">
-            <h2>{songTitle}</h2>
-            <p className="workspace-info-game">{gameTitle}</p>
-            <span className="workspace-info-vgmc-badge">{vgmcStatus}</span>
-          </div>
-        </div>
-      </div>
-
-      <div className="workspace-info-content">
-        <section className="workspace-info-section">
-          <h4>Your Feedback</h4>
-          <div className="workspace-info-personal">
-            <div className="workspace-info-rating-row">
-              <span className="label">Rating:</span>
-              <select
-                className="workspace-info-rating-select"
-                value={personalFeedback.rating || ''}
-                onChange={(ev) =>
-                  onUpdateRating(
-                    track.videoId,
-                    parseInt(ev.target.value) || null,
-                  )
-                }
+    <div className={`workspace-info-panel ${track ? 'is-open' : ''}`}>
+      <div className="workspace-info-content-wrapper">
+        {track && (
+          <>
+            <div className="workspace-info-header">
+              <button
+                className="workspace-info-close"
+                onClick={onClose}
+                title="Deselect track"
               >
-                <option value="">No Rating</option>
-                {[10, 9, 8, 7, 6, 5, 4, 3, 2, 1].map((r) => (
-                  <option key={r} value={r}>
-                    {r} / 10
-                  </option>
-                ))}
-              </select>
-            </div>
-            <textarea
-              className="workspace-info-note-editor"
-              placeholder="Add personal notes or comments..."
-              value={localComment}
-              onChange={handleCommentChange}
-            />
-          </div>
-        </section>
-
-        <section className="workspace-info-section">
-          <h4>Community Support</h4>
-          <div className="workspace-support-bar">
-            {Object.keys(communityData.supports).length === 0 ? (
-              <div className="support-segment empty" style={{ width: '100%' }}>
-                No support recorded yet
-              </div>
-            ) : (
-              [3, 2, 1].map((level) => {
-                const count = communityData.supports[level] || 0;
-                const total = Object.values(communityData.supports).reduce(
-                  (a, b) => a + b,
-                  0,
-                );
-                const width = count > 0 ? (count / total) * 100 : 0;
-                return (
-                  <div
-                    key={level}
-                    className={`support-segment level-${level}`}
-                    style={{ width: `${width}%` }}
-                    title={`Level ${level} Support: ${count}`}
-                  >
-                    {count > 0 && <span>{count}</span>}
-                  </div>
-                );
-              })
-            )}
-          </div>
-        </section>
-
-        <section className="workspace-info-section community">
-          <h4>Community Activity</h4>
-          {isLoading ? (
-            <p className="workspace-info-loading">Loading community data...</p>
-          ) : peerFeedback.length === 0 ? (
-            <p className="workspace-info-empty">No community feedback yet.</p>
-          ) : (
-            <div className="workspace-peer-list">
-              {peerFeedback.map((f, i) => (
-                <div key={i} className="workspace-peer-item">
-                  <div className="workspace-peer-header">
-                    <span className="workspace-peer-user">
-                      {getDisplayProfileName(f.profiles?.username, 'Anonymous')}
-                    </span>
-                    {f.rating && (
-                      <span className="workspace-peer-rating">
-                        {f.rating}/10
-                      </span>
-                    )}
-                  </div>
-                  {f.note && <p className="workspace-peer-note">{f.note}</p>}
+                ✕
+              </button>
+              <div className="workspace-info-hero">
+                <img
+                  src={track.thumbnail || track.sourceThumbnailUrl}
+                  alt=""
+                  className="workspace-info-img"
+                />
+                <div className="workspace-info-titles">
+                  <h2>{songTitle}</h2>
+                  <p className="workspace-info-game">{gameTitle}</p>
+                  <span className="workspace-info-vgmc-badge">
+                    {vgmcStatus}
+                  </span>
                 </div>
-              ))}
+              </div>
             </div>
-          )}
-        </section>
+
+            <div className="workspace-info-content">
+              <section className="workspace-info-section">
+                <h4>Your Feedback</h4>
+                <div className="workspace-info-personal">
+                  <div className="workspace-info-rating-row">
+                    <span className="label">Rating:</span>
+                    <select
+                      className="workspace-info-rating-select"
+                      value={personalFeedback.rating || ''}
+                      onChange={(ev) =>
+                        onUpdateRating(
+                          track.videoId,
+                          parseInt(ev.target.value) || null,
+                        )
+                      }
+                    >
+                      <option value="">No Rating</option>
+                      {[10, 9, 8, 7, 6, 5, 4, 3, 2, 1].map((r) => (
+                        <option key={r} value={r}>
+                          {r} / 10
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <textarea
+                    className="workspace-info-note-editor"
+                    placeholder="Add personal notes or comments..."
+                    value={localComment}
+                    onChange={handleCommentChange}
+                  />
+                </div>
+              </section>
+
+              {Object.keys(communityData.supports).length > 0 && (
+                <section className="workspace-info-section">
+                  <h4>Community Support</h4>
+                  <div className="workspace-support-bar">
+                    {[3, 2, 1].map((level) => {
+                      const count = communityData.supports[level] || 0;
+                      const total = Object.values(
+                        communityData.supports,
+                      ).reduce((a, b) => a + b, 0);
+                      const width = count > 0 ? (count / total) * 100 : 0;
+                      return (
+                        <div
+                          key={level}
+                          className={`support-segment level-${level}`}
+                          style={{ width: `${width}%` }}
+                          title={`Level ${level} Support: ${count}`}
+                        >
+                          {count > 0 && <span>{count}</span>}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </section>
+              )}
+
+              <section className="workspace-info-section community">
+                <h4>Community Activity</h4>
+                {isLoading ? (
+                  <p className="workspace-info-loading">
+                    Loading community data...
+                  </p>
+                ) : peerFeedback.length === 0 ? (
+                  <p className="workspace-info-empty">
+                    No community feedback yet.
+                  </p>
+                ) : (
+                  <div className="workspace-peer-list">
+                    {peerFeedback.map((f, i) => (
+                      <div key={i} className="workspace-peer-item">
+                        <div className="workspace-peer-header">
+                          <span className="workspace-peer-user">
+                            {getDisplayProfileName(
+                              f.profiles?.username,
+                              'Anonymous',
+                            )}
+                          </span>
+                          {f.rating && (
+                            <span className="workspace-peer-rating">
+                              {f.rating}/10
+                            </span>
+                          )}
+                        </div>
+                        {f.note && (
+                          <p className="workspace-peer-note">{f.note}</p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </section>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
@@ -1433,7 +1439,7 @@ export default function Workspaces({
           </div>
 
           <TrackInfoPanel
-            key={selectedTrackId}
+            key={selectedTrack?.videoId || 'none'}
             track={selectedTrack}
             communityData={communityData}
             isLoading={isLoadingCommunity}

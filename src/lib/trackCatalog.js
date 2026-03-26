@@ -797,39 +797,47 @@ export async function fetchRandomUnplacedVgmcTrack(
 ) {
   if (!supabase) return null;
 
-  let from = 0;
-  const pageSize = 200;
-  let hasMore = true;
-
-  while (hasMore) {
-    const { data, error } = await supabase
+  try {
+    // 1. Get the total count of unplaced tracks
+    const { count, error: countError } = await supabase
       .from('track_catalog')
-      .select('*')
+      .select('*', { count: 'exact', head: true })
       .not('tournaments', 'eq', '[]')
-      .range(from, from + pageSize - 1);
+      .eq('has_result', false);
 
-    if (error || !data || data.length === 0) {
-      break;
+    if (countError || !count) {
+      console.warn('Could not fetch count for random spotlight:', countError);
+      return null;
     }
 
-    const candidates = data.filter((entry) => {
-      const vid = entry.source_external_id || entry.videoId;
-      if (vid && excludeVideoIds.includes(vid)) return false;
+    // 2. Try a few random offsets to find a candidate that isn't excluded
+    // We fetch a small batch (10 tracks) at a random offset to increase chances of finding an unlistened track
+    const maxAttempts = 3;
+    for (let i = 0; i < maxAttempts; i++) {
+      const randomOffset = Math.max(0, Math.floor(Math.random() * count) - 5);
+      const { data, error } = await supabase
+        .from('track_catalog')
+        .select('*')
+        .not('tournaments', 'eq', '[]')
+        .eq('has_result', false)
+        .range(randomOffset, randomOffset + 20);
 
-      const tournaments = entry.tournaments || [];
-      if (!Array.isArray(tournaments) || tournaments.length === 0) return false;
+      if (error || !data || data.length === 0) continue;
 
-      // Unplaced means all recorded tournament appearances have no valid placement
-      return tournaments.every((t) => !t.placement || t.placement <= 0);
-    });
+      const candidates = data.filter((entry) => {
+        const vid = entry.source_external_id || entry.videoId;
+        return vid && !excludeVideoIds.includes(vid);
+      });
 
-    if (candidates.length > 0) {
-      const randomEntry =
-        candidates[Math.floor(Math.random() * candidates.length)];
-      return normalizeTrackCatalogEntry(randomEntry);
+      if (candidates.length > 0) {
+        // Pick a random candidate from the filtered batch
+        const finalPick =
+          candidates[Math.floor(Math.random() * candidates.length)];
+        return normalizeTrackCatalogEntry(finalPick);
+      }
     }
-
-    from += pageSize;
+  } catch (err) {
+    console.error('Error during random track fetch:', err);
   }
 
   return null;

@@ -3927,6 +3927,7 @@ export default function App() {
             <HomePage
               supabase={supabase}
               authUser={authUser}
+              isAuthReady={isAuthReady}
               currentPlaylist={playlist}
               listenedStatusById={listenedStatusById}
               onAddToPlaylist={handleQueueFromSupportList}

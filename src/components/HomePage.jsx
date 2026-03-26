@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import DiscordIcon from './DiscordIcon.jsx';
+import ScrollingText from './ScrollingText.jsx';
 import useMediaQuery from '../hooks/useMediaQuery.js';
 import {
   buildDiscoveryCandidates,
@@ -264,6 +265,7 @@ export default function HomePage({
   onPlayNow,
   onNavigateToPlayer,
   onShowToast,
+  isAuthReady = true,
 }) {
   const isMobileLayout = useMediaQuery('(max-width: 960px)');
   const [nominationUpdates, setNominationUpdates] = useState([]);
@@ -272,6 +274,7 @@ export default function HomePage({
   const [updatesError, setUpdatesError] = useState('');
   const [isDashboardLoading, setIsDashboardLoading] = useState(true);
   const [isUpdatesLoading, setIsUpdatesLoading] = useState(true);
+  const [isExtraLoading, setIsExtraLoading] = useState(true);
   const [featuredDiscoveryId, setFeaturedDiscoveryId] = useState(null);
   const [dbUnlistenedCount, setDbUnlistenedCount] = useState(null);
   const [prospectiveFallbackTrack, setProspectiveFallbackTrack] =
@@ -281,6 +284,7 @@ export default function HomePage({
   );
   const [maxVgmcNumber, setMaxVgmcNumber] = useState(24);
   const [discoveryMetadataById, setDiscoveryMetadataById] = useState({});
+  const [isShowingFallback, setIsShowingFallback] = useState(false);
 
   const currentPlaylistIds = useMemo(
     () => new Set(currentPlaylist.map((video) => video.videoId)),
@@ -299,23 +303,25 @@ export default function HomePage({
         listenedStatusById,
         excludeUserId: authUser?.id ?? null,
         limit: 10,
+        ignoreFilterVideoIds: featuredDiscoveryId ? [featuredDiscoveryId] : [],
       }),
     [
       authUser?.id,
       currentPlaylistIds,
       listenedStatusById,
       visibleNominationUpdates,
+      featuredDiscoveryId,
     ],
   );
 
   const featuredDiscoveryCandidate = useMemo(() => {
-    if (discoveryCandidates.length === 0) return null;
+    if (isShowingFallback || discoveryCandidates.length === 0) return null;
     return (
       discoveryCandidates.find(
         (candidate) => candidate.videoId === featuredDiscoveryId,
       ) ?? discoveryCandidates[0]
     );
-  }, [discoveryCandidates, featuredDiscoveryId]);
+  }, [discoveryCandidates, featuredDiscoveryId, isShowingFallback]);
 
   const activeFeaturedDiscoveryId =
     featuredDiscoveryCandidate?.videoId ?? featuredDiscoveryId ?? null;
@@ -338,6 +344,7 @@ export default function HomePage({
   );
 
   useEffect(() => {
+    if (!isAuthReady) return undefined;
     let isActive = true;
 
     async function loadDashboardUpdates() {
@@ -366,9 +373,10 @@ export default function HomePage({
     return () => {
       isActive = false;
     };
-  }, [supabase]);
+  }, [supabase, isAuthReady]);
 
   useEffect(() => {
+    if (!isAuthReady) return undefined;
     let isActive = true;
 
     async function loadVgmcUpdates() {
@@ -394,13 +402,17 @@ export default function HomePage({
     return () => {
       isActive = false;
     };
-  }, []);
+  }, [isAuthReady]);
 
   useEffect(() => {
+    if (!isAuthReady) return undefined;
     let isActive = true;
 
     async function loadExtraHomeData() {
       if (!supabase) return;
+      if (!prospectiveFallbackTrack) {
+        setIsExtraLoading(true);
+      }
 
       try {
         const { totalCount } = await fetchPagedTracks(supabase, { limit: 1 });
@@ -410,24 +422,34 @@ export default function HomePage({
 
         if (isActive) {
           setDbUnlistenedCount(Math.max(0, totalCount - listenedCount));
-        }
+          // Only load a fallback if we don't have one yet, to prevent jumping during playback
+          if (prospectiveFallbackTrack && !isDashboardLoading) {
+            setIsExtraLoading(false);
+            return;
+          }
 
-        const excludeIds = Object.keys(listenedStatusById || {});
-        const unplacedTrack = await fetchRandomUnplacedVgmcTrack(
-          supabase,
-          excludeIds,
-        );
+          const excludeIds = Object.keys(listenedStatusById || {});
+          const unplacedTrack = await fetchRandomUnplacedVgmcTrack(
+            supabase,
+            excludeIds,
+          );
 
-        if (isActive && unplacedTrack) {
-          const mappedTrack = mapTrackCatalogEntryToVideo(unplacedTrack);
-          setProspectiveFallbackTrack({
-            ...mappedTrack,
-            tournaments: unplacedTrack.tournaments || [],
-            isVgmcUnplaced: true,
-          });
+          if (isActive && unplacedTrack) {
+            const mappedTrack = mapTrackCatalogEntryToVideo(unplacedTrack);
+            setProspectiveFallbackTrack({
+              ...mappedTrack,
+              tournaments: unplacedTrack.tournaments || [],
+              isVgmcUnplaced: true,
+            });
+          }
+          setIsExtraLoading(false);
         }
       } catch {
         // Ignore error
+      } finally {
+        if (isActive) {
+          setIsExtraLoading(false);
+        }
       }
     }
 
@@ -436,9 +458,16 @@ export default function HomePage({
     return () => {
       isActive = false;
     };
-  }, [supabase, listenedStatusById]);
+  }, [
+    supabase,
+    listenedStatusById,
+    isAuthReady,
+    isDashboardLoading,
+    prospectiveFallbackTrack,
+  ]);
 
   useEffect(() => {
+    if (!isAuthReady) return undefined;
     let isActive = true;
     async function loadMaxVgmc() {
       if (!supabase) return;
@@ -453,9 +482,10 @@ export default function HomePage({
     return () => {
       isActive = false;
     };
-  }, [supabase]);
+  }, [supabase, isAuthReady]);
 
   useEffect(() => {
+    if (!isAuthReady) return undefined;
     let isActive = true;
     async function enrichDiscoveryMetadata() {
       if (!supabase || discoveryCandidates.length === 0) return;
@@ -479,7 +509,7 @@ export default function HomePage({
     return () => {
       isActive = false;
     };
-  }, [supabase, discoveryCandidates]);
+  }, [supabase, discoveryCandidates, isAuthReady]);
 
   const handleQueueVideos = useCallback(
     (videos, emptyMessage) => {
@@ -553,6 +583,7 @@ export default function HomePage({
     );
 
     if (nextCandidate) {
+      setIsShowingFallback(false);
       setFeaturedDiscoveryId(nextCandidate.videoId);
       return;
     }
@@ -571,6 +602,7 @@ export default function HomePage({
             tournaments: unplacedTrack.tournaments || [],
             isVgmcUnplaced: true,
           });
+          setIsShowingFallback(true);
           showActionNotice('Showcasing a random unplaced VGMC track!');
           return;
         }
@@ -610,19 +642,24 @@ export default function HomePage({
 
   const sectionSummaries = useMemo(
     () => ({
-      overview: isDashboardLoading
-        ? 'Loading current dashboard stats'
-        : `${visibleNominationUpdates.length} lists, ${discoveryCandidates.length} picks, ${vgmcThreads.length} threads`,
-      nominations: isDashboardLoading
-        ? 'Loading updated lists'
-        : `${visibleNominationUpdates.length} updated lists`,
+      overview:
+        !isAuthReady || isDashboardLoading
+          ? 'Loading current dashboard stats'
+          : `${visibleNominationUpdates.length} lists, ${discoveryCandidates.length} picks, ${vgmcThreads.length} threads`,
+      nominations:
+        !isAuthReady || isDashboardLoading
+          ? 'Loading updated lists'
+          : `${visibleNominationUpdates.length} updated lists`,
       discover:
-        discoveryCandidates.length === 0
-          ? 'You are caught up'
-          : `${discoveryCandidates.length} discovery picks`,
-      updates: isUpdatesLoading
-        ? 'Loading GameFAQs threads'
-        : `${vgmcThreads.length} VGMC threads`,
+        !isAuthReady || isDashboardLoading
+          ? 'Loading picks'
+          : discoveryCandidates.length === 0
+            ? 'You are caught up'
+            : `${discoveryCandidates.length} discovery picks`,
+      updates:
+        !isAuthReady || isUpdatesLoading
+          ? 'Loading GameFAQs threads'
+          : `${vgmcThreads.length} VGMC threads`,
     }),
     [
       discoveryCandidates.length,
@@ -630,6 +667,7 @@ export default function HomePage({
       isUpdatesLoading,
       vgmcThreads.length,
       visibleNominationUpdates.length,
+      isAuthReady,
     ],
   );
 
@@ -688,18 +726,11 @@ export default function HomePage({
 
               <div className="dashboard-hero-actions">
                 <button
-                  className="dashboard-action-btn"
+                  className="dashboard-action-btn dashboard-action-btn-primary"
                   type="button"
                   onClick={onNavigateToPlayer}
                 >
                   Open player
-                </button>
-                <button
-                  className="dashboard-link-btn"
-                  type="button"
-                  onClick={handleFindNewSong}
-                >
-                  Find new song
                 </button>
               </div>
 
@@ -719,8 +750,27 @@ export default function HomePage({
         </div>
 
         <div className="dashboard-hero-spotlight">
-          {featuredDiscoveryCandidate ? (
-            <article className="dashboard-feature-card dashboard-feature-card-hero">
+          {!isAuthReady || isDashboardLoading || isExtraLoading ? (
+            <div className="dashboard-feature-card dashboard-feature-card-hero dashboard-hero-loader-placeholder">
+              <div className="hero-loader-image-skeleton">
+                <div
+                  className="hero-loader-spinner"
+                  aria-label="Loading hero showcase"
+                />
+              </div>
+              <div className="hero-loader-copy-skeleton">
+                <div className="skeleton-line kicker" />
+                <div className="skeleton-line title" />
+                <div className="skeleton-line meta" />
+                <div className="skeleton-actions-skeleton">
+                  <div className="skeleton-button" />
+                  <div className="skeleton-button" />
+                  <div className="skeleton-button" />
+                </div>
+              </div>
+            </div>
+          ) : featuredDiscoveryCandidate ? (
+            <article className="dashboard-feature-card dashboard-feature-card-hero animate-fade-in">
               <img
                 className="dashboard-feature-thumb"
                 src={featuredDiscoveryCandidate.thumbnail}
@@ -731,9 +781,14 @@ export default function HomePage({
               <div className="dashboard-feature-copy">
                 <span className="dashboard-feature-kicker">New Nomination</span>
                 <h2 className="dashboard-feature-title">
-                  {discoveryMetadataById[featuredDiscoveryCandidate.videoId]
-                    ? `${discoveryMetadataById[featuredDiscoveryCandidate.videoId].gameTitle} - ${discoveryMetadataById[featuredDiscoveryCandidate.videoId].trackTitle}`
-                    : featuredDiscoveryCandidate.title}
+                  <ScrollingText
+                    text={
+                      discoveryMetadataById[featuredDiscoveryCandidate.videoId]
+                        ? `${discoveryMetadataById[featuredDiscoveryCandidate.videoId].gameTitle} - ${discoveryMetadataById[featuredDiscoveryCandidate.videoId].trackTitle}`
+                        : featuredDiscoveryCandidate.title
+                    }
+                    truncateWhenStatic={true}
+                  />
                 </h2>
                 <div className="dashboard-feature-meta">
                   <p className="dashboard-feature-meta-vgmc">
@@ -756,7 +811,7 @@ export default function HomePage({
                       handlePlayDiscoveryCandidate(featuredDiscoveryCandidate)
                     }
                   >
-                    Listen now
+                    Listen Now
                   </button>
                   <button
                     className="dashboard-action-btn"
@@ -765,13 +820,20 @@ export default function HomePage({
                       handleAddDiscoveryCandidate(featuredDiscoveryCandidate)
                     }
                   >
-                    Add to current playlist
+                    Add to Playlist
+                  </button>
+                  <button
+                    className="dashboard-action-btn dashboard-action-btn-muted"
+                    type="button"
+                    onClick={handleFindNewSong}
+                  >
+                    New Song
                   </button>
                 </div>
               </div>
             </article>
           ) : prospectiveFallbackTrack ? (
-            <article className="dashboard-feature-card dashboard-feature-card-hero">
+            <article className="dashboard-feature-card dashboard-feature-card-hero animate-fade-in">
               <img
                 className="dashboard-feature-thumb"
                 src={prospectiveFallbackTrack.thumbnail}
@@ -782,10 +844,15 @@ export default function HomePage({
               <div className="dashboard-feature-copy">
                 <span className="dashboard-feature-kicker">VGMC Unplaced</span>
                 <h2 className="dashboard-feature-title">
-                  {prospectiveFallbackTrack.gameTitle &&
-                  prospectiveFallbackTrack.trackTitle
-                    ? `${prospectiveFallbackTrack.gameTitle} - ${prospectiveFallbackTrack.trackTitle}`
-                    : prospectiveFallbackTrack.title}
+                  <ScrollingText
+                    text={
+                      prospectiveFallbackTrack.gameTitle &&
+                      prospectiveFallbackTrack.trackTitle
+                        ? `${prospectiveFallbackTrack.gameTitle} - ${prospectiveFallbackTrack.trackTitle}`
+                        : prospectiveFallbackTrack.title
+                    }
+                    truncateWhenStatic={true}
+                  />
                 </h2>
                 <div className="dashboard-feature-meta">
                   <p className="dashboard-feature-meta-vgmc">
@@ -811,7 +878,7 @@ export default function HomePage({
                       handlePlayDiscoveryCandidate(prospectiveFallbackTrack)
                     }
                   >
-                    Listen now
+                    Listen Now
                   </button>
                   <button
                     className="dashboard-action-btn"
@@ -820,7 +887,14 @@ export default function HomePage({
                       handleAddDiscoveryCandidate(prospectiveFallbackTrack)
                     }
                   >
-                    Add to current playlist
+                    Add to Playlist
+                  </button>
+                  <button
+                    className="dashboard-action-btn dashboard-action-btn-muted"
+                    type="button"
+                    onClick={handleFindNewSong}
+                  >
+                    New Song
                   </button>
                 </div>
               </div>
@@ -858,7 +932,7 @@ export default function HomePage({
                 lists, they will appear here.
               </DashboardMessage>
             ) : (
-              <div className="dashboard-update-list">
+              <div className="dashboard-update-list animate-fade-in">
                 {visibleNominationUpdates.map((update) => (
                   <NominationUpdateCard
                     key={update.userId}
@@ -890,7 +964,7 @@ export default function HomePage({
                 new discovery picks will show here.
               </DashboardMessage>
             ) : (
-              <div className="dashboard-discovery-list">
+              <div className="dashboard-discovery-list animate-fade-in">
                 {discoveryCandidates.slice(0, 5).map((candidate) => (
                   <DiscoveryRow
                     key={candidate.videoId}
@@ -923,7 +997,7 @@ export default function HomePage({
                 No VGMC threads were found on the contests board right now.
               </DashboardMessage>
             ) : (
-              <div className="dashboard-thread-list">
+              <div className="dashboard-thread-list animate-fade-in">
                 {vgmcThreads.map((thread) => (
                   <VgmcThreadItem key={thread.url} thread={thread} />
                 ))}
