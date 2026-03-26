@@ -7638,6 +7638,10 @@ body.is-resizing .resize-handle {
   font-weight: 500;
 }
 
+.theme-light .vgmc-number.has-result {
+  color: #000;
+}
+
 .vgmc-number.no-result,
 .vgmc-comma {
   color: var(--text-muted);
