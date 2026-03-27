@@ -57,8 +57,8 @@ describe('HomePage mobile layout', () => {
       />,
     );
 
-    const overviewToggle = await screen.findByRole('button', {
-      name: 'Collapse NomPlayer overview',
+    const nominationsToggle = await screen.findByRole('button', {
+      name: 'Collapse Updated Nominations',
     });
     const discoverToggle = await screen.findByRole('button', {
       name: 'Expand Discover',
@@ -67,7 +67,7 @@ describe('HomePage mobile layout', () => {
       name: 'Expand VGMC Updates',
     });
 
-    expect(overviewToggle).toHaveAttribute('aria-expanded', 'true');
+    expect(nominationsToggle).toHaveAttribute('aria-expanded', 'true');
     expect(discoverToggle).toHaveAttribute('aria-expanded', 'false');
     expect(updatesToggle).toHaveAttribute('aria-expanded', 'false');
 

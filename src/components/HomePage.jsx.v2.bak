@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { createPortal } from 'react-dom';
 import DiscordIcon from './DiscordIcon.jsx';
 import ScrollingText from './ScrollingText.jsx';
 import useMediaQuery from '../hooks/useMediaQuery.js';
@@ -7,6 +6,7 @@ import {
   buildDiscoveryCandidates,
   fetchDashboardNominationUpdates,
   fetchDashboardVgmcUpdates,
+  formatRelativeDashboardTime,
   pickNextDiscoveryCandidate,
 } from '../lib/dashboard.js';
 import {
@@ -38,6 +38,7 @@ const DESKTOP_DASHBOARD_COLLAPSE_DEFAULTS = {
 function DashboardSection({
   title,
   eyebrow,
+  tone,
   children,
   actions = null,
   caption = null,
@@ -49,7 +50,7 @@ function DashboardSection({
 }) {
   return (
     <section
-      className={`dashboard-section-feed ${className}`}
+      className={`dashboard-section dashboard-section-${tone}${className ? ` ${className}` : ''}`}
       aria-label={title}
     >
       <div className="dashboard-pane-shell">
@@ -125,231 +126,65 @@ function DashboardAvatar({ update }) {
   );
 }
 
-function NominationEmptyCard() {
+function NominationUpdateCard({ update, onAddWholeList, onAddUpdates }) {
+  const displayIdentity = parseStoredProfileUsername(update.username);
+
   return (
-    <article className="dashboard-update-card dashboard-update-card-empty">
-      <div className="dashboard-update-empty-shell">
-        <div className="dashboard-update-empty-icon" aria-hidden="true">
-          +
+    <article className="dashboard-update-card">
+      <div className="dashboard-update-meta">
+        <DashboardAvatar update={update} />
+
+        <div className="dashboard-update-copy">
+          <div className="dashboard-update-title-row">
+            <h3 className="dashboard-update-title">
+              <span className="profile-name-inline">
+                {displayIdentity.provider === 'discord' && (
+                  <DiscordIcon className="profile-provider-icon dashboard-provider-icon" />
+                )}
+                <span>{displayIdentity.displayName}</span>
+              </span>
+            </h3>
+            <span className="dashboard-chip">
+              {formatRelativeDashboardTime(update.updatedAt)}
+            </span>
+          </div>
+
+          <div className="dashboard-update-subtitle">
+            {update.gamefaqsUsername
+              ? `GameFaqs: ${update.gamefaqsUsername}`
+              : `${update.nominations.length} nomination${update.nominations.length === 1 ? '' : 's'}`}
+          </div>
         </div>
-        <p className="dashboard-update-empty-text">Refresh to find updates</p>
+      </div>
+
+      <div className="dashboard-update-song-list">
+        {update.nominations.slice(0, 4).map((video, index) => (
+          <div key={video.videoId} className="dashboard-update-song-row">
+            <span className="dashboard-update-song-index" aria-hidden="true">
+              {index + 1}
+            </span>
+            <span className="dashboard-update-song-title">{video.title}</span>
+          </div>
+        ))}
+      </div>
+
+      <div className="dashboard-update-actions">
+        <button
+          className="dashboard-action-btn dashboard-action-btn-muted"
+          type="button"
+          onClick={() => onAddUpdates(update)}
+        >
+          Add updates
+        </button>
+        <button
+          className="dashboard-action-btn"
+          type="button"
+          onClick={() => onAddWholeList(update)}
+        >
+          Add whole list
+        </button>
       </div>
     </article>
-  );
-}
-
-function ModalPortal({ children }) {
-  if (typeof document === 'undefined') return null;
-  const target = document.getElementById('modal-root');
-  if (!target) return null;
-  return createPortal(children, target);
-}
-
-function NominationUpdateCard({
-  update,
-  isExpanded = false,
-  onToggleExpand,
-  onAddWholeList,
-  onAddUpdates,
-  onPlayTrack,
-  onAddTrack,
-}) {
-  const displayIdentity = parseStoredProfileUsername(update.username);
-  const nominationCount = update.nominations.length;
-
-  const handleCardClick = () => {
-    if (!isExpanded) {
-      onToggleExpand(update.userId);
-    }
-  };
-
-  return (
-    <>
-      <article
-        className={`dashboard-update-card ${isExpanded ? 'dashboard-card-expanded' : 'dashboard-card-interactive'}`}
-        onClick={handleCardClick}
-      >
-        {isExpanded ? (
-          <ModalPortal>
-            <div className="dashboard-card-modal-content">
-              <button
-                className="dashboard-card-close-btn"
-                type="button"
-                aria-label="Close expanded list"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onToggleExpand(null);
-                }}
-              >
-                ✕
-              </button>
-
-              <div className="dashboard-update-header">
-                <div className="dashboard-update-heading">
-                  <h3 className="dashboard-update-title">
-                    <span className="profile-name-inline">
-                      {displayIdentity.provider === 'discord' && (
-                        <DiscordIcon className="profile-provider-icon dashboard-provider-icon" />
-                      )}
-                      <span>{displayIdentity.displayName}</span>
-                    </span>
-                  </h3>
-                  <p className="dashboard-update-count">
-                    {nominationCount} {nominationCount === 1 ? 'item' : 'items'}
-                  </p>
-                </div>
-              </div>
-
-              <div className="dashboard-update-full-list">
-                <div className="dashboard-update-scroll-area">
-                  {update.nominations.map((video, index) => (
-                    <div
-                      key={video.videoId}
-                      className="dashboard-update-full-row"
-                    >
-                      <span
-                        className="dashboard-update-full-index"
-                        aria-hidden="true"
-                      >
-                        {index + 1}
-                      </span>
-                      <span className="dashboard-update-full-title">
-                        {video.title}
-                      </span>
-
-                      <div className="dashboard-update-row-actions">
-                        <button
-                          className="dashboard-update-row-btn"
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onPlayTrack(video);
-                          }}
-                          title="Play now"
-                        >
-                          Listen
-                        </button>
-                        <button
-                          className="dashboard-update-row-btn dashboard-update-row-btn-primary"
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onAddTrack(video);
-                          }}
-                          title="Add to current playlist"
-                        >
-                          Add
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="dashboard-update-footer">
-                <div className="dashboard-update-actions">
-                  <button
-                    className="dashboard-action-btn dashboard-action-btn-muted"
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onAddUpdates(update);
-                    }}
-                    title="Add recently added items"
-                  >
-                    Add updates
-                  </button>
-                  <button
-                    className="dashboard-action-btn"
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onAddWholeList(update);
-                    }}
-                    title="Add entire list"
-                  >
-                    Add whole list
-                  </button>
-                </div>
-                <div className="dashboard-update-user-context">
-                  <DashboardAvatar update={update} />
-                </div>
-              </div>
-            </div>
-          </ModalPortal>
-        ) : (
-          <>
-            <div className="dashboard-update-header">
-              <div className="dashboard-update-heading">
-                <h3 className="dashboard-update-title">
-                  <span className="profile-name-inline">
-                    {displayIdentity.provider === 'discord' && (
-                      <DiscordIcon className="profile-provider-icon dashboard-provider-icon" />
-                    )}
-                    <span>{displayIdentity.displayName}</span>
-                  </span>
-                </h3>
-                <p className="dashboard-update-count">
-                  {nominationCount} {nominationCount === 1 ? 'item' : 'items'}
-                </p>
-              </div>
-            </div>
-
-            <div className="dashboard-update-peek-container">
-              <div className="dashboard-update-peek-list">
-                {update.nominations.slice(0, 3).map((video, index) => (
-                  <div
-                    key={video.videoId}
-                    className="dashboard-update-peek-row"
-                  >
-                    <span
-                      className="dashboard-update-peek-index"
-                      aria-hidden="true"
-                    >
-                      {index + 1}
-                    </span>
-                    <span className="dashboard-update-peek-title">
-                      {video.title}
-                    </span>
-                  </div>
-                ))}
-              </div>
-              <div className="dashboard-update-peek-fade" aria-hidden="true" />
-            </div>
-
-            <div className="dashboard-update-footer">
-              <div className="dashboard-update-actions">
-                <button
-                  className="dashboard-action-btn dashboard-action-btn-muted"
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onAddUpdates(update);
-                  }}
-                  title="Add recently added items"
-                >
-                  Add updates
-                </button>
-                <button
-                  className="dashboard-action-btn"
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onAddWholeList(update);
-                  }}
-                  title="Add entire list"
-                >
-                  Add whole list
-                </button>
-              </div>
-              <div className="dashboard-update-user-context">
-                <DashboardAvatar update={update} />
-              </div>
-            </div>
-          </>
-        )}
-      </article>
-    </>
   );
 }
 
@@ -440,7 +275,6 @@ export default function HomePage({
   const [isDashboardLoading, setIsDashboardLoading] = useState(true);
   const [isUpdatesLoading, setIsUpdatesLoading] = useState(true);
   const [isExtraLoading, setIsExtraLoading] = useState(true);
-  const [expandedUserId, setExpandedUserId] = useState(null);
   const [featuredDiscoveryId, setFeaturedDiscoveryId] = useState(null);
   const [dbUnlistenedCount, setDbUnlistenedCount] = useState(null);
   const [prospectiveFallbackTrack, setProspectiveFallbackTrack] =
@@ -859,32 +693,60 @@ export default function HomePage({
           <span className="dashboard-hero-badge">Community Dashboard</span>
           <h1 className="dashboard-hero-title">NomPlayer</h1>
 
-          <p className="dashboard-hero-description">
-            Track recently refreshed nomination lists, find songs you might have
-            missed, and discover older tracks from the VGMC archives.
-          </p>
-
-          <div className="dashboard-hero-actions">
+          {isMobileLayout && (
             <button
-              className="dashboard-action-btn dashboard-action-btn-primary"
+              className={`dashboard-mobile-toggle dashboard-mobile-toggle-hero${mobileCollapsedSections.overview ? ' collapsed' : ''}`}
               type="button"
-              onClick={onNavigateToPlayer}
+              aria-expanded={!mobileCollapsedSections.overview}
+              aria-label={`${mobileCollapsedSections.overview ? 'Expand' : 'Collapse'} NomPlayer overview`}
+              onClick={() => toggleMobileSection('overview')}
             >
-              Open player
+              <span className="dashboard-mobile-toggle-copy">
+                <span className="dashboard-mobile-toggle-label">
+                  {mobileCollapsedSections.overview
+                    ? 'Expand overview'
+                    : 'Collapse overview'}
+                </span>
+                <span className="dashboard-mobile-toggle-summary">
+                  {sectionSummaries.overview}
+                </span>
+              </span>
+              <span className="dashboard-mobile-toggle-icon" aria-hidden="true">
+                ▾
+              </span>
             </button>
-          </div>
+          )}
 
-          <div className="dashboard-stat-strip">
-            {dashboardStats.map((stat) => (
-              <div
-                key={stat.label}
-                className={`dashboard-stat-card dashboard-stat-card-${stat.accent}`}
-              >
-                <span className="dashboard-stat-value">{stat.value}</span>
-                <span className="dashboard-stat-label">{stat.label}</span>
+          {(!isMobileLayout || !mobileCollapsedSections.overview) && (
+            <>
+              <p className="dashboard-hero-description">
+                Track recently refreshed nomination lists, find songs you might
+                have missed, and discover older tracks from the VGMC archives.
+              </p>
+
+              <div className="dashboard-hero-actions">
+                <button
+                  className="dashboard-action-btn dashboard-action-btn-primary"
+                  type="button"
+                  onClick={onNavigateToPlayer}
+                >
+                  Open player
+                </button>
               </div>
-            ))}
-          </div>
+
+              <div className="dashboard-stat-strip">
+                {dashboardStats.map((stat) => (
+                  <div
+                    key={stat.label}
+                    className={`dashboard-stat-card dashboard-stat-card-${stat.accent}`}
+                  >
+                    <span className="dashboard-stat-value">{stat.value}</span>
+                    <span className="dashboard-stat-label">{stat.label}</span>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
         </div>
 
         <div className="dashboard-hero-spotlight">
@@ -1045,112 +907,104 @@ export default function HomePage({
         </div>
       </section>
 
-      <div className="home-sections">
-        <DashboardSection
-          title="Updated Nominations"
-          eyebrow="Community"
-          tone="discover"
-          caption="Recently refreshed nomination lists from other users."
-          className="dashboard-nominations-section"
-          isMobileLayout={isMobileLayout}
-          isCollapsed={isMobileLayout && mobileCollapsedSections.nominations}
-          onToggleCollapse={() => toggleMobileSection('nominations')}
-          summary={sectionSummaries.nominations}
-        >
-          {isDashboardLoading ? (
-            <DashboardMessage>Loading nomination updates…</DashboardMessage>
-          ) : dashboardError ? (
-            <DashboardMessage tone="danger">{dashboardError}</DashboardMessage>
-          ) : visibleNominationUpdates.length === 0 ? (
-            <div className="dashboard-update-list animate-fade-in">
-              <NominationEmptyCard />
-              <NominationEmptyCard />
-              <NominationEmptyCard />
-            </div>
-          ) : (
-            <>
-              {expandedUserId && (
-                <div
-                  className="modal-backdrop nomination-card-backdrop-sectional"
-                  onClick={() => setExpandedUserId(null)}
-                  role="presentation"
-                />
-              )}
+      <div className="dashboard-flow">
+        <div className="dashboard-flow-main">
+          <DashboardSection
+            title="Updated Nominations"
+            eyebrow="Community"
+            tone="discover"
+            caption="Recently refreshed nomination lists from other users."
+            className="dashboard-section-feed"
+            isMobileLayout={isMobileLayout}
+            isCollapsed={isMobileLayout && mobileCollapsedSections.nominations}
+            onToggleCollapse={() => toggleMobileSection('nominations')}
+            summary={sectionSummaries.nominations}
+          >
+            {isDashboardLoading ? (
+              <DashboardMessage>Loading nomination updates…</DashboardMessage>
+            ) : dashboardError ? (
+              <DashboardMessage tone="danger">
+                {dashboardError}
+              </DashboardMessage>
+            ) : visibleNominationUpdates.length === 0 ? (
+              <DashboardMessage>
+                No public nomination updates yet. Once users start curating
+                lists, they will appear here.
+              </DashboardMessage>
+            ) : (
               <div className="dashboard-update-list animate-fade-in">
                 {visibleNominationUpdates.map((update) => (
                   <NominationUpdateCard
                     key={update.userId}
                     update={update}
-                    isExpanded={expandedUserId === update.userId}
-                    onToggleExpand={setExpandedUserId}
                     onAddWholeList={handleAddWholeList}
                     onAddUpdates={handleAddUpdates}
-                    onPlayTrack={handlePlayDiscoveryCandidate}
-                    onAddTrack={handleAddDiscoveryCandidate}
                   />
                 ))}
               </div>
-            </>
-          )}
-        </DashboardSection>
+            )}
+          </DashboardSection>
+        </div>
 
-        <DashboardSection
-          title="Discover"
-          eyebrow="Recommended"
-          tone="manage"
-          caption="Songs other users nominated that are still missing from your current playlist."
-          className="dashboard-section-discover"
-          isMobileLayout={isMobileLayout}
-          isCollapsed={isMobileLayout && mobileCollapsedSections.discover}
-          onToggleCollapse={() => toggleMobileSection('discover')}
-          summary={sectionSummaries.discover}
-        >
-          {discoveryCandidates.length === 0 ? (
-            <DashboardMessage>
-              You are caught up for now. When more nomination lists appear, new
-              discovery picks will show here.
-            </DashboardMessage>
-          ) : (
-            <div className="dashboard-discovery-list animate-fade-in">
-              {discoveryCandidates.slice(0, 5).map((candidate) => (
-                <DiscoveryRow
-                  key={candidate.videoId}
-                  candidate={candidate}
-                  onAdd={handleAddDiscoveryCandidate}
-                  onPlayNow={handlePlayDiscoveryCandidate}
-                />
-              ))}
-            </div>
-          )}
-        </DashboardSection>
+        <div className="dashboard-flow-side">
+          <DashboardSection
+            title="Discover"
+            eyebrow="Recommended"
+            tone="manage"
+            caption="Songs other users nominated that are still missing from your current playlist."
+            className="dashboard-section-discover"
+            isMobileLayout={isMobileLayout}
+            isCollapsed={isMobileLayout && mobileCollapsedSections.discover}
+            onToggleCollapse={() => toggleMobileSection('discover')}
+            summary={sectionSummaries.discover}
+          >
+            {discoveryCandidates.length === 0 ? (
+              <DashboardMessage>
+                You are caught up for now. When more nomination lists appear,
+                new discovery picks will show here.
+              </DashboardMessage>
+            ) : (
+              <div className="dashboard-discovery-list animate-fade-in">
+                {discoveryCandidates.slice(0, 5).map((candidate) => (
+                  <DiscoveryRow
+                    key={candidate.videoId}
+                    candidate={candidate}
+                    onAdd={handleAddDiscoveryCandidate}
+                    onPlayNow={handlePlayDiscoveryCandidate}
+                  />
+                ))}
+              </div>
+            )}
+          </DashboardSection>
 
-        <DashboardSection
-          title="VGMC Updates"
-          eyebrow="GameFAQs"
-          tone="updates"
-          caption="Live threads from the GameFAQs Contests board with VGMC in the title."
-          className="dashboard-section-updates"
-          isMobileLayout={isMobileLayout}
-          isCollapsed={isMobileLayout && mobileCollapsedSections.updates}
-          onToggleCollapse={() => toggleMobileSection('updates')}
-          summary={sectionSummaries.updates}
-        >
-          {isUpdatesLoading ? (
-            <DashboardMessage>Loading GameFAQs threads…</DashboardMessage>
-          ) : updatesError ? (
-            <DashboardMessage tone="danger">{updatesError}</DashboardMessage>
-          ) : vgmcThreads.length === 0 ? (
-            <DashboardMessage>
-              No VGMC threads were found on the contests board right now.
-            </DashboardMessage>
-          ) : (
-            <div className="dashboard-thread-list animate-fade-in">
-              {vgmcThreads.map((thread) => (
-                <VgmcThreadItem key={thread.url} thread={thread} />
-              ))}
-            </div>
-          )}
-        </DashboardSection>
+          <DashboardSection
+            title="VGMC Updates"
+            eyebrow="GameFAQs"
+            tone="updates"
+            caption="Live threads from the GameFAQs Contests board with VGMC in the title."
+            className="dashboard-section-updates"
+            isMobileLayout={isMobileLayout}
+            isCollapsed={isMobileLayout && mobileCollapsedSections.updates}
+            onToggleCollapse={() => toggleMobileSection('updates')}
+            summary={sectionSummaries.updates}
+          >
+            {isUpdatesLoading ? (
+              <DashboardMessage>Loading GameFAQs threads…</DashboardMessage>
+            ) : updatesError ? (
+              <DashboardMessage tone="danger">{updatesError}</DashboardMessage>
+            ) : vgmcThreads.length === 0 ? (
+              <DashboardMessage>
+                No VGMC threads were found on the contests board right now.
+              </DashboardMessage>
+            ) : (
+              <div className="dashboard-thread-list animate-fade-in">
+                {vgmcThreads.map((thread) => (
+                  <VgmcThreadItem key={thread.url} thread={thread} />
+                ))}
+              </div>
+            )}
+          </DashboardSection>
+        </div>
       </div>
     </div>
   );
