@@ -2077,6 +2077,7 @@ body {
 }
 
 .topbar {
+  grid-row: 1;
   grid-column: 1 / -1;
   position: relative;
   display: flex;
@@ -2086,10 +2087,11 @@ body {
   background: var(--bg-topbar);
   backdrop-filter: blur(20px);
   border-bottom: 1px solid var(--border);
-  z-index: 100;
+  z-index: 250; /* Ensure it stays above modal backdrops (z-index 220) */
 }
 
 .main-content {
+  grid-row: 2;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2292,7 +2294,7 @@ body {
   gap: 14px;
   transform: translate(calc(-50% + var(--topbar-controls-offset, 0px)), -50%);
   transition: transform 0.32s cubic-bezier(0.16, 1, 0.3, 1);
-  z-index: 2;
+  z-index: 10;
 }
 
 .playback-controls {
@@ -9319,10 +9321,12 @@ body.is-resizing .resize-handle {
 /* Specific Desktop Layout: Center in active area to the right of navigation */
 @media (min-width: 961px) {
   .dashboard-card-modal-content {
-    left: calc(96px + (100vw - 96px) / 2) !important;
-    top: calc(68px + (100vh - 68px - 112.5px) / 2) !important;
-    width: min(680px, 90vw - 96px) !important;
-    max-height: calc(100vh - 68px - 112.5px - 100px) !important;
+    left: calc(50% + 48px) !important; /* Offset for 96px sidebar */
+    top: calc(50% - 22px) !important; /* Center with slight upward shift */
+    transform: translate(-50%, -50%) !important;
+    max-width: 800px !important;
+    max-height: calc(100vh - 200px) !important;
+    width: min(680px, 85vw - 96px) !important;
   }
 }
 
