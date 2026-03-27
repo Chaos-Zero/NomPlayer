@@ -2105,7 +2105,7 @@ body {
   align-items: center;
   min-width: 0;
   position: relative;
-  z-index: 1;
+  z-index: 3;
 }
 
 .topbar-logo {
@@ -5500,6 +5500,48 @@ button.playlist-search-indicator:hover {
   padding: 18px;
 }
 
+.delete-account-dialog {
+  max-width: 440px;
+}
+
+.delete-dialog-header-content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.delete-dialog-warning-icon {
+  width: 32px;
+  height: 32px;
+  color: var(--danger);
+  flex-shrink: 0;
+}
+
+.delete-dialog-body {
+  padding: 24px 0;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+.delete-dialog-body strong {
+  color: var(--text-primary);
+}
+
+.delete-dialog-irreversible {
+  margin-top: 12px;
+  font-size: 0.9em;
+  color: var(--danger);
+  font-weight: 500;
+}
+
+.delete-dialog-footer {
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
 .modal-header {
   display: flex;
   align-items: flex-start;
@@ -5723,6 +5765,21 @@ button.playlist-search-indicator:hover {
   gap: 10px;
   flex: 1;
   min-width: 0;
+}
+
+.settings-danger-zone {
+  margin-top: 32px;
+}
+
+.settings-danger-separator {
+  height: 1px;
+  background: var(--border);
+  margin-bottom: 24px;
+}
+
+.settings-delete-btn {
+  width: 100%;
+  justify-content: center;
 }
 
 .settings-avatar-url-field {

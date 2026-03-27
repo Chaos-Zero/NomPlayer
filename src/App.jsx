@@ -23,6 +23,7 @@ import UserSettingsDialog from './components/UserSettingsDialog.jsx';
 import ListeningHistoryDialog from './components/ListeningHistoryDialog.jsx';
 import SupportLevelDropdown from './components/SupportLevelDropdown.jsx';
 import ExportVgmcModal from './components/ExportVgmcModal.jsx';
+import DeleteAccountConfirmDialog from './components/DeleteAccountConfirmDialog.jsx';
 const TrackDatabase = lazy(() => import('./components/TrackDatabase.jsx'));
 import useMediaQuery from './hooks/useMediaQuery.js';
 import {
@@ -523,6 +524,9 @@ export default function App() {
   const [authMessage, setAuthMessage] = useState('');
   const [authError, setAuthError] = useState('');
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isDeleteAccountConfirmOpen, setIsDeleteAccountConfirmOpen] =
+    useState(false);
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [supportLevelDropdown, setSupportLevelDropdown] = useState(null);
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
@@ -2260,6 +2264,46 @@ export default function App() {
       setAuthError(error.message || 'Failed to log out.');
     }
   }, [applyPersistedPlayerState, currentVideo, supabase]);
+
+  const handleDeleteAccountConfirm = useCallback(async () => {
+    if (!supabase) return;
+
+    setIsDeletingAccount(true);
+    try {
+      const { error } = await supabase.rpc('delete_own_user');
+      if (error) throw error;
+
+      // Clear all local state
+      clearLocalGuestPlayerState();
+      applyPersistedPlayerState({});
+      localStorage.clear();
+
+      // Sign out to clear session
+      await supabase.auth.signOut();
+
+      // Reset UI state
+      setIsDeleteAccountConfirmOpen(false);
+      setIsSettingsOpen(false);
+      setActivePage('home');
+
+      setAppToastTone('logout');
+      setAppToastMessage('Account deleted successfully.');
+      if (appToastTimeoutRef.current) {
+        window.clearTimeout(appToastTimeoutRef.current);
+      }
+      appToastTimeoutRef.current = window.setTimeout(() => {
+        appToastTimeoutRef.current = null;
+        setAppToastMessage('');
+        setAppToastTone('default');
+      }, 3000);
+    } catch (error) {
+      console.error('Account deletion failed:', error);
+      setAuthError(error.message || 'Failed to delete account.');
+      setIsDeleteAccountConfirmOpen(false);
+    } finally {
+      setIsDeletingAccount(false);
+    }
+  }, [applyPersistedPlayerState, supabase]);
 
   const handleOpenHistory = useCallback(() => {
     setIsHistoryOpen(true);
@@ -4162,6 +4206,14 @@ export default function App() {
         notice={settingsNotice}
         onClose={() => setIsSettingsOpen(false)}
         onSave={handleSaveSettings}
+        onDeleteAccount={() => setIsDeleteAccountConfirmOpen(true)}
+      />
+
+      <DeleteAccountConfirmDialog
+        isOpen={isDeleteAccountConfirmOpen}
+        isSubmitting={isDeletingAccount}
+        onClose={() => setIsDeleteAccountConfirmOpen(false)}
+        onConfirm={handleDeleteAccountConfirm}
       />
 
       <ListeningHistoryDialog

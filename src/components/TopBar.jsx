@@ -1103,7 +1103,6 @@ export default function TopBar({
           type="button"
           title={showSupportList ? 'Hide Support' : 'Show Support'}
           aria-label={showSupportList ? 'Hide Support' : 'Show Support'}
-          disabled={!currentVideo || isCurrentVideoNominated}
           onClick={() => setShowSupportList((s) => !s)}
         >
           <SupportIcon />

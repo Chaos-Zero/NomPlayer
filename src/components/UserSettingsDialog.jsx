@@ -85,6 +85,7 @@ export default function UserSettingsDialog({
   notice = '',
   onClose,
   onSave,
+  onDeleteAccount,
 }) {
   if (!isOpen || !user) return null;
 
@@ -174,12 +175,26 @@ export default function UserSettingsDialog({
               </div>
             )}
 
-            <button
-              className="btn btn-primary auth-dialog-submit"
-              type="submit"
-            >
-              {isSubmitting ? 'Saving…' : 'Save settings'}
-            </button>
+            <div className="auth-dialog-submit-group">
+              <button
+                className="btn btn-primary auth-dialog-submit"
+                type="submit"
+              >
+                {isSubmitting ? 'Saving…' : 'Save settings'}
+              </button>
+
+              <div className="settings-danger-zone">
+                <div className="settings-danger-separator" />
+                <button
+                  className="btn btn-danger settings-delete-btn"
+                  type="button"
+                  onClick={onDeleteAccount}
+                  disabled={isSubmitting}
+                >
+                  Delete Account
+                </button>
+              </div>
+            </div>
           </form>
         </div>
       </div>
