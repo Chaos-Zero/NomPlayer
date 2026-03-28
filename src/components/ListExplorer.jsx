@@ -5,7 +5,10 @@ import React, {
   useEffect,
   useRef,
 } from 'react';
-import { getDisplayProfileName } from '../lib/playerState.js';
+import {
+  getDisplayProfileName,
+  deriveProfileAvatarUrl,
+} from '../lib/playerState.js';
 import { ingestYouTubeTrackSources } from '../lib/trackCatalog.js';
 import { fetchCommunityFeedback, upsertUserFeedback } from '../lib/feedback.js';
 import {
@@ -267,17 +270,6 @@ function TrackInfoPanel({
                   }}
                 >
                   <h4>Your Feedback</h4>
-                  {personalFeedback?.user_id && (
-                    <span
-                      style={{
-                        fontSize: '10px',
-                        opacity: 0.5,
-                        color: '#4ade80',
-                      }}
-                    >
-                      (Loaded from DB)
-                    </span>
-                  )}
                 </div>
                 <div className="list-explorer-info-personal">
                   <div className="list-explorer-info-rating-row">
@@ -354,22 +346,32 @@ function TrackInfoPanel({
                   <div className="list-explorer-peer-list">
                     {peerFeedback.map((f, i) => (
                       <div key={i} className="list-explorer-peer-item">
-                        <div className="list-explorer-peer-header">
-                          <span className="list-explorer-peer-user">
-                            {getDisplayProfileName(
-                              f.user_profile?.username || f.profiles?.username,
-                              'Anonymous',
-                            )}
-                          </span>
-                          {f.rating && (
-                            <span className="list-explorer-peer-rating">
-                              {f.rating}/10
+                        <img
+                          src={deriveProfileAvatarUrl(
+                            f.profiles,
+                            f.profiles?.avatar_url,
+                          )}
+                          alt=""
+                          className="list-explorer-peer-avatar"
+                        />
+                        <div className="list-explorer-peer-content">
+                          <div className="list-explorer-peer-header">
+                            <span className="list-explorer-peer-user">
+                              {getDisplayProfileName(
+                                f.profiles?.username,
+                                'Anonymous',
+                              )}
                             </span>
+                            {f.rating && (
+                              <span className="list-explorer-peer-rating">
+                                {f.rating}/10
+                              </span>
+                            )}
+                          </div>
+                          {f.note && (
+                            <p className="list-explorer-peer-note">{f.note}</p>
                           )}
                         </div>
-                        {f.note && (
-                          <p className="list-explorer-peer-note">{f.note}</p>
-                        )}
                       </div>
                     ))}
                   </div>
