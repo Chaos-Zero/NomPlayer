@@ -107,9 +107,7 @@ describe('dashboard helpers', () => {
     expect(pickNextDiscoveryCandidate(candidates, 'alpha1234567')).toEqual(
       candidates[1],
     );
-    expect(pickNextDiscoveryCandidate(candidates, 'beta12345678')).toEqual(
-      candidates[0],
-    );
+    expect(pickNextDiscoveryCandidate(candidates, 'beta12345678')).toBeNull();
   });
 
   it('extracts only VGMC threads from the GameFAQs RSS feed xml', async () => {
