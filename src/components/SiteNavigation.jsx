@@ -65,14 +65,14 @@ const NAV_ITEMS = [
     Icon: PlayerIcon,
   },
   {
-    id: 'database',
-    label: 'Track Database',
-    Icon: DatabaseIcon,
-  },
-  {
     id: 'listExplorer',
     label: 'List Explorer',
     Icon: ListExplorerIcon,
+  },
+  {
+    id: 'database',
+    label: 'Track Database',
+    Icon: DatabaseIcon,
   },
 ];
 
