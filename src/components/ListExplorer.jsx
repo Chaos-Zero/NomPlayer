@@ -464,7 +464,7 @@ function SortableListExplorerCard({
     <div
       ref={setNodeRef}
       style={isDraggingStyle}
-      className={`list-explorer-card ${isSelected ? 'selected' : ''} ${isDragging ? 'dragging' : ''} ${isReadOnly ? 'read-only' : ''}`}
+      className={`list-explorer-card ${isSelected ? 'selected' : ''} ${isDragging ? 'dragging' : ''} ${isReadOnly ? 'read-only' : ''} ${isSupportList ? 'is-support-list' : ''}`}
       onClick={() => onSelect?.(video.videoId)}
       onContextMenu={(e) => onContextMenu?.(e, video)}
     >
