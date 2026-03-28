@@ -147,6 +147,7 @@ function ModalPortal({ children }) {
 
 function NominationUpdateCard({
   update,
+  metadataById = {},
   isExpanded = false,
   onToggleExpand,
   onAddWholeList,
@@ -214,7 +215,9 @@ function NominationUpdateCard({
                         {index + 1}
                       </span>
                       <span className="dashboard-update-full-title">
-                        {video.title}
+                        {metadataById[video.videoId]
+                          ? `${metadataById[video.videoId].gameTitle} - ${metadataById[video.videoId].trackTitle}`
+                          : video.title}
                       </span>
 
                       <div className="dashboard-update-row-actions">
@@ -255,9 +258,9 @@ function NominationUpdateCard({
                       e.stopPropagation();
                       onAddUpdates(update);
                     }}
-                    title="Add recently added items"
+                    title="Add unheard nominations"
                   >
-                    Add updates
+                    Add Unheard
                   </button>
                   <button
                     className="dashboard-action-btn"
@@ -309,7 +312,7 @@ function NominationUpdateCard({
                       {index + 1}
                     </span>
                     <span className="dashboard-update-peek-title">
-                      {video.title}
+                      {metadataById[video.videoId]?.trackTitle || video.title}
                     </span>
                   </div>
                 ))}
@@ -326,9 +329,9 @@ function NominationUpdateCard({
                     e.stopPropagation();
                     onAddUpdates(update);
                   }}
-                  title="Add recently added items"
+                  title="Add unheard nominations"
                 >
-                  Add updates
+                  Add Unheard
                 </button>
                 <button
                   className="dashboard-action-btn"
@@ -353,7 +356,7 @@ function NominationUpdateCard({
   );
 }
 
-function DiscoveryRow({ candidate, onAdd, onPlayNow }) {
+function DiscoveryRow({ candidate, metadata, onAdd, onPlayNow }) {
   const nominatorNames = candidate.nominators
     .slice(0, 3)
     .map((nominator) => getDisplayProfileName(nominator.username))
@@ -370,7 +373,11 @@ function DiscoveryRow({ candidate, onAdd, onPlayNow }) {
 
       <div className="dashboard-discovery-copy">
         <div className="dashboard-discovery-title-row">
-          <h3 className="dashboard-discovery-title">{candidate.title}</h3>
+          <h3 className="dashboard-discovery-title">
+            {metadata
+              ? `${metadata.gameTitle} - ${metadata.trackTitle}`
+              : candidate.title}
+          </h3>
           <span className="dashboard-chip dashboard-chip-warm">
             {candidate.nominationCount} pick
             {candidate.nominationCount === 1 ? '' : 's'}
@@ -449,7 +456,7 @@ export default function HomePage({
     MOBILE_DASHBOARD_COLLAPSE_DEFAULTS,
   );
   const [maxVgmcNumber, setMaxVgmcNumber] = useState(24);
-  const [discoveryMetadataById, setDiscoveryMetadataById] = useState({});
+  const [trackMetadataById, setTrackMetadataById] = useState({});
   const [isShowingFallback, setIsShowingFallback] = useState(false);
 
   const currentPlaylistIds = useMemo(
@@ -468,7 +475,7 @@ export default function HomePage({
         currentPlaylistIds,
         listenedStatusById,
         excludeUserId: authUser?.id ?? null,
-        limit: 10,
+        limit: 100,
         ignoreFilterVideoIds: featuredDiscoveryId ? [featuredDiscoveryId] : [],
       }),
     [
@@ -653,29 +660,36 @@ export default function HomePage({
   useEffect(() => {
     if (!isAuthReady) return undefined;
     let isActive = true;
-    async function enrichDiscoveryMetadata() {
-      if (!supabase || discoveryCandidates.length === 0) return;
+    async function enrichTrackMetadata() {
+      if (!supabase) return;
+      const discoveryIds = discoveryCandidates.map((c) => c.videoId);
+      const updateIds = visibleNominationUpdates.flatMap((u) =>
+        u.nominations.map((n) => n.videoId),
+      );
+      const allVideoIds = [...new Set([...discoveryIds, ...updateIds])];
+
+      if (allVideoIds.length === 0) return;
+
       try {
-        const videoIds = discoveryCandidates.map((c) => c.videoId);
         const metadataList = await fetchTrackCatalogByVideoIds(
           supabase,
-          videoIds,
+          allVideoIds,
         );
         if (!isActive) return;
         const metaMap = {};
         metadataList.forEach((track) => {
           metaMap[track.videoId] = track;
         });
-        setDiscoveryMetadataById(metaMap);
+        setTrackMetadataById((prev) => ({ ...prev, ...metaMap }));
       } catch (err) {
-        console.error('Failed to enrich discovery metadata:', err);
+        console.error('Failed to enrich track metadata:', err);
       }
     }
-    enrichDiscoveryMetadata();
+    enrichTrackMetadata();
     return () => {
       isActive = false;
     };
-  }, [supabase, discoveryCandidates, isAuthReady]);
+  }, [supabase, discoveryCandidates, visibleNominationUpdates, isAuthReady]);
 
   const handleQueueVideos = useCallback(
     (videos, emptyMessage) => {
@@ -714,14 +728,16 @@ export default function HomePage({
   const handleAddUpdates = useCallback(
     (update) => {
       const nextVideos = update.nominations.filter(
-        (video) => !currentPlaylistIds.has(video.videoId),
+        (video) =>
+          !currentPlaylistIds.has(video.videoId) &&
+          !listenedStatusById[video.videoId],
       );
       handleQueueVideos(
         nextVideos,
-        `No new nominations from ${getDisplayProfileName(update.username)} for your current playlist.`,
+        `No unheard nominations from ${getDisplayProfileName(update.username)} for your current playlist.`,
       );
     },
-    [currentPlaylistIds, handleQueueVideos],
+    [currentPlaylistIds, listenedStatusById, handleQueueVideos],
   );
 
   const handleAddDiscoveryCandidate = useCallback(
@@ -921,8 +937,8 @@ export default function HomePage({
                 <h2 className="dashboard-feature-title">
                   <ScrollingText
                     text={
-                      discoveryMetadataById[featuredDiscoveryCandidate.videoId]
-                        ? `${discoveryMetadataById[featuredDiscoveryCandidate.videoId].gameTitle} - ${discoveryMetadataById[featuredDiscoveryCandidate.videoId].trackTitle}`
+                      trackMetadataById[featuredDiscoveryCandidate.videoId]
+                        ? `${trackMetadataById[featuredDiscoveryCandidate.videoId].gameTitle} - ${trackMetadataById[featuredDiscoveryCandidate.videoId].trackTitle}`
                         : featuredDiscoveryCandidate.title
                     }
                     truncateWhenStatic={true}
@@ -1081,6 +1097,7 @@ export default function HomePage({
                   <NominationUpdateCard
                     key={update.userId}
                     update={update}
+                    metadataById={trackMetadataById}
                     isExpanded={expandedUserId === update.userId}
                     onToggleExpand={setExpandedUserId}
                     onAddWholeList={handleAddWholeList}
@@ -1116,6 +1133,7 @@ export default function HomePage({
                 <DiscoveryRow
                   key={candidate.videoId}
                   candidate={candidate}
+                  metadata={trackMetadataById[candidate.videoId]}
                   onAdd={handleAddDiscoveryCandidate}
                   onPlayNow={handlePlayDiscoveryCandidate}
                 />

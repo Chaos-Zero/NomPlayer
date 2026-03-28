@@ -94,76 +94,93 @@ export function buildDiscoveryCandidates(
     ignoreFilterVideoIds = [],
   } = {},
 ) {
-  const aggregated = new Map();
   const ignoreSet = new Set(ignoreFilterVideoIds || []);
+  const userNominationLists = [];
 
+  // 1. Group new nominations by user
   for (const update of nominationUpdates) {
     if (!update || (excludeUserId && update.userId === excludeUserId)) {
       continue;
     }
 
+    const userNewNoms = [];
     for (const nomination of update.nominations) {
       if (!nomination?.videoId) continue;
 
       if (!ignoreSet.has(nomination.videoId)) {
         if (currentPlaylistIds.has(nomination.videoId)) continue;
-        if (listenedStatusById[nomination.videoId] === 'complete') continue;
+        // User requested ONLY show if user has NOT started them (falsy status)
+        if (listenedStatusById[nomination.videoId]) continue;
       }
 
-      const existing = aggregated.get(nomination.videoId);
-      if (!existing) {
-        aggregated.set(nomination.videoId, {
-          ...nomination,
-          nominationCount: 1,
-          latestUpdatedAt: update.updatedAt,
-          nominators: [
-            {
-              userId: update.userId,
-              username: update.username,
-              avatarUrl: update.avatarUrl,
-            },
-          ],
-        });
-        continue;
+      userNewNoms.push({
+        ...nomination,
+        latestUpdatedAt: update.updatedAt,
+        nominators: [
+          {
+            userId: update.userId,
+            username: update.username,
+            avatarUrl: update.avatarUrl,
+          },
+        ],
+      });
+    }
+
+    if (userNewNoms.length > 0) {
+      userNominationLists.push(userNewNoms);
+    }
+  }
+
+  // 2. Interleave the lists (Round-robin)
+  const finalCandidates = [];
+  const seenVideoIds = new Set();
+  let hasMore = true;
+  let round = 0;
+
+  while (hasMore && finalCandidates.length < limit) {
+    hasMore = false;
+    for (const list of userNominationLists) {
+      if (round < list.length) {
+        hasMore = true;
+        const candidate = list[round];
+        if (!seenVideoIds.has(candidate.videoId)) {
+          seenVideoIds.add(candidate.videoId);
+          finalCandidates.push(candidate);
+        }
+        if (finalCandidates.length >= limit) break;
       }
+    }
+    round++;
+  }
 
-      existing.nominationCount += 1;
-      existing.latestUpdatedAt =
-        typeof update.updatedAt === 'string' &&
-        (!existing.latestUpdatedAt ||
-          update.updatedAt > existing.latestUpdatedAt)
-          ? update.updatedAt
-          : existing.latestUpdatedAt;
+  // 3. Populate nominationCount and merge nominators for duplicates across users
+  // (Though they are now interleaved, we should still handle if they appeared in other users' lists
+  // and ensure we have full nominator info)
+  for (const candidate of finalCandidates) {
+    candidate.nominationCount = 0;
+    candidate.nominators = [];
 
-      if (
-        !existing.nominators.some(
-          (nominator) => nominator.userId === update.userId,
-        )
-      ) {
-        existing.nominators.push({
-          userId: update.userId,
-          username: update.username,
-          avatarUrl: update.avatarUrl,
-        });
+    for (const update of nominationUpdates) {
+      const match = update.nominations.find(
+        (n) => n.videoId === candidate.videoId,
+      );
+      if (match) {
+        candidate.nominationCount += 1;
+        if (
+          !candidate.nominators.some((n) => n.userId === update.userId) &&
+          (!excludeUserId || update.userId !== excludeUserId)
+        ) {
+          candidate.nominators.push({
+            userId: update.userId,
+            username: update.username,
+            avatarUrl: update.avatarUrl,
+          });
+        }
       }
     }
   }
 
-  return [...aggregated.values()]
-    .sort((left, right) => {
-      if (right.nominationCount !== left.nominationCount) {
-        return right.nominationCount - left.nominationCount;
-      }
-
-      if ((right.latestUpdatedAt || '') !== (left.latestUpdatedAt || '')) {
-        return (right.latestUpdatedAt || '').localeCompare(
-          left.latestUpdatedAt || '',
-        );
-      }
-
-      return left.title.localeCompare(right.title);
-    })
-    .slice(0, Math.max(1, limit));
+  return finalCandidates;
 }
 
 export function pickNextDiscoveryCandidate(candidates, currentVideoId = null) {
@@ -183,7 +200,12 @@ export function pickNextDiscoveryCandidate(candidates, currentVideoId = null) {
     return candidates[0];
   }
 
-  return candidates[(currentIndex + 1) % candidates.length];
+  // No wrap-around: return null if we're at the end
+  if (currentIndex >= candidates.length - 1) {
+    return null;
+  }
+
+  return candidates[currentIndex + 1];
 }
 
 export function formatRelativeDashboardTime(value) {
