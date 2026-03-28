@@ -8966,6 +8966,41 @@ body.is-resizing .resize-handle {
   flex: 1;
   padding: 8px;
   min-width: 0;
+  position: relative; /* Base for absolute positioning */
+}
+
+.list-explorer-card-support-icon-overlay {
+  position: absolute;
+  top: 50%;
+  right: 56px; /* Increased offset to give 'x' more room */
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  pointer-events: none; /* Don't block clicks to the card or remove button */
+  z-index: 5;
+}
+
+.list-explorer-card-support-icon-overlay svg {
+  width: 15px;
+  height: 15px;
+}
+
+.list-explorer-card-support-icon-overlay.level-3 {
+  color: #ffb700;
+  filter: drop-shadow(0 0 5px rgba(255, 183, 0, 0.4));
+}
+
+.list-explorer-card-support-icon-overlay.level-2 {
+  color: #ff2d78;
+  filter: drop-shadow(0 0 5px rgba(255, 45, 120, 0.4));
+}
+
+.list-explorer-card-support-icon-overlay.level-1 {
+  color: #fbbf24;
+  filter: drop-shadow(0 0 5px rgba(251, 191, 36, 0.4));
 }
 
 .list-explorer-comment-textarea:focus {
@@ -9946,3 +9981,5 @@ body.is-resizing .resize-handle {
   white-space: pre-wrap;
   word-break: break-word;
 }
+
+/* Card Support Icons in List Explorer */

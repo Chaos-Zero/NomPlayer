@@ -449,17 +449,21 @@ function SortableListExplorerCard({
     disabled: isReadOnly,
   });
 
-  const style = {
+  const isDraggingStyle = {
     transform: CSS.Transform.toString(transform),
     transition,
     zIndex: isDragging ? 100 : 1,
-    opacity: isDragging ? 0.5 : 1, // Visual feedback for local dragging if enabled
+    opacity: isDragging ? 0.5 : 1,
   };
+
+  const listId = sortableId.split(':')[0];
+  const isSupportList = listId === 'support';
+  const supportLevel = video.supportLevel || 1;
 
   return (
     <div
       ref={setNodeRef}
-      style={style}
+      style={isDraggingStyle}
       className={`list-explorer-card ${isSelected ? 'selected' : ''} ${isDragging ? 'dragging' : ''} ${isReadOnly ? 'read-only' : ''}`}
       onClick={() => onSelect?.(video.videoId)}
       onContextMenu={(e) => onContextMenu?.(e, video)}
@@ -484,6 +488,13 @@ function SortableListExplorerCard({
             onOpenContextMenu={onContextMenu}
             itemAriaPrefix="List Explorer track"
           />
+          {isSupportList && (
+            <div
+              className={`list-explorer-card-support-icon-overlay level-${supportLevel}`}
+            >
+              {supportLevel === 3 ? <LockIcon /> : <HeartIcon />}
+            </div>
+          )}
         </div>
       </div>
     </div>
