@@ -1155,7 +1155,7 @@ export default function ListExplorer({
             `[data-column-id="${scrollId}"]`,
           );
           if (element) {
-            element.scrollIntoView({ behavior: 'smooth', inline: 'center' });
+            element.scrollIntoView({ behavior: 'smooth', inline: 'end' });
           }
         }
       }, 100);
