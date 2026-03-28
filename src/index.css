@@ -9735,3 +9735,85 @@ body.is-resizing .resize-handle {
 .theme-light .dashboard-update-full-row:hover {
   background: rgba(0, 0, 0, 0.06) !important;
 }
+
+/* ─── Feedback Persistence Styles ─── */
+.list-explorer-info-feedback-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.btn-save-feedback {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 38px;
+  padding: 0 20px;
+  border-radius: 12px;
+  border: 1px solid rgba(196, 181, 253, 0.3);
+  background: linear-gradient(
+    135deg,
+    rgba(124, 58, 237, 0.85),
+    rgba(88, 28, 135, 0.8)
+  );
+  color: white;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.16);
+}
+
+.btn-save-feedback:hover:not(:disabled) {
+  transform: translateY(-2px);
+  background: linear-gradient(
+    135deg,
+    rgba(139, 92, 246, 0.9),
+    rgba(107, 33, 168, 0.85)
+  );
+  border-color: rgba(196, 181, 253, 0.5);
+  box-shadow: 0 8px 20px rgba(124, 58, 237, 0.28);
+}
+
+.btn-save-feedback:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.btn-save-feedback:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: rgba(255, 255, 255, 0.08);
+  border-color: transparent;
+  box-shadow: none;
+}
+
+/* Database Feedback Icons */
+.btn-feedback-save {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: #c89cff;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+  opacity: 0.8;
+}
+
+.btn-feedback-save:hover {
+  opacity: 1;
+  background: rgba(124, 58, 237, 0.14);
+  transform: scale(1.1);
+}
+
+.feedback-row-action {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}

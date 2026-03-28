@@ -254,6 +254,28 @@ const TrackRow = memo(
         </span>
       ));
 
+    const [localNote, setLocalNote] = useState(null);
+    const [localRating, setLocalRating] = useState(null);
+
+    const isFeedbackDirty =
+      (localNote !== null && localNote !== (feedback.note || '')) ||
+      (localRating !== null && localRating !== (feedback.rating || ''));
+
+    const handleSaveFeedback = (e) => {
+      if (e) e.stopPropagation();
+      const finalRating = localRating !== null ? localRating : feedback.rating;
+      const finalNote = localNote !== null ? localNote : feedback.note;
+
+      if (finalRating !== feedback.rating) {
+        onUpdateRating(track.trackId, String(finalRating));
+      }
+      if (finalNote !== feedback.note) {
+        onUpdateNote(track.trackId, finalNote);
+      }
+      setLocalRating(null);
+      setLocalNote(null);
+    };
+
     return (
       <tr
         className={`${isSelected ? 'selected' : ''} ${track.isRetired ? 'retired' : ''}`}
@@ -337,8 +359,8 @@ const TrackRow = memo(
           }}
         >
           <select
-            value={feedback.rating || ''}
-            onChange={(e) => onUpdateRating(track.trackId, e.target.value)}
+            value={localRating !== null ? localRating : feedback.rating || ''}
+            onChange={(e) => setLocalRating(e.target.value)}
           >
             <option value="">-</option>
             {[...Array(10)].map((_, i) => (
@@ -395,15 +417,30 @@ const TrackRow = memo(
             maxWidth: columnWidths.comment,
           }}
         >
-          <input
-            type="text"
-            placeholder="Add note..."
-            value={feedback.note || ''}
-            onChange={(e) => onUpdateNote(track.trackId, e.target.value)}
-            onFocus={() =>
-              onSetExpandedCell({ id: track.trackId, col: 'comment' })
-            }
-          />
+          <div
+            className="comment-cell-content"
+            style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+          >
+            <input
+              type="text"
+              placeholder="Add note..."
+              value={localNote !== null ? localNote : feedback.note || ''}
+              onChange={(e) => setLocalNote(e.target.value)}
+              onFocus={() =>
+                onSetExpandedCell({ id: track.trackId, col: 'comment' })
+              }
+              style={{ flex: 1 }}
+            />
+            {isFeedbackDirty && (
+              <button
+                className="btn-feedback-save"
+                onClick={handleSaveFeedback}
+                title="Save feedback (rating and note)"
+              >
+                <SaveIcon />
+              </button>
+            )}
+          </div>
         </td>
         {isEditMode && (
           <td className="col-actions">

@@ -52,10 +52,12 @@ export async function fetchCommunityFeedback(supabase, trackId) {
     .from('track_user_feedback')
     .select(
       `
+      track_id,
+      user_id,
       rating,
       note,
       updated_at,
-      profiles:user_id (
+      profiles (
         username,
         avatar_url
       )

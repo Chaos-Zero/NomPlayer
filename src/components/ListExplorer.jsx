@@ -6,6 +6,8 @@ import React, {
   useRef,
 } from 'react';
 import { getDisplayProfileName } from '../lib/playerState.js';
+import { ingestYouTubeTrackSources } from '../lib/trackCatalog.js';
+import { fetchCommunityFeedback, upsertUserFeedback } from '../lib/feedback.js';
 import {
   DndContext,
   closestCenter,
@@ -139,21 +141,57 @@ function TrackInfoPanel({
   onClose,
   authUser,
   onUpdateComment,
-  onUpdateRating,
+  onSaveFeedback,
 }) {
-  const [localComment, setLocalComment] = useState('');
-
-  // No long use useEffect to sync localComment; handled by key on instantiation
-
   const personalFeedback = useMemo(() => {
-    if (!track || !communityData.feedback) return { rating: null, note: '' };
-    return (
-      communityData.feedback.find((f) => f.user_id === authUser?.id) || {
-        rating: null,
-        note: '',
-      }
-    );
+    if (!track || !communityData.feedback || !authUser?.id)
+      return { rating: null, note: '' };
+
+    // Uid matching - be aggressive but specific to the track
+    const myId = authUser.id;
+    const currentTrackId = track?.trackId || track?.id;
+
+    const found = communityData.feedback.find((f) => {
+      // Must be for this track (if we have track_id in the feedback)
+      if (currentTrackId && f.track_id && f.track_id !== currentTrackId)
+        return false;
+
+      // Direct column match
+      if (f.user_id === myId || f.userId === myId) return true;
+      // Nested profile match
+      if (f.profiles?.id === myId || f.user_profile?.user_id === myId)
+        return true;
+      return false;
+    });
+
+    return found || { rating: null, note: '' };
   }, [track, communityData.feedback, authUser?.id]);
+
+  const [localComment, setLocalComment] = useState(personalFeedback.note || '');
+  const [localRating, setLocalRating] = useState(personalFeedback.rating || '');
+
+  // Sync local state when DB feedback arrives or track changes
+  // Using the "Adjusting state during render" pattern to avoid linting errors and
+  // ensure the most efficient update without cascading effects.
+  const [prevSync, setPrevSync] = useState({
+    note: personalFeedback.note,
+    rating: personalFeedback.rating,
+    videoId: track?.videoId,
+  });
+
+  if (
+    personalFeedback.note !== prevSync.note ||
+    personalFeedback.rating !== prevSync.rating ||
+    track?.videoId !== prevSync.videoId
+  ) {
+    setPrevSync({
+      note: personalFeedback.note,
+      rating: personalFeedback.rating,
+      videoId: track?.videoId,
+    });
+    setLocalComment(personalFeedback.note || track?.comment || '');
+    setLocalRating(personalFeedback.rating || '');
+  }
 
   const peerFeedback = useMemo(() => {
     if (!track || !communityData.feedback) return [];
@@ -221,18 +259,34 @@ function TrackInfoPanel({
 
             <div className="list-explorer-info-content">
               <section className="list-explorer-info-section">
-                <h4>Your Feedback</h4>
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                  }}
+                >
+                  <h4>Your Feedback</h4>
+                  {personalFeedback?.user_id && (
+                    <span
+                      style={{
+                        fontSize: '10px',
+                        opacity: 0.5,
+                        color: '#4ade80',
+                      }}
+                    >
+                      (Loaded from DB)
+                    </span>
+                  )}
+                </div>
                 <div className="list-explorer-info-personal">
                   <div className="list-explorer-info-rating-row">
                     <span className="label">Rating:</span>
                     <select
                       className="list-explorer-info-rating-select"
-                      value={personalFeedback.rating || ''}
+                      value={localRating}
                       onChange={(ev) =>
-                        onUpdateRating(
-                          track.videoId,
-                          parseInt(ev.target.value) || null,
-                        )
+                        setLocalRating(parseInt(ev.target.value) || '')
                       }
                     >
                       <option value="">No Rating</option>
@@ -249,6 +303,15 @@ function TrackInfoPanel({
                     value={localComment}
                     onChange={handleCommentChange}
                   />
+                  <div className="list-explorer-info-feedback-actions">
+                    <button
+                      className="btn-save-feedback"
+                      onClick={() => onSaveFeedback(localRating, localComment)}
+                      disabled={isLoading}
+                    >
+                      {isLoading ? 'Saving...' : 'Save Feedback'}
+                    </button>
+                  </div>
                 </div>
               </section>
 
@@ -294,7 +357,7 @@ function TrackInfoPanel({
                         <div className="list-explorer-peer-header">
                           <span className="list-explorer-peer-user">
                             {getDisplayProfileName(
-                              f.profiles?.username,
+                              f.user_profile?.username || f.profiles?.username,
                               'Anonymous',
                             )}
                           </span>
@@ -748,6 +811,8 @@ export default function ListExplorer({
     }
   };
 
+  const [isSavingFeedback, setIsSavingFeedback] = useState(false);
+
   const handleDragStart = (event) => {
     const { active } = event;
     const activeId = String(active.id);
@@ -1080,33 +1145,44 @@ export default function ListExplorer({
 
     const fetchData = async () => {
       try {
-        // Fetch track metadata from catalog for tournament info
+        // Fetch track metadata from catalog for track_id and tournament info
         const { data: catalogData } = await supabase
           .from('track_catalog')
-          .select('tournaments')
+          .select('track_id, tournaments')
           .eq('source_external_id', selectedTrackId)
           .single();
 
-        // Fetch feedback (all users)
-        const { data: feedbackData } = await supabase
-          .from('track_user_feedback')
-          .select('*, profiles(username)')
-          .eq('track_id', selectedTrackId || '')
-          .order('updated_at', { ascending: false });
+        const trackIdForFeedback = catalogData?.track_id;
 
-        // Fetch support counts by level
-        const { data: supportData } = await supabase
-          .from('track_supports')
-          .select('level')
-          .eq('track_id', selectedTrackId || '');
+        // Fetch feedback (all users)
+        let feedbackData = [];
+        let supportData = [];
+
+        if (trackIdForFeedback) {
+          try {
+            feedbackData = await fetchCommunityFeedback(
+              supabase,
+              trackIdForFeedback,
+            );
+          } catch (err) {
+            console.error('Error fetching community feedback:', err);
+          }
+
+          // Fetch support counts by level
+          const { data: sData } = await supabase
+            .from('track_supports')
+            .select('level')
+            .eq('track_id', trackIdForFeedback);
+          supportData = sData || [];
+        }
 
         if (active) {
-          const supports = (supportData || []).reduce((acc, curr) => {
+          const supports = supportData.reduce((acc, curr) => {
             acc[curr.level] = (acc[curr.level] || 0) + 1;
             return acc;
           }, {});
           setCommunityData({
-            feedback: feedbackData || [],
+            feedback: feedbackData,
             supports,
             tournaments: catalogData?.tournaments || [],
           });
@@ -1236,7 +1312,7 @@ export default function ListExplorer({
           key={selectedTrack?.videoId || 'none'}
           track={selectedTrack}
           communityData={communityData}
-          isLoading={isLoadingCommunity}
+          isLoading={isLoadingCommunity || isSavingFeedback}
           onClose={() => setSelectedTrackId(null)}
           authUser={authUser}
           onUpdateComment={(videoId, comment) =>
@@ -1246,23 +1322,57 @@ export default function ListExplorer({
               comment,
             )
           }
-          onUpdateRating={async (videoId, rating) => {
-            if (!supabase || !authUser) return;
-            const { error } = await supabase
-              .from('track_user_feedback')
-              .upsert({
-                track_id: selectedTrack.id,
-                user_id: authUser.id,
-                rating,
-                updated_at: new Date().toISOString(),
+          onSaveFeedback={async (rating, note) => {
+            if (!supabase || !authUser || !selectedTrack) return;
+            setIsSavingFeedback(true);
+            try {
+              let trackId = selectedTrack.trackId || selectedTrack.id;
+              // Ingest if missing UUID
+              if (!trackId || !/^[0-9a-f-]{36}$/i.test(trackId)) {
+                const ingested = await ingestYouTubeTrackSources(supabase, [
+                  selectedTrack,
+                ]);
+                if (ingested && ingested.length > 0) {
+                  trackId = ingested[0].track_id;
+                  // Update local list state
+                  const updateId = (list) =>
+                    list.map((v) =>
+                      v.videoId === selectedTrack.videoId
+                        ? { ...v, trackId }
+                        : v,
+                    );
+                  onUpdateNominationList(updateId(nominationList));
+                  onUpdateSupportList(updateId(supportList));
+                  onUpdatePlaylist(updateId(playlist));
+                }
+              }
+
+              if (!trackId) {
+                onShowToast('Could not link track for feedback.');
+                return;
+              }
+
+              await upsertUserFeedback(supabase, authUser.id, trackId, {
+                rating: rating || null,
+                note: note || null,
               });
-            if (!error) {
-              onShowToast(`Rating updated to ${rating || 'none'}`);
-              const { data } = await supabase
-                .from('track_user_feedback')
-                .select('*, profiles(username, avatar_url)')
-                .eq('track_id', selectedTrack.id);
-              setCommunityData((prev) => ({ ...prev, feedback: data || [] }));
+
+              onShowToast('Feedback saved!');
+
+              // Refresh community feedback
+              const feedbackData = await fetchCommunityFeedback(
+                supabase,
+                trackId,
+              );
+              setCommunityData((prev) => ({
+                ...prev,
+                feedback: feedbackData || [],
+              }));
+            } catch (err) {
+              console.error('Error saving feedback:', err);
+              onShowToast('Failed to save feedback.');
+            } finally {
+              setIsSavingFeedback(false);
             }
           }}
         />
