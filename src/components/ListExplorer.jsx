@@ -188,42 +188,42 @@ function TrackInfoPanel({
   }
 
   return (
-    <div className={`workspace-info-panel ${track ? 'is-open' : ''}`}>
-      <div className="workspace-info-content-wrapper">
+    <div className={`list-explorer-info-panel ${track ? 'is-open' : ''}`}>
+      <div className="list-explorer-info-content-wrapper">
         {track && (
           <>
-            <div className="workspace-info-header">
+            <div className="list-explorer-info-header">
               <button
-                className="workspace-info-close"
+                className="list-explorer-info-close"
                 onClick={onClose}
                 title="Deselect track"
               >
                 ✕
               </button>
-              <div className="workspace-info-hero">
+              <div className="list-explorer-info-hero">
                 <img
                   src={track.thumbnail || track.sourceThumbnailUrl}
                   alt=""
-                  className="workspace-info-img"
+                  className="list-explorer-info-img"
                 />
-                <div className="workspace-info-titles">
+                <div className="list-explorer-info-titles">
                   <h2>{songTitle}</h2>
-                  <p className="workspace-info-game">{gameTitle}</p>
-                  <span className="workspace-info-vgmc-badge">
+                  <p className="list-explorer-info-game">{gameTitle}</p>
+                  <span className="list-explorer-info-vgmc-badge">
                     {vgmcStatus}
                   </span>
                 </div>
               </div>
             </div>
 
-            <div className="workspace-info-content">
-              <section className="workspace-info-section">
+            <div className="list-explorer-info-content">
+              <section className="list-explorer-info-section">
                 <h4>Your Feedback</h4>
-                <div className="workspace-info-personal">
-                  <div className="workspace-info-rating-row">
+                <div className="list-explorer-info-personal">
+                  <div className="list-explorer-info-rating-row">
                     <span className="label">Rating:</span>
                     <select
-                      className="workspace-info-rating-select"
+                      className="list-explorer-info-rating-select"
                       value={personalFeedback.rating || ''}
                       onChange={(ev) =>
                         onUpdateRating(
@@ -241,7 +241,7 @@ function TrackInfoPanel({
                     </select>
                   </div>
                   <textarea
-                    className="workspace-info-note-editor"
+                    className="list-explorer-info-note-editor"
                     placeholder="Add personal notes or comments..."
                     value={localComment}
                     onChange={handleCommentChange}
@@ -250,9 +250,9 @@ function TrackInfoPanel({
               </section>
 
               {Object.keys(communityData.supports).length > 0 && (
-                <section className="workspace-info-section">
+                <section className="list-explorer-info-section">
                   <h4>Community Support</h4>
-                  <div className="workspace-support-bar">
+                  <div className="list-explorer-support-bar">
                     {[3, 2, 1].map((level) => {
                       const count = communityData.supports[level] || 0;
                       const total = Object.values(
@@ -274,35 +274,35 @@ function TrackInfoPanel({
                 </section>
               )}
 
-              <section className="workspace-info-section community">
+              <section className="list-explorer-info-section community">
                 <h4>Community Activity</h4>
                 {isLoading ? (
-                  <p className="workspace-info-loading">
+                  <p className="list-explorer-info-loading">
                     Loading community data...
                   </p>
                 ) : peerFeedback.length === 0 ? (
-                  <p className="workspace-info-empty">
+                  <p className="list-explorer-info-empty">
                     No community feedback yet.
                   </p>
                 ) : (
-                  <div className="workspace-peer-list">
+                  <div className="list-explorer-peer-list">
                     {peerFeedback.map((f, i) => (
-                      <div key={i} className="workspace-peer-item">
-                        <div className="workspace-peer-header">
-                          <span className="workspace-peer-user">
+                      <div key={i} className="list-explorer-peer-item">
+                        <div className="list-explorer-peer-header">
+                          <span className="list-explorer-peer-user">
                             {getDisplayProfileName(
                               f.profiles?.username,
                               'Anonymous',
                             )}
                           </span>
                           {f.rating && (
-                            <span className="workspace-peer-rating">
+                            <span className="list-explorer-peer-rating">
                               {f.rating}/10
                             </span>
                           )}
                         </div>
                         {f.note && (
-                          <p className="workspace-peer-note">{f.note}</p>
+                          <p className="list-explorer-peer-note">{f.note}</p>
                         )}
                       </div>
                     ))}
@@ -317,7 +317,7 @@ function TrackInfoPanel({
   );
 }
 
-function SortableWorkspaceCard({
+function SortableListExplorerCard({
   sortableId,
   video,
   isSelected,
@@ -350,11 +350,11 @@ function SortableWorkspaceCard({
     <div
       ref={setNodeRef}
       style={style}
-      className={`workspace-card ${isSelected ? 'selected' : ''} ${isDragging ? 'dragging' : ''} ${isReadOnly ? 'read-only' : ''}`}
+      className={`list-explorer-card ${isSelected ? 'selected' : ''} ${isDragging ? 'dragging' : ''} ${isReadOnly ? 'read-only' : ''}`}
       onClick={() => onSelect?.(video.videoId)}
       onContextMenu={(e) => onContextMenu?.(e, video)}
     >
-      <div className="workspace-card-inner">
+      <div className="list-explorer-card-inner">
         {!isReadOnly && (
           <div
             className="drag-handle"
@@ -366,13 +366,13 @@ function SortableWorkspaceCard({
             ⠿
           </div>
         )}
-        <div className="workspace-card-main">
+        <div className="list-explorer-card-main">
           <SupportItem
             video={video}
             onRemove={isReadOnly ? null : () => onRemove(video.videoId)}
             onDoubleQueue={() => onPlayNow(video)}
             onOpenContextMenu={onContextMenu}
-            itemAriaPrefix="Workspace track"
+            itemAriaPrefix="List Explorer track"
           />
         </div>
       </div>
@@ -380,7 +380,7 @@ function SortableWorkspaceCard({
   );
 }
 
-function WorkspaceColumn({
+function ListExplorerColumn({
   id,
   title,
   subtitle,
@@ -431,18 +431,18 @@ function WorkspaceColumn({
   return (
     <div
       ref={setNodeRef}
-      className={`workspace-column ${isFocused ? 'focused' : ''}`}
+      className={`list-explorer-column ${isFocused ? 'focused' : ''}`}
       data-column-id={id}
     >
       <div
-        className="workspace-column-header"
+        className="list-explorer-column-header"
         style={{ '--column-accent': `var(${colorVar})` }}
       >
-        <div className="workspace-column-title-group">
+        <div className="list-explorer-column-title-group">
           {isCustom && playlists.length > 0 ? (
-            <div className="workspace-playlist-selector-shell">
+            <div className="list-explorer-playlist-selector-shell">
               <select
-                className="workspace-playlist-select"
+                className="list-explorer-playlist-select"
                 value={activePlaylistId || ''}
                 onChange={(ev) => onSelectPlaylist?.(ev.target.value)}
               >
@@ -452,21 +452,23 @@ function WorkspaceColumn({
                   </option>
                 ))}
               </select>
-              <div className="workspace-column-subtitle">{subtitle}</div>
+              <div className="list-explorer-column-subtitle">{subtitle}</div>
             </div>
           ) : (
-            <div className="workspace-column-title-row">
+            <div className="list-explorer-column-title-row">
               <h3>{title}</h3>
               {subtitle && (
-                <span className="workspace-column-subtitle">{subtitle}</span>
+                <span className="list-explorer-column-subtitle">
+                  {subtitle}
+                </span>
               )}
             </div>
           )}
         </div>
-        <div className="workspace-column-actions">
+        <div className="list-explorer-column-actions">
           {canAddAll && videos && videos.length > 0 && (
             <button
-              className="workspace-column-btn"
+              className="list-explorer-column-btn"
               onClick={onAddAll}
               title="Add all tracks to current playlist"
             >
@@ -476,14 +478,14 @@ function WorkspaceColumn({
           {videos && videos.length > 0 && (
             <>
               <button
-                className="workspace-column-btn"
+                className="list-explorer-column-btn"
                 onClick={() => onExport?.(videos)}
                 title="Export for VGMC"
               >
                 <ExportIcon />
               </button>
               <button
-                className="workspace-column-btn"
+                className="list-explorer-column-btn"
                 onClick={() => onSavePlaylist?.(videos)}
                 title="Create YouTube Playlist"
               >
@@ -493,7 +495,7 @@ function WorkspaceColumn({
           )}
           {isFocused ? (
             <button
-              className="workspace-column-btn"
+              className="list-explorer-column-btn"
               onClick={onUnfocus}
               title="Exit full view"
             >
@@ -501,7 +503,7 @@ function WorkspaceColumn({
             </button>
           ) : (
             <button
-              className="workspace-column-btn"
+              className="list-explorer-column-btn"
               onClick={onFocus}
               title="Focus on this list"
             >
@@ -510,7 +512,7 @@ function WorkspaceColumn({
           )}
           {canClose && (
             <button
-              className="workspace-column-btn close"
+              className="list-explorer-column-btn close"
               onClick={onClose}
               title="Close list"
             >
@@ -520,9 +522,9 @@ function WorkspaceColumn({
         </div>
       </div>
 
-      <div className="workspace-column-content">
+      <div className="list-explorer-column-content">
         {onAddByUrl && (
-          <form className="workspace-quick-add" onSubmit={handleAdd}>
+          <form className="list-explorer-quick-add" onSubmit={handleAdd}>
             <input
               type="text"
               placeholder="Paste YouTube link to add track..."
@@ -541,14 +543,14 @@ function WorkspaceColumn({
           items={(videos || []).map((v) => `${id}:${v.videoId}`)}
           strategy={verticalListSortingStrategy}
         >
-          <div className="workspace-list">
+          <div className="list-explorer-list">
             {!videos || videos.length === 0 ? (
-              <div className="workspace-list-empty">
+              <div className="list-explorer-list-empty">
                 <span>No tracks here yet</span>
               </div>
             ) : (
               videos.map((video, index) => (
-                <SortableWorkspaceCard
+                <SortableListExplorerCard
                   key={`${id}:${video.videoId}`}
                   sortableId={`${id}:${video.videoId}`}
                   video={video}
@@ -569,7 +571,7 @@ function WorkspaceColumn({
   );
 }
 
-export default function Workspaces({
+export default function ListExplorer({
   playlist,
   supportList,
   nominationList,
@@ -980,20 +982,20 @@ export default function Workspaces({
     }
   };
 
-  const handleCreatePlaylist = () => {
-    const name = prompt('Enter playlist name:');
-    if (name) {
-      onUpdateCustomPlaylists([
-        ...customPlaylists,
-        {
-          id: `pl-${Math.random().toString(36).slice(2, 11)}`,
-          name,
-          videos: [],
-        },
-      ]);
-    }
-  };
-
+  /* const handleCreatePlaylist = () => {
+     const name = prompt('Enter playlist name:');
+     if (name) {
+       onUpdateCustomPlaylists([
+         ...customPlaylists,
+         {
+           id: `pl-${Math.random().toString(36).slice(2, 11)}`,
+           name,
+           videos: [],
+         },
+       ]);
+     }
+   };
+ */
   const handleAddByUrl = async (id, url) => {
     const videoIdMatch = url.match(
       /(?:youtu\.be\/|youtube\.com\/(?:.*v=|.*\/|.*e\/))([^&?/#]+)/,
@@ -1163,15 +1165,15 @@ export default function Workspaces({
 
   return (
     <div
-      className={`workspaces-container ${focusedListId ? 'has-focused' : ''} ${selectedTrackId ? 'has-selection' : ''}`}
+      className={`list-explorer-container ${focusedListId ? 'has-focused' : ''} ${selectedTrackId ? 'has-selection' : ''}`}
     >
-      <div className="workspaces-header">
-        <div className="workspaces-title-group">
-          <h1>Workspaces</h1>
+      <div className="list-explorer-header">
+        <div className="list-explorer-title-group">
+          <h1>List Explorer</h1>
           <p>A fluid space to organize and manage your musical collections</p>
         </div>
-        <div className="workspaces-global-actions">
-          <div className="workspace-toolbar">
+        <div className="list-explorer-global-actions">
+          <div className="list-explorer-toolbar">
             <div className="toolbar-group">
               <span className="toolbar-label">Show:</span>
               <button
@@ -1185,17 +1187,6 @@ export default function Workspaces({
                 onClick={() => setShowNewNominations(!showNewNominations)}
               >
                 New Nominations
-              </button>
-            </div>
-            <div className="toolbar-separator" />
-            <div className="toolbar-group">
-              <button
-                className="toolbar-toggle"
-                onClick={handleCreatePlaylist}
-                title="Create a new custom playlist"
-              >
-                <PlaylistPlusIcon />
-                New Playlist
               </button>
             </div>
             <div className="toolbar-separator" />
@@ -1235,9 +1226,9 @@ export default function Workspaces({
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
       >
-        <div className="workspaces-layout">
-          <div ref={gridRef} className="workspaces-grid">
-            <WorkspaceColumn
+        <div className="list-explorer-layout">
+          <div ref={gridRef} className="list-explorer-grid">
+            <ListExplorerColumn
               id="nominations"
               title="Nominations"
               subtitle={`${nominationList.length} tracks`}
@@ -1266,7 +1257,7 @@ export default function Workspaces({
               onSavePlaylist={onSavePlaylist}
             />
 
-            <WorkspaceColumn
+            <ListExplorerColumn
               id="support"
               title="Support List"
               subtitle={`${supportList.length} tracks`}
@@ -1296,7 +1287,7 @@ export default function Workspaces({
             />
 
             {showCurrentPlaylist && (
-              <WorkspaceColumn
+              <ListExplorerColumn
                 id="current"
                 title="Current Playlist"
                 subtitle={`${playlist.length} tracks`}
@@ -1323,7 +1314,7 @@ export default function Workspaces({
             )}
 
             {showNewNominations && (
-              <WorkspaceColumn
+              <ListExplorerColumn
                 id="new-nominations"
                 title="New Nominations"
                 subtitle={`${newNominations.length} tracks`}
@@ -1351,7 +1342,7 @@ export default function Workspaces({
             )}
 
             {peerColumns.map((col) => (
-              <WorkspaceColumn
+              <ListExplorerColumn
                 key={col.user_id}
                 id={`peer-${col.user_id}`}
                 title={`${getDisplayProfileName(col.username)}'s Noms`}
@@ -1388,7 +1379,7 @@ export default function Workspaces({
             ))}
 
             {activeCustomPlaylist && (
-              <WorkspaceColumn
+              <ListExplorerColumn
                 id={activeCustomPlaylist.id}
                 title={activeCustomPlaylist.name}
                 subtitle={`${activeCustomPlaylist.videos.length} tracks`}
@@ -1540,9 +1531,9 @@ export default function Workspaces({
 
         <DragOverlay dropAnimation={dropAnimationConfig}>
           {activeVideo ? (
-            <div className="workspace-item-drag-preview">
+            <div className="list-explorer-item-drag-preview">
               <img src={activeVideo.thumbnail} alt="" />
-              <div className="workspace-item-drag-info">
+              <div className="list-explorer-item-drag-info">
                 <span className="title">
                   {activeVideo.displayTitle || activeVideo.title}
                 </span>

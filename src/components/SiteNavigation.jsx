@@ -45,7 +45,7 @@ function DatabaseIcon() {
   );
 }
 
-function WorkspacesIcon() {
+function ListExplorerIcon() {
   return (
     <svg viewBox="0 0 20 20" aria-hidden="true" fill="currentColor">
       <path d="M2 4.25A2.25 2.25 0 0 1 4.25 2h11.5A2.25 2.25 0 0 1 18 4.25v11.5A2.25 2.25 0 0 1 15.75 18H4.25A2.25 2.25 0 0 1 2 15.75V4.25Zm2.25-.75a.75.75 0 0 0-.75.75v11.5c0 .414.336.75.75.75h5.25V3.5H4.25Zm6.75 14.25h4.75a.75.75 0 0 0 .75-.75V11h-5.5v6.75Zm0-8.25h5.5V4.25a.75.75 0 0 0-.75-.75h-4.75V10Z" />
@@ -70,9 +70,9 @@ const NAV_ITEMS = [
     Icon: DatabaseIcon,
   },
   {
-    id: 'workspaces',
-    label: 'Workspaces',
-    Icon: WorkspacesIcon,
+    id: 'listExplorer',
+    label: 'List Explorer',
+    Icon: ListExplorerIcon,
   },
 ];
 

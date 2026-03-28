@@ -17,7 +17,7 @@ import HomePage from './components/HomePage.jsx';
 import GuestImportDialog from './components/GuestImportDialog.jsx';
 import MetadataEntryDialog from './components/MetadataEntryDialog.jsx';
 import SiteNavigation from './components/SiteNavigation.jsx';
-import Workspaces from './components/Workspaces.jsx';
+import ListExplorer from './components/ListExplorer.jsx';
 import ScrollingText from './components/ScrollingText.jsx';
 import UserSettingsDialog from './components/UserSettingsDialog.jsx';
 import ListeningHistoryDialog from './components/ListeningHistoryDialog.jsx';
@@ -1382,7 +1382,7 @@ export default function App() {
     : displayPlaylist.findIndex((video) => video.videoId === currentVideoId);
   const isPlayerPage = activePage === 'player';
   const isDatabasePage = activePage === 'database';
-  const isWorkspacesPage = activePage === 'workspaces';
+  const isListExplorerPage = activePage === 'listExplorer';
   const shouldRenderDesktopPlaylistOverlay = !isMobileLayout && !isPlayerPage;
   const effectivePlaylistCollapsed = isPlayerPage
     ? isPlaylistCollapsed
@@ -3748,7 +3748,10 @@ export default function App() {
   );
 
   const shellIsCollapsed =
-    isPlaylistCollapsed || !isPlayerPage || isDatabasePage || isWorkspacesPage;
+    isPlaylistCollapsed ||
+    !isPlayerPage ||
+    isDatabasePage ||
+    isListExplorerPage;
   const shouldRenderPersistentPlayer = isPlayerPage || Boolean(currentVideo);
   const canTogglePlayback = Boolean(transientVideo) || playlist.length > 0;
   const hasDetachedFooter =
@@ -3964,10 +3967,10 @@ export default function App() {
         />
 
         <main
-          className={`main-content${isPlayerPage ? ' player-view' : isDatabasePage || isWorkspacesPage ? ' home-view' : ' home-view'}${isWorkspacesPage ? ' workspaces-view' : ''}${!isPlayerPage && isLogoutTransitioning ? ' logout-fade-in' : ''}`}
+          className={`main-content${isPlayerPage ? ' player-view' : isDatabasePage || isListExplorerPage ? ' home-view' : ' home-view'}${isListExplorerPage ? ' list-explorer-view' : ''}${!isPlayerPage && isLogoutTransitioning ? ' logout-fade-in' : ''}`}
           id="main-content"
         >
-          {!isPlayerPage && !isDatabasePage && !isWorkspacesPage && (
+          {!isPlayerPage && !isDatabasePage && !isListExplorerPage && (
             <HomePage
               supabase={supabase}
               authUser={authUser}
@@ -3997,8 +4000,8 @@ export default function App() {
             </Suspense>
           )}
 
-          {activePage === 'workspaces' && (
-            <Workspaces
+          {activePage === 'listExplorer' && (
+            <ListExplorer
               playlist={playlist}
               supportList={supportList}
               nominationList={nominationList}
