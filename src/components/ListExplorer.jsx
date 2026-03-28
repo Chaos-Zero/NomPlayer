@@ -116,6 +116,26 @@ function EditIcon() {
   );
 }
 
+function LockIcon() {
+  return (
+    <svg viewBox="0 0 20 20" fill="currentColor">
+      <path
+        fillRule="evenodd"
+        d="M10 1a4.5 4.5 0 0 0-4.5 4.5V9H5a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6a2 2 0 0 0-2-2h-.5V5.5A4.5 4.5 0 0 0 10 1Zm3 8H7V5.5a3 3 0 1 1 6 0V9Z"
+        clipRule="evenodd"
+      />
+    </svg>
+  );
+}
+
+function HeartIcon() {
+  return (
+    <svg viewBox="0 0 20 20" fill="currentColor">
+      <path d="M9.653 16.915l-.005-.003-.019-.01a20.759 20.759 0 0 1-1.162-.682 22.045 22.045 0 0 1-2.582-1.9C4.045 12.733 2 10.352 2 7.5a4.5 4.5 0 0 1 8-2.828A4.5 4.5 0 0 1 18 7.5c0 2.852-2.044 5.233-3.885 6.82a22.049 22.049 0 0 1-3.744 2.582 20.77 20.77 0 0 1-1.162.682l-.019.01-.005.003L9.653 16.915z" />
+    </svg>
+  );
+}
+
 const dropAnimationConfig = {
   sideEffects: defaultDropAnimationSideEffects({
     styles: {
@@ -200,6 +220,12 @@ function TrackInfoPanel({
     if (!track || !communityData.feedback) return [];
     return communityData.feedback.filter((f) => f.user_id !== authUser?.id);
   }, [track, communityData.feedback, authUser?.id]);
+
+  const supportSummary = useMemo(() => {
+    const list = communityData.supports || {};
+    const total = Object.values(list).reduce((a, b) => a + b, 0);
+    return { ...list, total };
+  }, [communityData.supports]);
 
   const trackTournaments = useMemo(() => {
     if (!track) return [];
@@ -307,30 +333,46 @@ function TrackInfoPanel({
                 </div>
               </section>
 
-              {Object.keys(communityData.supports).length > 0 && (
-                <section className="list-explorer-info-section">
-                  <h4>Community Support</h4>
-                  <div className="list-explorer-support-bar">
-                    {[3, 2, 1].map((level) => {
-                      const count = communityData.supports[level] || 0;
-                      const total = Object.values(
-                        communityData.supports,
-                      ).reduce((a, b) => a + b, 0);
-                      const width = count > 0 ? (count / total) * 100 : 0;
-                      return (
+              <section className="list-explorer-info-section">
+                <h4>Community Support</h4>
+                <div className="list-explorer-support-summary">
+                  {supportSummary.total > 0 ? (
+                    <div className="list-explorer-support-icons">
+                      {supportSummary[3] > 0 && (
                         <div
-                          key={level}
-                          className={`support-segment level-${level}`}
-                          style={{ width: `${width}%` }}
-                          title={`Level ${level} Support: ${count}`}
+                          className="support-badge highest"
+                          title={`${supportSummary[3]} Highest Supports`}
                         >
-                          {count > 0 && <span>{count}</span>}
+                          <LockIcon />
+                          <span>{supportSummary[3]}</span>
                         </div>
-                      );
-                    })}
-                  </div>
-                </section>
-              )}
+                      )}
+                      {supportSummary[2] > 0 && (
+                        <div
+                          className="support-badge high"
+                          title={`${supportSummary[2]} High Supports`}
+                        >
+                          <HeartIcon />
+                          <span>{supportSummary[2]}</span>
+                        </div>
+                      )}
+                      {supportSummary[1] > 0 && (
+                        <div
+                          className="support-badge normal"
+                          title={`${supportSummary[1]} Normal Supports`}
+                        >
+                          <HeartIcon />
+                          <span>{supportSummary[1]}</span>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="list-explorer-support-empty">
+                      No community support yet.
+                    </div>
+                  )}
+                </div>
+              </section>
 
               <section className="list-explorer-info-section community">
                 <h4>Community Activity</h4>
