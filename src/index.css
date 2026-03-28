@@ -8368,6 +8368,233 @@ body.is-resizing .resize-handle {
     background: var(--border);
     opacity: 0.3;
   }
+
+  /* List Explorer Mobile Adjustments */
+  .list-explorer-container {
+    padding: 12px;
+    gap: 8px; /* Reduced from 16px */
+  }
+
+  .list-explorer-header {
+    display: grid !important;
+    grid-template-columns: 1fr auto auto !important;
+    grid-template-rows: auto auto !important;
+    gap: 12px 8px !important;
+    align-items: center !important;
+    margin-bottom: 0px !important; /* Reduced from 4px */
+    width: 100% !important;
+    max-width: none !important;
+  }
+
+  .list-explorer-title-group {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .list-explorer-title-group h1 {
+    font-size: 20px !important;
+    margin: 0 !important;
+  }
+
+  .list-explorer-title-group p {
+    display: none !important;
+  }
+
+  .list-explorer-global-actions,
+  .list-explorer-toolbar {
+    display: contents !important;
+  }
+
+  /* Show/Nomination Buttons Group */
+  .list-explorer-toolbar > .toolbar-group:first-child {
+    display: contents !important;
+  }
+
+  /* Target the specific toggle buttons in the first group */
+  .list-explorer-toolbar > .toolbar-group:first-child .toolbar-toggle {
+    margin: 0 !important;
+    white-space: nowrap !important;
+    padding: 6px 10px !important;
+    font-size: 11px !important;
+    height: 36px !important;
+    border-radius: 10px !important;
+    grid-row: 1;
+  }
+
+  .list-explorer-toolbar
+    > .toolbar-group:first-child
+    .toolbar-toggle:first-of-type {
+    grid-column: 2;
+  }
+
+  .list-explorer-toolbar
+    > .toolbar-group:first-child
+    .toolbar-toggle:last-of-type {
+    grid-column: 3;
+  }
+
+  /* Select User Dropdown Group */
+  .list-explorer-toolbar > .toolbar-group:last-child {
+    grid-column: 2 / span 2;
+    grid-row: 2;
+    display: flex !important;
+    width: 100% !important;
+    margin: 0 !important;
+  }
+
+  .toolbar-select {
+    width: 100% !important;
+    height: 38px !important;
+    font-size: 13px !important;
+    padding: 0 12px !important;
+    background: rgba(var(--bg-deep-rgb), 0.8) !important;
+    border-radius: 10px !important;
+  }
+
+  .toolbar-label,
+  .toolbar-separator {
+    display: none !important;
+  }
+
+  .list-explorer-grid {
+    padding-top: 4px !important; /* Reduced from 20px */
+  }
+
+  .list-explorer-layout {
+    transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .list-explorer-container.has-selection .list-explorer-layout {
+    transform: translateY(220px);
+  }
+
+  .list-explorer-container.has-selection .list-explorer-grid {
+    transform: none !important; /* Disable desktop horizontal shift */
+  }
+
+  .list-explorer-info-panel {
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: auto !important;
+    width: 100% !important;
+    height: auto !important;
+    max-height: calc(50vh - 80px) !important; /* Half of available space */
+    display: flex !important; /* Supports internal scrolling layout */
+    flex-direction: column !important;
+    transform: translateY(-100%) !important;
+    border-left: none !important;
+    border-bottom: 1px solid var(--border) !important;
+    z-index: 30 !important;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3) !important;
+  }
+
+  .list-explorer-info-panel.is-open {
+    transform: translateY(0) !important;
+  }
+
+  .list-explorer-info-img {
+    display: none !important;
+  }
+
+  .list-explorer-info-content-wrapper {
+    width: 100% !important;
+    min-width: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    overflow: hidden !important; /* Disable wrapper-level scroll */
+    flex: 1 !important;
+  }
+
+  .list-explorer-info-content {
+    overflow-y: auto !important; /* Enable internal scrolling */
+    flex: 1 !important;
+  }
+
+  .list-explorer-info-header {
+    padding-bottom: 0 !important;
+  }
+
+  .list-explorer-info-hero {
+    padding: 16px !important;
+    padding-right: 48px !important; /* Avoid close button overlay */
+    gap: 12px !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    min-height: 0 !important;
+    aspect-ratio: auto !important;
+    background: transparent !important;
+  }
+
+  .theme-light .list-explorer-info-hero {
+    background: var(--bg-deep) !important;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .list-explorer-info-titles {
+    position: static !important;
+    padding: 0 !important;
+    width: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 8px !important;
+  }
+
+  .list-explorer-info-title-group {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: wrap !important;
+    align-items: center !important;
+    width: 100% !important;
+    gap: 0 4px !important;
+  }
+
+  .list-explorer-info-separator {
+    display: inline !important;
+    opacity: 0.6;
+    margin: 0 4px;
+    color: inherit;
+  }
+
+  .list-explorer-info-titles h2,
+  .list-explorer-info-game {
+    font-size: 1rem !important;
+    font-weight: 700 !important;
+    margin: 0 !important;
+    line-height: 1.4 !important;
+    text-shadow: none !important;
+  }
+
+  .list-explorer-info-titles h2 {
+    color: white !important;
+  }
+
+  .theme-light .list-explorer-info-titles h2 {
+    color: var(--text-primary) !important;
+  }
+
+  .list-explorer-info-game {
+    opacity: 1 !important;
+    color: white !important;
+  }
+
+  .theme-light .list-explorer-info-game {
+    color: var(--text-secondary) !important;
+  }
+
+  .list-explorer-info-vgmc-badge {
+    margin-top: 0 !important;
+    padding: 3px 10px !important;
+    font-size: 0.75rem !important;
+    display: inline-block !important;
+    width: auto !important;
+    flex-basis: auto !important;
+    background: var(--accent) !important;
+    border-radius: 4px !important;
+    color: white !important;
+    align-self: flex-start !important;
+  }
 }
 
 /* ─── Database View Loading UX ─── */
@@ -8431,6 +8658,7 @@ body.is-resizing .resize-handle {
   overflow: hidden;
   height: 100%;
   background: var(--bg-base);
+  position: relative; /* Anchor for absolute info pane */
 }
 
 .list-explorer-header {
@@ -8441,6 +8669,16 @@ body.is-resizing .resize-handle {
   max-width: 1600px;
   margin: 0 auto;
   width: 100%;
+  transition: padding-right 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.list-explorer-container.has-selection .list-explorer-header {
+  padding-right: 420px;
+}
+
+.list-explorer-title-group {
+  flex: 1;
+  min-width: 0;
 }
 
 .list-explorer-title-group h1 {
@@ -8815,7 +9053,6 @@ body.is-resizing .resize-handle {
   right: 0;
   bottom: 0;
   width: 420px;
-  flex-shrink: 0;
   background: var(--bg-surface);
   border-left: 1px solid var(--border);
   display: flex;
@@ -8966,7 +9203,7 @@ body.is-resizing .resize-handle {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  mask-image: linear-gradient(to bottom, black 60%, transparent);
+  mask-image: linear-gradient(to bottom, black 50%, transparent);
 }
 
 .list-explorer-info-titles {
@@ -8974,15 +9211,28 @@ body.is-resizing .resize-handle {
   bottom: 0;
   left: 0;
   right: 0;
-  padding: 20px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.list-explorer-info-title-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.list-explorer-info-separator {
+  display: none;
 }
 
 .list-explorer-info-titles h2 {
-  font-size: 22px;
+  font-size: 24px;
   font-weight: 850;
   color: white;
   line-height: 1.1;
-  margin-bottom: 6px;
+  margin: 0;
   text-shadow:
     0 2px 4px rgba(0, 0, 0, 0.5),
     0 4px 12px rgba(0, 0, 0, 0.9);
@@ -8999,6 +9249,8 @@ body.is-resizing .resize-handle {
 
 .list-explorer-info-vgmc-badge {
   display: inline-block;
+  width: fit-content;
+  align-self: flex-start;
   margin-top: 8px;
   padding: 4px 10px;
   background: var(--accent);

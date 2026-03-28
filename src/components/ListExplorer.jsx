@@ -207,8 +207,11 @@ function TrackInfoPanel({
                   className="list-explorer-info-img"
                 />
                 <div className="list-explorer-info-titles">
-                  <h2>{songTitle}</h2>
-                  <p className="list-explorer-info-game">{gameTitle}</p>
+                  <div className="list-explorer-info-title-group">
+                    <p className="list-explorer-info-game">{gameTitle}</p>
+                    <span className="list-explorer-info-separator"> - </span>
+                    <h2 className="list-explorer-info-song">{songTitle}</h2>
+                  </div>
                   <span className="list-explorer-info-vgmc-badge">
                     {vgmcStatus}
                   </span>
@@ -1170,7 +1173,10 @@ export default function ListExplorer({
       <div className="list-explorer-header">
         <div className="list-explorer-title-group">
           <h1>List Explorer</h1>
-          <p>A fluid space to organize and manage your musical collections</p>
+          <p>
+            Manage your lists, see other users' lists, and view info on each
+            track
+          </p>
         </div>
         <div className="list-explorer-global-actions">
           <div className="list-explorer-toolbar">
@@ -1226,6 +1232,41 @@ export default function ListExplorer({
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
       >
+        <TrackInfoPanel
+          key={selectedTrack?.videoId || 'none'}
+          track={selectedTrack}
+          communityData={communityData}
+          isLoading={isLoadingCommunity}
+          onClose={() => setSelectedTrackId(null)}
+          authUser={authUser}
+          onUpdateComment={(videoId, comment) =>
+            handleUpdateComment(
+              selectedTrackId ? findListId(selectedTrackId) : null,
+              videoId,
+              comment,
+            )
+          }
+          onUpdateRating={async (videoId, rating) => {
+            if (!supabase || !authUser) return;
+            const { error } = await supabase
+              .from('track_user_feedback')
+              .upsert({
+                track_id: selectedTrack.id,
+                user_id: authUser.id,
+                rating,
+                updated_at: new Date().toISOString(),
+              });
+            if (!error) {
+              onShowToast(`Rating updated to ${rating || 'none'}`);
+              const { data } = await supabase
+                .from('track_user_feedback')
+                .select('*, profiles(username, avatar_url)')
+                .eq('track_id', selectedTrack.id);
+              setCommunityData((prev) => ({ ...prev, feedback: data || [] }));
+            }
+          }}
+        />
+
         <div className="list-explorer-layout">
           <div ref={gridRef} className="list-explorer-grid">
             <ListExplorerColumn
@@ -1428,42 +1469,6 @@ export default function ListExplorer({
               />
             )}
           </div>
-
-          <TrackInfoPanel
-            key={selectedTrack?.videoId || 'none'}
-            track={selectedTrack}
-            communityData={communityData}
-            isLoading={isLoadingCommunity}
-            onClose={() => setSelectedTrackId(null)}
-            authUser={authUser}
-            onUpdateComment={(videoId, comment) =>
-              handleUpdateComment(
-                selectedTrackId ? findListId(selectedTrackId) : null,
-                videoId,
-                comment,
-              )
-            }
-            onUpdateRating={async (videoId, rating) => {
-              if (!supabase || !authUser) return;
-              const { error } = await supabase
-                .from('track_user_feedback')
-                .upsert({
-                  track_id: selectedTrack.id, // We need the track UUID here
-                  user_id: authUser.id,
-                  rating,
-                  updated_at: new Date().toISOString(),
-                });
-              if (!error) {
-                onShowToast(`Rating updated to ${rating || 'none'}`);
-                // Refresh community data
-                const { data } = await supabase
-                  .from('track_user_feedback')
-                  .select('*, profiles(username, avatar_url)')
-                  .eq('track_id', selectedTrack.id);
-                setCommunityData((prev) => ({ ...prev, feedback: data || [] }));
-              }
-            }}
-          />
         </div>
 
         {contextMenu && (
