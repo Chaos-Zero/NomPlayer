@@ -2905,9 +2905,9 @@ body {
 }
 
 .mobile-topbar-front.with-detached-player {
-  grid-template-rows: calc(
-      var(--mobile-detached-player-base-visible-height) + 12px
-    ) var(--mobile-topbar-shell-h);
+  grid-template-rows:
+    calc(var(--mobile-detached-player-base-visible-height) + 12px)
+    var(--mobile-topbar-shell-h);
   gap: 0;
   padding: 0 12px;
   background: transparent;
@@ -8761,7 +8761,9 @@ body.is-resizing .resize-handle {
   /* Scrollbar Styling */
   scrollbar-width: auto;
   scrollbar-color: var(--accent) var(--bg-deep);
-  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  transition:
+    transform 0.4s cubic-bezier(0.16, 1, 0.3, 1),
+    margin-right 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .list-explorer-grid::-webkit-scrollbar {
@@ -9123,7 +9125,7 @@ body.is-resizing .resize-handle {
 }
 
 .list-explorer-container.has-selection .list-explorer-grid {
-  transform: translateX(-420px);
+  margin-right: 420px;
 }
 
 /* ─── Track Info Panel ─── */

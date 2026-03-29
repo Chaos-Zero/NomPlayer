@@ -1297,6 +1297,16 @@ export default function ListExplorer({
     }
   }, [activeColumnIds]);
 
+  // Auto-scroll the grid when the info panel opens to restore the "push" effect
+  const prevSelectedTrackId = useRef(null);
+  useEffect(() => {
+    // Only trigger auto-scroll when moving from NO selection to a selection
+    if (selectedTrackId && !prevSelectedTrackId.current && gridRef.current) {
+      gridRef.current.scrollBy({ left: 420, behavior: 'smooth' });
+    }
+    prevSelectedTrackId.current = selectedTrackId;
+  }, [selectedTrackId]);
+
   return (
     <div
       className={`list-explorer-container ${focusedListId ? 'has-focused' : ''} ${selectedTrackId ? 'has-selection' : ''}`}
