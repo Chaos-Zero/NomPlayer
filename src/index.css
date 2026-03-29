@@ -3740,7 +3740,7 @@ body {
 
   .home-shell {
     height: 100%;
-    padding: calc(78px + env(safe-area-inset-top)) 14px 24px;
+    padding: 12px 14px 24px;
     padding-bottom: calc(24px + env(safe-area-inset-bottom));
   }
 
@@ -3766,7 +3766,7 @@ body {
   }
 
   .home-shell.dashboard-home-shell {
-    padding: calc(78px + env(safe-area-inset-top)) 14px 24px;
+    padding: 12px 0 24px;
     padding-bottom: calc(100px + env(safe-area-inset-bottom));
   }
 
@@ -3779,7 +3779,9 @@ body {
     flex-direction: column;
     gap: 32px;
     padding: 24px 20px;
-    border-radius: 22px;
+    border-radius: 0;
+    overflow: visible;
+    min-height: auto;
   }
 
   .dashboard-hero-copy {
@@ -3887,7 +3889,7 @@ body {
 
   .home-sections {
     gap: 32px;
-    padding: 20px;
+    padding: 20px 14px;
   }
 
   .dashboard-section {
@@ -3984,6 +3986,31 @@ body {
     min-height: 152px;
   }
 
+  .dashboard-feature-mobile-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 4px;
+    width: 100%;
+  }
+
+  .dashboard-feature-mobile-header .dashboard-feature-meta-vgmc {
+    font-size: 13px;
+    font-weight: 800;
+    color: var(--accent-light);
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  .dashboard-action-btn-inline {
+    height: 38px !important;
+    padding: 0 16px !important;
+    flex: none !important;
+    width: auto !important;
+    font-size: 12px !important;
+  }
+
   .app-shell,
   .app-shell.playlist-collapsed {
     grid-template-columns: 1fr;
@@ -4002,6 +4029,8 @@ body {
     grid-column: 1;
     min-height: 0;
     overflow: hidden;
+    position: relative;
+    z-index: 500;
   }
 
   .topbar {
@@ -4062,7 +4091,7 @@ body {
     align-items: flex-end;
     justify-content: flex-end;
     gap: 0;
-    z-index: 101;
+    z-index: 1200;
     pointer-events: auto;
   }
 
@@ -9668,9 +9697,11 @@ body.is-resizing .resize-handle {
 
 .dashboard-feature-card-hero .dashboard-feature-actions {
   display: flex !important;
+  flex-direction: row !important;
   flex-wrap: nowrap !important;
   width: 100%;
   gap: 8px !important;
+  margin-top: 4px;
 }
 
 .dashboard-feature-card-hero .dashboard-feature-actions .dashboard-action-btn {

@@ -4057,7 +4057,6 @@ export default function App() {
               onSavePlaylist={handleCreateYTPlaylist}
             />
           )}
-
           {persistentPlayer}
         </main>
 

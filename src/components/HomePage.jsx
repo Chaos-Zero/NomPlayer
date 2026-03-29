@@ -487,6 +487,18 @@ export default function HomePage({
     ],
   );
 
+  // Pin the first discovery candidate as the featured one if none is set
+  // This prevents the card from rotating when the first track's status changes during playback
+  useEffect(() => {
+    if (
+      !featuredDiscoveryId &&
+      discoveryCandidates.length > 0 &&
+      !isShowingFallback
+    ) {
+      setFeaturedDiscoveryId(discoveryCandidates[0].videoId);
+    }
+  }, [discoveryCandidates, featuredDiscoveryId, isShowingFallback]);
+
   const featuredDiscoveryCandidate = useMemo(() => {
     if (isShowingFallback || discoveryCandidates.length === 0) return null;
     return (
@@ -925,6 +937,22 @@ export default function HomePage({
             </div>
           ) : featuredDiscoveryCandidate ? (
             <article className="dashboard-feature-card dashboard-feature-card-hero animate-fade-in">
+              {isMobileLayout && (
+                <div className="dashboard-feature-mobile-header">
+                  <span className="dashboard-feature-meta-vgmc">
+                    VGMC {maxVgmcNumber + 1}
+                  </span>
+                  <button
+                    className="dashboard-action-btn dashboard-action-btn-muted dashboard-action-btn-inline"
+                    type="button"
+                    onClick={() =>
+                      handlePlayDiscoveryCandidate(featuredDiscoveryCandidate)
+                    }
+                  >
+                    Listen Now
+                  </button>
+                </div>
+              )}
               <img
                 className="dashboard-feature-thumb"
                 src={featuredDiscoveryCandidate.thumbnail}
@@ -945,9 +973,11 @@ export default function HomePage({
                   />
                 </h2>
                 <div className="dashboard-feature-meta">
-                  <p className="dashboard-feature-meta-vgmc">
-                    VGMC {maxVgmcNumber + 1}
-                  </p>
+                  {!isMobileLayout && (
+                    <p className="dashboard-feature-meta-vgmc">
+                      VGMC {maxVgmcNumber + 1}
+                    </p>
+                  )}
                   <p className="dashboard-feature-meta-nominators">
                     Nominated by{' '}
                     {featuredDiscoveryCandidate.nominators
@@ -958,15 +988,17 @@ export default function HomePage({
                   </p>
                 </div>
                 <div className="dashboard-feature-actions">
-                  <button
-                    className="dashboard-action-btn dashboard-action-btn-muted"
-                    type="button"
-                    onClick={() =>
-                      handlePlayDiscoveryCandidate(featuredDiscoveryCandidate)
-                    }
-                  >
-                    Listen Now
-                  </button>
+                  {!isMobileLayout && (
+                    <button
+                      className="dashboard-action-btn dashboard-action-btn-muted"
+                      type="button"
+                      onClick={() =>
+                        handlePlayDiscoveryCandidate(featuredDiscoveryCandidate)
+                      }
+                    >
+                      Listen Now
+                    </button>
+                  )}
                   <button
                     className="dashboard-action-btn"
                     type="button"
@@ -988,6 +1020,33 @@ export default function HomePage({
             </article>
           ) : prospectiveFallbackTrack ? (
             <article className="dashboard-feature-card dashboard-feature-card-hero animate-fade-in">
+              {isMobileLayout && (
+                <div className="dashboard-feature-mobile-header">
+                  <span className="dashboard-feature-meta-vgmc">
+                    {(() => {
+                      const sequenceNumbers = [
+                        ...new Set(
+                          (prospectiveFallbackTrack.tournaments || [])
+                            .map((t) => t.sequenceNumber || t.sequence_number)
+                            .filter((n) => Number.isInteger(n)),
+                        ),
+                      ].sort((a, b) => a - b);
+                      return sequenceNumbers.length > 0
+                        ? `VGMC ${sequenceNumbers.join(', ')}`
+                        : 'VGMC Unplaced';
+                    })()}
+                  </span>
+                  <button
+                    className="dashboard-action-btn dashboard-action-btn-muted dashboard-action-btn-inline"
+                    type="button"
+                    onClick={() =>
+                      handlePlayDiscoveryCandidate(prospectiveFallbackTrack)
+                    }
+                  >
+                    Listen Now
+                  </button>
+                </div>
+              )}
               <img
                 className="dashboard-feature-thumb"
                 src={prospectiveFallbackTrack.thumbnail}
@@ -1009,31 +1068,35 @@ export default function HomePage({
                   />
                 </h2>
                 <div className="dashboard-feature-meta">
-                  <p className="dashboard-feature-meta-vgmc">
-                    {(() => {
-                      const sequenceNumbers = [
-                        ...new Set(
-                          (prospectiveFallbackTrack.tournaments || [])
-                            .map((t) => t.sequenceNumber || t.sequence_number)
-                            .filter((n) => Number.isInteger(n)),
-                        ),
-                      ].sort((a, b) => a - b);
-                      return sequenceNumbers.length > 0
-                        ? `VGMC ${sequenceNumbers.join(', ')}`
-                        : 'VGMC Unplaced';
-                    })()}
-                  </p>
+                  {!isMobileLayout && (
+                    <p className="dashboard-feature-meta-vgmc">
+                      {(() => {
+                        const sequenceNumbers = [
+                          ...new Set(
+                            (prospectiveFallbackTrack.tournaments || [])
+                              .map((t) => t.sequenceNumber || t.sequence_number)
+                              .filter((n) => Number.isInteger(n)),
+                          ),
+                        ].sort((a, b) => a - b);
+                        return sequenceNumbers.length > 0
+                          ? `VGMC ${sequenceNumbers.join(', ')}`
+                          : 'VGMC Unplaced';
+                      })()}
+                    </p>
+                  )}
                 </div>
                 <div className="dashboard-feature-actions">
-                  <button
-                    className="dashboard-action-btn dashboard-action-btn-muted"
-                    type="button"
-                    onClick={() =>
-                      handlePlayDiscoveryCandidate(prospectiveFallbackTrack)
-                    }
-                  >
-                    Listen Now
-                  </button>
+                  {!isMobileLayout && (
+                    <button
+                      className="dashboard-action-btn dashboard-action-btn-muted"
+                      type="button"
+                      onClick={() =>
+                        handlePlayDiscoveryCandidate(prospectiveFallbackTrack)
+                      }
+                    >
+                      Listen Now
+                    </button>
+                  )}
                   <button
                     className="dashboard-action-btn"
                     type="button"
