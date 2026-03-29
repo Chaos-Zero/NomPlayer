@@ -30,7 +30,12 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { PointerSensor as CorePointerSensor } from '@dnd-kit/core';
-import { SortableSupportItem, SupportItem } from './FavouritesPanel';
+import {
+  SortableSupportItem,
+  SupportItem,
+  HeartIcon,
+  LockIcon,
+} from './FavouritesPanel';
 import { ContextMenuPortal } from './ContextMenuPortal';
 import ExportIcon from './ExportIcon.jsx';
 import YouTubeIcon from './YouTubeIcon.jsx';
@@ -112,26 +117,6 @@ function EditIcon() {
     >
       <path d="M5.433 13.917l1.262-3.155A4 4 0 017.58 9.42l6.92-6.918a2.121 2.121 0 013 3l-6.92 6.918c-.383.383-.84.685-1.343.886l-3.154 1.262a.5.5 0 01-.65-.65z" />
       <path d="M3.5 5.75c0-.69.56-1.25 1.25-1.25H10A.75.75 0 0010 3H4.75A2.75 2.75 0 002 5.75v9.5A2.75 2.75 0 004.75 18h9.5A2.75 2.75 0 0017 15.25V10a.75.75 0 00-1.5 0v5.25c0 .69-.56 1.25-1.25 1.25h-9.5c-.69 0-1.25-.56-1.25-1.25v-9.5z" />
-    </svg>
-  );
-}
-
-function LockIcon() {
-  return (
-    <svg viewBox="0 0 20 20" fill="currentColor">
-      <path
-        fillRule="evenodd"
-        d="M10 1a4.5 4.5 0 0 0-4.5 4.5V9H5a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6a2 2 0 0 0-2-2h-.5V5.5A4.5 4.5 0 0 0 10 1Zm3 8H7V5.5a3 3 0 1 1 6 0V9Z"
-        clipRule="evenodd"
-      />
-    </svg>
-  );
-}
-
-function HeartIcon() {
-  return (
-    <svg viewBox="0 0 20 20" fill="currentColor">
-      <path d="M9.653 16.915l-.005-.003-.019-.01a20.759 20.759 0 0 1-1.162-.682 22.045 22.045 0 0 1-2.582-1.9C4.045 12.733 2 10.352 2 7.5a4.5 4.5 0 0 1 8-2.828A4.5 4.5 0 0 1 18 7.5c0 2.852-2.044 5.233-3.885 6.82a22.049 22.049 0 0 1-3.744 2.582 20.77 20.77 0 0 1-1.162.682l-.019.01-.005.003L9.653 16.915z" />
     </svg>
   );
 }
@@ -435,6 +420,7 @@ function SortableListExplorerCard({
   onContextMenu,
   onPlayNow,
   onRemove,
+  onOpenSupportDropdown,
   isReadOnly = false,
 }) {
   const {
@@ -458,7 +444,6 @@ function SortableListExplorerCard({
 
   const listId = sortableId.split(':')[0];
   const isSupportList = listId === 'support';
-  const supportLevel = video.supportLevel || 1;
 
   return (
     <div
@@ -486,15 +471,10 @@ function SortableListExplorerCard({
             onRemove={isReadOnly ? null : () => onRemove(video.videoId)}
             onDoubleQueue={() => onPlayNow(video)}
             onOpenContextMenu={onContextMenu}
+            onOpenSupportDropdown={onOpenSupportDropdown}
+            tone={isSupportList ? 'support' : undefined}
             itemAriaPrefix="List Explorer track"
           />
-          {isSupportList && (
-            <div
-              className={`list-explorer-card-support-icon-overlay level-${supportLevel}`}
-            >
-              {supportLevel === 3 ? <LockIcon /> : <HeartIcon />}
-            </div>
-          )}
         </div>
       </div>
     </div>

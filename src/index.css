@@ -85,6 +85,7 @@
   );
   --bg-panel: rgba(18, 18, 26, 0.96);
   --bg-table-striped: rgba(255, 255, 255, 0.02);
+  --player-footer-total-h: calc(var(--footer-player-h) + 32px + 20px + 24px);
 }
 
 :root.theme-light {
@@ -8420,6 +8421,11 @@ body.is-resizing .resize-handle {
     padding: 12px;
     gap: 8px;
     /* Reduced from 16px */
+    transition: padding-bottom 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .main-content.has-persistent-player .list-explorer-container {
+    padding-bottom: calc(var(--player-footer-total-h) / 1.5 + 20px);
   }
 
   .list-explorer-header {
@@ -8712,6 +8718,11 @@ body.is-resizing .resize-handle {
   background: var(--bg-base);
   position: relative;
   /* Anchor for absolute info pane */
+  transition: padding-bottom 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.main-content.has-persistent-player .list-explorer-container {
+  padding-bottom: var(--player-footer-total-h);
 }
 
 .list-explorer-header {
@@ -9184,10 +9195,15 @@ body.is-resizing .resize-handle {
   z-index: 10;
   transform: translateX(100%);
   transition:
-    transform 0.4s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+    bottom 0.3s cubic-bezier(0.16, 1, 0.3, 1),
     opacity 0.3s ease;
   opacity: 0;
   pointer-events: none;
+}
+
+.main-content.has-persistent-player .list-explorer-info-panel {
+  bottom: var(--player-footer-total-h);
 }
 
 .list-explorer-info-panel.is-open {
@@ -10081,4 +10097,39 @@ body.is-resizing .resize-handle {
   word-break: break-word;
 }
 
-/* Card Support Icons in List Explorer */
+.theme-light .list-explorer-peer-rating {
+  background: rgba(124, 58, 237, 0.12) !important;
+  color: #4c1d95 !important;
+  border-color: rgba(124, 58, 237, 0.2) !important;
+}
+
+.support-tier-icon-btn svg {
+  width: 14px;
+  height: 14px;
+  display: block;
+}
+
+/* ─── Light Mode Community Activity Overrides ─── */
+.theme-light .list-explorer-peer-item {
+  background: rgba(0, 0, 0, 0.04) !important;
+  border-color: rgba(0, 0, 0, 0.08) !important;
+}
+
+.theme-light .list-explorer-peer-item:hover {
+  background: rgba(0, 0, 0, 0.06) !important;
+}
+
+.theme-light .list-explorer-peer-user {
+  color: #b45309 !important; /* Darker amber/gold for light mode */
+}
+
+.theme-light .list-explorer-peer-note {
+  color: #000000 !important;
+  opacity: 0.9;
+}
+
+.theme-light .list-explorer-peer-rating {
+  background: rgba(124, 58, 237, 0.12) !important;
+  color: #4c1d95 !important;
+  border-color: rgba(124, 58, 237, 0.2) !important;
+}

@@ -36,6 +36,26 @@ function getPlaylistItemDisplay(video) {
   };
 }
 
+export function LockIcon() {
+  return (
+    <svg viewBox="0 0 20 20" fill="currentColor">
+      <path
+        fillRule="evenodd"
+        d="M10 1a4.5 4.5 0 0 0-4.5 4.5V9H5a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6a2 2 0 0 0-2-2h-.5V5.5A4.5 4.5 0 0 0 10 1Zm3 8H7V5.5a3 3 0 1 1 6 0V9Z"
+        clipRule="evenodd"
+      />
+    </svg>
+  );
+}
+
+export function HeartIcon() {
+  return (
+    <svg viewBox="0 0 20 20" fill="currentColor">
+      <path d="M9.653 16.915l-.005-.003-.019-.01a20.759 20.759 0 0 1-1.162-.682 22.045 22.045 0 0 1-2.582-1.9C4.045 12.733 2 10.352 2 7.5a4.5 4.5 0 0 1 8-2.828A4.5 4.5 0 0 1 18 7.5c0 2.852-2.044 5.233-3.885 6.82a22.049 22.049 0 0 1-3.744 2.582 20.77 20.77 0 0 1-1.162.682l-.019.01-.005.003L9.653 16.915z" />
+    </svg>
+  );
+}
+
 export function SupportItem({
   orderNumber,
   video,
@@ -187,7 +207,7 @@ export function SupportItem({
                       : 'var(--gold)',
               }}
             >
-              {video.supportLevel === 3 ? '🔒' : '♥'}
+              {video.supportLevel === 3 ? <LockIcon /> : <HeartIcon />}
             </button>
           )}
           {onRemove && (

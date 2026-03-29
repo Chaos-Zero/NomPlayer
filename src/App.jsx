@@ -3999,7 +3999,7 @@ export default function App() {
         />
 
         <main
-          className={`main-content${isPlayerPage ? ' player-view' : isDatabasePage || isListExplorerPage ? ' home-view' : ' home-view'}${isListExplorerPage ? ' list-explorer-view' : ''}${!isPlayerPage && isLogoutTransitioning ? ' logout-fade-in' : ''}`}
+          className={`main-content${isPlayerPage ? ' player-view' : isDatabasePage || isListExplorerPage ? ' home-view' : ' home-view'}${isListExplorerPage ? ' list-explorer-view' : ''}${!isPlayerPage && isLogoutTransitioning ? ' logout-fade-in' : ''}${hasDetachedFooter && !isPlayerPage ? ' has-persistent-player' : ''}`}
           id="main-content"
         >
           {!isPlayerPage && !isDatabasePage && !isListExplorerPage && (
