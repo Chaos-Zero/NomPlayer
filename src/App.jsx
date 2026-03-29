@@ -536,6 +536,7 @@ export default function App() {
   const [settingsNotice, setSettingsNotice] = useState('');
   const [guestImportState, setGuestImportState] = useState(null);
   const [guestImportSelections, setGuestImportSelections] = useState(null);
+  const [discordAuthUrl, setDiscordAuthUrl] = useState('');
   const authUserIdRef = useRef(null);
 
   useEffect(
@@ -1777,11 +1778,36 @@ export default function App() {
     supabase,
   ]);
 
-  const handleOpenAuthDialog = useCallback(() => {
-    setAuthError('');
-    setAuthMessage('');
-    setAuthDialogMode('signin');
-  }, []);
+  const handleOpenAuthDialog = useCallback(
+    (mode = 'signin') => {
+      setAuthError('');
+      setAuthMessage('');
+      setAuthDialogMode(mode);
+
+      // Pre-calculate Discord URL to enable a real <a> link for Universal Link support.
+      // Doing this as soon as the dialog opens increases the chance of a successful app hand-off.
+      if (supabase) {
+        setDiscordAuthUrl('');
+        void supabase.auth
+          .signInWithOAuth({
+            provider: 'discord',
+            options: {
+              redirectTo: getAppRedirectPath(),
+              skipBrowserRedirect: true,
+            },
+          })
+          .then(({ data }) => {
+            if (data?.url) {
+              setDiscordAuthUrl(data.url);
+            }
+          })
+          .catch((err) => {
+            console.error('Failed to pre-calculate Discord URL:', err);
+          });
+      }
+    },
+    [supabase],
+  );
 
   const handleCloseAuthDialog = useCallback(() => {
     setAuthDialogMode(null);
@@ -4230,6 +4256,7 @@ export default function App() {
         onSignIn={handleSignIn}
         onSignUp={handleSignUp}
         onContinueWithDiscord={handleContinueWithDiscord}
+        discordAuthUrl={discordAuthUrl}
         onRequestPasswordReset={handleRequestPasswordReset}
         onUpdatePassword={handleUpdateRecoveredPassword}
       />

@@ -14,6 +14,7 @@ export default function AuthDialog({
   onContinueWithDiscord,
   onRequestPasswordReset,
   onUpdatePassword,
+  discordAuthUrl = '',
 }) {
   if (!isOpen) return null;
 
@@ -259,15 +260,34 @@ export default function AuthDialog({
                     <span>or</span>
                   </div>
 
-                  <button
-                    className="btn auth-dialog-discord-btn"
-                    type="button"
-                    onClick={() => onContinueWithDiscord?.()}
-                    disabled={isSubmitting}
-                  >
-                    <DiscordIcon className="auth-dialog-discord-icon" />
-                    Continue with Discord
-                  </button>
+                  <div className="auth-dialog-discord-row">
+                    {discordAuthUrl ? (
+                      <a
+                        className="btn auth-dialog-discord-btn"
+                        href={discordAuthUrl}
+                        rel="noopener noreferrer"
+                        onClick={() => onContinueWithDiscord?.()}
+                      >
+                        <DiscordIcon className="auth-dialog-discord-icon" />
+                        Continue with Discord
+                      </a>
+                    ) : (
+                      <button
+                        className="btn auth-dialog-discord-btn"
+                        type="button"
+                        onClick={() => onContinueWithDiscord?.()}
+                        disabled={isSubmitting}
+                      >
+                        <DiscordIcon className="auth-dialog-discord-icon" />
+                        Continue with Discord
+                      </button>
+                    )}
+                    {discordAuthUrl && (
+                      <p className="auth-dialog-discord-hint">
+                        Pro-tip: This will open the Discord app if installed.
+                      </p>
+                    )}
+                  </div>
                 </>
               )}
             </form>
