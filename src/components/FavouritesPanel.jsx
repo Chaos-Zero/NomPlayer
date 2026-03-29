@@ -765,6 +765,30 @@ export default function FavouritesPanel({
                 margin: '4px 0',
               }}
             />
+            <button
+              className="support-context-menu-item"
+              type="button"
+              role="menuitem"
+              onClick={() => {
+                const removedIds = contextMenu.videos.map(
+                  (video) => video.videoId,
+                );
+                onRemove(removedIds);
+                setContextMenu(null);
+                if (selectionMode) {
+                  setSelectedIds([]);
+                }
+              }}
+            >
+              {contextRemoveLabel}
+            </button>
+            <div
+              style={{
+                height: '1px',
+                background: 'var(--border)',
+                margin: '4px 0',
+              }}
+            />
             {authUser && (
               <button
                 className="support-context-menu-item"
