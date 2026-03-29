@@ -6798,6 +6798,27 @@ button.playlist-search-indicator:hover {
   background: rgba(239, 68, 68, 0.1);
 }
 
+.track-comment-indicator {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--gold);
+  margin-left: 8px;
+  vertical-align: text-bottom;
+  opacity: 0.95;
+  transition: all var(--transition);
+  filter: drop-shadow(0 0 2px rgba(0, 0, 0, 0.3));
+}
+
+.track-comment-indicator svg {
+  width: 15px;
+  height: 15px;
+}
+
+.fav-item:hover .track-comment-indicator {
+  opacity: 1;
+}
+
 .support-select-toggle {
   -webkit-appearance: none;
   -moz-appearance: none;

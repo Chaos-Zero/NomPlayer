@@ -272,51 +272,55 @@ function TrackInfoPanel({
             </div>
 
             <div className="list-explorer-info-content">
-              <section className="list-explorer-info-section">
-                <div
-                  style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                  }}
-                >
-                  <h4>Your Feedback</h4>
-                </div>
-                <div className="list-explorer-info-personal">
-                  <div className="list-explorer-info-rating-row">
-                    <span className="label">Rating:</span>
-                    <select
-                      className="list-explorer-info-rating-select"
-                      value={localRating}
-                      onChange={(ev) =>
-                        setLocalRating(parseInt(ev.target.value) || '')
-                      }
-                    >
-                      <option value="">No Rating</option>
-                      {[10, 9, 8, 7, 6, 5, 4, 3, 2, 1].map((r) => (
-                        <option key={r} value={r}>
-                          {r} / 10
-                        </option>
-                      ))}
-                    </select>
+              {authUser && (
+                <section className="list-explorer-info-section">
+                  <div
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                    }}
+                  >
+                    <h4>Your Feedback</h4>
                   </div>
-                  <textarea
-                    className="list-explorer-info-note-editor"
-                    placeholder="Add personal notes or comments..."
-                    value={localComment}
-                    onChange={handleCommentChange}
-                  />
-                  <div className="list-explorer-info-feedback-actions">
-                    <button
-                      className="btn-save-feedback"
-                      onClick={() => onSaveFeedback(localRating, localComment)}
-                      disabled={isLoading}
-                    >
-                      {isLoading ? 'Saving...' : 'Save Feedback'}
-                    </button>
+                  <div className="list-explorer-info-personal">
+                    <div className="list-explorer-info-rating-row">
+                      <span className="label">Rating:</span>
+                      <select
+                        className="list-explorer-info-rating-select"
+                        value={localRating}
+                        onChange={(ev) =>
+                          setLocalRating(parseInt(ev.target.value) || '')
+                        }
+                      >
+                        <option value="">No Rating</option>
+                        {[10, 9, 8, 7, 6, 5, 4, 3, 2, 1].map((r) => (
+                          <option key={r} value={r}>
+                            {r} / 10
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <textarea
+                      className="list-explorer-info-note-editor"
+                      placeholder="Add personal notes or comments..."
+                      value={localComment}
+                      onChange={handleCommentChange}
+                    />
+                    <div className="list-explorer-info-feedback-actions">
+                      <button
+                        className="btn-save-feedback"
+                        onClick={() =>
+                          onSaveFeedback(localRating, localComment)
+                        }
+                        disabled={isLoading}
+                      >
+                        {isLoading ? 'Saving...' : 'Save Feedback'}
+                      </button>
+                    </div>
                   </div>
-                </div>
-              </section>
+                </section>
+              )}
 
               <section className="list-explorer-info-section">
                 <h4>Community Support</h4>
@@ -422,6 +426,7 @@ function SortableListExplorerCard({
   onRemove,
   onOpenSupportDropdown,
   isReadOnly = false,
+  hasComments = false,
 }) {
   const {
     attributes,
@@ -474,6 +479,7 @@ function SortableListExplorerCard({
             onOpenSupportDropdown={onOpenSupportDropdown}
             tone={isSupportList ? 'support' : undefined}
             itemAriaPrefix="List Explorer track"
+            hasComments={hasComments}
           />
         </div>
       </div>
@@ -506,6 +512,7 @@ function ListExplorerColumn({
   isReadOnly = false,
   onExport,
   onSavePlaylist,
+  globalCommentedVideoIds = null,
 }) {
   const [addUrl, setAddUrl] = useState('');
   const { setNodeRef } = useDroppable({
@@ -662,6 +669,11 @@ function ListExplorerColumn({
                   onPlayNow={onPlayNow}
                   onRemove={onRemove}
                   isReadOnly={isReadOnly}
+                  hasComments={
+                    globalCommentedVideoIds?.has(video.videoId) ||
+                    (!!video.comment &&
+                      (id.startsWith('peer-') || id === 'new-nominations'))
+                  }
                 />
               ))
             )}
@@ -695,6 +707,9 @@ export default function ListExplorer({
   const [focusedListId, setFocusedListId] = useState(null);
   const [activeCustomPlaylistId, setActiveCustomPlaylistId] = useState(null);
   const [selectedTrackId, setSelectedTrackId] = useState(null);
+  const [globalCommentedVideoIds, setGlobalCommentedVideoIds] = useState(
+    new Set(),
+  );
   const [communityData, setCommunityData] = useState({
     feedback: [],
     supports: {},
@@ -749,6 +764,54 @@ export default function ListExplorer({
     };
     fetchPeerLists();
   }, [supabase]);
+
+  // Fetch global comment status (tracks with feedback from others)
+  useEffect(() => {
+    const fetchGlobalCommentStatus = async () => {
+      if (!supabase) return;
+
+      try {
+        // Get all external_ids that have community feedback notes (excluding ours if logged in)
+        let query = supabase
+          .from('track_user_feedback')
+          .select(
+            `
+            note,
+            tracks!inner (
+              track_sources (
+                external_id
+              )
+            )
+          `,
+          )
+          .not('note', 'is', null);
+
+        if (authUser?.id) {
+          query = query.neq('user_id', authUser.id);
+        }
+
+        const { data, error } = await query;
+        if (!error && data) {
+          const ids = new Set();
+          data.forEach((d) => {
+            if (d.note && d.note.trim().length > 0) {
+              const sources = d.tracks?.track_sources || [];
+              sources.forEach((s) => {
+                if (s.external_id) {
+                  ids.add(s.external_id);
+                }
+              });
+            }
+          });
+          setGlobalCommentedVideoIds(ids);
+        }
+      } catch (err) {
+        console.error('Error fetching global comment status:', err);
+      }
+    };
+    fetchGlobalCommentStatus();
+  }, [supabase, authUser]);
+
   // Derived New Nominations from overall community lists
   const newNominations = useMemo(() => {
     if (!allPeerLists) return [];
@@ -1429,6 +1492,10 @@ export default function ListExplorer({
 
               onShowToast('Feedback saved!');
 
+              // If we added a note, it won't be in our "others" set anyway,
+              // but if we deleted a note (not possible here yet but good practice),
+              // we might want to refresh. Since it's our own note, no UI change needed for the balloon.
+
               // Refresh community feedback
               const feedbackData = await fetchCommunityFeedback(
                 supabase,
@@ -1476,6 +1543,7 @@ export default function ListExplorer({
               onAddAll={() => handleAddAllToCurrent(nominationList)}
               onExport={onExport}
               onSavePlaylist={onSavePlaylist}
+              globalCommentedVideoIds={globalCommentedVideoIds}
             />
 
             <ListExplorerColumn
@@ -1505,6 +1573,7 @@ export default function ListExplorer({
               onAddAll={() => handleAddAllToCurrent(supportList)}
               onExport={onExport}
               onSavePlaylist={onSavePlaylist}
+              globalCommentedVideoIds={globalCommentedVideoIds}
             />
 
             {showCurrentPlaylist && (
@@ -1531,6 +1600,7 @@ export default function ListExplorer({
                 onClose={() => setShowCurrentPlaylist(false)}
                 onExport={onExport}
                 onSavePlaylist={onSavePlaylist}
+                globalCommentedVideoIds={globalCommentedVideoIds}
               />
             )}
 
@@ -1559,6 +1629,7 @@ export default function ListExplorer({
                 isReadOnly={true}
                 onExport={onExport}
                 onSavePlaylist={onSavePlaylist}
+                globalCommentedVideoIds={globalCommentedVideoIds}
               />
             )}
 
@@ -1596,6 +1667,7 @@ export default function ListExplorer({
                 isReadOnly={true}
                 onExport={onExport}
                 onSavePlaylist={onSavePlaylist}
+                globalCommentedVideoIds={globalCommentedVideoIds}
               />
             ))}
 
@@ -1646,6 +1718,7 @@ export default function ListExplorer({
                 }}
                 onExport={onExport}
                 onSavePlaylist={onSavePlaylist}
+                globalCommentedVideoIds={globalCommentedVideoIds}
               />
             )}
           </div>

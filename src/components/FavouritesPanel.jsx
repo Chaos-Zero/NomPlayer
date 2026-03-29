@@ -56,6 +56,18 @@ export function HeartIcon() {
   );
 }
 
+export function SpeechBubbleIcon() {
+  return (
+    <svg viewBox="0 0 20 20" fill="currentColor">
+      <path
+        fillRule="evenodd"
+        d="M10 2c-2.236 0-4.43.18-6.57.532a2.31 2.31 0 00-1.93 2.185c-.286 1.9-.447 3.832-.482 5.8a2.301 2.301 0 001.077 2.05L4 14.5V17a1 1 0 001.625.78L8.734 15.1c.42.025.84.042 1.266.05 2.236 0 4.43-.18 6.57-.532a2.31 2.31 0 001.93-2.185c.286-1.9.447-3.832.482-5.8a2.301 2.301 0 00-1.077-2.05L16 3.5V2h-6z"
+        clipRule="evenodd"
+      />
+    </svg>
+  );
+}
+
 export function SupportItem({
   orderNumber,
   video,
@@ -70,6 +82,7 @@ export function SupportItem({
   removeButtonTitle,
   removeButtonAriaLabel,
   tone,
+  hasComments = false,
 }) {
   const [imgError, setImgError] = useState(false);
   const display = getPlaylistItemDisplay(video);
@@ -155,13 +168,29 @@ export function SupportItem({
                   {display.gameTitle}
                 </div>
               )}
-              {display.trackTitle && (
-                <div className="meta-track-title">{display.trackTitle}</div>
-              )}
+              <div className="meta-track-title">
+                {display.trackTitle}
+                {hasComments && (
+                  <span
+                    className="track-comment-indicator"
+                    title="Has community comments"
+                  >
+                    <SpeechBubbleIcon />
+                  </span>
+                )}
+              </div>
             </div>
           ) : (
             <div className="playlist-item-title-raw">
               {display.trackTitle || video.videoId}
+              {hasComments && (
+                <span
+                  className="track-comment-indicator"
+                  title="Has community comments"
+                >
+                  <SpeechBubbleIcon />
+                </span>
+              )}
             </div>
           )}
         </div>
@@ -241,6 +270,7 @@ export function SortableSupportItem({
   removeButtonTitle,
   removeButtonAriaLabel,
   tone,
+  hasComments = false,
 }) {
   const {
     attributes,
@@ -285,6 +315,7 @@ export function SortableSupportItem({
         removeButtonAriaLabel={removeButtonAriaLabel}
         onOpenSupportDropdown={onOpenSupportDropdown}
         tone={tone}
+        hasComments={hasComments}
       />
     </div>
   );
