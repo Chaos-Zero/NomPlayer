@@ -24,6 +24,12 @@ import ListeningHistoryDialog from './components/ListeningHistoryDialog.jsx';
 import SupportLevelDropdown from './components/SupportLevelDropdown.jsx';
 import ExportVgmcModal from './components/ExportVgmcModal.jsx';
 import DeleteAccountConfirmDialog from './components/DeleteAccountConfirmDialog.jsx';
+import FooterFeedbackPanel from './components/FooterFeedbackPanel.jsx';
+import {
+  SpeechBubbleIcon,
+  HeartIcon,
+  LockIcon,
+} from './components/FavouritesPanel.jsx';
 const TrackDatabase = lazy(() => import('./components/TrackDatabase.jsx'));
 import useMediaQuery from './hooks/useMediaQuery.js';
 import {
@@ -524,6 +530,10 @@ export default function App() {
   const [authMessage, setAuthMessage] = useState('');
   const [authError, setAuthError] = useState('');
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isFeedbackPanelOpen, setIsFeedbackPanelOpen] = useState(false);
+  const [globalCommentedVideoIds, setGlobalCommentedVideoIds] = useState(
+    new Set(),
+  );
   const [isDeleteAccountConfirmOpen, setIsDeleteAccountConfirmOpen] =
     useState(false);
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
@@ -1085,6 +1095,47 @@ export default function App() {
       window.sessionStorage.removeItem(DISCORD_OAUTH_SILENT_PENDING_KEY);
     }
   }, [authUser]);
+
+  useEffect(() => {
+    if (!supabase) return;
+
+    const fetchGlobalFeedbackStatus = async () => {
+      try {
+        // Fetch tracks with comments (matching working logic from ListExplorer)
+        // We use a simpler query first to ensure it works
+        const { data, error } = await supabase
+          .from('track_user_feedback')
+          .select('tracks!inner(track_sources!inner(external_id))')
+          .not('note', 'is', null)
+          .not('note', 'eq', '');
+
+        // Also fetch tracks with supports (this table is small and usually reliable)
+        const { data: supportData } = await supabase
+          .from('track_supports')
+          .select('tracks!inner(track_sources!inner(external_id))');
+
+        if (error) throw error;
+
+        const ids = new Set();
+        data?.forEach((row) => {
+          row.tracks?.track_sources?.forEach((src) => {
+            if (src.external_id) ids.add(src.external_id);
+          });
+        });
+        supportData?.forEach((row) => {
+          row.tracks?.track_sources?.forEach((src) => {
+            if (src.external_id) ids.add(src.external_id);
+          });
+        });
+
+        setGlobalCommentedVideoIds(ids);
+      } catch (err) {
+        console.error('Error fetching global feedback status:', err);
+      }
+    };
+
+    fetchGlobalFeedbackStatus();
+  }, [supabase]);
 
   const mergeCatalogTrackSummaries = useCallback((summaries) => {
     if (!summaries.length) {
@@ -3834,6 +3885,11 @@ export default function App() {
     return `${hasGameTitle ? currentVideo.gameTitle : ''}${hasGameTitle && hasTrackTitle ? ' - ' : ''}${hasTrackTitle ? currentVideo.trackTitle : ''}`;
   })();
 
+  const currentVideoHasFeedback = useMemo(() => {
+    if (!currentVideo?.videoId) return false;
+    return globalCommentedVideoIds.has(currentVideo.videoId);
+  }, [currentVideo?.videoId, globalCommentedVideoIds]);
+
   const persistentPlayer = shouldRenderPersistentPlayer ? (
     <div
       key="persistent-player-surface"
@@ -3891,6 +3947,17 @@ export default function App() {
             </button>
 
             <button
+              className={`btn btn-icon detached-footer-feedback-btn ${isFeedbackPanelOpen ? 'active' : ''} ${currentVideoHasFeedback ? 'has-feedback' : ''}`}
+              type="button"
+              onClick={() => setIsFeedbackPanelOpen(!isFeedbackPanelOpen)}
+              aria-label="View feedback and community activity"
+              title="View feedback and community activity"
+              disabled={!currentVideo}
+            >
+              <SpeechBubbleIcon />
+            </button>
+
+            <button
               className={`btn btn-icon detached-footer-support-btn${currentSupportClassName}`}
               type="button"
               onClick={(event) => {
@@ -3917,6 +3984,16 @@ export default function App() {
             </button>
           </div>
         </>
+      )}
+
+      {isFeedbackPanelOpen && currentVideo && (
+        <FooterFeedbackPanel
+          track={currentVideo}
+          supabase={supabase}
+          authUser={authUser}
+          onClose={() => setIsFeedbackPanelOpen(false)}
+          onShowToast={showDefaultAppToast}
+        />
       )}
     </div>
   ) : null;
