@@ -1478,17 +1478,20 @@ export default function App() {
         : isCurrentVideoSupported
           ? 'Remove Support'
           : 'Add to support list';
+  const currentSupportLevel = currentVideoSupportEntry?.supportLevel || 1;
   const currentSupportClassName = isCurrentVideoNominated
     ? ' nominated locked'
     : isCurrentVideoRetired
       ? ' retired-blocked'
       : isCurrentVideoSupported
-        ? ' supported'
+        ? ` supported level-${currentSupportLevel}`
         : '';
   const currentSupportGlyph = isCurrentVideoNominated
     ? '★'
     : isCurrentVideoSupported
-      ? '♥'
+      ? currentSupportLevel === 3
+        ? '🔒'
+        : '♥'
       : '♡';
   const apiKeyMissing = !import.meta.env.VITE_YT_API_KEY;
   const guestImportCounts = guestImportState
@@ -2931,72 +2934,99 @@ export default function App() {
   }, []);
 
   const handleToggleSupportFromPlaylist = useCallback(
-    async (video, level = null) => {
-      if (!video) return;
-      if (nominationList.some((entry) => entry.videoId === video.videoId))
-        return;
+    async (videoOrVideos, level = null) => {
+      if (!videoOrVideos) return;
+      const videos = Array.isArray(videoOrVideos)
+        ? videoOrVideos
+        : [videoOrVideos];
+      if (videos.length === 0) return;
 
-      const { allowedVideos, retiredVideos } = await partitionRetiredVideos([
-        video,
-      ]);
-      if (!allowedVideos.length) {
+      const allowedVideosToProcess = videos.filter(
+        (v) => !nominationList.some((entry) => entry.videoId === v.videoId),
+      );
+
+      if (allowedVideosToProcess.length === 0) return;
+
+      const { allowedVideos, retiredVideos } = await partitionRetiredVideos(
+        allowedVideosToProcess,
+      );
+
+      if (allowedVideos.length === 0) {
         if (retiredVideos.length > 0) {
           showRetiredSongToast();
         }
         return;
       }
 
-      const [nextVideo] = allowedVideos;
-
-      const exists = supportList.some(
-        (entry) => entry.videoId === nextVideo.videoId,
-      );
-
       setSupportList((previousList) => {
-        if (level === 0) {
-          return previousList.filter(
-            (entry) => entry.videoId !== nextVideo.videoId,
-          );
-        }
+        let nextList = [...previousList];
 
-        if (exists) {
-          if (level !== null) {
-            return previousList.map((entry) =>
-              entry.videoId === nextVideo.videoId
-                ? { ...entry, supportLevel: level }
-                : entry,
+        allowedVideos.forEach((nextVideo) => {
+          const exists = previousList.some(
+            (entry) => entry.videoId === nextVideo.videoId,
+          );
+
+          if (level === 0) {
+            nextList = nextList.filter(
+              (entry) => entry.videoId !== nextVideo.videoId,
             );
+          } else if (exists) {
+            if (level !== null) {
+              nextList = nextList.map((entry) =>
+                entry.videoId === nextVideo.videoId
+                  ? { ...entry, supportLevel: level }
+                  : entry,
+              );
+            } else {
+              nextList = nextList.filter(
+                (entry) => entry.videoId !== nextVideo.videoId,
+              );
+            }
+          } else {
+            nextList.push({
+              ...nextVideo,
+              supportLevel: level !== null ? level : 1,
+            });
           }
-          return previousList.filter(
-            (entry) => entry.videoId !== nextVideo.videoId,
-          );
-        }
+        });
 
-        const videoToAdd = {
-          ...nextVideo,
-          supportLevel: level !== null ? level : 1,
-        };
-        return [...previousList, videoToAdd];
+        return nextList;
       });
 
-      const isRemoving = level === 0 || (exists && level === null);
-      if (!isRemoving) {
-        showSupportToast(
-          level === 2
-            ? 'Added to High Support'
-            : level === 3
-              ? 'Added to Definite Support'
-              : 'Added to Support list',
-        );
+      if (authUser) {
+        allowedVideos.forEach((v) => {
+          const exists = supportList.some(
+            (entry) => entry.videoId === v.videoId,
+          );
+          const isRemoving = level === 0 || (exists && level === null);
+          const nextLevel = isRemoving ? 0 : level !== null ? level : 1;
+          if (v.trackId) {
+            saveTrackSupport(supabase, authUser.id, v, nextLevel).catch(
+              (error) => {
+                console.error('Failed to sync support level to DB:', error);
+              },
+            );
+          }
+        });
       }
 
-      if (authUser && nextVideo.trackId) {
-        const nextLevel = isRemoving ? 0 : level !== null ? level : 1;
-        saveTrackSupport(supabase, authUser.id, nextVideo, nextLevel).catch(
-          (error) => {
-            console.error('Failed to sync support level to DB:', error);
-          },
+      if (allowedVideos.length === 1) {
+        const nextVideo = allowedVideos[0];
+        const exists = supportList.some(
+          (entry) => entry.videoId === nextVideo.videoId,
         );
+        const isRemoving = level === 0 || (exists && level === null);
+        if (!isRemoving) {
+          showSupportToast(
+            level === 2
+              ? 'Added to High Support'
+              : level === 3
+                ? 'Added to Definite Support'
+                : 'Added to Support list',
+          );
+        }
+      } else {
+        showSupportToast(`Updated support for ${allowedVideos.length} tracks`);
       }
     },
     [
@@ -3803,6 +3833,7 @@ export default function App() {
         }
         isNominated={isCurrentVideoNominated}
         onToggleSupport={handleToggleSupportFromPlaylist}
+        supportLevel={currentSupportLevel}
         isCurrentVideoInPlaylist={isCurrentVideoInPlaylist}
         onAddToPlaylist={handleQueueFromSupportList}
         variant={playerPresentation}
@@ -3938,6 +3969,7 @@ export default function App() {
           currentVideo={currentVideo}
           isCurrentVideoSupported={isCurrentVideoSupported}
           isCurrentVideoNominated={isCurrentVideoNominated}
+          currentSupportLevel={currentSupportLevel}
           onToggleCurrentVideoSupport={handleToggleSupportFromPlaylist}
           isCurrentVideoInPlaylist={isCurrentVideoInPlaylist}
           onAddToPlaylist={handleQueueFromSupportList}
@@ -4018,6 +4050,9 @@ export default function App() {
               authUser={authUser}
               supabase={supabase}
               onUpdateMetadata={handleOpenMetadataUpdate}
+              onOpenSupportDropdown={(video, position) =>
+                setSupportLevelDropdown({ video, position, direction: 'down' })
+              }
               onExport={handleOpenExportModal}
               onSavePlaylist={handleCreateYTPlaylist}
             />
@@ -4248,12 +4283,16 @@ export default function App() {
       {supportLevelDropdown && (
         <SupportLevelDropdown
           video={supportLevelDropdown.video}
+          videos={supportLevelDropdown.videos}
           position={supportLevelDropdown.position}
           direction={supportLevelDropdown.direction}
           currentLevel={supportLevelDropdown.video?.supportLevel || 1}
           onClose={() => setSupportLevelDropdown(null)}
           onSelect={(level) => {
-            handleToggleSupportFromPlaylist(supportLevelDropdown.video, level);
+            handleToggleSupportFromPlaylist(
+              supportLevelDropdown.videos || supportLevelDropdown.video,
+              level,
+            );
             setSupportLevelDropdown(null);
           }}
         />

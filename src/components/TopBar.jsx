@@ -189,6 +189,7 @@ export default function TopBar({
   onToggleCurrentVideoSupport,
   isCurrentVideoInPlaylist = false,
   onAddToPlaylist,
+  currentSupportLevel = 1,
   authUser = null,
   userProfile = null,
   isAuthAvailable = false,
@@ -255,12 +256,14 @@ export default function TopBar({
   const currentSupportClassName = isCurrentVideoNominated
     ? ' nominated locked'
     : isCurrentVideoSupported
-      ? ' supported'
+      ? ` supported level-${currentSupportLevel}`
       : '';
   const currentSupportGlyph = isCurrentVideoNominated
     ? '★'
     : isCurrentVideoSupported
-      ? '♥'
+      ? currentSupportLevel === 3
+        ? '🔒'
+        : '♥'
       : '♡';
   const hasTrackTitle =
     typeof currentVideo?.trackTitle === 'string' &&

@@ -468,14 +468,6 @@ export default function FavouritesPanel({
     setContextMenu(null);
   }
 
-  function handleRemoveSupport() {
-    if (!contextMenu?.videos.length) return;
-    const removedIds = contextMenu.videos.map((video) => video.videoId);
-    setSelectedIds((prev) => prev.filter((id) => !removedIds.includes(id)));
-    onRemove(removedIds);
-    setContextMenu(null);
-  }
-
   const showSelectionActions = selectionMode && supportList.length > 0;
 
   return (
@@ -731,41 +723,20 @@ export default function FavouritesPanel({
               className="support-context-menu-item"
               type="button"
               role="menuitem"
-              onClick={() => {
-                contextMenu.videos.forEach((v) => onToggleSupport(v, 1));
+              onClick={(event) => {
+                const rect = event.currentTarget.getBoundingClientRect();
+                onOpenSupportDropdown(
+                  contextMenu.videos[0],
+                  {
+                    top: rect.top,
+                    left: rect.left + rect.width / 2,
+                  },
+                  contextMenu.videos,
+                );
                 setContextMenu(null);
               }}
             >
-              <span style={{ color: 'var(--gold)', marginRight: 8 }}>♥</span>{' '}
-              Set Standard Support
-            </button>
-            <button
-              className="support-context-menu-item"
-              type="button"
-              role="menuitem"
-              onClick={() => {
-                contextMenu.videos.forEach((v) => onToggleSupport(v, 2));
-                setContextMenu(null);
-              }}
-            >
-              <span style={{ color: 'var(--support-pink)', marginRight: 8 }}>
-                ♥
-              </span>{' '}
-              Set High Support
-            </button>
-            <button
-              className="support-context-menu-item"
-              type="button"
-              role="menuitem"
-              onClick={() => {
-                contextMenu.videos.forEach((v) => onToggleSupport(v, 3));
-                setContextMenu(null);
-              }}
-            >
-              <span style={{ color: 'var(--support-gold)', marginRight: 8 }}>
-                🔒
-              </span>{' '}
-              Set Definite Support
+              Update Support
             </button>
             <div
               style={{
@@ -787,14 +758,6 @@ export default function FavouritesPanel({
                 Update Metadata
               </button>
             )}
-            <button
-              className="support-context-menu-item danger"
-              type="button"
-              role="menuitem"
-              onClick={handleRemoveSupport}
-            >
-              {contextRemoveLabel}
-            </button>
           </ContextMenuPortal>
         )}
       </div>

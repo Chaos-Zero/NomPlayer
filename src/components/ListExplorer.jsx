@@ -710,6 +710,7 @@ export default function ListExplorer({
   onUpdateMetadata,
   onExport,
   onSavePlaylist,
+  onOpenSupportDropdown,
 }) {
   const [focusedListId, setFocusedListId] = useState(null);
   const [activeCustomPlaylistId, setActiveCustomPlaylistId] = useState(null);
@@ -1033,6 +1034,30 @@ export default function ListExplorer({
     onAddToPlaylist([video]);
     onShowToast('Track added to playlist');
     closeContextMenu();
+  };
+
+  const isVideoSupported = (videoId) =>
+    supportList?.some((h) => h.videoId === videoId);
+
+  const handleToggleTrackSupport = (video, event) => {
+    if (onOpenSupportDropdown) {
+      const rect = event.currentTarget.getBoundingClientRect();
+      onOpenSupportDropdown(video, {
+        top: rect.top,
+        left: rect.left + rect.width / 2,
+      });
+      setContextMenu(null);
+    } else {
+      // Fallback to simple toggle
+      if (isVideoSupported(video.videoId)) {
+        onUpdateSupportList?.(
+          supportList.filter((h) => h.videoId !== video.videoId),
+        );
+      } else {
+        onUpdateSupportList?.([...supportList, { ...video, supportLevel: 1 }]);
+      }
+      setContextMenu(null);
+    }
   };
 
   const handleRemoveTrack = (listId, videoId) => {
@@ -1670,6 +1695,15 @@ export default function ListExplorer({
               >
                 <PlaylistPlusIcon />
                 <span>Add to Playlist</span>
+              </button>
+            )}
+            {contextMenu.sourceListId !== 'nominations' && (
+              <button
+                className="database-context-menu-item"
+                onClick={(e) => handleToggleTrackSupport(contextMenu.video, e)}
+              >
+                <HeartIcon />
+                <span>Update Support</span>
               </button>
             )}
             <button
