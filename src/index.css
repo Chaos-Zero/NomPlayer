@@ -2976,6 +2976,7 @@ body {
 }
 
 .mobile-topbar-front.with-detached-player.entering::after {
+  opacity: 0;
   animation: mobile-detached-panel-rise 0.42s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
@@ -4115,6 +4116,7 @@ body {
   .player-surface.detached-footer.mobile-detached-footer.entering
     .player-wrap-mini {
     opacity: 0;
+    pointer-events: none;
     animation: player-surface-fade-in 0.18s ease 0.28s both;
   }
 
