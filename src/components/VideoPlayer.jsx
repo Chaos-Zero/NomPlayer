@@ -351,214 +351,225 @@ export default function VideoPlayer({
     },
   };
 
-  return (
-    <div className={`player-wrap player-wrap-${variant}`}>
-      <div className="player-stage has-community-activity">
-        <div className="player-video-stack">
-          <div className="player-grid-top-spacer" />
-          <div className="player-grid-video-row">
-            <div className="player-iframe-container" id="player-container">
-              <YouTube
-                key={video.videoId}
-                videoId={video.videoId}
-                opts={opts}
-                onReady={handleReady}
-                onEnd={handleEnd}
-                onStateChange={handleStateChange}
-                style={{ width: '100%', height: '100%' }}
-              />
-              {isOverlayEnabled && (
-                <div className="player-overlay enabled">
-                  <div className="player-overlay-main-controls">
-                    <button
-                      className="btn btn-icon player-overlay-btn"
-                      type="button"
-                      onClick={onPrev}
-                      title="Previous"
-                      aria-label="Previous video"
+  const isFull = variant === 'full';
+
+  const metadataNode =
+    showMetadata && (video.trackTitle || video.gameTitle || video.title) ? (
+      <div
+        className="now-playing-info"
+        style={isFull ? { marginBottom: '0', paddingBottom: '0' } : undefined}
+      >
+        <div className="now-playing-main">
+          <div className="now-playing-meta">
+            <div className="now-playing-title">
+              {video.trackTitle || video.gameTitle ? (
+                <>
+                  {video.gameTitle && (
+                    <div
+                      className="now-playing-subtitle"
+                      style={
+                        !video.trackTitle
+                          ? {
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '8px',
+                              fontSize: '11px',
+                              marginBottom: '4px',
+                            }
+                          : {
+                              fontSize: '11px',
+                              marginBottom: '4px',
+                            }
+                      }
                     >
-                      <PreviousIcon />
-                    </button>
-                    <button
-                      className="btn btn-play player-overlay-btn player-overlay-btn-play"
-                      type="button"
-                      onClick={onTogglePlay}
-                      title={isPlaying ? 'Pause' : 'Play'}
-                      aria-label={isPlaying ? 'Pause' : 'Play'}
-                    >
-                      {isPlaying ? <PauseIcon /> : <PlayIcon />}
-                    </button>
-                    <button
-                      className="btn btn-icon player-overlay-btn"
-                      type="button"
-                      onClick={onNext}
-                      title="Next"
-                      aria-label="Next video"
-                    >
-                      <NextIcon />
-                    </button>
-                  </div>
-                  <div className="player-overlay-gap" aria-hidden="true" />
-                  <div className="player-overlay-sub-controls">
-                    <button
-                      className={`player-overlay-chip shuffle${isShuffleEnabled ? ' active' : ''}`}
-                      type="button"
-                      onClick={onShuffle}
-                      aria-label="Shuffle playlist"
-                      title="Shuffle playlist"
-                    >
-                      <span aria-hidden="true">🔀</span>
-                    </button>
-                    <button
-                      className={`player-overlay-chip preview${isPreviewModeEnabled ? ' active' : ''}`}
-                      type="button"
-                      onClick={onTogglePreview}
-                      aria-label="Preview mode"
-                      title="Preview mode"
-                    >
-                      <FastForwardIcon />
-                    </button>
-                    <div className="item-fav-container">
-                      <button
-                        className={`player-overlay-chip support${supportClassName}`}
-                        type="button"
-                        aria-label={supportLabel}
-                        title={supportTooltip}
-                        disabled={isNominated}
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          if (!isSupported) {
-                            onToggleSupport(video);
-                            const rect =
-                              event.currentTarget.getBoundingClientRect();
-                            onOpenSupportDropdown(video, {
-                              top: rect.top,
-                              left: rect.left + rect.width / 2,
-                            });
-                          } else {
-                            onToggleSupport(video);
-                          }
-                        }}
-                      >
-                        {supportGlyph}
-                      </button>
+                      {!video.trackTitle && isPlaying && (
+                        <div
+                          className="now-playing-dot"
+                          style={{ marginTop: 0 }}
+                        />
+                      )}
+                      <span>{video.gameTitle}</span>
                     </div>
-                  </div>
+                  )}
+                  {video.trackTitle && (
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                      }}
+                    >
+                      {isPlaying && (
+                        <div
+                          className="now-playing-dot"
+                          style={{ marginTop: 0 }}
+                        />
+                      )}
+                      <span>{video.trackTitle}</span>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                  }}
+                >
+                  {isPlaying && (
+                    <div className="now-playing-dot" style={{ marginTop: 0 }} />
+                  )}
+                  <span>{video.title}</span>
                 </div>
               )}
             </div>
-          </div>
-
-          <div className="player-bottom-content-wrapper">
-            <div className="player-scroll-area">
-              {showMetadata &&
-                (video.trackTitle || video.gameTitle || video.title) && (
-                  <div
-                    className="now-playing-info"
-                    style={{ marginBottom: '0', paddingBottom: '0' }}
-                  >
-                    <div className="now-playing-main">
-                      <div className="now-playing-meta">
-                        <div className="now-playing-title">
-                          {video.trackTitle || video.gameTitle ? (
-                            <>
-                              {video.gameTitle && (
-                                <div
-                                  className="now-playing-subtitle"
-                                  style={
-                                    !video.trackTitle
-                                      ? {
-                                          display: 'flex',
-                                          alignItems: 'center',
-                                          gap: '8px',
-                                          fontSize: '11px',
-                                          marginBottom: '4px',
-                                        }
-                                      : {
-                                          fontSize: '11px',
-                                          marginBottom: '4px',
-                                        }
-                                  }
-                                >
-                                  {!video.trackTitle && isPlaying && (
-                                    <div
-                                      className="now-playing-dot"
-                                      style={{ marginTop: 0 }}
-                                    />
-                                  )}
-                                  <span>{video.gameTitle}</span>
-                                </div>
-                              )}
-                              {video.trackTitle && (
-                                <div
-                                  style={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '8px',
-                                  }}
-                                >
-                                  {isPlaying && (
-                                    <div
-                                      className="now-playing-dot"
-                                      style={{ marginTop: 0 }}
-                                    />
-                                  )}
-                                  <span>{video.trackTitle}</span>
-                                </div>
-                              )}
-                            </>
-                          ) : (
-                            <div
-                              style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '8px',
-                              }}
-                            >
-                              {isPlaying && (
-                                <div
-                                  className="now-playing-dot"
-                                  style={{ marginTop: 0 }}
-                                />
-                              )}
-                              <span>{video.title}</span>
-                            </div>
-                          )}
-                        </div>
-                        {videoUrl && (
-                          <a
-                            className="now-playing-link"
-                            href={videoUrl}
-                            target="_blank"
-                            rel="noreferrer"
-                          >
-                            {videoUrl}
-                          </a>
-                        )}
-                      </div>
-                    </div>
-                    <div className="now-playing-actions">
-                      <button
-                        className={`btn btn-icon add-to-playlist-btn${isCurrentVideoInPlaylist ? ' hidden' : ''}`}
-                        onClick={() => onAddToPlaylist?.([video])}
-                        title="Add to current playlist"
-                        aria-label="Add to current playlist"
-                      >
-                        <PlaylistPlusIcon />
-                      </button>
-                    </div>
-                  </div>
-                )}
-              <CommunityActivity
-                videoId={video.videoId}
-                supabase={supabase}
-                authUser={authUser}
-                onShowToast={onShowToast}
-              />
-            </div>
-            <div className="player-filler" />
+            {videoUrl && (
+              <a
+                className="now-playing-link"
+                href={videoUrl}
+                target="_blank"
+                rel="noreferrer"
+              >
+                {videoUrl}
+              </a>
+            )}
           </div>
         </div>
+        <div className="now-playing-actions">
+          <button
+            className={`btn btn-icon add-to-playlist-btn${isCurrentVideoInPlaylist ? ' hidden' : ''}`}
+            onClick={() => onAddToPlaylist?.([video])}
+            title="Add to current playlist"
+            aria-label="Add to current playlist"
+          >
+            <PlaylistPlusIcon />
+          </button>
+        </div>
+      </div>
+    ) : null;
+
+  const playerIframeNode = (
+    <div className="player-iframe-container" id="player-container">
+      <YouTube
+        key={video.videoId}
+        videoId={video.videoId}
+        opts={opts}
+        onReady={handleReady}
+        onEnd={handleEnd}
+        onStateChange={handleStateChange}
+        style={{ width: '100%', height: '100%' }}
+      />
+      {isOverlayEnabled && (
+        <div className="player-overlay enabled">
+          <div className="player-overlay-main-controls">
+            <button
+              className="btn btn-icon player-overlay-btn"
+              type="button"
+              onClick={onPrev}
+              title="Previous"
+              aria-label="Previous video"
+            >
+              <PreviousIcon />
+            </button>
+            <button
+              className="btn btn-play player-overlay-btn player-overlay-btn-play"
+              type="button"
+              onClick={onTogglePlay}
+              title={isPlaying ? 'Pause' : 'Play'}
+              aria-label={isPlaying ? 'Pause' : 'Play'}
+            >
+              {isPlaying ? <PauseIcon /> : <PlayIcon />}
+            </button>
+            <button
+              className="btn btn-icon player-overlay-btn"
+              type="button"
+              onClick={onNext}
+              title="Next"
+              aria-label="Next video"
+            >
+              <NextIcon />
+            </button>
+          </div>
+          <div className="player-overlay-gap" aria-hidden="true" />
+          <div className="player-overlay-sub-controls">
+            <button
+              className={`player-overlay-chip shuffle${isShuffleEnabled ? ' active' : ''}`}
+              type="button"
+              onClick={onShuffle}
+              aria-label="Shuffle playlist"
+              title="Shuffle playlist"
+            >
+              <span aria-hidden="true">🔀</span>
+            </button>
+            <button
+              className={`player-overlay-chip preview${isPreviewModeEnabled ? ' active' : ''}`}
+              type="button"
+              onClick={onTogglePreview}
+              aria-label="Preview mode"
+              title="Preview mode"
+            >
+              <FastForwardIcon />
+            </button>
+            <div className="item-fav-container">
+              <button
+                className={`player-overlay-chip support${supportClassName}`}
+                type="button"
+                aria-label={supportLabel}
+                title={supportTooltip}
+                disabled={isNominated}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  if (!isSupported) {
+                    onToggleSupport(video);
+                    const rect = event.currentTarget.getBoundingClientRect();
+                    onOpenSupportDropdown(video, {
+                      top: rect.top,
+                      left: rect.left + rect.width / 2,
+                    });
+                  } else {
+                    onToggleSupport(video);
+                  }
+                }}
+              >
+                {supportGlyph}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
+  return (
+    <div className={`player-wrap player-wrap-${variant}`}>
+      <div className={`player-stage${isFull ? ' has-community-activity' : ''}`}>
+        <div className="player-video-stack">
+          {isFull && <div className="player-grid-top-spacer" />}
+          {isFull ? (
+            <div className="player-grid-video-row">
+              {playerIframeNode}
+              {metadataNode}
+            </div>
+          ) : (
+            playerIframeNode
+          )}
+
+          {isFull && (
+            <div className="player-bottom-content-wrapper">
+              <div className="player-scroll-area">
+                <CommunityActivity
+                  videoId={video.videoId}
+                  supabase={supabase}
+                  authUser={authUser}
+                  onShowToast={onShowToast}
+                />
+              </div>
+              <div className="player-filler" />
+            </div>
+          )}
+        </div>
+        {!isFull && metadataNode}
       </div>
     </div>
   );
