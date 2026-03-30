@@ -3920,6 +3920,9 @@ export default function App() {
         onAddToPlaylist={handleQueueFromSupportList}
         variant={playerPresentation}
         showMetadata={isPlayerPage}
+        supabase={supabase}
+        authUser={authUser}
+        onShowToast={showDefaultAppToast}
       />
 
       {isDesktopDetachedFooter && (

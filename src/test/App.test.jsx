@@ -91,6 +91,9 @@ vi.mock('../components/FavouritesPanel.jsx', () => ({
       </div>
     );
   },
+  HeartIcon: () => <div data-testid="heart-icon-mock" />,
+  LockIcon: () => <div data-testid="lock-icon-mock" />,
+  SpeechBubbleIcon: () => <div data-testid="speech-bubble-icon-mock" />,
 }));
 
 vi.mock('../components/HomePage.jsx', () => ({
@@ -104,6 +107,84 @@ vi.mock('../components/HomePage.jsx', () => ({
       </div>
     );
   },
+}));
+
+vi.mock('../lib/supabase.js', () => {
+  const mock = {
+    from: vi.fn().mockReturnThis(),
+    select: vi.fn().mockReturnThis(),
+    eq: vi.fn().mockReturnThis(),
+    in: vi.fn().mockReturnThis(),
+    not: vi.fn().mockReturnThis(),
+    order: vi.fn().mockReturnThis(),
+    range: vi.fn().mockReturnThis(),
+    limit: vi.fn().mockReturnThis(),
+    insert: vi.fn().mockResolvedValue({ data: null, error: null }),
+    upsert: vi.fn().mockResolvedValue({ data: null, error: null }),
+    update: vi.fn().mockResolvedValue({ data: null, error: null }),
+    delete: vi.fn().mockResolvedValue({ data: null, error: null }),
+    rpc: vi.fn().mockResolvedValue({ data: [], error: null }),
+    auth: {
+      onAuthStateChange: vi.fn().mockReturnValue({
+        data: { subscription: { unsubscribe: vi.fn() } },
+      }),
+      getUser: vi.fn().mockResolvedValue({ data: { user: null }, error: null }),
+    },
+    then: (onFullfilled) => onFullfilled({ data: [], error: null }),
+  };
+  return {
+    isSupabaseConfigured: true,
+    getSupabaseClient: () => mock,
+  };
+});
+
+vi.mock('../lib/feedback.js', () => ({
+  fetchCommunityFeedback: vi.fn().mockResolvedValue([]),
+  upsertUserFeedback: vi.fn().mockResolvedValue({ error: null }),
+}));
+
+vi.mock('../lib/trackCatalog.js', () => ({
+  fetchTrackCatalogByVideoIds: vi.fn().mockResolvedValue([]),
+  ingestYouTubeTrackSources: vi.fn().mockResolvedValue([]),
+  searchTrackCatalog: vi.fn().mockResolvedValue([]),
+  mapTrackCatalogEntryToVideo: (entry) => entry,
+}));
+
+vi.mock('../lib/playerState.js', () => ({
+  fetchUserTrackListenStatuses: vi.fn().mockResolvedValue({}),
+  fetchUserPlayerState: vi.fn().mockResolvedValue(null),
+  fetchUserProfile: vi.fn().mockResolvedValue(null),
+  recordYouTubeTrackListen: vi.fn(),
+  saveUserPlayerState: vi.fn(),
+  saveTrackSupport: vi.fn(),
+  upsertUserProfile: vi.fn(),
+  recordTrackHistory: vi.fn(),
+  getTrackHistory: vi.fn().mockResolvedValue([]),
+  clearTrackHistory: vi.fn(),
+  NOMINATION_LIST_STORAGE_KEY: 'yt_nomination_list',
+  SUPPORT_LIST_STORAGE_KEY: 'yt_support_list',
+  LEGACY_SUPPORT_STORAGE_KEY: 'yt_support',
+  createGuestImportSelectionState: () => ({}),
+  createPersistedPlayerState: () => ({}),
+  checkSignupAvailability: vi.fn().mockResolvedValue(true),
+  deriveProfileAvatarUrl: (p, url) => url,
+  deriveProfileUsername: (p) => p?.username || 'Anonymous',
+  hasImportableGuestCollections: () => false,
+  hasMeaningfulPlayerState: () => false,
+  isDiscordAuthUser: () => false,
+  loadLocalPlayerState: () => ({
+    playlist: [],
+    currentVideoId: null,
+    shuffleOrderIds: [],
+    showOriginalOrder: false,
+    listenedStatusById: {},
+    supportList: [],
+    nominationList: [],
+  }),
+  mergeGuestCollectionsIntoPlayerState: (s) => s,
+  normalizeOptionalProfileValue: (v) => v,
+  normalizePersistedPlayerState: (s) => s,
+  persistLocalGuestPlayerState: vi.fn(),
 }));
 
 describe('App', () => {
