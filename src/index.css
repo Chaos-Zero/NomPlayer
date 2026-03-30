@@ -4061,6 +4061,7 @@ body {
 
   .topbar.mobile-layout.mobile-detached-player {
     min-height: 112px;
+    z-index: 1150;
   }
 
   .topbar.mobile-layout.mobile-detached-player .mobile-topbar-shell {
@@ -4102,7 +4103,7 @@ body {
     align-items: flex-end;
     justify-content: flex-end;
     gap: 0;
-    z-index: 1200;
+    z-index: 2000 !important;
     pointer-events: auto;
   }
 
@@ -4129,6 +4130,10 @@ body {
     justify-content: center;
     min-height: 0;
     padding: 12px 14px 20px;
+    z-index: auto !important;
+    position: relative !important;
+    isolation: auto !important;
+    transform: none !important;
   }
 
   .main-content.home-view {
@@ -4306,6 +4311,8 @@ body {
 
 .player-iframe-container {
   width: 100%;
+  max-width: 100%;
+  max-height: 100%;
   border-radius: var(--radius-lg);
   overflow: hidden;
   background: #000;
