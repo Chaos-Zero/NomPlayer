@@ -546,14 +546,14 @@ export default function VideoPlayer({
       <div className={`player-stage${isFull ? ' has-community-activity' : ''}`}>
         <div className="player-video-stack">
           {isFull && <div className="player-grid-top-spacer" />}
-          {isFull ? (
-            <div className="player-grid-video-row">
-              {playerIframeNode}
-              {metadataNode}
-            </div>
-          ) : (
-            playerIframeNode
-          )}
+          <div
+            className={
+              isFull ? 'player-grid-video-row' : 'player-grid-video-row-minimal'
+            }
+          >
+            {playerIframeNode}
+            {isFull && metadataNode}
+          </div>
 
           {isFull && (
             <div className="player-bottom-content-wrapper">

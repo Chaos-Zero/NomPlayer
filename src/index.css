@@ -4409,6 +4409,10 @@ body {
   min-height: 0;
 }
 
+.player-grid-video-row-minimal {
+  display: contents;
+}
+
 .player-bottom-content-wrapper {
   flex: 1 1 0px;
   width: 100%;
@@ -9524,6 +9528,7 @@ body.is-resizing .resize-handle {
   display: flex;
   align-items: center;
   gap: 12px;
+  margin-bottom: 12px;
 }
 
 .list-explorer-info-rating-row .label {
