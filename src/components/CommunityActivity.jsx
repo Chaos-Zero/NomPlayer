@@ -151,6 +151,44 @@ export default function CommunityActivity({
     <div
       className={`player-community-activity ${!trackId ? 'loading-track' : ''}`}
     >
+      {/* ─── Community Support Summary (Conditional) ─── */}
+      {supportSummary.total > 0 && (
+        <section className="list-explorer-info-section">
+          <h4>COMMUNITY SUPPORT</h4>
+          <div className="list-explorer-support-summary">
+            <div className="list-explorer-support-icons">
+              {supportSummary[3] > 0 && (
+                <div
+                  className="support-badge highest"
+                  title={`${supportSummary[3]} Highest Supports`}
+                >
+                  <LockIcon />
+                  <span>{supportSummary[3]}</span>
+                </div>
+              )}
+              {supportSummary[2] > 0 && (
+                <div
+                  className="support-badge high"
+                  title={`${supportSummary[2]} High Supports`}
+                >
+                  <HeartIcon />
+                  <span>{supportSummary[2]}</span>
+                </div>
+              )}
+              {supportSummary[1] > 0 && (
+                <div
+                  className="support-badge normal"
+                  title={`${supportSummary[1]} Normal Supports`}
+                >
+                  <HeartIcon />
+                  <span>{supportSummary[1]}</span>
+                </div>
+              )}
+            </div>
+          </div>
+        </section>
+      )}
+
       {/* ─── Your Feedback Editor (Always Shown) ─── */}
       <section className="list-explorer-info-section user-feedback">
         <h4>YOUR FEEDBACK</h4>
@@ -222,44 +260,6 @@ export default function CommunityActivity({
         )}
       </section>
 
-      {/* ─── Community Support Summary (Conditional) ─── */}
-      {supportSummary.total > 0 && (
-        <section className="list-explorer-info-section">
-          <h4>COMMUNITY SUPPORT</h4>
-          <div className="list-explorer-support-summary">
-            <div className="list-explorer-support-icons">
-              {supportSummary[3] > 0 && (
-                <div
-                  className="support-badge highest"
-                  title={`${supportSummary[3]} Highest Supports`}
-                >
-                  <LockIcon />
-                  <span>{supportSummary[3]}</span>
-                </div>
-              )}
-              {supportSummary[2] > 0 && (
-                <div
-                  className="support-badge high"
-                  title={`${supportSummary[2]} High Supports`}
-                >
-                  <HeartIcon />
-                  <span>{supportSummary[2]}</span>
-                </div>
-              )}
-              {supportSummary[1] > 0 && (
-                <div
-                  className="support-badge normal"
-                  title={`${supportSummary[1]} Normal Supports`}
-                >
-                  <HeartIcon />
-                  <span>{supportSummary[1]}</span>
-                </div>
-              )}
-            </div>
-          </div>
-        </section>
-      )}
-
       {/* ─── Community Activity List (Conditional) ─── */}
       {peerFeedback.length > 0 && (
         <section className="list-explorer-info-section community">
@@ -267,40 +267,36 @@ export default function CommunityActivity({
           <div className="list-explorer-peer-list">
             {peerFeedback.map((f, i) => (
               <div key={i} className="list-explorer-peer-item">
-                <div className="list-explorer-peer-header">
-                  <div
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '10px',
-                    }}
-                  >
-                    <img
-                      src={
-                        f.profiles
-                          ? deriveProfileAvatarUrl(
-                              f.profiles,
-                              f.profiles.avatar_url,
-                            )
-                          : ''
-                      }
-                      alt=""
-                      className="list-explorer-peer-avatar"
-                      onError={(e) => {
-                        e.target.style.display = 'none';
-                      }}
-                    />
+                <img
+                  src={
+                    f.profiles
+                      ? deriveProfileAvatarUrl(
+                          f.profiles,
+                          f.profiles.avatar_url,
+                        )
+                      : ''
+                  }
+                  alt=""
+                  className="list-explorer-peer-avatar"
+                  onError={(e) => {
+                    e.target.style.display = 'none';
+                  }}
+                />
+                <div className="list-explorer-peer-content">
+                  <div className="list-explorer-peer-header">
                     <span className="list-explorer-peer-user">
                       {getDisplayProfileName(f.profiles?.username, 'Anonymous')}
                     </span>
+                    {f.rating && (
+                      <span className="list-explorer-peer-rating">
+                        {f.rating}/10
+                      </span>
+                    )}
                   </div>
-                  {f.rating && (
-                    <span className="list-explorer-peer-rating">
-                      {f.rating}/10
-                    </span>
+                  {f.note && (
+                    <p className="list-explorer-peer-note">{f.note}</p>
                   )}
                 </div>
-                {f.note && <p className="list-explorer-peer-note">{f.note}</p>}
               </div>
             ))}
           </div>
