@@ -208,6 +208,7 @@ export default function TopBar({
   onNavigateToPlayer,
   isMenuOpen = false,
   onToggleMenu,
+  hidePlaybackControls = false,
 }) {
   const isMobileLayout = useMediaQuery('(max-width: 960px)');
   const [urlValue, setUrlValue] = useState('');
@@ -660,82 +661,87 @@ export default function TopBar({
 
     return (
       <div
-        className={`playback-controls${className ? ` ${className}` : ''}`}
-        aria-hidden={hidden || undefined}
+        className={`playback-controls-stage${hidePlaybackControls ? ' flipped' : ''}`}
       >
-        {showModeButtons && (
-          <button
-            className={`btn btn-icon shuffle-btn${isShuffleEnabled ? ' active' : ''}`}
-            onClick={onShuffle}
-            title="Shuffle playlist"
-            aria-label="Shuffle playlist"
-            aria-pressed={isShuffleEnabled}
-            tabIndex={hidden ? -1 : 0}
-          >
-            <span className="shuffle-glyph" aria-hidden="true">
-              🔀
-            </span>
-          </button>
-        )}
-
-        <button
-          className="btn btn-icon"
-          onClick={onPrev}
-          title="Previous"
-          id={withIds ? 'prev-btn' : undefined}
-          aria-label="Previous video"
-          tabIndex={hidden ? -1 : 0}
+        <div
+          className={`playback-controls playback-controls-front${className ? ` ${className}` : ''}`}
+          aria-hidden={hidden || hidePlaybackControls || undefined}
         >
-          <PreviousIcon />
-        </button>
-
-        <button
-          className="btn btn-play"
-          onClick={() => setIsPlaying((p) => !p)}
-          title={isPlaying ? 'Pause' : 'Play'}
-          id={withIds ? 'play-pause-btn' : undefined}
-          aria-label={isPlaying ? 'Pause' : 'Play'}
-          disabled={!canTogglePlayback}
-          tabIndex={hidden ? -1 : 0}
-        >
-          {isMobileLayout && isPreviewModeEnabled ? (
-            <StopwatchIcon
-              countdown={previewCountdown}
-              className="transport-icon transport-icon-preview"
-            />
-          ) : isPlaying ? (
-            <PauseIcon />
-          ) : (
-            <PlayIcon />
+          {showModeButtons && (
+            <button
+              className={`btn btn-icon shuffle-btn${isShuffleEnabled ? ' active' : ''}`}
+              onClick={onShuffle}
+              title="Shuffle playlist"
+              aria-label="Shuffle playlist"
+              aria-pressed={isShuffleEnabled}
+              tabIndex={hidden || hidePlaybackControls ? -1 : 0}
+            >
+              <span className="shuffle-glyph" aria-hidden="true">
+                🔀
+              </span>
+            </button>
           )}
-        </button>
 
-        <button
-          className="btn btn-icon"
-          onClick={onNext}
-          title="Next"
-          id={withIds ? 'next-btn' : undefined}
-          aria-label="Next video"
-          tabIndex={hidden ? -1 : 0}
-        >
-          <NextIcon />
-        </button>
-
-        {showModeButtons && (
           <button
-            className={`btn btn-icon${isPreviewModeEnabled ? ' active' : ''}`}
-            onClick={onTogglePreview}
-            title="Preview mode"
-            aria-label="Preview mode"
-            aria-pressed={isPreviewModeEnabled}
-            tabIndex={hidden ? -1 : 0}
+            className="btn btn-icon"
+            onClick={onPrev}
+            title="Previous"
+            id={withIds ? 'prev-btn' : undefined}
+            aria-label="Previous video"
+            tabIndex={hidden || hidePlaybackControls ? -1 : 0}
           >
-            <StopwatchIcon
-              countdown={previewCountdown}
-              className="transport-icon transport-icon-preview"
-            />
+            <PreviousIcon />
           </button>
-        )}
+
+          <button
+            className="btn btn-play"
+            onClick={() => setIsPlaying((p) => !p)}
+            title={isPlaying ? 'Pause' : 'Play'}
+            id={withIds ? 'play-pause-btn' : undefined}
+            aria-label={isPlaying ? 'Pause' : 'Play'}
+            disabled={!canTogglePlayback}
+            tabIndex={hidden || hidePlaybackControls ? -1 : 0}
+          >
+            {isMobileLayout && isPreviewModeEnabled ? (
+              <StopwatchIcon
+                countdown={previewCountdown}
+                className="transport-icon transport-icon-preview"
+              />
+            ) : isPlaying ? (
+              <PauseIcon />
+            ) : (
+              <PlayIcon />
+            )}
+          </button>
+
+          <button
+            className="btn btn-icon"
+            onClick={onNext}
+            title="Next"
+            id={withIds ? 'next-btn' : undefined}
+            aria-label="Next video"
+            tabIndex={hidden || hidePlaybackControls ? -1 : 0}
+          >
+            <NextIcon />
+          </button>
+
+          {showModeButtons && (
+            <button
+              className={`btn btn-icon${isPreviewModeEnabled ? ' active' : ''}`}
+              onClick={onTogglePreview}
+              title="Preview mode"
+              aria-label="Preview mode"
+              aria-pressed={isPreviewModeEnabled}
+              tabIndex={hidden || hidePlaybackControls ? -1 : 0}
+            >
+              <StopwatchIcon
+                countdown={previewCountdown}
+                className="transport-icon transport-icon-preview"
+              />
+            </button>
+          )}
+        </div>
+        <div className="playback-controls-face playback-controls-back" />
       </div>
     );
   }

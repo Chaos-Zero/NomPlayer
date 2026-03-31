@@ -11189,3 +11189,184 @@ body.is-resizing .resize-handle {
     max-width: 320px;
   }
 }
+
+/* Redesigned Premium Footer */
+.detached-footer-premium-container {
+  display: grid;
+  grid-template-columns: 1fr 2fr 1fr;
+  align-items: center;
+  gap: 2rem;
+  width: 100%;
+  height: 100%;
+  padding: 0 1rem;
+}
+
+.detached-footer-left {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.detached-footer-center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.footer-playback-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1.5rem;
+}
+
+.footer-control-btn {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  border-radius: 50%;
+}
+
+.footer-control-btn:hover {
+  color: var(--text-primary);
+  background: var(--bg-glass-hover);
+  transform: scale(1.1);
+}
+
+.footer-control-btn.active {
+  color: var(--accent);
+}
+
+.footer-control-btn.play-pause {
+  background: var(--accent);
+  color: white;
+  width: 40px;
+  height: 40px;
+  box-shadow: 0 0 15px var(--accent-glow);
+}
+
+.footer-control-btn.play-pause:hover {
+  transform: scale(1.15);
+  background: var(--accent-hover);
+}
+
+.footer-control-btn svg {
+  width: 20px;
+  height: 20px;
+}
+
+.footer-progress-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  width: 100%;
+  margin-top: 4px;
+}
+
+.footer-time-label {
+  font-family: var(--font-mono, monospace);
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  min-width: 40px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.footer-progress-slider {
+  flex: 1;
+  -webkit-appearance: none;
+  appearance: none;
+  background: var(--border);
+  height: 4px;
+  border-radius: 2px;
+  outline: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.footer-progress-slider:hover {
+  height: 6px;
+  background: rgba(var(--accent-rgb), 0.3);
+}
+
+.theme-light .footer-progress-slider:hover {
+  background: rgba(var(--accent-rgb), 0.15);
+}
+
+.footer-progress-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 12px;
+  height: 12px;
+  background: var(--accent);
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: 0 0 10px var(--accent-glow);
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.footer-progress-slider:hover::-webkit-slider-thumb {
+  opacity: 1;
+}
+
+.detached-footer-right {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+/* 3D Rotation for TopBar Controls */
+.playback-controls-stage {
+  position: relative;
+  width: fit-content;
+  height: fit-content;
+  perspective: 1000px;
+  transform-style: preserve-3d;
+}
+
+.playback-controls-front,
+.playback-controls-face {
+  backface-visibility: hidden;
+  transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  align-items: center;
+}
+
+.playback-controls-back {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  transform: rotateX(180deg);
+  background: transparent;
+  pointer-events: none;
+}
+
+.playback-controls-stage.flipped .playback-controls-front {
+  transform: rotateX(-180deg);
+  pointer-events: none;
+  opacity: 0;
+}
+
+.playback-controls-stage.flipped .playback-controls-back {
+  transform: rotateX(0);
+  opacity: 1;
+}
+
+@media (max-width: 960px) {
+  .detached-footer-premium-container {
+    display: none; /* App.jsx doesn't render it on mobile anyway */
+  }
+}

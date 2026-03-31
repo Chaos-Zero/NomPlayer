@@ -75,10 +75,19 @@ import {
 } from './lib/trackCatalog.js';
 import { getSupabaseClient, isSupabaseConfigured } from './lib/supabase.js';
 import {
+  formatTime,
   getYouTubeThumbnailUrl,
   parseYouTubeInput,
   singleVideoEntry,
 } from './utils/youtube.js';
+import {
+  PreviousIcon,
+  NextIcon,
+  PlayIcon,
+  PauseIcon,
+  FastForwardIcon,
+  PlaylistPlusIcon,
+} from './components/Icons.jsx';
 
 const LOGOUT_TRANSITION_MS = 260;
 const DISCORD_OAUTH_SEEN_STORAGE_KEY = 'discord_oauth_seen';
@@ -385,19 +394,6 @@ function stripOAuthErrorParamsFromUrl() {
   window.history.replaceState(window.history.state, '', url.toString());
 }
 
-function PlaylistPlusIcon() {
-  return (
-    <svg
-      className="collection-icon"
-      viewBox="0 0 24 24"
-      aria-hidden="true"
-      fill="currentColor"
-    >
-      <path d="M14 10H2v2h12v-2zm0-4H2v2h12V6zm4 8v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zM2 16h8v-2H2v2z" />
-    </svg>
-  );
-}
-
 export default function App() {
   const isMobileLayout = useMediaQuery('(max-width: 960px)');
   const supabase = getSupabaseClient();
@@ -538,6 +534,9 @@ export default function App() {
   const [isAuthReady, setIsAuthReady] = useState(!isSupabaseConfigured);
   const [isAuthSubmitting, setIsAuthSubmitting] = useState(false);
   const [authDialogMode, setAuthDialogMode] = useState(null);
+  const [footerCurrentTime, setFooterCurrentTime] = useState(0);
+  const [footerDuration, setFooterDuration] = useState(0);
+  const videoPlayerRef = useRef(null);
   const [authMessage, setAuthMessage] = useState('');
   const [authError, setAuthError] = useState('');
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -3977,16 +3976,27 @@ export default function App() {
     return globalCommentedVideoIds.has(currentVideo.videoId);
   }, [currentVideo?.videoId, globalCommentedVideoIds]);
 
+  const handleSeek = useCallback((e) => {
+    const newTime = parseFloat(e.target.value);
+    setFooterCurrentTime(newTime);
+    videoPlayerRef.current?.seekTo(newTime);
+  }, []);
+
   const persistentPlayer = shouldRenderPersistentPlayer ? (
     <div
       key="persistent-player-surface"
       className={`player-surface player-surface-${playerPresentation}${hasDetachedFooter ? ' detached-footer' : ''}${isMobileDetachedFooter ? ' mobile-detached-footer' : ''}${isPlaying && !isActuallySettling ? ' playing' : ''}${isDetachedFooterEntering ? ' entering' : ''}${isActuallySettling ? ' settling' : ''}${isPlayerRevealing ? ' revealing' : ''}${isLogoutTransitioning ? ' logging-out' : ''}`}
     >
       <VideoPlayer
+        ref={videoPlayerRef}
         video={currentVideo}
         isPlaying={isPlaying}
         onVideoEnd={handleVideoEnd}
         onPlaybackChange={handlePlayerPlaybackChange}
+        onProgressUpdate={({ currentTime, duration }) => {
+          setFooterCurrentTime(currentTime);
+          setFooterDuration(duration);
+        }}
         onPrev={handlePrev}
         onNext={handleNext}
         onTogglePlay={() =>
@@ -4013,18 +4023,80 @@ export default function App() {
       />
 
       {isDesktopDetachedFooter && (
-        <>
-          <div className="now-playing-footer">
-            <span className="now-playing-footer-dot-slot">
-              {isPlaying && <span className="now-playing-dot" />}
-            </span>
-            <ScrollingText
-              className="now-playing-footer-title"
-              text={currentVideoDisplayTitle}
-            />
+        <div className="detached-footer-premium-container">
+          {/* Left Block: Now Playing */}
+          <div className="detached-footer-left">
+            <div className="now-playing-footer">
+              <span className="now-playing-footer-dot-slot">
+                {isPlaying && <span className="now-playing-dot" />}
+              </span>
+              <ScrollingText
+                className="now-playing-footer-title"
+                text={currentVideoDisplayTitle}
+              />
+            </div>
           </div>
 
-          <div className="detached-footer-actions">
+          {/* Center Block: Controls & Progress */}
+          <div className="detached-footer-center">
+            <div className="footer-playback-controls">
+              <button
+                className={`footer-control-btn shuffle${isShuffleEnabled ? ' active' : ''}`}
+                onClick={handleShufflePlaylist}
+                title="Shuffle"
+              >
+                🔀
+              </button>
+              <button
+                className="footer-control-btn"
+                onClick={handlePrev}
+                title="Previous"
+              >
+                <PreviousIcon />
+              </button>
+              <button
+                className="footer-control-btn play-pause"
+                onClick={() => handleSetIsPlaying((p) => !p)}
+                title={isPlaying ? 'Pause' : 'Play'}
+              >
+                {isPlaying ? <PauseIcon /> : <PlayIcon />}
+              </button>
+              <button
+                className="footer-control-btn"
+                onClick={handleNext}
+                title="Next"
+              >
+                <NextIcon />
+              </button>
+              <button
+                className={`footer-control-btn preview${isPreviewModeEnabled ? ' active' : ''}`}
+                onClick={handleTogglePreviewMode}
+                title="Preview"
+              >
+                <FastForwardIcon />
+              </button>
+            </div>
+            <div className="footer-progress-row">
+              <span className="footer-time-label">
+                {formatTime(footerCurrentTime)}
+              </span>
+              <input
+                type="range"
+                className="footer-progress-slider"
+                min={0}
+                max={footerDuration || 0}
+                step={0.1}
+                value={footerCurrentTime}
+                onChange={handleSeek}
+              />
+              <span className="footer-time-label">
+                {formatTime(footerDuration)}
+              </span>
+            </div>
+          </div>
+
+          {/* Right Block: Actions */}
+          <div className="detached-footer-right">
             <button
               className={`btn btn-icon add-to-playlist-btn detached-footer-add-btn${isCurrentVideoInPlaylist ? ' hidden' : ''}`}
               type="button"
@@ -4085,7 +4157,7 @@ export default function App() {
               {currentSupportGlyph}
             </button>
           </div>
-        </>
+        </div>
       )}
 
       {/* Feedback panel moved out of footer so it can be anchored anywhere */}
@@ -4118,6 +4190,9 @@ export default function App() {
           theme={theme}
           onToggleTheme={handleToggleTheme}
           isPlaying={isPlaying}
+          hidePlaybackControls={
+            isPlaying && activePage !== 'player' && !isMobileLayout
+          }
           setIsPlaying={handleSetIsPlaying}
           onPrev={handlePrev}
           onNext={handleNext}
