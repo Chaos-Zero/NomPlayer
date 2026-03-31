@@ -3905,6 +3905,7 @@ export default function App() {
       }
 
       setActivePage(nextPage);
+      setIsFeedbackPanelOpen(false);
       setIsMobileNavOpen(false);
       if (!isMobileLayout && nextPage !== 'player') {
         setIsDesktopOverlayPlaylistOpen(false);

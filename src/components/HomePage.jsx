@@ -1320,7 +1320,9 @@ export default function HomePage({
                 />
               )}
               <div className="dashboard-nominations-carousel-container animate-fade-in">
-                <ThreeDCarousel autoRotate={!expandedUserId}>
+                <ThreeDCarousel
+                  autoRotate={!expandedUserId && !isFeedbackPanelOpen}
+                >
                   {visibleNominationUpdates.map((update) => (
                     <NominationUpdateCard
                       key={update.userId}

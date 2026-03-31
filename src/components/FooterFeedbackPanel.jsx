@@ -1,7 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import { fetchCommunityFeedback, upsertUserFeedback } from '../lib/feedback.js';
 import { ingestYouTubeTrackSources } from '../lib/trackCatalog.js';
-import { getDisplayProfileName } from '../lib/playerState.js';
+import {
+  getDisplayProfileName,
+  deriveProfileAvatarUrl,
+} from '../lib/playerState.js';
 import { SpeechBubbleIcon, HeartIcon, LockIcon } from './FavouritesPanel.jsx';
 
 export default function FooterFeedbackPanel({
@@ -228,11 +231,6 @@ export default function FooterFeedbackPanel({
     }
   };
 
-  const deriveProfileAvatarUrl = (profile) => {
-    if (profile?.avatar_url) return profile.avatar_url;
-    return null;
-  };
-
   return (
     <div
       className={`list-explorer-info-panel footer-feedback-popover is-open${anchorRect ? ' is-anchored' : ''}`}
@@ -298,19 +296,33 @@ export default function FooterFeedbackPanel({
               <h4>COMMUNITY SUPPORT</h4>
               <div className="list-explorer-support-summary">
                 <div className="list-explorer-support-icons">
-                  <div
-                    className="support-badge normal"
-                    style={{
-                      background: 'rgba(245, 158, 11, 0.15)',
-                      borderColor: '#f59e0b',
-                      color: '#fbbf24',
-                    }}
-                  >
-                    <HeartIcon />
-                    <span style={{ marginLeft: '6px' }}>
-                      {supportSummary.total}
-                    </span>
-                  </div>
+                  {supportSummary[3] > 0 && (
+                    <div
+                      className="support-badge highest"
+                      title={`${supportSummary[3]} Highest Supports`}
+                    >
+                      <LockIcon />
+                      <span>{supportSummary[3]}</span>
+                    </div>
+                  )}
+                  {supportSummary[2] > 0 && (
+                    <div
+                      className="support-badge high"
+                      title={`${supportSummary[2]} High Supports`}
+                    >
+                      <HeartIcon />
+                      <span>{supportSummary[2]}</span>
+                    </div>
+                  )}
+                  {supportSummary[1] > 0 && (
+                    <div
+                      className="support-badge normal"
+                      title={`${supportSummary[1]} Normal Supports`}
+                    >
+                      <HeartIcon />
+                      <span>{supportSummary[1]}</span>
+                    </div>
+                  )}
                 </div>
               </div>
             </section>
@@ -333,59 +345,32 @@ export default function FooterFeedbackPanel({
               <div className="list-explorer-peer-list">
                 {peerFeedback.map((f, i) => (
                   <div key={i} className="list-explorer-peer-item">
-                    <div className="list-explorer-peer-header">
-                      <div
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '10px',
-                        }}
-                      >
-                        <img
-                          src={deriveProfileAvatarUrl(f.profiles)}
-                          alt=""
-                          style={{
-                            width: '32px',
-                            height: '32px',
-                            borderRadius: '50%',
-                            border: '1.5px solid #6366f1',
-                          }}
-                          onError={(e) => {
-                            e.target.style.display = 'none';
-                          }}
-                        />
-                        <span
-                          className="list-explorer-peer-user"
-                          style={{ color: '#fbbf24' }}
-                        >
+                    <img
+                      src={deriveProfileAvatarUrl(
+                        f.profiles,
+                        f.profiles?.avatar_url,
+                      )}
+                      alt=""
+                      className="list-explorer-peer-avatar"
+                    />
+                    <div className="list-explorer-peer-content">
+                      <div className="list-explorer-peer-header">
+                        <span className="list-explorer-peer-user">
                           {getDisplayProfileName(
                             f.profiles?.username,
                             'Anonymous',
                           )}
                         </span>
+                        {f.rating && (
+                          <span className="list-explorer-peer-rating">
+                            {f.rating}/10
+                          </span>
+                        )}
                       </div>
-                      {f.rating && (
-                        <span
-                          className="list-explorer-peer-rating"
-                          style={{
-                            background: 'rgba(124, 58, 237, 0.2)',
-                            padding: '2px 8px',
-                            borderRadius: '4px',
-                            color: '#c4b5fd',
-                          }}
-                        >
-                          {f.rating}/10
-                        </span>
+                      {f.note && (
+                        <p className="list-explorer-peer-note">{f.note}</p>
                       )}
                     </div>
-                    {f.note && (
-                      <p
-                        className="list-explorer-peer-note"
-                        style={{ marginTop: '8px' }}
-                      >
-                        {f.note}
-                      </p>
-                    )}
                   </div>
                 ))}
               </div>
