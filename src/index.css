@@ -2114,9 +2114,10 @@ body {
   align-items: center;
   gap: 24px;
   z-index: 110;
-  opacity: 1;
-  transform: translateY(0);
-  pointer-events: auto;
+  opacity: 0;
+  transform: translateY(40px);
+  pointer-events: none;
+  visibility: hidden;
   transition:
     opacity 0.22s ease,
     transform 0.34s cubic-bezier(0.16, 1, 0.3, 1),
@@ -2124,19 +2125,22 @@ body {
     box-shadow var(--transition);
 }
 
-.player-surface.detached-footer:not(.playing) {
-  opacity: 0;
-  transform: translateY(40px);
-  pointer-events: none;
-}
-
 .player-surface.detached-footer.playing {
   opacity: 1;
   transform: translateY(0);
+  pointer-events: auto;
+  visibility: visible;
 }
 
 .player-surface.detached-footer.playing.entering {
   animation: footer-rise 0.34s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.player-surface.detached-footer.settling {
+  opacity: 0 !important;
+  pointer-events: none !important;
+  transition: none !important;
+  visibility: hidden !important;
 }
 
 .player-surface.detached-footer.logging-out {

@@ -478,6 +478,8 @@ export default function App() {
   const [isDetachedFooterPending, setIsDetachedFooterPending] = useState(false);
   const [isPlayerRevealPending, setIsPlayerRevealPending] = useState(false);
   const [isPlayerRevealing, setIsPlayerRevealing] = useState(false);
+  const [isDetachedFooterSettling, setIsDetachedFooterSettling] =
+    useState(false);
   const [isLogoutTransitioning, setIsLogoutTransitioning] = useState(false);
   const supportToastTimeoutRef = useRef(null);
   const appToastTimeoutRef = useRef(null);
@@ -499,6 +501,7 @@ export default function App() {
   const detachedFooterFrameRef = useRef(0);
   const playerRevealTimeoutRef = useRef(0);
   const playerRevealFrameRef = useRef(0);
+  const detachedFooterSettlingDelayTimeoutRef = useRef(0);
   const logoutTransitionTimeoutRef = useRef(0);
   const guestSyncTimeoutRef = useRef(0);
   const authSyncFlushTimeoutRef = useRef(0);
@@ -609,10 +612,6 @@ export default function App() {
   useEffect(() => {
     currentVideoIdRef.current = currentVideoId;
   }, [currentVideoId]);
-
-  useEffect(() => {
-    isPlayingRef.current = isPlaying;
-  }, [isPlaying]);
 
   useEffect(() => {
     activePageRef.current = activePage;
@@ -3751,6 +3750,12 @@ export default function App() {
       detachedFooterTimeoutRef.current = 0;
     }
 
+    if (detachedFooterSettlingDelayTimeoutRef.current) {
+      window.clearTimeout(detachedFooterSettlingDelayTimeoutRef.current);
+      detachedFooterSettlingDelayTimeoutRef.current = 0;
+    }
+
+    setIsDetachedFooterSettling(false);
     setIsDetachedFooterPending(false);
     setIsDetachedFooterEntering(false);
   }, []);
@@ -3794,26 +3799,55 @@ export default function App() {
       !previousDetachedFooterIntent &&
       shouldShowDetachedFooter &&
       !isDetachedFooterPending &&
-      !isDetachedFooterEntering
+      !isDetachedFooterEntering &&
+      !isDetachedFooterSettling
     ) {
-      startDetachedFooterEntrance();
+      const wasStartedOutside = !isPlayingRef.current;
+      if (wasStartedOutside) {
+        if (detachedFooterSettlingDelayTimeoutRef.current) {
+          window.clearTimeout(detachedFooterSettlingDelayTimeoutRef.current);
+        }
+        setIsDetachedFooterSettling(true);
+        detachedFooterSettlingDelayTimeoutRef.current = window.setTimeout(
+          () => {
+            detachedFooterSettlingDelayTimeoutRef.current = 0;
+            setIsDetachedFooterSettling(false);
+            startDetachedFooterEntrance();
+          },
+          250,
+        );
+      } else {
+        startDetachedFooterEntrance();
+      }
       return;
     }
 
     if (
       previousDetachedFooterIntent &&
       !shouldShowDetachedFooter &&
-      (isDetachedFooterPending || isDetachedFooterEntering)
+      (isDetachedFooterPending ||
+        isDetachedFooterEntering ||
+        isDetachedFooterSettling)
     ) {
+      if (detachedFooterSettlingDelayTimeoutRef.current) {
+        window.clearTimeout(detachedFooterSettlingDelayTimeoutRef.current);
+        detachedFooterSettlingDelayTimeoutRef.current = 0;
+      }
+      setIsDetachedFooterSettling(false);
       clearDetachedFooterEntrance();
     }
   }, [
     clearDetachedFooterEntrance,
     isDetachedFooterEntering,
     isDetachedFooterPending,
+    isDetachedFooterSettling,
     shouldShowDetachedFooter,
     startDetachedFooterEntrance,
   ]);
+
+  useEffect(() => {
+    isPlayingRef.current = isPlaying;
+  }, [isPlaying]);
 
   const handleNavigate = useCallback(
     (nextPage) => {
@@ -3856,6 +3890,7 @@ export default function App() {
       }
 
       if (shouldAnimateDetachedFooter) {
+        setIsDetachedFooterSettling(false);
         startDetachedFooterEntrance();
       } else {
         clearDetachedFooterEntrance();
@@ -3903,8 +3938,16 @@ export default function App() {
     isListExplorerPage;
   const shouldRenderPersistentPlayer = isPlayerPage || Boolean(currentVideo);
   const canTogglePlayback = Boolean(transientVideo) || playlist.length > 0;
+  const isCurrentlyBecomingDetached =
+    shouldShowDetachedFooter &&
+    !previousDetachedFooterIntentRef.current &&
+    !isPlayingRef.current;
+  const isActuallySettling =
+    isDetachedFooterSettling || isCurrentlyBecomingDetached;
+
   const hasDetachedFooter =
-    shouldShowDetachedFooter && !isDetachedFooterPending;
+    shouldShowDetachedFooter &&
+    (!isDetachedFooterPending || isActuallySettling);
   const isDesktopDetachedFooter = hasDetachedFooter && !isMobileLayout;
   const isMobileDetachedFooter = hasDetachedFooter && isMobileLayout;
   const playerPresentation = isPlayerPage
@@ -3935,7 +3978,7 @@ export default function App() {
   const persistentPlayer = shouldRenderPersistentPlayer ? (
     <div
       key="persistent-player-surface"
-      className={`player-surface player-surface-${playerPresentation}${hasDetachedFooter ? ' detached-footer' : ''}${isMobileDetachedFooter ? ' mobile-detached-footer' : ''}${isPlaying ? ' playing' : ''}${isDetachedFooterEntering ? ' entering' : ''}${isPlayerRevealing ? ' revealing' : ''}${isLogoutTransitioning ? ' logging-out' : ''}`}
+      className={`player-surface player-surface-${playerPresentation}${hasDetachedFooter ? ' detached-footer' : ''}${isMobileDetachedFooter ? ' mobile-detached-footer' : ''}${isPlaying && !isActuallySettling ? ' playing' : ''}${isDetachedFooterEntering ? ' entering' : ''}${isActuallySettling ? ' settling' : ''}${isPlayerRevealing ? ' revealing' : ''}${isLogoutTransitioning ? ' logging-out' : ''}`}
     >
       <VideoPlayer
         video={currentVideo}
