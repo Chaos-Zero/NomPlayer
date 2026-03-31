@@ -182,6 +182,19 @@ function NominationUpdateCard({
   const displayIdentity = parseStoredProfileUsername(update.username);
   const nominationCount = update.nominations.length;
 
+  const resolveTrack = (video) => {
+    const meta = metadataById[video.videoId];
+    if (!meta) return video;
+    return {
+      ...video,
+      trackTitle: meta.trackTitle || video.trackTitle,
+      gameTitle: meta.gameTitle || video.gameTitle,
+      title: meta.trackTitle
+        ? `${meta.gameTitle} - ${meta.trackTitle}`
+        : video.title,
+    };
+  };
+
   return (
     <>
       <article
@@ -263,7 +276,7 @@ function NominationUpdateCard({
                           type="button"
                           onClick={(e) => {
                             e.stopPropagation();
-                            onPlayTrack(video);
+                            onPlayTrack(resolveTrack(video));
                           }}
                           title="Play now"
                         >
@@ -274,7 +287,7 @@ function NominationUpdateCard({
                           type="button"
                           onClick={(e) => {
                             e.stopPropagation();
-                            onAddTrack([video]);
+                            onAddTrack([resolveTrack(video)]);
                           }}
                           title="Add to current playlist"
                         >
@@ -387,7 +400,7 @@ function NominationUpdateCard({
                         className="peek-action-btn"
                         onClick={(e) => {
                           e.stopPropagation();
-                          onAddTrack?.([video]);
+                          onAddTrack?.([resolveTrack(video)]);
                         }}
                         title="Add to playlist"
                       >
@@ -397,7 +410,7 @@ function NominationUpdateCard({
                         className="peek-action-btn peek-action-btn-play"
                         onClick={(e) => {
                           e.stopPropagation();
-                          onPlayTrack?.(video);
+                          onPlayTrack?.(resolveTrack(video));
                         }}
                         title="Play now"
                       >
@@ -560,6 +573,22 @@ export default function HomePage({
   const [trackMetadataById, setTrackMetadataById] = useState({});
   const [isShowingFallback, setIsShowingFallback] = useState(false);
 
+  const resolveTrack = useCallback(
+    (video) => {
+      const meta = trackMetadataById[video.videoId];
+      if (!meta) return video;
+      return {
+        ...video,
+        trackTitle: meta.trackTitle || video.trackTitle,
+        gameTitle: meta.gameTitle || video.gameTitle,
+        title: meta.trackTitle
+          ? `${meta.gameTitle} - ${meta.trackTitle}`
+          : video.title || meta.trackTitle || 'Unknown Track',
+      };
+    },
+    [trackMetadataById],
+  );
+
   const currentPlaylistIds = useMemo(
     () => new Set(currentPlaylist.map((video) => video.videoId)),
     [currentPlaylist],
@@ -609,9 +638,6 @@ export default function HomePage({
     );
   }, [discoveryCandidates, featuredDiscoveryId, isShowingFallback]);
 
-  const activeFeaturedDiscoveryId =
-    featuredDiscoveryCandidate?.videoId ?? featuredDiscoveryId ?? null;
-
   const totalVisibleNominationCount = useMemo(
     () =>
       visibleNominationUpdates.reduce(
@@ -619,14 +645,6 @@ export default function HomePage({
         0,
       ),
     [visibleNominationUpdates],
-  );
-
-  const showActionNotice = useCallback(
-    (message) => {
-      if (!message) return;
-      onShowToast?.(message);
-    },
-    [onShowToast],
   );
 
   useEffect(() => {
@@ -804,77 +822,61 @@ export default function HomePage({
     };
   }, [supabase, discoveryCandidates, visibleNominationUpdates, isAuthReady]);
 
-  const handleQueueVideos = useCallback(
-    (videos, emptyMessage) => {
-      if (!videos?.length) {
-        showActionNotice(emptyMessage);
-        return;
-      }
-
-      const addResult = onAddToPlaylist?.(videos);
-      const addedCount =
-        typeof addResult === 'number'
-          ? addResult
-          : (addResult?.addedCount ?? 0);
-
-      showActionNotice(
-        addedCount > 0
-          ? addedCount === 1
-            ? 'Added 1 song to your current playlist'
-            : `Added ${addedCount} songs to your current playlist`
-          : emptyMessage,
+  const handleAddDiscoveryCandidate = useCallback(
+    (videoOrArray) => {
+      const videos = Array.isArray(videoOrArray)
+        ? videoOrArray
+        : [videoOrArray];
+      const resolved = videos.map((v) => resolveTrack(v));
+      onAddToPlaylist?.(resolved);
+      onShowToast?.(
+        `${resolved.length} ${resolved.length === 1 ? 'song' : 'songs'} added to playlist`,
       );
     },
-    [onAddToPlaylist, showActionNotice],
+    [onAddToPlaylist, onShowToast, resolveTrack],
+  );
+
+  const handlePlayDiscoveryCandidate = useCallback(
+    (video) => {
+      onPlayNow?.(resolveTrack(video));
+      onNavigateToPlayer?.();
+    },
+    [onPlayNow, onNavigateToPlayer, resolveTrack],
   );
 
   const handleAddWholeList = useCallback(
     (update) => {
-      handleQueueVideos(
-        update.nominations,
-        `${getDisplayProfileName(update.username)}'s nominations are already in your current playlist.`,
-      );
+      const resolved = update.nominations.map((v) => resolveTrack(v));
+      onAddToPlaylist?.(resolved);
+      onShowToast?.(`Added all ${resolved.length} songs to playlist`);
     },
-    [handleQueueVideos],
+    [onAddToPlaylist, onShowToast, resolveTrack],
   );
 
   const handleAddUpdates = useCallback(
     (update) => {
-      const nextVideos = update.nominations.filter(
-        (video) =>
-          !currentPlaylistIds.has(video.videoId) &&
-          !listenedStatusById[video.videoId],
+      const unplaced = update.nominations.filter(
+        (v) => !currentPlaylistIds.has(v.videoId),
       );
-      handleQueueVideos(
-        nextVideos,
-        `No unheard nominations from ${getDisplayProfileName(update.username)} for your current playlist.`,
-      );
-    },
-    [currentPlaylistIds, listenedStatusById, handleQueueVideos],
-  );
 
-  const handleAddDiscoveryCandidate = useCallback(
-    (candidate) => {
-      handleQueueVideos(
-        [candidate],
-        'That song is already in your current playlist.',
+      if (unplaced.length === 0) {
+        onShowToast?.('All songs from this list are already in your playlist');
+        return;
+      }
+
+      const resolved = unplaced.map((v) => resolveTrack(v));
+      onAddToPlaylist?.(resolved);
+      onShowToast?.(
+        `Added ${resolved.length} new ${resolved.length === 1 ? 'song' : 'songs'} to playlist`,
       );
     },
-    [handleQueueVideos],
-  );
-
-  const handlePlayDiscoveryCandidate = useCallback(
-    (candidate) => {
-      onPlayNow?.(candidate);
-      showActionNotice(`Playing ${candidate.title}`);
-    },
-    [onPlayNow, showActionNotice],
+    [currentPlaylistIds, onAddToPlaylist, onShowToast, resolveTrack],
   );
 
   const handleFindNewSong = useCallback(async () => {
     const nextCandidate = pickNextDiscoveryCandidate(
       discoveryCandidates,
-      activeFeaturedDiscoveryId,
+      featuredDiscoveryId,
     );
 
     if (nextCandidate) {
@@ -898,19 +900,19 @@ export default function HomePage({
             isVgmcUnplaced: true,
           });
           setIsShowingFallback(true);
-          showActionNotice('Showcasing a random unplaced VGMC track!');
+          onShowToast?.('Showcasing a random unplaced VGMC track!');
           return;
         }
       } catch {
-        showActionNotice('Failed to fetch a random unplaced track.');
+        onShowToast?.('Failed to fetch a random unplaced track.');
       }
     }
 
-    showActionNotice('No fresh nomination picks are available right now.');
+    onShowToast?.('No fresh nomination picks are available right now.');
   }, [
-    activeFeaturedDiscoveryId,
+    featuredDiscoveryId,
     discoveryCandidates,
-    showActionNotice,
+    onShowToast,
     listenedStatusById,
     supabase,
   ]);
