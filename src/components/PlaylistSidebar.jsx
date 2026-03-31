@@ -344,6 +344,7 @@ export default function PlaylistSidebar({
   onOpenSupportDropdown,
   onExport,
   onSavePlaylist,
+  activePage,
 }) {
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -379,6 +380,10 @@ export default function PlaylistSidebar({
     [playlist, selectedIdSet],
   );
   const canReorder = !selectionMode && (!isShuffleEnabled || showOriginalOrder);
+  useEffect(() => {
+    setSelectionMode(false);
+    setSelectedIds([]);
+  }, [activePage]);
 
   useEffect(() => {
     function clearGesture() {

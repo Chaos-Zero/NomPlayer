@@ -4311,6 +4311,7 @@ export default function App() {
               authUser={authUser}
               onExport={handleOpenExportModal}
               onSavePlaylist={handleCreateYTPlaylist}
+              activePage={activePage}
             />
             {!effectivePlaylistCollapsed && apiKeyMissing && (
               <div className="api-key-notice">
