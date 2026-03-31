@@ -10,7 +10,55 @@ export default function FooterFeedbackPanel({
   authUser,
   onClose,
   onShowToast,
+  anchorRect,
 }) {
+  const [popoverStyle, setPopoverStyle] = useState({});
+
+  useEffect(() => {
+    if (!anchorRect) {
+      setPopoverStyle({});
+      return;
+    }
+
+    const calculatePosition = () => {
+      const padding = 16;
+      const panelWidth = 400;
+      const vhLimit = window.innerHeight * 0.7;
+      const panelHeight = Math.min(520, vhLimit);
+
+      // Default to showing on the left of the button
+      let left = anchorRect.left - panelWidth - 12;
+      let top = anchorRect.top - panelHeight / 2 + anchorRect.height / 2;
+
+      // If not enough room on left, show on right
+      if (left < padding) {
+        left = anchorRect.left + anchorRect.width + 12;
+      }
+
+      // Final clamping
+      left = Math.max(
+        padding,
+        Math.min(left, window.innerWidth - panelWidth - padding),
+      );
+      top = Math.max(
+        padding,
+        Math.min(top, window.innerHeight - panelHeight - padding),
+      );
+
+      setPopoverStyle({
+        position: 'fixed',
+        left: `${left}px`,
+        top: `${top}px`,
+        bottom: 'auto',
+        right: 'auto',
+        transform: 'none',
+      });
+    };
+
+    calculatePosition();
+    window.addEventListener('resize', calculatePosition);
+    return () => window.removeEventListener('resize', calculatePosition);
+  }, [anchorRect]);
   const [communityData, setCommunityData] = useState({
     feedback: [],
     supports: {},
@@ -141,7 +189,10 @@ export default function FooterFeedbackPanel({
   };
 
   return (
-    <div className="list-explorer-info-panel footer-feedback-popover is-open">
+    <div
+      className={`list-explorer-info-panel footer-feedback-popover is-open${anchorRect ? ' is-anchored' : ''}`}
+      style={popoverStyle}
+    >
       <div className="list-explorer-info-header footer-header">
         <button className="list-explorer-info-close" onClick={onClose}>
           ✕

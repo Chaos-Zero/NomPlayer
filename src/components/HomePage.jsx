@@ -23,6 +23,28 @@ import {
 import ThreeDCarousel from './ThreeDCarousel.jsx';
 
 const DASHBOARD_REFRESH_LIMIT = 8;
+
+const PlayIcon = () => (
+  <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+    <path d="M8 5v14l11-7z" />
+  </svg>
+);
+
+const PlaylistPlusIcon = () => (
+  <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+    <path d="M14 10H2v2h12v-2zm0-4H2v2h12V6zm4 8v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zM2 16h8v-2H2v2z" />
+  </svg>
+);
+
+const SpeechBubbleIcon = () => (
+  <svg viewBox="0 0 20 20" fill="currentColor" width="14" height="14">
+    <path
+      fillRule="evenodd"
+      d="M10 2c-2.236 0-4.43.18-6.57.532a2.31 2.31 0 00-1.93 2.185c-.286 1.9-.447 3.832-.482 5.8a2.301 2.301 0 001.077 2.05L4 14.5V17a1 1 0 001.625.78L8.734 15.1c.42.025.84.042 1.266.05 2.236 0 4.43-.18 6.57-.532a2.31 2.31 0 001.93-2.185c.286-1.9.447-3.832.482-5.8a2.301 2.301 0 00-1.077-2.05L16 3.5V2h-6z"
+      clipRule="evenodd"
+    />
+  </svg>
+);
 const MOBILE_DASHBOARD_COLLAPSE_DEFAULTS = {
   overview: false,
   nominations: false,
@@ -155,6 +177,7 @@ function NominationUpdateCard({
   onAddUpdates,
   onPlayTrack,
   onAddTrack,
+  onShowComments,
 }) {
   const displayIdentity = parseStoredProfileUsername(update.username);
   const nominationCount = update.nominations.length;
@@ -251,7 +274,7 @@ function NominationUpdateCard({
                           type="button"
                           onClick={(e) => {
                             e.stopPropagation();
-                            onAddTrack(video);
+                            onAddTrack([video]);
                           }}
                           title="Add to current playlist"
                         >
@@ -341,6 +364,45 @@ function NominationUpdateCard({
                       <span className="dashboard-update-peek-title">
                         {metadataById[video.videoId]?.trackTitle || video.title}
                       </span>
+                    </div>
+
+                    <div className="dashboard-update-peek-actions">
+                      <button
+                        className="peek-action-btn peek-action-btn-comments"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const rect = e.currentTarget.getBoundingClientRect();
+                          onShowComments?.(video, {
+                            top: rect.top,
+                            left: rect.left,
+                            width: rect.width,
+                            height: rect.height,
+                          });
+                        }}
+                        title="View comments"
+                      >
+                        <SpeechBubbleIcon />
+                      </button>
+                      <button
+                        className="peek-action-btn"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onAddTrack?.([video]);
+                        }}
+                        title="Add to playlist"
+                      >
+                        <PlaylistPlusIcon />
+                      </button>
+                      <button
+                        className="peek-action-btn peek-action-btn-play"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onPlayTrack?.(video);
+                        }}
+                        title="Play now"
+                      >
+                        <PlayIcon />
+                      </button>
                     </div>
                   </div>
                 ))}
@@ -473,6 +535,7 @@ export default function HomePage({
   listenedStatusById = {},
   onAddToPlaylist,
   onPlayNow,
+  onShowComments,
   onNavigateToPlayer,
   onShowToast,
   isAuthReady = true,
@@ -1211,6 +1274,7 @@ export default function HomePage({
                       onAddUpdates={handleAddUpdates}
                       onPlayTrack={handlePlayDiscoveryCandidate}
                       onAddTrack={handleAddDiscoveryCandidate}
+                      onShowComments={onShowComments}
                     />
                   ))}
                 </ThreeDCarousel>

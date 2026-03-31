@@ -1613,6 +1613,58 @@ body {
   line-height: 1.2;
 }
 
+.dashboard-update-peek-actions {
+  display: none;
+  align-items: center;
+  gap: 12px;
+  padding-left: 8px;
+  animation: peekActionFadeIn 0.2s ease-out;
+}
+
+.dashboard-update-peek-row:hover .dashboard-update-peek-actions {
+  display: flex;
+}
+
+.peek-action-btn {
+  background: none;
+  border: none;
+  padding: 4px;
+  cursor: pointer;
+  color: var(--text-secondary);
+  opacity: 0.6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  border-radius: 6px;
+}
+
+.peek-action-btn:hover {
+  opacity: 1;
+  color: var(--accent-light);
+  background: var(--bg-glass);
+  transform: translateY(-1px);
+}
+
+.peek-action-btn-comments:hover {
+  color: var(--accent-info);
+}
+
+.peek-action-btn-play:hover {
+  color: #10b981; /* Green for play */
+}
+
+@keyframes peekActionFadeIn {
+  from {
+    opacity: 0;
+    transform: translateX(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
 .dashboard-update-footer {
   margin-top: 12px;
   display: flex;
@@ -10618,9 +10670,9 @@ body.is-resizing .resize-handle {
 
 /* ─── Footer Feedback Popover ─── */
 .footer-feedback-popover {
-  position: absolute !important;
-  bottom: calc(var(--footer-player-h) + 16px) !important;
-  right: 12px !important;
+  position: absolute;
+  bottom: calc(var(--footer-player-h) + 16px);
+  right: 12px;
   width: 400px !important;
   max-width: calc(100vw - 24px) !important;
   height: min(520px, 70vh) !important;
@@ -10629,7 +10681,7 @@ body.is-resizing .resize-handle {
   background: var(--bg-surface) !important;
   border: 1px solid var(--border) !important;
   box-shadow: 0 12px 48px rgba(0, 0, 0, 0.6) !important;
-  transform: none !important;
+  transform: none;
   opacity: 1 !important;
   pointer-events: auto !important;
   animation: footerPopoverFadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;

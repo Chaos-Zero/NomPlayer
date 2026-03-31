@@ -531,6 +531,8 @@ export default function App() {
   const [authError, setAuthError] = useState('');
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isFeedbackPanelOpen, setIsFeedbackPanelOpen] = useState(false);
+  const [feedbackTrack, setFeedbackTrack] = useState(null);
+  const [feedbackPosition, setFeedbackPosition] = useState(null);
   const [globalCommentedVideoIds, setGlobalCommentedVideoIds] = useState(
     new Set(),
   );
@@ -3117,6 +3119,18 @@ export default function App() {
     ],
   );
 
+  const handleShowComments = useCallback((video, position = null) => {
+    setFeedbackTrack(video);
+    setFeedbackPosition(position);
+    setIsFeedbackPanelOpen(true);
+  }, []);
+
+  const handleCloseFeedbackPanel = useCallback(() => {
+    setIsFeedbackPanelOpen(false);
+    setFeedbackTrack(null);
+    setFeedbackPosition(null);
+  }, []);
+
   const handleAddManyToSupportList = useCallback(
     async (videos) => {
       if (!videos.length) {
@@ -3952,7 +3966,19 @@ export default function App() {
             <button
               className={`btn btn-icon detached-footer-feedback-btn ${isFeedbackPanelOpen ? 'active' : ''} ${currentVideoHasFeedback ? 'has-feedback' : ''}`}
               type="button"
-              onClick={() => setIsFeedbackPanelOpen(!isFeedbackPanelOpen)}
+              onClick={(e) => {
+                if (isFeedbackPanelOpen) {
+                  handleCloseFeedbackPanel();
+                } else {
+                  const rect = e.currentTarget.getBoundingClientRect();
+                  handleShowComments(currentVideo, {
+                    top: rect.top,
+                    left: rect.left,
+                    width: rect.width,
+                    height: rect.height,
+                  });
+                }
+              }}
               aria-label="View feedback and community activity"
               title="View feedback and community activity"
               disabled={!currentVideo}
@@ -3989,15 +4015,7 @@ export default function App() {
         </>
       )}
 
-      {isFeedbackPanelOpen && currentVideo && (
-        <FooterFeedbackPanel
-          track={currentVideo}
-          supabase={supabase}
-          authUser={authUser}
-          onClose={() => setIsFeedbackPanelOpen(false)}
-          onShowToast={showDefaultAppToast}
-        />
-      )}
+      {/* Feedback panel moved out of footer so it can be anchored anywhere */}
     </div>
   ) : null;
 
@@ -4117,6 +4135,7 @@ export default function App() {
               listenedStatusById={listenedStatusById}
               onAddToPlaylist={handleQueueFromSupportList}
               onPlayNow={handlePlayNowFromSupportList}
+              onShowComments={handleShowComments}
               onNavigateToPlayer={() => handleNavigate('player')}
               onShowToast={(message) =>
                 showDefaultAppToast(message, 'dashboard')
@@ -4409,6 +4428,17 @@ export default function App() {
         tracks={exportTracks}
         onClose={handleRequestCloseExportModal}
       />
+
+      {isFeedbackPanelOpen && (feedbackTrack || currentVideo) && (
+        <FooterFeedbackPanel
+          track={feedbackTrack || currentVideo}
+          supabase={supabase}
+          authUser={authUser}
+          anchorRect={feedbackPosition}
+          onClose={handleCloseFeedbackPanel}
+          onShowToast={showDefaultAppToast}
+        />
+      )}
     </div>
   );
 }
