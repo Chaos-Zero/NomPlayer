@@ -21,6 +21,7 @@ import {
   fetchMaxVgmcNumber,
 } from '../lib/trackCatalog.js';
 import ThreeDCarousel from './ThreeDCarousel.jsx';
+import { ContextMenuPortal } from './ContextMenuPortal.jsx';
 
 const DASHBOARD_REFRESH_LIMIT = 8;
 
@@ -203,6 +204,45 @@ export function NominationUpdateCard({
 }) {
   const displayIdentity = parseStoredProfileUsername(update.username);
   const nominationCount = update.nominations.length;
+  const [contextMenu, setContextMenu] = useState(null);
+
+  const handleContextAction = useCallback(
+    (action, e, video) => {
+      setContextMenu(null);
+      const resolved = resolveTrack(video);
+      if (action === 'play') onPlayTrack(resolved);
+      else if (action === 'add') onAddTrack([resolved]);
+      else if (action === 'support') {
+        if (!supportStatusById[video.videoId]?.isSupported) {
+          onToggleSupport?.(resolved);
+          if (onOpenSupportDropdown && e) {
+            onOpenSupportDropdown(resolved, {
+              top: e.clientY,
+              left: e.clientX,
+            });
+          }
+        } else {
+          onToggleSupport?.(resolved);
+        }
+      } else if (action === 'comments' && e) {
+        onShowComments?.(resolved, {
+          top: e.clientY,
+          left: e.clientX,
+          width: 0,
+          height: 0,
+        });
+      }
+    },
+    [
+      onPlayTrack,
+      onAddTrack,
+      onToggleSupport,
+      onOpenSupportDropdown,
+      onShowComments,
+      resolveTrack,
+      supportStatusById,
+    ],
+  );
 
   const renderPeekRowActivity = (video, index) => {
     const hasSupport = supportStatusById[video.videoId]?.isSupported;
@@ -228,6 +268,15 @@ export function NominationUpdateCard({
         onDoubleClick={(e) => {
           e.stopPropagation();
           onPlayTrack(resolveTrack(video));
+        }}
+        onContextMenu={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          setContextMenu({
+            x: e.clientX,
+            y: e.clientY,
+            video,
+          });
         }}
       >
         <span className="dashboard-update-peek-index" aria-hidden="true">
@@ -517,6 +566,57 @@ export function NominationUpdateCard({
           </>
         )}
       </article>
+
+      {contextMenu && (
+        <ContextMenuPortal
+          x={contextMenu.x}
+          y={contextMenu.y}
+          onClose={() => setContextMenu(null)}
+          className="playlist-context-menu"
+        >
+          <button
+            className="playlist-context-menu-item"
+            onClick={(e) => handleContextAction('play', e, contextMenu.video)}
+          >
+            <span>Play Now</span>
+          </button>
+          <button
+            className="playlist-context-menu-item"
+            onClick={(e) => handleContextAction('add', e, contextMenu.video)}
+          >
+            <span>Add to current playlist</span>
+          </button>
+          <button
+            className={`playlist-context-menu-item ${
+              supportStatusById[contextMenu.video.videoId]?.isSupported
+                ? 'active has-feedback'
+                : ''
+            }`}
+            onClick={(e) =>
+              handleContextAction('support', e, contextMenu.video)
+            }
+            onContextMenu={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              handleContextAction('support', e, contextMenu.video);
+            }}
+          >
+            <span>
+              {supportStatusById[contextMenu.video.videoId]?.isSupported
+                ? 'Remove from support list'
+                : 'Add to support list'}
+            </span>
+          </button>
+          <button
+            className="playlist-context-menu-item"
+            onClick={(e) =>
+              handleContextAction('comments', e, contextMenu.video)
+            }
+          >
+            <span>View activity and comments</span>
+          </button>
+        </ContextMenuPortal>
+      )}
     </>
   );
 }

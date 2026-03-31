@@ -1590,9 +1590,7 @@ body {
 
 .dashboard-update-peek-game {
   font-size: 9px;
-  /* One size smaller than the previous 10px */
   font-weight: 900;
-  /* Extra bold as requested */
   color: var(--accent-light);
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -1604,13 +1602,13 @@ body {
 }
 
 .dashboard-update-peek-title {
+  color: #b0b3b8;
+  font-size: 15px;
+  font-weight: 800;
+  line-height: 1.2;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  color: #b0b3b8; /* Even softer grey for song titles in dark mode */
-  font-size: 15px; /* Decreased from 16px */
-  font-weight: 800;
-  line-height: 1.2;
 }
 
 .dashboard-update-peek-actions {
@@ -1623,6 +1621,20 @@ body {
 
 .dashboard-update-peek-row:hover .dashboard-update-peek-actions {
   display: flex;
+}
+
+.dashboard-update-peek-row.has-activity .dashboard-update-peek-content {
+  padding-right: 32px; /* Reserve space for the activity/speech bubble icon */
+}
+
+/* On hover, let the action toolbar naturally push the text more,
+   but keep the padding if activity is also present */
+.dashboard-update-peek-row:hover .dashboard-update-peek-content {
+  padding-right: 8px; /* Reduce default padding to maximize icon space */
+}
+
+.dashboard-update-peek-row.has-activity:hover .dashboard-update-peek-content {
+  padding-right: 32px;
 }
 
 .dashboard-update-peek-row {
@@ -1669,18 +1681,9 @@ body {
   pointer-events: none;
 }
 
-.dashboard-update-peek-actions {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  opacity: 0;
-  transition: opacity 0.3s ease;
-}
-
-.dashboard-update-peek-row:hover .dashboard-update-peek-actions {
-  opacity: 1;
-  transform: translateX(0);
-}
+/* Consolidation note: Duplicate definition of .dashboard-update-peek-actions removed.
+   The toolbar now correctly disappears from the layout entirely on non-hover to prevent early truncation.
+*/
 
 .peek-action-btn {
   background: none;
