@@ -4163,6 +4163,7 @@ export default function App() {
               supportStatusById={supportStatusById}
               globalCommentedVideoIds={globalCommentedVideoIds}
               listenedStatusById={listenedStatusById}
+              isFeedbackPanelOpen={isFeedbackPanelOpen}
               onAddToPlaylist={handleQueueFromSupportList}
               onPlayNow={handlePlayNowFromSupportList}
               onToggleSupport={handleToggleSupportFromPlaylist}

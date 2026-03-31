@@ -12,31 +12,68 @@ export default function FooterFeedbackPanel({
   onShowToast,
   anchorRect,
 }) {
-  const popoverStyle = useMemo(() => {
-    if (!anchorRect) return {};
+  // To keep the popover aligned when the window resizes (e.g. modal centering)
+  const [windowDimensions, setWindowDimensions] = useState({
+    width: typeof window !== 'undefined' ? window.innerWidth : 1920,
+    height: typeof window !== 'undefined' ? window.innerHeight : 1080,
+  });
 
+  useEffect(() => {
+    const handleResize = () => {
+      setWindowDimensions({
+        width: window.innerWidth,
+        height: window.innerHeight,
+      });
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // Capture the initial window dimensions when the popover opens with a specific anchor
+  const [initialAnchorContext, setInitialAnchorContext] = useState(null);
+  useEffect(() => {
+    if (anchorRect) {
+      setInitialAnchorContext({
+        anchorRect,
+        windowWidth: window.innerWidth,
+        windowHeight: window.innerHeight,
+      });
+    } else {
+      setInitialAnchorContext(null);
+    }
+  }, [anchorRect]);
+
+  const popoverStyle = useMemo(() => {
+    if (!initialAnchorContext) return {};
+
+    const { anchorRect: baseRect, windowWidth: initW } = initialAnchorContext;
     const padding = 16;
     const panelWidth = 400;
-    const vhLimit = window.innerHeight * 0.7;
+    const vhLimit = windowDimensions.height * 0.7;
     const panelHeight = Math.min(520, vhLimit);
 
+    // Dynamic 'drag along' calculation:
+    // If the UI is centered (like the modal), the anchor's left shifts relative to the window center.
+    const centerOffset = baseRect.left - initW / 2;
+    const currentAnchorLeft = windowDimensions.width / 2 + centerOffset;
+
     // Default to showing on the right and aligned with the top of the button
-    let left = anchorRect.left + anchorRect.width + 12;
-    let top = anchorRect.top;
+    let left = currentAnchorLeft + baseRect.width + 12;
+    let top = baseRect.top; // We don't typically center vertically relative to window, but we could if needed
 
     // If not enough room on right, show on left
-    if (left + panelWidth > window.innerWidth - padding) {
-      left = anchorRect.left - panelWidth - 12;
+    if (left + panelWidth > windowDimensions.width - padding) {
+      left = currentAnchorLeft - panelWidth - 12;
     }
 
-    // Final clamping
+    // Final clamping to screen edges
     left = Math.max(
       padding,
-      Math.min(left, window.innerWidth - panelWidth - padding),
+      Math.min(left, windowDimensions.width - panelWidth - padding),
     );
     top = Math.max(
       padding,
-      Math.min(top, window.innerHeight - panelHeight - padding),
+      Math.min(top, windowDimensions.height - panelHeight - padding),
     );
 
     return {
@@ -46,8 +83,9 @@ export default function FooterFeedbackPanel({
       bottom: 'auto',
       right: 'auto',
       transform: 'none',
+      zIndex: 30001,
     };
-  }, [anchorRect]);
+  }, [initialAnchorContext, windowDimensions]);
   const [communityData, setCommunityData] = useState({
     feedback: [],
     supports: {},
@@ -183,6 +221,14 @@ export default function FooterFeedbackPanel({
       style={popoverStyle}
     >
       <div className="list-explorer-info-header footer-header">
+        <div className="footer-feedback-track-info">
+          <div className="footer-feedback-game-title">
+            {track?.gameTitle || track?.game || 'Unknown Game'}
+          </div>
+          <div className="footer-feedback-track-title">
+            {track?.trackTitle || track?.title || 'Unknown Track'}
+          </div>
+        </div>
         <button className="list-explorer-info-close" onClick={onClose}>
           ✕
         </button>
@@ -229,42 +275,38 @@ export default function FooterFeedbackPanel({
             </section>
           )}
 
-          <section className="list-explorer-info-section">
-            <h4>COMMUNITY SUPPORT</h4>
-            <div className="list-explorer-support-summary">
-              {supportSummary.total > 0 ? (
+          {supportSummary.total > 0 && (
+            <section className="list-explorer-info-section">
+              <h4>COMMUNITY SUPPORT</h4>
+              <div className="list-explorer-support-summary">
                 <div className="list-explorer-support-icons">
-                  {supportSummary.total > 0 && (
-                    <div
-                      className="support-badge normal"
-                      style={{
-                        background: 'rgba(245, 158, 11, 0.15)',
-                        borderColor: '#f59e0b',
-                        color: '#fbbf24',
-                      }}
-                    >
-                      <HeartIcon />
-                      <span style={{ marginLeft: '6px' }}>
-                        {supportSummary.total}
-                      </span>
-                    </div>
-                  )}
+                  <div
+                    className="support-badge normal"
+                    style={{
+                      background: 'rgba(245, 158, 11, 0.15)',
+                      borderColor: '#f59e0b',
+                      color: '#fbbf24',
+                    }}
+                  >
+                    <HeartIcon />
+                    <span style={{ marginLeft: '6px' }}>
+                      {supportSummary.total}
+                    </span>
+                  </div>
                 </div>
-              ) : (
-                <p
-                  className="list-explorer-info-empty"
-                  style={{ margin: 0, fontSize: '12px' }}
-                >
-                  No support yet.
-                </p>
-              )}
-            </div>
-          </section>
+              </div>
+            </section>
+          )}
 
           <section className="list-explorer-info-section community">
             <h4>COMMUNITY ACTIVITY</h4>
             {isLoading ? (
-              <p className="list-explorer-info-loading">Loading...</p>
+              <div
+                className="dashboard-modal-loading-container"
+                style={{ minHeight: '100px' }}
+              >
+                <div className="hero-loader-spinner" />
+              </div>
             ) : peerFeedback.length === 0 ? (
               <p className="list-explorer-info-empty">
                 No community feedback yet.

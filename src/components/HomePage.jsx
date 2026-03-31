@@ -198,6 +198,7 @@ export function NominationUpdateCard({
   onOpenSupportDropdown,
   supportStatusById = {},
   globalCommentedVideoIds = new Set(),
+  isFeedbackPanelOpen = false,
   resolveTrack,
 }) {
   const displayIdentity = parseStoredProfileUsername(update.username);
@@ -212,6 +213,22 @@ export function NominationUpdateCard({
       <div
         key={video.videoId}
         className={`dashboard-update-peek-row ${hasActivity ? 'has-activity' : ''}`}
+        onClick={(e) => {
+          if (isFeedbackPanelOpen) {
+            e.stopPropagation();
+            const rect = e.currentTarget.getBoundingClientRect();
+            onShowComments?.(resolveTrack(video), {
+              top: rect.top,
+              left: rect.left,
+              width: rect.width,
+              height: rect.height,
+            });
+          }
+        }}
+        onDoubleClick={(e) => {
+          e.stopPropagation();
+          onPlayTrack(resolveTrack(video));
+        }}
       >
         <span className="dashboard-update-peek-index" aria-hidden="true">
           {index + 1}
@@ -222,9 +239,12 @@ export function NominationUpdateCard({
             type="button"
             onClick={(e) => {
               e.stopPropagation();
+              const rect = e.currentTarget.getBoundingClientRect();
               onShowComments?.(resolveTrack(video), {
-                top: e.currentTarget.getBoundingClientRect().top,
-                left: e.currentTarget.getBoundingClientRect().left,
+                top: rect.top,
+                left: rect.left,
+                width: rect.width,
+                height: rect.height,
               });
             }}
             title="View activity and comments"
@@ -242,20 +262,6 @@ export function NominationUpdateCard({
         </div>
 
         <div className="dashboard-update-peek-actions">
-          <button
-            className="peek-action-btn peek-action-btn-comments"
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              onShowComments?.(resolveTrack(video), {
-                top: e.currentTarget.getBoundingClientRect().top,
-                left: e.currentTarget.getBoundingClientRect().left,
-              });
-            }}
-            title="View comments"
-          >
-            <SpeechBubbleIcon size={18} />
-          </button>
           <button
             className="peek-action-btn"
             type="button"
@@ -321,6 +327,23 @@ export function NominationUpdateCard({
           >
             <PlayIcon size={20} />
           </button>
+          <button
+            className="peek-action-btn peek-action-btn-comments"
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              const rect = e.currentTarget.getBoundingClientRect();
+              onShowComments?.(resolveTrack(video), {
+                top: rect.top,
+                left: rect.left,
+                width: rect.width,
+                height: rect.height,
+              });
+            }}
+            title="View comments"
+          >
+            <SpeechBubbleIcon size={18} />
+          </button>
         </div>
       </div>
     );
@@ -373,11 +396,17 @@ export function NominationUpdateCard({
               </div>
 
               <div className="dashboard-update-peek-container dashboard-modal-body">
-                <div className="dashboard-update-peek-list">
-                  {update.nominations.map((video, index) =>
-                    renderPeekRowActivity(video, index),
-                  )}
-                </div>
+                {update.nominations && update.nominations.length > 0 ? (
+                  <div className="dashboard-update-peek-list">
+                    {update.nominations.map((video, index) =>
+                      renderPeekRowActivity(video, index),
+                    )}
+                  </div>
+                ) : (
+                  <div className="dashboard-modal-loading-container">
+                    <div className="hero-loader-spinner" />
+                  </div>
+                )}
               </div>
 
               <div className="dashboard-update-footer">
@@ -576,6 +605,7 @@ export default function HomePage({
   onToggleSupport,
   onOpenSupportDropdown,
   supportStatusById = {},
+  isFeedbackPanelOpen = false,
   globalCommentedVideoIds = new Set(),
   onShowToast,
   isAuthReady = true,
@@ -1307,6 +1337,7 @@ export default function HomePage({
                       onOpenSupportDropdown={onOpenSupportDropdown}
                       supportStatusById={supportStatusById}
                       globalCommentedVideoIds={globalCommentedVideoIds}
+                      isFeedbackPanelOpen={isFeedbackPanelOpen}
                       resolveTrack={resolveTrack}
                     />
                   ))}
@@ -1359,7 +1390,12 @@ export default function HomePage({
           summary={sectionSummaries.updates}
         >
           {isUpdatesLoading ? (
-            <DashboardMessage>Loading GameFAQs threads…</DashboardMessage>
+            <div className="dashboard-nominations-loader">
+              <div
+                className="hero-loader-spinner"
+                aria-label="Loading GameFAQs threads"
+              />
+            </div>
           ) : updatesError ? (
             <DashboardMessage tone="danger">{updatesError}</DashboardMessage>
           ) : vgmcThreads.length === 0 ? (
