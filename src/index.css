@@ -483,6 +483,10 @@
   color: rgba(88, 28, 135, 0.9);
 }
 
+.theme-light .dashboard-update-peek-row:nth-child(even) {
+  background: rgba(168, 85, 247, 0.08); /* Soft light purple zebra */
+}
+
 .theme-light .dashboard-feature-card-hero {
   background:
     linear-gradient(
@@ -1427,7 +1431,8 @@ body {
   position: relative;
   background: rgba(0, 0, 0, 0.2);
   border-radius: var(--radius-md);
-  padding: 12px;
+  padding: 0; /* Removing parent padding to let stripes touch edges */
+  overflow: hidden; /* Ensure rounded corners clip the stripes */
   border: 1px solid var(--border);
   flex: 1;
   display: flex;
@@ -1438,10 +1443,10 @@ body {
 .dashboard-update-peek-list {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 0; /* Removing gap entirely to allow equal-sized zebra stripes */
   overflow-y: auto;
   flex: 1;
-  padding-right: 4px;
+  padding: 0;
   scrollbar-width: thin;
   scrollbar-color: transparent transparent;
   transition: scrollbar-color 0.3s ease;
@@ -1476,12 +1481,21 @@ body {
   gap: 10px;
   font-size: 0.9rem;
   line-height: 1.4;
-  opacity: 0.9;
-  transition: opacity 0.2s ease;
+  opacity: 0.95;
+  transition: all 0.2s ease;
+  padding: 13px 16px 12px 16px; /* Balanced height: 13px at top (extra pixel), 12px at bottom */
+  border-radius: 0;
+  margin: 0;
+  width: 100%;
+}
+
+.dashboard-update-peek-row:nth-child(even) {
+  background: rgba(0, 0, 0, 0.2); /* Deeper "dark grey" for dark mode zebra */
 }
 
 .dashboard-update-peek-row:hover {
   opacity: 1;
+  background: rgba(255, 255, 255, 0.08);
 }
 
 .dashboard-update-peek-index {
@@ -10705,6 +10719,22 @@ body.is-resizing .resize-handle {
   background: var(--bg-surface) !important;
   opacity: 1 !important;
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+}
+
+/* Bold typography for the active (featured) card list */
+.threed-carousel-item.active .dashboard-update-peek-row {
+  font-size: 1.15rem; /* Up from 0.9rem */
+  gap: 14px;
+}
+
+.threed-carousel-item.active .dashboard-update-peek-game {
+  font-size: 14px; /* Up from 10px */
+}
+
+.threed-carousel-item.active .dashboard-update-peek-index {
+  flex: 0 0 28px;
+  height: 28px;
+  font-size: 0.9rem;
 }
 
 .threed-carousel-nav {
