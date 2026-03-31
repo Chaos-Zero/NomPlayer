@@ -159,34 +159,18 @@ function NominationUpdateCard({
   const displayIdentity = parseStoredProfileUsername(update.username);
   const nominationCount = update.nominations.length;
 
-  const handleCardClick = () => {
-    if (!isExpanded) {
-      onToggleExpand(update.userId);
-    }
-  };
-
   return (
     <>
       <article
-        className={`dashboard-update-card ${isExpanded ? 'dashboard-card-expanded' : 'dashboard-card-interactive'}`}
-        onClick={handleCardClick}
+        className={`dashboard-update-card ${isExpanded ? 'dashboard-card-expanded' : ''}`}
       >
         {isExpanded ? (
           <ModalPortal>
             <div className="dashboard-card-modal-content">
-              <button
-                className="dashboard-card-close-btn"
-                type="button"
-                aria-label="Close expanded list"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onToggleExpand(null);
-                }}
-              >
-                ✕
-              </button>
-
-              <div className="dashboard-update-header">
+              <div className="dashboard-update-header dashboard-modal-header">
+                <div className="dashboard-update-user-context">
+                  <DashboardAvatar update={update} />
+                </div>
                 <div className="dashboard-update-heading">
                   <h3 className="dashboard-update-title">
                     <span className="profile-name-inline">
@@ -200,9 +184,25 @@ function NominationUpdateCard({
                     {nominationCount} {nominationCount === 1 ? 'item' : 'items'}
                   </p>
                 </div>
-                <div className="dashboard-update-user-context">
-                  <DashboardAvatar update={update} />
-                </div>
+                <button
+                  className="dashboard-card-close-btn"
+                  type="button"
+                  aria-label="Close expanded list"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onToggleExpand(null);
+                  }}
+                >
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="3"
+                    strokeLinecap="round"
+                  >
+                    <path d="M18 6L6 18M6 6l12 12" />
+                  </svg>
+                </button>
               </div>
 
               <div className="dashboard-update-full-list">
@@ -218,11 +218,17 @@ function NominationUpdateCard({
                       >
                         {index + 1}
                       </span>
-                      <span className="dashboard-update-full-title">
-                        {metadataById[video.videoId]
-                          ? `${metadataById[video.videoId].gameTitle} - ${metadataById[video.videoId].trackTitle}`
-                          : video.title}
-                      </span>
+                      <div className="dashboard-update-full-row-content">
+                        <span className="dashboard-update-full-track">
+                          {metadataById[video.videoId]?.trackTitle ||
+                            video.title}
+                        </span>
+                        {metadataById[video.videoId]?.gameTitle && (
+                          <span className="dashboard-update-full-game">
+                            {metadataById[video.videoId].gameTitle}
+                          </span>
+                        )}
+                      </div>
 
                       <div className="dashboard-update-row-actions">
                         <button
@@ -354,6 +360,20 @@ function NominationUpdateCard({
                   Add whole list
                 </button>
               </div>
+              <button
+                className="dashboard-update-expand-btn"
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onToggleExpand(update.userId);
+                }}
+                title="View full nomination list"
+              >
+                <svg viewBox="0 0 20 20" fill="currentColor">
+                  <path d="M11 3a1 1 0 100 2h2.586l-6.293 6.293a1 1 0 101.414 1.414L15 6.414V9a1 1 0 102 0V4a1 1 0 00-1-1h-5z" />
+                  <path d="M5 5a2 2 0 00-2 2v8a2 2 0 002 2h8a2 2 0 002-2v-3a1 1 0 10-2 0v3H5V7h3a1 1 0 000-2H5z" />
+                </svg>
+              </button>
             </div>
           </>
         )}
