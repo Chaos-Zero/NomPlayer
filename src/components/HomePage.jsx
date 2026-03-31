@@ -304,7 +304,7 @@ function NominationUpdateCard({
 
             <div className="dashboard-update-peek-container">
               <div className="dashboard-update-peek-list">
-                {update.nominations.slice(0, 8).map((video, index) => (
+                {update.nominations.slice(0, 20).map((video, index) => (
                   <div
                     key={video.videoId}
                     className="dashboard-update-peek-row"
@@ -327,7 +327,6 @@ function NominationUpdateCard({
                   </div>
                 ))}
               </div>
-              <div className="dashboard-update-peek-fade" aria-hidden="true" />
             </div>
 
             <div className="dashboard-update-footer">
