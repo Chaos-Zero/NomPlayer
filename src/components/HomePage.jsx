@@ -20,6 +20,7 @@ import {
   fetchTrackCatalogByVideoIds,
   fetchMaxVgmcNumber,
 } from '../lib/trackCatalog.js';
+import ThreeDCarousel from './ThreeDCarousel.jsx';
 
 const DASHBOARD_REFRESH_LIMIT = 8;
 const MOBILE_DASHBOARD_COLLAPSE_DEFAULTS = {
@@ -303,7 +304,7 @@ function NominationUpdateCard({
 
             <div className="dashboard-update-peek-container">
               <div className="dashboard-update-peek-list">
-                {update.nominations.slice(0, 3).map((video, index) => (
+                {update.nominations.slice(0, 8).map((video, index) => (
                   <div
                     key={video.videoId}
                     className="dashboard-update-peek-row"
@@ -314,9 +315,15 @@ function NominationUpdateCard({
                     >
                       {index + 1}
                     </span>
-                    <span className="dashboard-update-peek-title">
-                      {metadataById[video.videoId]?.trackTitle || video.title}
-                    </span>
+                    <div className="dashboard-update-peek-content">
+                      <span className="dashboard-update-peek-game">
+                        {metadataById[video.videoId]?.gameTitle ||
+                          'Unknown Game'}
+                      </span>
+                      <span className="dashboard-update-peek-title">
+                        {metadataById[video.videoId]?.trackTitle || video.title}
+                      </span>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -1155,20 +1162,22 @@ export default function HomePage({
                   role="presentation"
                 />
               )}
-              <div className="dashboard-update-list animate-fade-in">
-                {visibleNominationUpdates.map((update) => (
-                  <NominationUpdateCard
-                    key={update.userId}
-                    update={update}
-                    metadataById={trackMetadataById}
-                    isExpanded={expandedUserId === update.userId}
-                    onToggleExpand={setExpandedUserId}
-                    onAddWholeList={handleAddWholeList}
-                    onAddUpdates={handleAddUpdates}
-                    onPlayTrack={handlePlayDiscoveryCandidate}
-                    onAddTrack={handleAddDiscoveryCandidate}
-                  />
-                ))}
+              <div className="dashboard-nominations-carousel-container animate-fade-in">
+                <ThreeDCarousel>
+                  {visibleNominationUpdates.map((update) => (
+                    <NominationUpdateCard
+                      key={update.userId}
+                      update={update}
+                      metadataById={trackMetadataById}
+                      isExpanded={expandedUserId === update.userId}
+                      onToggleExpand={setExpandedUserId}
+                      onAddWholeList={handleAddWholeList}
+                      onAddUpdates={handleAddUpdates}
+                      onPlayTrack={handlePlayDiscoveryCandidate}
+                      onAddTrack={handleAddDiscoveryCandidate}
+                    />
+                  ))}
+                </ThreeDCarousel>
               </div>
             </>
           )}

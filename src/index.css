@@ -1422,7 +1422,7 @@ body {
   justify-content: space-between;
   align-items: flex-start;
   gap: 14px;
-  margin-bottom: 0px;
+  margin-bottom: 4px;
 }
 
 .dashboard-update-heading {
@@ -1489,11 +1489,34 @@ body {
   border: 1px solid var(--border);
 }
 
+.dashboard-update-peek-content {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
+
+.dashboard-update-peek-game {
+  font-size: 10px;
+  font-weight: 800;
+  color: var(--accent-light);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.2;
+  opacity: 0.8;
+}
+
 .dashboard-update-peek-title {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   color: var(--text-secondary);
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.2;
 }
 
 .dashboard-update-peek-fade {
@@ -2938,9 +2961,9 @@ body {
 }
 
 .mobile-topbar-front.with-detached-player {
-  grid-template-rows: calc(
-      var(--mobile-detached-player-base-visible-height) + 12px
-    ) var(--mobile-topbar-shell-h);
+  grid-template-rows:
+    calc(var(--mobile-detached-player-base-visible-height) + 12px)
+    var(--mobile-topbar-shell-h);
   gap: 0;
   padding: 0 12px;
   background: transparent;
@@ -10515,4 +10538,144 @@ body.is-resizing .resize-handle {
 /* Ensure the popover works in the detached footer context */
 .player-surface-mini .footer-feedback-popover {
   top: auto !important;
+}
+
+/* ─── 3D Carousel Component ─── */
+.threed-carousel-container {
+  position: relative;
+  width: 100%;
+  height: 600px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  overflow: visible;
+  margin: 10px 0 30px;
+  perspective: 1400px;
+}
+
+.threed-carousel-stage {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.threed-carousel-item {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  max-width: 580px;
+  max-height: 540px;
+  transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: transform, opacity;
+  display: flex;
+  flex-direction: column;
+}
+
+.threed-carousel-item .dashboard-update-card {
+  height: 100%;
+  flex: 1;
+}
+
+/* Add a subtle glow and solid background to the active card */
+.threed-carousel-item.active {
+  filter: drop-shadow(0 0 30px var(--accent-glow));
+}
+
+.threed-carousel-item.active .dashboard-update-card {
+  background: var(--bg-surface) !important;
+  opacity: 1 !important;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+}
+
+.threed-carousel-nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--bg-glass);
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 100;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  backdrop-filter: blur(12px);
+}
+
+.threed-carousel-nav:hover {
+  background: var(--bg-glass-hover);
+  border-color: var(--accent);
+  color: var(--accent);
+  transform: translateY(-50%) scale(1.15);
+  box-shadow: 0 0 20px var(--accent-glow);
+}
+
+.threed-carousel-prev {
+  left: 20px;
+}
+
+.threed-carousel-next {
+  right: 20px;
+}
+
+.threed-carousel-nav svg {
+  width: 24px;
+  height: 24px;
+}
+
+.threed-carousel-dots {
+  position: absolute;
+  bottom: -30px;
+  display: flex;
+  gap: 8px;
+  z-index: 100;
+}
+
+.threed-carousel-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--border);
+  border: none;
+  cursor: pointer;
+  transition: all var(--transition);
+  padding: 0;
+}
+
+.threed-carousel-dot.active {
+  background: var(--accent);
+  width: 20px;
+  border-radius: 4px;
+}
+
+.dashboard-nominations-carousel-container {
+  grid-column: 1 / -1;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+.dashboard-nominations-section .dashboard-pane-body {
+  overflow: visible !important;
+  padding: 0 !important;
+}
+
+/* Responsive adjustments */
+@media (max-width: 960px) {
+  .threed-carousel-container {
+    height: 420px;
+  }
+
+  .threed-carousel-item {
+    max-width: 320px;
+  }
 }
