@@ -707,6 +707,7 @@ export default function ListExplorer({
   const [focusedListId, setFocusedListId] = useState(null);
   const [activeCustomPlaylistId, setActiveCustomPlaylistId] = useState(null);
   const [selectedTrackId, setSelectedTrackId] = useState(null);
+  const [selectedColumnId, setSelectedColumnId] = useState(null);
   const [globalCommentedVideoIds, setGlobalCommentedVideoIds] = useState(
     new Set(),
   );
@@ -1365,15 +1366,31 @@ export default function ListExplorer({
     }
   }, [activeColumnIds]);
 
-  // Auto-scroll the grid when the info panel opens to restore the "push" effect
-  const prevSelectedTrackId = useRef(null);
+  // Auto-scroll the grid when the info panel opens to bring the selected column into view
   useEffect(() => {
-    // Only trigger auto-scroll when moving from NO selection to a selection
-    if (selectedTrackId && !prevSelectedTrackId.current && gridRef.current) {
-      gridRef.current.scrollBy({ left: 420, behavior: 'smooth' });
+    // Only auto-scroll on desktop (where the panel pushes content horizontally)
+    if (
+      window.innerWidth > 960 &&
+      selectedTrackId &&
+      selectedColumnId &&
+      gridRef.current
+    ) {
+      // Small delay to allow layout to settle after potential margin changes
+      const timeoutId = setTimeout(() => {
+        const element = gridRef.current?.querySelector(
+          `[data-column-id="${selectedColumnId}"]`,
+        );
+        if (element) {
+          element.scrollIntoView({
+            behavior: 'smooth',
+            inline: 'center',
+            block: 'nearest',
+          });
+        }
+      }, 100);
+      return () => clearTimeout(timeoutId);
     }
-    prevSelectedTrackId.current = selectedTrackId;
-  }, [selectedTrackId]);
+  }, [selectedTrackId, selectedColumnId]);
 
   return (
     <div
@@ -1446,7 +1463,10 @@ export default function ListExplorer({
           track={selectedTrack}
           communityData={communityData}
           isLoading={isLoadingCommunity || isSavingFeedback}
-          onClose={() => setSelectedTrackId(null)}
+          onClose={() => {
+            setSelectedTrackId(null);
+            setSelectedColumnId(null);
+          }}
           authUser={authUser}
           onUpdateComment={(videoId, comment) =>
             handleUpdateComment(
@@ -1537,7 +1557,10 @@ export default function ListExplorer({
                 )
               }
               selectedTrackId={selectedTrackId}
-              onSelectTrack={setSelectedTrackId}
+              onSelectTrack={(vid) => {
+                setSelectedTrackId(vid);
+                setSelectedColumnId('nominations');
+              }}
               onContextMenu={handleContextMenu}
               canAddAll={true}
               onAddAll={() => handleAddAllToCurrent(nominationList)}
@@ -1567,7 +1590,10 @@ export default function ListExplorer({
                 )
               }
               selectedTrackId={selectedTrackId}
-              onSelectTrack={setSelectedTrackId}
+              onSelectTrack={(vid) => {
+                setSelectedTrackId(vid);
+                setSelectedColumnId('support');
+              }}
               onContextMenu={handleContextMenu}
               canAddAll={true}
               onAddAll={() => handleAddAllToCurrent(supportList)}
@@ -1594,7 +1620,10 @@ export default function ListExplorer({
                 onRemovePlaylist={() => {}}
                 onRemove={onRemoveFromPlaylist}
                 selectedTrackId={selectedTrackId}
-                onSelectTrack={setSelectedTrackId}
+                onSelectTrack={(vid) => {
+                  setSelectedTrackId(vid);
+                  setSelectedColumnId('current');
+                }}
                 onContextMenu={handleContextMenu}
                 canClose={true}
                 onClose={() => setShowCurrentPlaylist(false)}
@@ -1620,7 +1649,10 @@ export default function ListExplorer({
                 onRemovePlaylist={() => {}}
                 onRemove={() => {}}
                 selectedTrackId={selectedTrackId}
-                onSelectTrack={setSelectedTrackId}
+                onSelectTrack={(vid) => {
+                  setSelectedTrackId(vid);
+                  setSelectedColumnId('new-nominations');
+                }}
                 onContextMenu={handleContextMenu}
                 canClose={true}
                 onClose={() => setShowNewNominations(false)}
@@ -1653,7 +1685,10 @@ export default function ListExplorer({
                   )
                 }
                 selectedTrackId={selectedTrackId}
-                onSelectTrack={setSelectedTrackId}
+                onSelectTrack={(vid) => {
+                  setSelectedTrackId(vid);
+                  setSelectedColumnId(`peer-${col.user_id}`);
+                }}
                 onContextMenu={handleContextMenu}
                 onRemove={() => {}}
                 canClose={true}
@@ -1694,7 +1729,10 @@ export default function ListExplorer({
                   handleAddByUrl(activeCustomPlaylist.id, url)
                 }
                 selectedTrackId={selectedTrackId}
-                onSelectTrack={setSelectedTrackId}
+                onSelectTrack={(vid) => {
+                  setSelectedTrackId(vid);
+                  setSelectedColumnId(activeCustomPlaylist.id);
+                }}
                 onContextMenu={handleContextMenu}
                 canClose={true}
                 onClose={() => setActiveCustomPlaylistId(null)}

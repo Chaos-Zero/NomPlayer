@@ -9119,7 +9119,12 @@ body.is-resizing .resize-handle {
 
   .list-explorer-container.has-selection .list-explorer-grid {
     transform: none !important;
+    margin-right: 0 !important;
     /* Disable desktop horizontal shift */
+  }
+
+  .list-explorer-container.has-selection .list-explorer-header {
+    padding-right: 0 !important;
   }
 
   .list-explorer-info-panel {
