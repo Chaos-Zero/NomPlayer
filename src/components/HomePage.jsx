@@ -312,7 +312,7 @@ export function NominationUpdateCard({
 
         <div className="dashboard-update-peek-actions">
           <button
-            className="peek-action-btn"
+            className="peek-action-btn peek-action-btn-add"
             type="button"
             onClick={(e) => {
               e.stopPropagation();
@@ -323,7 +323,11 @@ export function NominationUpdateCard({
             <PlaylistPlusIcon size={20} />
           </button>
           <button
-            className={`peek-action-btn ${supportStatusById[video.videoId]?.isSupported ? 'active has-feedback' : ''}`}
+            className={`peek-action-btn peek-action-btn-support ${
+              supportStatusById[video.videoId]?.isSupported
+                ? 'active has-feedback'
+                : ''
+            }`}
             type="button"
             onClick={(e) => {
               e.stopPropagation();

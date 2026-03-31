@@ -1637,6 +1637,35 @@ body {
   padding-right: 32px;
 }
 
+@media (max-width: 960px) {
+  .dashboard-update-peek-actions {
+    display: none !important;
+  }
+  .dashboard-update-peek-row.has-activity .dashboard-update-peek-actions {
+    display: flex !important;
+    gap: 0;
+  }
+  .peek-action-btn-add,
+  .peek-action-btn-support,
+  .peek-action-btn-play {
+    display: none !important;
+  }
+  /* Style the comment icon on mobile to match the activity symbol's importance */
+  .dashboard-update-peek-row.has-activity .peek-action-btn-comments {
+    color: var(--support-gold) !important;
+    opacity: 1 !important;
+  }
+  .peek-action-btn-activity {
+    display: none !important; /* Hide the non-interactive bubble on mobile in favor of the interactive one */
+  }
+  .dashboard-update-peek-row .dashboard-update-peek-content {
+    padding-right: 8px;
+  }
+  .dashboard-update-peek-row.has-activity .dashboard-update-peek-content {
+    padding-right: 0; /* Toolbar takes the space naturally */
+  }
+}
+
 .dashboard-update-peek-row {
   position: relative;
   display: flex;
