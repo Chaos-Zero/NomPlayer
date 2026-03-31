@@ -57,22 +57,26 @@ const ThreeDCarousel = ({
       };
     }
 
-    // Next card
-    if (diff === 1 || (count === 2 && diff === 1)) {
+    // First layer background (Next/Prev)
+    if (diff === 1 || diff === count - 1) {
+      const isNext = diff === 1;
       return {
-        transform: 'translateX(45%) scale(0.85)',
+        transform: `translateX(${isNext ? '48%' : '-48%'}) scale(0.85)`,
         opacity: 0.6,
         zIndex: 5,
         visibility: 'visible',
       };
     }
 
-    // Previous card
-    if (diff === count - 1) {
+    // Second layer background (2 positions away)
+    if (diff === 2 || diff === count - 2) {
+      const isNext = diff === 2;
+      // Only show if we have enough items to justify two layers on both sides
+      // but always show if possible even if it's the same card from both sides (it won't be due to diff logic)
       return {
-        transform: 'translateX(-45%) scale(0.85)',
-        opacity: 0.6,
-        zIndex: 5,
+        transform: `translateX(${isNext ? '82%' : '-82%'}) scale(0.72)`,
+        opacity: 0.25,
+        zIndex: 2,
         visibility: 'visible',
       };
     }
@@ -81,8 +85,8 @@ const ThreeDCarousel = ({
     return {
       transform:
         diff < count / 2
-          ? 'translateX(80%) scale(0.7)'
-          : 'translateX(-80%) scale(0.7)',
+          ? 'translateX(100%) scale(0.6)'
+          : 'translateX(-100%) scale(0.6)',
       opacity: 0,
       zIndex: 0,
       visibility: 'hidden',
