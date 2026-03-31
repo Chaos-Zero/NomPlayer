@@ -1052,6 +1052,20 @@ export default function ListExplorer({
           (sourceListId === 'support' && targetListId === 'nominations');
 
         if (!alreadyInTarget) {
+          // Rule: Nomination and Support cannot overlap
+          if (targetListId === 'support') {
+            const isNominated = nominationList.some(
+              (v) => v.videoId === sourceVideoId,
+            );
+            if (isNominated) {
+              onShowToast(
+                'Track already exists in your nomination list',
+                'error',
+              );
+              return;
+            }
+          }
+
           const targetIndex = targetVideoId
             ? targetList.findIndex((v) => v.videoId === targetVideoId)
             : -1;
@@ -1061,6 +1075,19 @@ export default function ListExplorer({
           } else {
             newList.push(video);
           }
+
+          // Rule: Nominations take priority and remove from support
+          if (targetListId === 'nominations') {
+            const isInSupport = supportList.some(
+              (v) => v.videoId === sourceVideoId,
+            );
+            if (isInSupport) {
+              onUpdateSupportList(
+                supportList.filter((v) => v.videoId !== sourceVideoId),
+              );
+            }
+          }
+
           setListById(targetListId, newList);
 
           if (shouldMove) {
@@ -1254,6 +1281,16 @@ export default function ListExplorer({
       onShowToast('Track already in this list');
       return;
     }
+
+    // Rule: Nomination and Support cannot overlap
+    if (id === 'support') {
+      const isNominated = nominationList.some((v) => v.videoId === videoId);
+      if (isNominated) {
+        onShowToast('Track already exists in your nomination list', 'error');
+        return;
+      }
+    }
+
     const newTrack = {
       videoId,
       title: 'Loading metadata...',
@@ -1263,6 +1300,15 @@ export default function ListExplorer({
       comment: '',
       addedAt: new Date().toISOString(),
     };
+
+    // Rule: Nominations take priority and remove from support
+    if (id === 'nominations') {
+      const isInSupport = supportList.some((v) => v.videoId === videoId);
+      if (isInSupport) {
+        onUpdateSupportList(supportList.filter((v) => v.videoId !== videoId));
+      }
+    }
+
     setListById(id, [...currentList, newTrack]);
     onShowToast('Added track to playlist');
   };

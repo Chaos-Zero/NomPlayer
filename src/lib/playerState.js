@@ -112,12 +112,13 @@ export function normalizePersistedPlayerState(
 ) {
   const playlist = normalizeVideoList(rawState?.playlist);
   const playlistIdSet = new Set(playlist.map((video) => video.videoId));
-  const supportList = normalizeVideoList(
-    rawState?.supportList ?? supportListFallback,
-  );
   const nominationList = normalizeVideoList(
     rawState?.nominationList ?? nominationListFallback,
   );
+  const nominationIdSet = new Set(nominationList.map((video) => video.videoId));
+  const supportList = normalizeVideoList(
+    rawState?.supportList ?? supportListFallback,
+  ).filter((video) => !nominationIdSet.has(video.videoId));
   const shuffleOrderIds = normalizeIdList(
     rawState?.shuffleOrderIds,
     playlistIdSet,

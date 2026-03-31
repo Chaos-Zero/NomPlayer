@@ -3263,10 +3263,6 @@ export default function App() {
         };
       }
 
-      const incomingIds = new Set(
-        nominationResult.addedVideos.map((video) => video.videoId),
-      );
-
       const currentCatalog = catalogTrackByVideoIdRef.current;
       const newTracksMissingMetadata = nominationResult.addedVideos.filter(
         (video) => {
@@ -3290,9 +3286,14 @@ export default function App() {
         });
       }
 
-      setSupportList((previousList) =>
-        previousList.filter((entry) => !incomingIds.has(entry.videoId)),
-      );
+      setSupportList((previousList) => {
+        const nextNominationIds = new Set(
+          nominationResult.nextList.map((v) => v.videoId),
+        );
+        return previousList.filter(
+          (entry) => !nextNominationIds.has(entry.videoId),
+        );
+      });
       setNominationList(nominationResult.nextList);
       syncCatalogForNominationVideos(nominationResult.addedVideos);
 
