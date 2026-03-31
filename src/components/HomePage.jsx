@@ -304,6 +304,14 @@ function NominationUpdateCard({
                   </span>
                 </h3>
                 <p className="dashboard-update-count">
+                  {update.gamefaqsUsername && (
+                    <>
+                      <span className="dashboard-update-gf-user">
+                        {update.gamefaqsUsername}
+                      </span>
+                      {' - '}
+                    </>
+                  )}
                   {nominationCount} {nominationCount === 1 ? 'item' : 'items'}
                 </p>
               </div>

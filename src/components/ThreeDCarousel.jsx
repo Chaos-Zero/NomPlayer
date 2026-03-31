@@ -111,6 +111,7 @@ const ThreeDCarousel = ({
             key={index}
             className={`threed-carousel-item ${index === active ? 'active' : ''}`}
             style={getCardStyle(index)}
+            onClick={() => index !== active && setActive(index)}
           >
             {child}
           </div>

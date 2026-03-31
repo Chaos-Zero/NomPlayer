@@ -482,6 +482,10 @@
   color: #000; /* Solid black for user names in light mode */
 }
 
+.theme-light .dashboard-update-card:hover .dashboard-update-title {
+  color: #000; /* Stay black on hover in light mode */
+}
+
 .theme-light .dashboard-update-peek-index {
   background: rgba(124, 58, 237, 0.1);
   color: rgba(88, 28, 135, 0.9);
@@ -1409,20 +1413,21 @@ body {
 }
 
 .dashboard-update-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 14px;
-  margin-bottom: 4px;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-rows: auto auto;
+  align-items: center; /* Vertical center for the first row (name/avatar) */
+  gap: 0 14px; /* Gap between columns, but not between rows for tighter alignment */
+  margin-bottom: 8px;
 }
 
 .dashboard-update-heading {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
+  display: contents; /* Let children participate in the grid */
 }
 
 .dashboard-update-title {
+  grid-column: 1;
+  grid-row: 1;
   font-size: 19px; /* Decreased from 1.25rem (20px) */
   font-weight: 800;
   color: #b0b3b8; /* Even softer white (mid-grey) for dark mode */
@@ -1433,14 +1438,34 @@ body {
   gap: 10px;
 }
 
-.dashboard-update-card:hover .dashboard-update-title {
-  color: #e2e8f0;
+.dashboard-update-user-context {
+  grid-column: 2;
+  grid-row: 1 / span 2; /* Avatar spans both to remain centrally anchored */
+  align-self: center;
 }
 
 .dashboard-update-count {
+  grid-column: 1;
+  grid-row: 2;
   font-size: 0.85rem;
-  color: var(--text-secondary);
   font-weight: 500;
+  color: var(--text-secondary);
+  opacity: 0.8;
+  margin: 0;
+  margin-top: -2px; /* Tighter fit under the name */
+}
+
+.dashboard-update-gf-user {
+  color: #0ea5e9; /* More classic sky blue */
+  font-weight: 700;
+}
+
+.theme-light .dashboard-update-gf-user {
+  color: #0284c7; /* A bit more intense for light mode */
+}
+
+.dashboard-update-card:hover .dashboard-update-title {
+  color: #e2e8f0;
 }
 
 .dashboard-update-peek-container {
@@ -10184,14 +10209,14 @@ body.is-resizing .resize-handle {
 /* Specific Desktop Layout: Center in active area to the right of navigation */
 @media (min-width: 961px) {
   .dashboard-card-modal-content {
+    /* Horizontal: Center relative to the area right of the 96px sidebar */
     left: calc(50% + 48px) !important;
-    /* Offset for 96px sidebar */
-    top: calc(50% - 22px) !important;
-    /* Center with slight upward shift */
+    /* Vertical: Center in the space between TopBar and bottom of viewport */
+    top: calc(var(--topbar-h) + (100dvh - var(--topbar-h)) / 2) !important;
     transform: translate(-50%, -50%) !important;
     max-width: 800px !important;
-    max-height: calc(100vh - 200px) !important;
-    width: min(680px, 85vw - 96px) !important;
+    max-height: calc(100vh - var(--topbar-h) - 60px) !important;
+    width: min(720px, 85vw - 96px) !important;
   }
 }
 
@@ -10716,6 +10741,15 @@ body.is-resizing .resize-handle {
   will-change: transform, opacity;
   display: flex;
   flex-direction: column;
+}
+
+.threed-carousel-item:not(.active) {
+  cursor: pointer;
+}
+
+.threed-carousel-item:not(.active) > * {
+  pointer-events: none;
+  user-select: none;
 }
 
 .threed-carousel-item .dashboard-update-card {
