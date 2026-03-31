@@ -4,7 +4,7 @@ import useMediaQuery from '../hooks/useMediaQuery';
 const ThreeDCarousel = ({
   children,
   autoRotate = true,
-  rotateInterval = 5000,
+  rotateInterval = 8000,
   className = '',
 }) => {
   const [active, setActive] = useState(0);
