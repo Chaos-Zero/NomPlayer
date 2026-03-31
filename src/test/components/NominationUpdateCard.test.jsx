@@ -24,11 +24,25 @@ describe('NominationUpdateCard', () => {
     },
   };
 
+  const mockResolveTrack = vi.fn((video) => {
+    const meta = mockMetadataById[video.videoId];
+    if (!meta) return video;
+    return {
+      ...video,
+      trackTitle: meta.trackTitle || video.trackTitle,
+      gameTitle: meta.gameTitle || video.gameTitle,
+      title: meta.trackTitle
+        ? `${meta.gameTitle} - ${meta.trackTitle}`
+        : video.title || meta.trackTitle || 'Unknown Track',
+    };
+  });
+
   it('renders track info and hover action buttons', () => {
     render(
       <NominationUpdateCard
         update={mockUpdate}
         metadataById={mockMetadataById}
+        resolveTrack={mockResolveTrack}
       />,
     );
 
@@ -38,7 +52,7 @@ describe('NominationUpdateCard', () => {
 
     // Check action buttons (by title)
     expect(screen.getByTitle('View comments')).toBeDefined();
-    expect(screen.getByTitle('Add to playlist')).toBeDefined();
+    expect(screen.getByTitle('Add to current playlist')).toBeDefined();
     expect(screen.getByTitle('Play now')).toBeDefined();
   });
 
@@ -49,10 +63,11 @@ describe('NominationUpdateCard', () => {
         update={mockUpdate}
         metadataById={mockMetadataById}
         onAddTrack={onAddTrack}
+        resolveTrack={mockResolveTrack}
       />,
     );
 
-    const addBtn = screen.getByTitle('Add to playlist');
+    const addBtn = screen.getByTitle('Add to current playlist');
     fireEvent.click(addBtn);
 
     expect(onAddTrack).toHaveBeenCalledWith([
@@ -72,6 +87,7 @@ describe('NominationUpdateCard', () => {
         update={mockUpdate}
         metadataById={mockMetadataById}
         onPlayTrack={onPlayTrack}
+        resolveTrack={mockResolveTrack}
       />,
     );
 
@@ -95,6 +111,7 @@ describe('NominationUpdateCard', () => {
         update={mockUpdate}
         metadataById={mockMetadataById}
         onShowComments={onShowComments}
+        resolveTrack={mockResolveTrack}
       />,
     );
 
