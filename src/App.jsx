@@ -1377,6 +1377,25 @@ export default function App() {
     [playOrderIds, shuffleOrderIds],
   );
 
+  const supportStatusById = useMemo(() => {
+    const status = {};
+    supportList.forEach((video) => {
+      status[video.videoId] = {
+        isSupported: true,
+        isNominated: false,
+        supportLevel: video.supportLevel || 1,
+      };
+    });
+    nominationList.forEach((video) => {
+      status[video.videoId] = {
+        isSupported: true,
+        isNominated: true,
+        supportLevel: video.supportLevel || 1,
+      };
+    });
+    return status;
+  }, [supportList, nominationList]);
+
   const displayPlaylist = useMemo(() => {
     const loadIndexById = new Map(
       playlist.map((video, index) => [video.videoId, index]),
@@ -1385,6 +1404,7 @@ export default function App() {
       isShuffleEnabled && !showOriginalOrder
         ? playOrderIds
         : playlist.map((video) => video.videoId);
+
     const playlistById = new Map(
       playlist.map((video) => [video.videoId, video]),
     );
@@ -4140,9 +4160,15 @@ export default function App() {
               authUser={authUser}
               isAuthReady={isAuthReady}
               currentPlaylist={playlist}
+              supportStatusById={supportStatusById}
+              globalCommentedVideoIds={globalCommentedVideoIds}
               listenedStatusById={listenedStatusById}
               onAddToPlaylist={handleQueueFromSupportList}
               onPlayNow={handlePlayNowFromSupportList}
+              onToggleSupport={handleToggleSupportFromPlaylist}
+              onOpenSupportDropdown={(video, position) =>
+                setSupportLevelDropdown({ video, position, direction: 'down' })
+              }
               onShowComments={handleShowComments}
               onNavigateToPlayer={() => handleNavigate('player')}
               onShowToast={(message) =>

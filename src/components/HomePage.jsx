@@ -45,6 +45,22 @@ const SpeechBubbleIcon = ({ size = 14 }) => (
     />
   </svg>
 );
+
+const HeartIcon = ({ size = 16 }) => (
+  <svg viewBox="0 0 20 20" fill="currentColor" width={size} height={size}>
+    <path d="M9.653 16.915l-.005-.003-.019-.01a20.759 20.759 0 0 1-1.162-.682 22.045 22.045 0 0 1-2.582-1.9C4.045 12.733 2 10.352 2 7.5a4.5 4.5 0 0 1 8-2.828A4.5 4.5 0 0 1 18 7.5c0 2.852-2.044 5.233-3.885 6.82a22.049 22.049 0 0 1-3.744 2.582 20.77 20.77 0 0 1-1.162.682l-.019.01-.005.003L9.653 16.915z" />
+  </svg>
+);
+
+const LockIcon = ({ size = 16 }) => (
+  <svg viewBox="0 0 20 20" fill="currentColor" width={size} height={size}>
+    <path
+      fillRule="evenodd"
+      d="M10 1a4.5 4.5 0 0 0-4.5 4.5V9H5a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6a2 2 0 0 0-2-2h-.5V5.5A4.5 4.5 0 0 0 10 1Zm3 8H7V5.5a3 3 0 1 1 6 0V9Z"
+      clipRule="evenodd"
+    />
+  </svg>
+);
 const MOBILE_DASHBOARD_COLLAPSE_DEFAULTS = {
   overview: false,
   nominations: false,
@@ -178,21 +194,136 @@ export function NominationUpdateCard({
   onPlayTrack,
   onAddTrack,
   onShowComments,
+  onToggleSupport,
+  onOpenSupportDropdown,
+  supportStatusById = {},
+  globalCommentedVideoIds = new Set(),
+  resolveTrack,
 }) {
   const displayIdentity = parseStoredProfileUsername(update.username);
   const nominationCount = update.nominations.length;
 
-  const resolveTrack = (video) => {
-    const meta = metadataById[video.videoId];
-    if (!meta) return video;
-    return {
-      ...video,
-      trackTitle: meta.trackTitle || video.trackTitle,
-      gameTitle: meta.gameTitle || video.gameTitle,
-      title: meta.trackTitle
-        ? `${meta.gameTitle} - ${meta.trackTitle}`
-        : video.title,
-    };
+  const renderPeekRowActivity = (video, index) => {
+    const hasSupport = supportStatusById[video.videoId]?.isSupported;
+    const hasComments = globalCommentedVideoIds.has(video.videoId);
+    const hasActivity = hasSupport || hasComments;
+
+    return (
+      <div
+        key={video.videoId}
+        className={`dashboard-update-peek-row ${hasActivity ? 'has-activity' : ''}`}
+      >
+        <span className="dashboard-update-peek-index" aria-hidden="true">
+          {index + 1}
+        </span>
+        {hasActivity && (
+          <button
+            className="peek-action-btn peek-action-btn-activity"
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onShowComments?.(resolveTrack(video), {
+                top: e.currentTarget.getBoundingClientRect().top,
+                left: e.currentTarget.getBoundingClientRect().left,
+              });
+            }}
+            title="View activity and comments"
+          >
+            <SpeechBubbleIcon size={18} />
+          </button>
+        )}
+        <div className="dashboard-update-peek-content">
+          <span className="dashboard-update-peek-game">
+            {metadataById[video.videoId]?.gameTitle || 'Unknown Game'}
+          </span>
+          <span className="dashboard-update-peek-title">
+            {metadataById[video.videoId]?.trackTitle || video.title}
+          </span>
+        </div>
+
+        <div className="dashboard-update-peek-actions">
+          <button
+            className="peek-action-btn peek-action-btn-comments"
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onShowComments?.(resolveTrack(video), {
+                top: e.currentTarget.getBoundingClientRect().top,
+                left: e.currentTarget.getBoundingClientRect().left,
+              });
+            }}
+            title="View comments"
+          >
+            <SpeechBubbleIcon size={18} />
+          </button>
+          <button
+            className="peek-action-btn"
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onAddTrack([resolveTrack(video)]);
+            }}
+            title="Add to current playlist"
+          >
+            <PlaylistPlusIcon size={20} />
+          </button>
+          <button
+            className={`peek-action-btn ${supportStatusById[video.videoId]?.isSupported ? 'active has-feedback' : ''}`}
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              const resolved = resolveTrack(video);
+              if (!supportStatusById[video.videoId]?.isSupported) {
+                onToggleSupport?.(resolved);
+                const rect = e.currentTarget.getBoundingClientRect();
+                onOpenSupportDropdown?.(resolved, {
+                  top: rect.top,
+                  left: rect.left + rect.width / 2,
+                });
+              } else {
+                onToggleSupport?.(resolved);
+              }
+            }}
+            onContextMenu={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              const resolved = resolveTrack(video);
+              const rect = e.currentTarget.getBoundingClientRect();
+              onOpenSupportDropdown?.(resolved, {
+                top: rect.top,
+                left: rect.left + rect.width / 2,
+              });
+            }}
+            title={
+              supportStatusById[video.videoId]?.isSupported
+                ? 'Remove support'
+                : 'Support this track'
+            }
+          >
+            {supportStatusById[video.videoId]?.isNominated ? (
+              '★'
+            ) : supportStatusById[video.videoId]?.supportLevel === 3 ? (
+              <LockIcon size={20} />
+            ) : supportStatusById[video.videoId]?.isSupported ? (
+              <HeartIcon size={20} />
+            ) : (
+              '♡'
+            )}
+          </button>
+          <button
+            className="peek-action-btn peek-action-btn-play"
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onPlayTrack(resolveTrack(video));
+            }}
+            title="Play now"
+          >
+            <PlayIcon size={20} />
+          </button>
+        </div>
+      </div>
+    );
   };
 
   return (
@@ -241,79 +372,11 @@ export function NominationUpdateCard({
                 </button>
               </div>
 
-              <div className="dashboard-update-full-list">
-                <div className="dashboard-update-scroll-area">
-                  {update.nominations.map((video, index) => (
-                    <div
-                      key={video.videoId}
-                      className="dashboard-update-full-row"
-                    >
-                      <span
-                        className="dashboard-update-full-index"
-                        aria-hidden="true"
-                      >
-                        {index + 1}
-                      </span>
-                      <div className="dashboard-update-full-row-content">
-                        {metadataById[video.videoId]?.gameTitle ? (
-                          <span className="dashboard-update-full-game">
-                            {metadataById[video.videoId].gameTitle}
-                          </span>
-                        ) : (
-                          <span className="dashboard-update-full-game">
-                            Unknown Game
-                          </span>
-                        )}
-                        <span className="dashboard-update-full-track">
-                          {metadataById[video.videoId]?.trackTitle ||
-                            video.title}
-                        </span>
-                      </div>
-
-                      <div className="dashboard-update-row-actions">
-                        <button
-                          className="peek-action-btn peek-action-btn-comments"
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            const rect =
-                              e.currentTarget.getBoundingClientRect();
-                            onShowComments?.(resolveTrack(video), {
-                              top: rect.top,
-                              left: rect.left,
-                              width: rect.width,
-                              height: rect.height,
-                            });
-                          }}
-                          title="View comments"
-                        >
-                          <SpeechBubbleIcon size={18} />
-                        </button>
-                        <button
-                          className="peek-action-btn"
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onAddTrack([resolveTrack(video)]);
-                          }}
-                          title="Add to current playlist"
-                        >
-                          <PlaylistPlusIcon size={20} />
-                        </button>
-                        <button
-                          className="peek-action-btn peek-action-btn-play"
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onPlayTrack(resolveTrack(video));
-                          }}
-                          title="Play now"
-                        >
-                          <PlayIcon size={20} />
-                        </button>
-                      </div>
-                    </div>
-                  ))}
+              <div className="dashboard-update-peek-container dashboard-modal-body">
+                <div className="dashboard-update-peek-list">
+                  {update.nominations.map((video, index) =>
+                    renderPeekRowActivity(video, index),
+                  )}
                 </div>
               </div>
 
@@ -376,67 +439,9 @@ export function NominationUpdateCard({
 
             <div className="dashboard-update-peek-container">
               <div className="dashboard-update-peek-list">
-                {update.nominations.slice(0, 20).map((video, index) => (
-                  <div
-                    key={video.videoId}
-                    className="dashboard-update-peek-row"
-                  >
-                    <span
-                      className="dashboard-update-peek-index"
-                      aria-hidden="true"
-                    >
-                      {index + 1}
-                    </span>
-                    <div className="dashboard-update-peek-content">
-                      <span className="dashboard-update-peek-game">
-                        {metadataById[video.videoId]?.gameTitle ||
-                          'Unknown Game'}
-                      </span>
-                      <span className="dashboard-update-peek-title">
-                        {metadataById[video.videoId]?.trackTitle || video.title}
-                      </span>
-                    </div>
-
-                    <div className="dashboard-update-peek-actions">
-                      <button
-                        className="peek-action-btn peek-action-btn-comments"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          const rect = e.currentTarget.getBoundingClientRect();
-                          onShowComments?.(resolveTrack(video), {
-                            top: rect.top,
-                            left: rect.left,
-                            width: rect.width,
-                            height: rect.height,
-                          });
-                        }}
-                        title="View comments"
-                      >
-                        <SpeechBubbleIcon />
-                      </button>
-                      <button
-                        className="peek-action-btn"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onAddTrack?.([resolveTrack(video)]);
-                        }}
-                        title="Add to playlist"
-                      >
-                        <PlaylistPlusIcon />
-                      </button>
-                      <button
-                        className="peek-action-btn peek-action-btn-play"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onPlayTrack?.(resolveTrack(video));
-                        }}
-                        title="Play now"
-                      >
-                        <PlayIcon />
-                      </button>
-                    </div>
-                  </div>
-                ))}
+                {update.nominations
+                  .slice(0, 20)
+                  .map((video, index) => renderPeekRowActivity(video, index))}
               </div>
             </div>
 
@@ -568,6 +573,10 @@ export default function HomePage({
   onPlayNow,
   onShowComments,
   onNavigateToPlayer,
+  onToggleSupport,
+  onOpenSupportDropdown,
+  supportStatusById = {},
+  globalCommentedVideoIds = new Set(),
   onShowToast,
   isAuthReady = true,
 }) {
@@ -1294,6 +1303,11 @@ export default function HomePage({
                       onPlayTrack={handlePlayDiscoveryCandidate}
                       onAddTrack={handleAddDiscoveryCandidate}
                       onShowComments={onShowComments}
+                      onToggleSupport={onToggleSupport}
+                      onOpenSupportDropdown={onOpenSupportDropdown}
+                      supportStatusById={supportStatusById}
+                      globalCommentedVideoIds={globalCommentedVideoIds}
+                      resolveTrack={resolveTrack}
                     />
                   ))}
                 </ThreeDCarousel>

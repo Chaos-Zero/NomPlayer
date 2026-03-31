@@ -1625,43 +1625,111 @@ body {
   display: flex;
 }
 
+.dashboard-update-peek-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  transition: background 0.2s ease;
+}
+
+.dashboard-update-peek-row:hover {
+  background: var(--bg-glass-heavy);
+}
+
+.dashboard-update-peek-index {
+  width: 24px;
+  flex-shrink: 0;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  opacity: 0.6;
+  text-align: center;
+  transition: all 0.3s ease;
+}
+
+.dashboard-update-peek-row.has-activity:not(:hover)
+  .dashboard-update-peek-index {
+  opacity: 0;
+  transform: scale(0.5);
+}
+
+.peek-action-btn-activity {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%) scale(1);
+  color: var(--support-gold) !important;
+  opacity: 1 !important;
+  z-index: 10;
+  pointer-events: none;
+  transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.dashboard-update-peek-row:hover .peek-action-btn-activity {
+  opacity: 0 !important;
+  transform: translateY(-50%) scale(0.5) translateX(20px);
+  pointer-events: none;
+}
+
+.dashboard-update-peek-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  opacity: 0;
+  transform: translateX(8px);
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.dashboard-update-peek-row:hover .dashboard-update-peek-actions {
+  opacity: 1;
+  transform: translateX(0);
+}
+
 .peek-action-btn {
   background: none;
   border: none;
-  padding: 4px;
-  cursor: pointer;
+  padding: 6px;
   color: var(--text-secondary);
-  opacity: 0.6;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: all 0.2s ease;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.2s ease;
-  border-radius: 6px;
 }
 
 .peek-action-btn:hover {
-  opacity: 1;
-  color: var(--accent-light) !important;
   background: var(--bg-glass);
-  transform: translateY(-1px);
+  color: var(--accent-light);
+  transform: translateY(-2px);
 }
 
-.peek-action-btn-comments:hover,
+.peek-action-btn-comments:hover {
+  color: var(--support-gold) !important;
+}
+
 .peek-action-btn-play:hover {
   color: var(--accent-light) !important;
 }
 
-@keyframes peekActionFadeIn {
-  from {
-    opacity: 0;
-    transform: translateX(8px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
+.peek-action-btn.active {
+  color: var(--accent-light);
+  opacity: 1;
 }
 
+.peek-action-btn.active.has-feedback {
+  color: var(--support-gold);
+}
+
+.dashboard-update-peek-content {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
 .dashboard-update-footer {
   margin-top: 12px;
   display: flex;
