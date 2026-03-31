@@ -10756,13 +10756,13 @@ body.is-resizing .resize-handle {
   background: var(--bg-surface) !important;
   border: 1px solid var(--border) !important;
   box-shadow: 0 12px 48px rgba(0, 0, 0, 0.6) !important;
-  transform: none;
-  opacity: 1 !important;
+  transform: none !important;
+  opacity: 0; /* Star hidden and fade in precisely via JS */
   pointer-events: auto !important;
-  animation: footerPopoverFadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  animation: footerPopoverFadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
   display: flex !important;
   flex-direction: column !important;
-  transition: opacity 0.2s ease !important; /* Pure fade transition */
+  transition: opacity 0.2s ease !important;
 }
 
 .footer-feedback-popover.is-anchored {

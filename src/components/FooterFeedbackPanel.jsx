@@ -30,7 +30,18 @@ export default function FooterFeedbackPanel({
   }, []);
 
   // Capture the initial window dimensions when the popover opens with a specific anchor
-  const [initialAnchorContext, setInitialAnchorContext] = useState(null);
+  // Initializing immediately from props prevents a 1-frame position "flash"
+  const [initialAnchorContext, setInitialAnchorContext] = useState(() => {
+    if (anchorRect) {
+      return {
+        anchorRect,
+        windowWidth: typeof window !== 'undefined' ? window.innerWidth : 1920,
+        windowHeight: typeof window !== 'undefined' ? window.innerHeight : 1080,
+      };
+    }
+    return null;
+  });
+
   useEffect(() => {
     if (anchorRect) {
       setInitialAnchorContext({
@@ -44,7 +55,14 @@ export default function FooterFeedbackPanel({
   }, [anchorRect]);
 
   const popoverStyle = useMemo(() => {
-    if (!initialAnchorContext) return {};
+    // If we're anchored but don't have the context yet, start hidden to avoid a layout jump
+    if (!initialAnchorContext) {
+      return {
+        opacity: 0,
+        visibility: 'hidden',
+        pointerEvents: 'none',
+      };
+    }
 
     const { anchorRect: baseRect, windowWidth: initW } = initialAnchorContext;
     const padding = 16;
