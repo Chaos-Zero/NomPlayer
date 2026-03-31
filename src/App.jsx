@@ -8,7 +8,15 @@ import {
   lazy,
   Suspense,
 } from 'react';
+import { createPortal } from 'react-dom';
 import TopBar from './components/TopBar.jsx';
+
+function ModalPortal({ children }) {
+  if (typeof document === 'undefined') return null;
+  const target = document.getElementById('modal-root');
+  if (!target) return null;
+  return createPortal(children, target);
+}
 import VideoPlayer from './components/VideoPlayer.jsx';
 import PlaylistSidebar from './components/PlaylistSidebar.jsx';
 import FavouritesPanel from './components/FavouritesPanel.jsx';
@@ -4430,14 +4438,16 @@ export default function App() {
       />
 
       {isFeedbackPanelOpen && (feedbackTrack || currentVideo) && (
-        <FooterFeedbackPanel
-          track={feedbackTrack || currentVideo}
-          supabase={supabase}
-          authUser={authUser}
-          anchorRect={feedbackPosition}
-          onClose={handleCloseFeedbackPanel}
-          onShowToast={showDefaultAppToast}
-        />
+        <ModalPortal>
+          <FooterFeedbackPanel
+            track={feedbackTrack || currentVideo}
+            supabase={supabase}
+            authUser={authUser}
+            anchorRect={feedbackPosition}
+            onClose={handleCloseFeedbackPanel}
+            onShowToast={showDefaultAppToast}
+          />
+        </ModalPortal>
       )}
     </div>
   );

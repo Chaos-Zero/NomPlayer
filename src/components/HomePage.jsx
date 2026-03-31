@@ -24,20 +24,20 @@ import ThreeDCarousel from './ThreeDCarousel.jsx';
 
 const DASHBOARD_REFRESH_LIMIT = 8;
 
-const PlayIcon = () => (
-  <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+const PlayIcon = ({ size = 16 }) => (
+  <svg viewBox="0 0 24 24" fill="currentColor" width={size} height={size}>
     <path d="M8 5v14l11-7z" />
   </svg>
 );
 
-const PlaylistPlusIcon = () => (
-  <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+const PlaylistPlusIcon = ({ size = 16 }) => (
+  <svg viewBox="0 0 24 24" fill="currentColor" width={size} height={size}>
     <path d="M14 10H2v2h12v-2zm0-4H2v2h12V6zm4 8v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zM2 16h8v-2H2v2z" />
   </svg>
 );
 
-const SpeechBubbleIcon = () => (
-  <svg viewBox="0 0 20 20" fill="currentColor" width="14" height="14">
+const SpeechBubbleIcon = ({ size = 14 }) => (
+  <svg viewBox="0 0 20 20" fill="currentColor" width={size} height={size}>
     <path
       fillRule="evenodd"
       d="M10 2c-2.236 0-4.43.18-6.57.532a2.31 2.31 0 00-1.93 2.185c-.286 1.9-.447 3.832-.482 5.8a2.301 2.301 0 001.077 2.05L4 14.5V17a1 1 0 001.625.78L8.734 15.1c.42.025.84.042 1.266.05 2.236 0 4.43-.18 6.57-.532a2.31 2.31 0 001.93-2.185c.286-1.9.447-3.832.482-5.8a2.301 2.301 0 00-1.077-2.05L16 3.5V2h-6z"
@@ -272,18 +272,25 @@ export function NominationUpdateCard({
 
                       <div className="dashboard-update-row-actions">
                         <button
-                          className="dashboard-update-row-btn"
+                          className="peek-action-btn peek-action-btn-comments"
                           type="button"
                           onClick={(e) => {
                             e.stopPropagation();
-                            onPlayTrack(resolveTrack(video));
+                            const rect =
+                              e.currentTarget.getBoundingClientRect();
+                            onShowComments?.(resolveTrack(video), {
+                              top: rect.top,
+                              left: rect.left,
+                              width: rect.width,
+                              height: rect.height,
+                            });
                           }}
-                          title="Play now"
+                          title="View comments"
                         >
-                          Listen
+                          <SpeechBubbleIcon size={18} />
                         </button>
                         <button
-                          className="dashboard-update-row-btn dashboard-update-row-btn-primary"
+                          className="peek-action-btn"
                           type="button"
                           onClick={(e) => {
                             e.stopPropagation();
@@ -291,7 +298,18 @@ export function NominationUpdateCard({
                           }}
                           title="Add to current playlist"
                         >
-                          Add
+                          <PlaylistPlusIcon size={20} />
+                        </button>
+                        <button
+                          className="peek-action-btn peek-action-btn-play"
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onPlayTrack(resolveTrack(video));
+                          }}
+                          title="Play now"
+                        >
+                          <PlayIcon size={20} />
                         </button>
                       </div>
                     </div>
@@ -385,7 +403,7 @@ export function NominationUpdateCard({
                         onClick={(e) => {
                           e.stopPropagation();
                           const rect = e.currentTarget.getBoundingClientRect();
-                          onShowComments?.(video, {
+                          onShowComments?.(resolveTrack(video), {
                             top: rect.top,
                             left: rect.left,
                             width: rect.width,
@@ -839,9 +857,8 @@ export default function HomePage({
   const handlePlayDiscoveryCandidate = useCallback(
     (video) => {
       onPlayNow?.(resolveTrack(video));
-      onNavigateToPlayer?.();
     },
-    [onPlayNow, onNavigateToPlayer, resolveTrack],
+    [onPlayNow, resolveTrack],
   );
 
   const handleAddWholeList = useCallback(

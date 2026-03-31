@@ -1641,17 +1641,14 @@ body {
 
 .peek-action-btn:hover {
   opacity: 1;
-  color: var(--accent-light);
+  color: var(--accent-light) !important;
   background: var(--bg-glass);
   transform: translateY(-1px);
 }
 
-.peek-action-btn-comments:hover {
-  color: var(--accent-info);
-}
-
+.peek-action-btn-comments:hover,
 .peek-action-btn-play:hover {
-  color: #10b981; /* Green for play */
+  color: var(--accent-light) !important;
 }
 
 @keyframes peekActionFadeIn {
@@ -10373,6 +10370,10 @@ body.is-resizing .resize-handle {
   opacity: 0 !important;
   transform: translateX(10px) !important;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+.dashboard-update-row-actions .peek-action-btn {
+  padding: 6px !important;
 }
 
 .dashboard-update-full-row:hover .dashboard-update-row-actions {
