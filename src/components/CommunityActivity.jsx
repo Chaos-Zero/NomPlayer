@@ -5,6 +5,7 @@ import {
   deriveProfileAvatarUrl,
 } from '../lib/playerState.js';
 import { HeartIcon, LockIcon } from './FavouritesPanel.jsx';
+import { ContextMenuPortal } from './ContextMenuPortal';
 
 export default function CommunityActivity({
   videoId,
@@ -13,9 +14,11 @@ export default function CommunityActivity({
   onShowToast,
 }) {
   const [trackId, setTrackId] = useState(null);
+  const [supportersMenu, setSupportersMenu] = useState(null);
   const [communityData, setCommunityData] = useState({
     feedback: [],
     supports: {},
+    supporterNames: { 1: [], 2: [], 3: [] },
   });
   const [userFeedback, setUserFeedback] = useState({
     rating: 0,
@@ -54,8 +57,24 @@ export default function CommunityActivity({
   const supportSummary = useMemo(() => {
     const list = communityData.supports || {};
     const total = Object.values(list).reduce((a, b) => a + b, 0);
-    return { ...list, total };
-  }, [communityData.supports]);
+
+    return {
+      ...list,
+      total,
+      1: {
+        count: list[1] || 0,
+        names: communityData.supporterNames?.[1] || [],
+      },
+      2: {
+        count: list[2] || 0,
+        names: communityData.supporterNames?.[2] || [],
+      },
+      3: {
+        count: list[3] || 0,
+        names: communityData.supporterNames?.[3] || [],
+      },
+    };
+  }, [communityData.supports, communityData.supporterNames]);
 
   // Initial Fetch: Resolve track_id and load community data
   useEffect(() => {
@@ -96,7 +115,74 @@ export default function CommunityActivity({
             return acc;
           }, {});
 
-          setCommunityData({ feedback, supports });
+          // Resolve supporter names
+          const namesByLevel = { 1: [], 2: [], 3: [] };
+          const missingProfilesUserIds = [];
+
+          // 1. Check existing feedback for names
+          (supportData || []).forEach((sup) => {
+            const foundFeedback = feedback.find(
+              (f) => f.user_id === sup.user_id,
+            );
+            if (foundFeedback?.profiles?.username) {
+              namesByLevel[sup.level].push(
+                getDisplayProfileName(
+                  foundFeedback.profiles.username,
+                  'Anonymous listener',
+                ),
+              );
+            } else {
+              missingProfilesUserIds.push(sup.user_id);
+            }
+          });
+
+          // 2. Clear duplicates in missing IDs
+          const uniqueMissingIds = [...new Set(missingProfilesUserIds)];
+
+          // 3. Optional targeted fetch for names not in feedback list
+          if (uniqueMissingIds.length > 0) {
+            const { data: missingProfiles } = await supabase
+              .from('profiles')
+              .select('id, username')
+              .in('id', uniqueMissingIds);
+
+            if (missingProfiles) {
+              const profileMap = new Map(
+                missingProfiles.map((p) => [p.id, p.username]),
+              );
+              (supportData || []).forEach((sup) => {
+                if (profileMap.has(sup.user_id)) {
+                  const uname = profileMap.get(sup.user_id);
+                  const displayName = getDisplayProfileName(
+                    uname,
+                    'Anonymous listener',
+                  );
+                  // Only add if not already added from feedback list
+                  if (!namesByLevel[sup.level].includes(displayName)) {
+                    namesByLevel[sup.level].push(displayName);
+                  }
+                }
+              });
+            }
+          }
+
+          // 4. Fill in any remaining unknowns
+          (supportData || []).forEach((sup) => {
+            // If we still don't have enough names for the count, add anonymous placeholders
+            const currentCount = namesByLevel[sup.level].length;
+            const targetCount = supports[sup.level] || 0;
+            if (currentCount < targetCount) {
+              for (let i = 0; i < targetCount - currentCount; i++) {
+                namesByLevel[sup.level].push('Anonymous listener');
+              }
+            }
+          });
+
+          setCommunityData({
+            feedback,
+            supports,
+            supporterNames: namesByLevel,
+          });
 
           // Extract current user's feedback if available
           const myFeedback = feedback.find((f) => f.user_id === authUser?.id);
@@ -141,6 +227,20 @@ export default function CommunityActivity({
     }
   };
 
+  const handleShowSupporters = (event, level) => {
+    event.stopPropagation();
+    const summary = supportSummary[level];
+    if (!summary || !summary.names || summary.names.length === 0) return;
+
+    const rect = event.currentTarget.getBoundingClientRect();
+    setSupportersMenu({
+      names: summary.names,
+      level,
+      x: rect.left + rect.width / 2,
+      y: rect.top,
+    });
+  };
+
   if (isLoading && !trackId) {
     return (
       <div className="community-activity-loading">Loading activity...</div>
@@ -157,36 +257,70 @@ export default function CommunityActivity({
           <h4>COMMUNITY SUPPORT</h4>
           <div className="list-explorer-support-summary">
             <div className="list-explorer-support-icons">
-              {supportSummary[3] > 0 && (
-                <div
+              {supportSummary[3]?.count > 0 && (
+                <button
                   className="support-badge highest"
-                  title={`${supportSummary[3]} Highest Supports`}
+                  type="button"
+                  onClick={(e) => handleShowSupporters(e, 3)}
+                  title={`${supportSummary[3].count} Highest Supports (Click to see names)`}
                 >
                   <LockIcon />
-                  <span>{supportSummary[3]}</span>
-                </div>
+                  <span>{supportSummary[3].count}</span>
+                </button>
               )}
-              {supportSummary[2] > 0 && (
-                <div
+              {supportSummary[2]?.count > 0 && (
+                <button
                   className="support-badge high"
-                  title={`${supportSummary[2]} High Supports`}
+                  type="button"
+                  onClick={(e) => handleShowSupporters(e, 2)}
+                  title={`${supportSummary[2].count} High Supports (Click to see names)`}
                 >
                   <HeartIcon />
-                  <span>{supportSummary[2]}</span>
-                </div>
+                  <span>{supportSummary[2].count}</span>
+                </button>
               )}
-              {supportSummary[1] > 0 && (
-                <div
+              {supportSummary[1]?.count > 0 && (
+                <button
                   className="support-badge normal"
-                  title={`${supportSummary[1]} Normal Supports`}
+                  type="button"
+                  onClick={(e) => handleShowSupporters(e, 1)}
+                  title={`${supportSummary[1].count} Normal Supports (Click to see names)`}
                 >
                   <HeartIcon />
-                  <span>{supportSummary[1]}</span>
-                </div>
+                  <span>{supportSummary[1].count}</span>
+                </button>
               )}
             </div>
           </div>
         </section>
+      )}
+
+      {supportersMenu && (
+        <ContextMenuPortal
+          x={supportersMenu.x}
+          y={supportersMenu.y}
+          onClose={() => setSupportersMenu(null)}
+          className="supporters-popover"
+        >
+          <div className="supporters-popover-header">
+            {supportersMenu.level === 3
+              ? 'Highest'
+              : supportersMenu.level === 2
+                ? 'High'
+                : 'Normal'}{' '}
+            Supports
+          </div>
+          <div
+            className="supporters-list"
+            onClick={() => setSupportersMenu(null)}
+          >
+            {supportersMenu.names.map((name, i) => (
+              <div key={i} className="supporters-list-item">
+                {name}
+              </div>
+            ))}
+          </div>
+        </ContextMenuPortal>
       )}
 
       {/* ─── Your Feedback Editor (Always Shown) ─── */}

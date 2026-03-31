@@ -10603,6 +10603,9 @@ body.is-resizing .resize-handle {
   transition: all 0.2s ease;
   min-width: 60px;
   justify-content: center;
+  cursor: pointer;
+  font-family: inherit;
+  outline: none;
 }
 
 .support-badge:hover {
@@ -10643,6 +10646,68 @@ body.is-resizing .resize-handle {
 .support-badge span {
   font-family: 'Outfit', sans-serif;
   letter-spacing: -0.01em;
+}
+
+/* Supporters List Popover */
+.supporters-popover {
+  background: rgba(18, 18, 24, 0.95);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  padding: 12px;
+  min-width: 200px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+  animation: supportersAppear 0.24s cubic-bezier(0.16, 1, 0.3, 1);
+  overflow: hidden;
+}
+
+@keyframes supportersAppear {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.supporters-popover-header {
+  font-size: 11px;
+  font-weight: 800;
+  color: rgba(255, 255, 255, 0.45);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  padding: 0 4px 10px 4px;
+  margin-bottom: 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.supporters-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 300px;
+  overflow-y: auto;
+  cursor: default;
+}
+
+.supporters-list-item {
+  font-size: 13px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.85);
+  padding: 6px 12px;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+}
+
+.supporters-list-item:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
+  transform: translateX(4px);
 }
 
 .list-explorer-support-empty {

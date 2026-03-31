@@ -151,6 +151,7 @@ function TrackInfoPanel({
   onUpdateComment,
   onSaveFeedback,
 }) {
+  const [supportersMenu, setSupportersMenu] = useState(null);
   const personalFeedback = useMemo(() => {
     if (!track || !communityData.feedback || !authUser?.id)
       return { rating: null, note: '' };
@@ -208,7 +209,10 @@ function TrackInfoPanel({
 
   const supportSummary = useMemo(() => {
     const list = communityData.supports || {};
-    const total = Object.values(list).reduce((a, b) => a + b, 0);
+    const total = Object.values(list).reduce(
+      (a, b) => a + (typeof b === 'object' ? b.count : b),
+      0,
+    );
     return { ...list, total };
   }, [communityData.supports]);
 
@@ -238,6 +242,21 @@ function TrackInfoPanel({
     gameTitle = parts[0].trim();
     songTitle = parts.slice(1).join(' - ').trim();
   }
+
+  const handleShowSupporters = (event, level) => {
+    event.stopPropagation();
+
+    const summary = supportSummary[level];
+    if (!summary || !summary.names || summary.names.length === 0) return;
+
+    const rect = event.currentTarget.getBoundingClientRect();
+    setSupportersMenu({
+      names: summary.names,
+      level,
+      x: rect.left + rect.width / 2,
+      y: rect.top,
+    });
+  };
 
   return (
     <div className={`list-explorer-info-panel ${track ? 'is-open' : ''}`}>
@@ -327,32 +346,38 @@ function TrackInfoPanel({
                 <div className="list-explorer-support-summary">
                   {supportSummary.total > 0 ? (
                     <div className="list-explorer-support-icons">
-                      {supportSummary[3] > 0 && (
-                        <div
+                      {supportSummary[3]?.count > 0 && (
+                        <button
                           className="support-badge highest"
-                          title={`${supportSummary[3]} Highest Supports`}
+                          type="button"
+                          onClick={(e) => handleShowSupporters(e, 3)}
+                          title={`${supportSummary[3].count} Highest Supports (Click to see names)`}
                         >
                           <LockIcon />
-                          <span>{supportSummary[3]}</span>
-                        </div>
+                          <span>{supportSummary[3].count}</span>
+                        </button>
                       )}
-                      {supportSummary[2] > 0 && (
-                        <div
+                      {supportSummary[2]?.count > 0 && (
+                        <button
                           className="support-badge high"
-                          title={`${supportSummary[2]} High Supports`}
+                          type="button"
+                          onClick={(e) => handleShowSupporters(e, 2)}
+                          title={`${supportSummary[2].count} High Supports (Click to see names)`}
                         >
                           <HeartIcon />
-                          <span>{supportSummary[2]}</span>
-                        </div>
+                          <span>{supportSummary[2].count}</span>
+                        </button>
                       )}
-                      {supportSummary[1] > 0 && (
-                        <div
+                      {supportSummary[1]?.count > 0 && (
+                        <button
                           className="support-badge normal"
-                          title={`${supportSummary[1]} Normal Supports`}
+                          type="button"
+                          onClick={(e) => handleShowSupporters(e, 1)}
+                          title={`${supportSummary[1].count} Normal Supports (Click to see names)`}
                         >
                           <HeartIcon />
-                          <span>{supportSummary[1]}</span>
-                        </div>
+                          <span>{supportSummary[1].count}</span>
+                        </button>
                       )}
                     </div>
                   ) : (
@@ -412,6 +437,33 @@ function TrackInfoPanel({
           </>
         )}
       </div>
+      {supportersMenu && (
+        <ContextMenuPortal
+          x={supportersMenu.x}
+          y={supportersMenu.y}
+          onClose={() => setSupportersMenu(null)}
+          className="supporters-popover"
+        >
+          <div className="supporters-popover-header">
+            {supportersMenu.level === 3
+              ? 'Highest'
+              : supportersMenu.level === 2
+                ? 'High'
+                : 'Normal'}{' '}
+            Supports
+          </div>
+          <div
+            className="supporters-list"
+            onClick={() => setSupportersMenu(null)}
+          >
+            {supportersMenu.names.map((name, i) => (
+              <div key={i} className="supporters-list-item">
+                {name}
+              </div>
+            ))}
+          </div>
+        </ContextMenuPortal>
+      )}
     </div>
   );
 }
@@ -1280,7 +1332,6 @@ export default function ListExplorer({
 
         // Fetch feedback (all users)
         let feedbackData = [];
-        let supportData = [];
 
         if (trackIdForFeedback) {
           try {
@@ -1293,21 +1344,77 @@ export default function ListExplorer({
           }
 
           // Fetch support counts by level
-          const { data: sData } = await supabase
+          const { data: supportData, error: sError } = await supabase
             .from('track_supports')
-            .select('level')
+            .select('level, user_id')
             .eq('track_id', trackIdForFeedback);
-          supportData = sData || [];
-        }
 
-        if (active) {
-          const supports = supportData.reduce((acc, curr) => {
-            acc[curr.level] = (acc[curr.level] || 0) + 1;
-            return acc;
-          }, {});
+          if (sError) throw sError;
+
+          if (active) {
+            const supports = {};
+            if (supportData && supportData.length > 0) {
+              // Group by level first
+              supportData.forEach((row) => {
+                if (!supports[row.level]) {
+                  supports[row.level] = { count: 0, names: [], userIds: [] };
+                }
+                supports[row.level].count += 1;
+                if (row.user_id) supports[row.level].userIds.push(row.user_id);
+              });
+
+              // Also resolve usernames from the current feedback list (fast cache)
+              const profileMap = new Map();
+              feedbackData.forEach((f) => {
+                if (f.user_id && f.profiles) {
+                  profileMap.set(f.user_id, f.profiles.username);
+                }
+              });
+
+              // Fetch any missing profiles for supporters who haven't left feedback
+              const missingUserIds = [
+                ...new Set(
+                  supportData
+                    .map((r) => r.user_id)
+                    .filter((id) => id && !profileMap.has(id)),
+                ),
+              ];
+              if (missingUserIds.length > 0) {
+                try {
+                  const { data: extraProfiles } = await supabase
+                    .from('profiles')
+                    .select('id, username')
+                    .in('id', missingUserIds);
+
+                  if (extraProfiles) {
+                    extraProfiles.forEach((p) =>
+                      profileMap.set(p.id, p.username),
+                    );
+                  }
+                } catch (err) {
+                  console.error('Error fetching extra profiles:', err);
+                }
+              }
+
+              // Merge names
+              Object.values(supports).forEach((tier) => {
+                tier.names = tier.userIds.map((uid) => {
+                  const username = profileMap.get(uid);
+                  return getDisplayProfileName(username, 'Anonymous listener');
+                });
+              });
+            }
+
+            setCommunityData({
+              feedback: feedbackData,
+              supports,
+              tournaments: catalogData?.tournaments || [],
+            });
+          }
+        } else if (active) {
           setCommunityData({
-            feedback: feedbackData,
-            supports,
+            feedback: [],
+            supports: {},
             tournaments: catalogData?.tournaments || [],
           });
         }

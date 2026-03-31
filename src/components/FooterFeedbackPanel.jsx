@@ -6,6 +6,7 @@ import {
   deriveProfileAvatarUrl,
 } from '../lib/playerState.js';
 import { SpeechBubbleIcon, HeartIcon, LockIcon } from './FavouritesPanel.jsx';
+import { ContextMenuPortal } from './ContextMenuPortal';
 
 export default function FooterFeedbackPanel({
   track,
@@ -15,6 +16,7 @@ export default function FooterFeedbackPanel({
   onShowToast,
   anchorRect,
 }) {
+  const [supportersMenu, setSupportersMenu] = useState(null);
   // To keep the popover aligned when the window resizes (e.g. modal centering)
   const [windowDimensions, setWindowDimensions] = useState({
     width: typeof window !== 'undefined' ? window.innerWidth : 1920,
@@ -149,7 +151,10 @@ export default function FooterFeedbackPanel({
 
   const supportSummary = useMemo(() => {
     const list = communityData.supports || {};
-    const total = Object.values(list).reduce((a, b) => a + b, 0);
+    const total = Object.values(list).reduce(
+      (a, b) => a + (typeof b === 'object' ? b.count : b),
+      0,
+    );
     return { ...list, total };
   }, [communityData.supports]);
 
@@ -173,19 +178,71 @@ export default function FooterFeedbackPanel({
           return;
         }
 
-        const [feedback, { data: supportData }] = await Promise.all([
-          fetchCommunityFeedback(supabase, trackId),
-          supabase
-            .from('track_supports')
-            .select('level')
-            .eq('track_id', trackId),
-        ]);
+        const [feedback, { data: supportData, error: sError }] =
+          await Promise.all([
+            fetchCommunityFeedback(supabase, trackId),
+            supabase
+              .from('track_supports')
+              .select('level, user_id')
+              .eq('track_id', trackId),
+          ]);
+
+        if (sError) throw sError;
 
         if (active) {
-          const supports = (supportData || []).reduce((acc, curr) => {
-            acc[curr.level] = (acc[curr.level] || 0) + 1;
-            return acc;
-          }, {});
+          const supports = {};
+          if (supportData && supportData.length > 0) {
+            // Group by level first
+            supportData.forEach((row) => {
+              if (!supports[row.level]) {
+                supports[row.level] = { count: 0, names: [], userIds: [] };
+              }
+              supports[row.level].count += 1;
+              if (row.user_id) supports[row.level].userIds.push(row.user_id);
+            });
+
+            // Also resolve usernames from the current feedback list (fast cache)
+            const profileMap = new Map();
+            feedback.forEach((f) => {
+              if (f.user_id && f.profiles) {
+                profileMap.set(f.user_id, f.profiles.username);
+              }
+            });
+
+            // Fetch any missing profiles for supporters who haven't left feedback
+            const missingUserIds = [
+              ...new Set(
+                supportData
+                  .map((r) => r.user_id)
+                  .filter((id) => id && !profileMap.has(id)),
+              ),
+            ];
+            if (missingUserIds.length > 0) {
+              try {
+                const { data: extraProfiles } = await supabase
+                  .from('profiles')
+                  .select('id, username')
+                  .in('id', missingUserIds);
+
+                if (extraProfiles) {
+                  extraProfiles.forEach((p) =>
+                    profileMap.set(p.id, p.username),
+                  );
+                }
+              } catch (err) {
+                console.error('Error fetching extra profiles:', err);
+              }
+            }
+
+            // For users not in feedback, we could fetch profiles, but let's start with a safe merge
+            Object.values(supports).forEach((tier) => {
+              tier.names = tier.userIds.map((uid) => {
+                const username = profileMap.get(uid);
+                return getDisplayProfileName(username, 'Anonymous listener');
+              });
+            });
+          }
+
           setCommunityData({ feedback, supports });
         }
       } catch (err) {
@@ -229,6 +286,22 @@ export default function FooterFeedbackPanel({
     } finally {
       setIsSaving(false);
     }
+  };
+
+  const handleShowSupporters = (event, level) => {
+    event.stopPropagation();
+    if (!onShowToast) return;
+
+    const summary = supportSummary[level];
+    if (!summary || !summary.names || summary.names.length === 0) return;
+
+    const rect = event.currentTarget.getBoundingClientRect();
+    setSupportersMenu({
+      names: summary.names,
+      level,
+      x: rect.left + rect.width / 2,
+      y: rect.top,
+    });
   };
 
   return (
@@ -295,35 +368,43 @@ export default function FooterFeedbackPanel({
             <section className="list-explorer-info-section">
               <h4>COMMUNITY SUPPORT</h4>
               <div className="list-explorer-support-summary">
-                <div className="list-explorer-support-icons">
-                  {supportSummary[3] > 0 && (
-                    <div
-                      className="support-badge highest"
-                      title={`${supportSummary[3]} Highest Supports`}
-                    >
-                      <LockIcon />
-                      <span>{supportSummary[3]}</span>
-                    </div>
-                  )}
-                  {supportSummary[2] > 0 && (
-                    <div
-                      className="support-badge high"
-                      title={`${supportSummary[2]} High Supports`}
-                    >
-                      <HeartIcon />
-                      <span>{supportSummary[2]}</span>
-                    </div>
-                  )}
-                  {supportSummary[1] > 0 && (
-                    <div
-                      className="support-badge normal"
-                      title={`${supportSummary[1]} Normal Supports`}
-                    >
-                      <HeartIcon />
-                      <span>{supportSummary[1]}</span>
-                    </div>
-                  )}
-                </div>
+                {supportSummary.total > 0 ? (
+                  <div className="list-explorer-support-icons">
+                    {supportSummary[3]?.count > 0 && (
+                      <button
+                        className="support-badge highest"
+                        type="button"
+                        onClick={(e) => handleShowSupporters(e, 3)}
+                        title={`${supportSummary[3].count} Highest Supports (Click to see names)`}
+                      >
+                        <LockIcon />
+                        <span>{supportSummary[3].count}</span>
+                      </button>
+                    )}
+                    {supportSummary[2]?.count > 0 && (
+                      <button
+                        className="support-badge high"
+                        type="button"
+                        onClick={(e) => handleShowSupporters(e, 2)}
+                        title={`${supportSummary[2].count} High Supports (Click to see names)`}
+                      >
+                        <HeartIcon />
+                        <span>{supportSummary[2].count}</span>
+                      </button>
+                    )}
+                    {supportSummary[1]?.count > 0 && (
+                      <button
+                        className="support-badge normal"
+                        type="button"
+                        onClick={(e) => handleShowSupporters(e, 1)}
+                        title={`${supportSummary[1].count} Normal Supports (Click to see names)`}
+                      >
+                        <HeartIcon />
+                        <span>{supportSummary[1].count}</span>
+                      </button>
+                    )}
+                  </div>
+                ) : null}
               </div>
             </section>
           )}
@@ -378,6 +459,34 @@ export default function FooterFeedbackPanel({
           </section>
         </div>
       </div>
+
+      {supportersMenu && (
+        <ContextMenuPortal
+          x={supportersMenu.x}
+          y={supportersMenu.y}
+          onClose={() => setSupportersMenu(null)}
+          className="supporters-popover"
+        >
+          <div className="supporters-popover-header">
+            {supportersMenu.level === 3
+              ? 'Highest'
+              : supportersMenu.level === 2
+                ? 'High'
+                : 'Normal'}{' '}
+            Supports
+          </div>
+          <div
+            className="supporters-list"
+            onClick={() => setSupportersMenu(null)}
+          >
+            {supportersMenu.names.map((name, i) => (
+              <div key={i} className="supporters-list-item">
+                {name}
+              </div>
+            ))}
+          </div>
+        </ContextMenuPortal>
+      )}
     </div>
   );
 }

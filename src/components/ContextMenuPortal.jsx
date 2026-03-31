@@ -75,7 +75,7 @@ export function ContextMenuPortal({
         position: 'fixed',
         top: coords.y,
         left: coords.x,
-        zIndex: 10000,
+        zIndex: 50000,
         pointerEvents: 'auto',
       }}
       onClick={(e) => e.stopPropagation()}
