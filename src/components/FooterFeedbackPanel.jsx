@@ -10,7 +10,44 @@ export default function FooterFeedbackPanel({
   authUser,
   onClose,
   onShowToast,
+  anchorRect,
 }) {
+  const popoverStyle = useMemo(() => {
+    if (!anchorRect) return {};
+
+    const padding = 16;
+    const panelWidth = 400;
+    const vhLimit = window.innerHeight * 0.7;
+    const panelHeight = Math.min(520, vhLimit);
+
+    // Default to showing on the right and aligned with the top of the button
+    let left = anchorRect.left + anchorRect.width + 12;
+    let top = anchorRect.top;
+
+    // If not enough room on right, show on left
+    if (left + panelWidth > window.innerWidth - padding) {
+      left = anchorRect.left - panelWidth - 12;
+    }
+
+    // Final clamping
+    left = Math.max(
+      padding,
+      Math.min(left, window.innerWidth - panelWidth - padding),
+    );
+    top = Math.max(
+      padding,
+      Math.min(top, window.innerHeight - panelHeight - padding),
+    );
+
+    return {
+      position: 'fixed',
+      left: `${left}px`,
+      top: `${top}px`,
+      bottom: 'auto',
+      right: 'auto',
+      transform: 'none',
+    };
+  }, [anchorRect]);
   const [communityData, setCommunityData] = useState({
     feedback: [],
     supports: {},
@@ -141,7 +178,10 @@ export default function FooterFeedbackPanel({
   };
 
   return (
-    <div className="list-explorer-info-panel footer-feedback-popover is-open">
+    <div
+      className={`list-explorer-info-panel footer-feedback-popover is-open${anchorRect ? ' is-anchored' : ''}`}
+      style={popoverStyle}
+    >
       <div className="list-explorer-info-header footer-header">
         <button className="list-explorer-info-close" onClick={onClose}>
           ✕

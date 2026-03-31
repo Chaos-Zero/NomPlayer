@@ -20,8 +20,31 @@ import {
   fetchTrackCatalogByVideoIds,
   fetchMaxVgmcNumber,
 } from '../lib/trackCatalog.js';
+import ThreeDCarousel from './ThreeDCarousel.jsx';
 
 const DASHBOARD_REFRESH_LIMIT = 8;
+
+const PlayIcon = () => (
+  <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+    <path d="M8 5v14l11-7z" />
+  </svg>
+);
+
+const PlaylistPlusIcon = () => (
+  <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+    <path d="M14 10H2v2h12v-2zm0-4H2v2h12V6zm4 8v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zM2 16h8v-2H2v2z" />
+  </svg>
+);
+
+const SpeechBubbleIcon = () => (
+  <svg viewBox="0 0 20 20" fill="currentColor" width="14" height="14">
+    <path
+      fillRule="evenodd"
+      d="M10 2c-2.236 0-4.43.18-6.57.532a2.31 2.31 0 00-1.93 2.185c-.286 1.9-.447 3.832-.482 5.8a2.301 2.301 0 001.077 2.05L4 14.5V17a1 1 0 001.625.78L8.734 15.1c.42.025.84.042 1.266.05 2.236 0 4.43-.18 6.57-.532a2.31 2.31 0 001.93-2.185c.286-1.9.447-3.832.482-5.8a2.301 2.301 0 00-1.077-2.05L16 3.5V2h-6z"
+      clipRule="evenodd"
+    />
+  </svg>
+);
 const MOBILE_DASHBOARD_COLLAPSE_DEFAULTS = {
   overview: false,
   nominations: false,
@@ -145,7 +168,7 @@ function ModalPortal({ children }) {
   return createPortal(children, target);
 }
 
-function NominationUpdateCard({
+export function NominationUpdateCard({
   update,
   metadataById = {},
   isExpanded = false,
@@ -154,38 +177,36 @@ function NominationUpdateCard({
   onAddUpdates,
   onPlayTrack,
   onAddTrack,
+  onShowComments,
 }) {
   const displayIdentity = parseStoredProfileUsername(update.username);
   const nominationCount = update.nominations.length;
 
-  const handleCardClick = () => {
-    if (!isExpanded) {
-      onToggleExpand(update.userId);
-    }
+  const resolveTrack = (video) => {
+    const meta = metadataById[video.videoId];
+    if (!meta) return video;
+    return {
+      ...video,
+      trackTitle: meta.trackTitle || video.trackTitle,
+      gameTitle: meta.gameTitle || video.gameTitle,
+      title: meta.trackTitle
+        ? `${meta.gameTitle} - ${meta.trackTitle}`
+        : video.title,
+    };
   };
 
   return (
     <>
       <article
-        className={`dashboard-update-card ${isExpanded ? 'dashboard-card-expanded' : 'dashboard-card-interactive'}`}
-        onClick={handleCardClick}
+        className={`dashboard-update-card ${isExpanded ? 'dashboard-card-expanded' : ''}`}
       >
         {isExpanded ? (
           <ModalPortal>
             <div className="dashboard-card-modal-content">
-              <button
-                className="dashboard-card-close-btn"
-                type="button"
-                aria-label="Close expanded list"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onToggleExpand(null);
-                }}
-              >
-                ✕
-              </button>
-
-              <div className="dashboard-update-header">
+              <div className="dashboard-update-header dashboard-modal-header">
+                <div className="dashboard-update-user-context">
+                  <DashboardAvatar update={update} />
+                </div>
                 <div className="dashboard-update-heading">
                   <h3 className="dashboard-update-title">
                     <span className="profile-name-inline">
@@ -199,9 +220,25 @@ function NominationUpdateCard({
                     {nominationCount} {nominationCount === 1 ? 'item' : 'items'}
                   </p>
                 </div>
-                <div className="dashboard-update-user-context">
-                  <DashboardAvatar update={update} />
-                </div>
+                <button
+                  className="dashboard-card-close-btn"
+                  type="button"
+                  aria-label="Close expanded list"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onToggleExpand(null);
+                  }}
+                >
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="3"
+                    strokeLinecap="round"
+                  >
+                    <path d="M18 6L6 18M6 6l12 12" />
+                  </svg>
+                </button>
               </div>
 
               <div className="dashboard-update-full-list">
@@ -217,11 +254,21 @@ function NominationUpdateCard({
                       >
                         {index + 1}
                       </span>
-                      <span className="dashboard-update-full-title">
-                        {metadataById[video.videoId]
-                          ? `${metadataById[video.videoId].gameTitle} - ${metadataById[video.videoId].trackTitle}`
-                          : video.title}
-                      </span>
+                      <div className="dashboard-update-full-row-content">
+                        {metadataById[video.videoId]?.gameTitle ? (
+                          <span className="dashboard-update-full-game">
+                            {metadataById[video.videoId].gameTitle}
+                          </span>
+                        ) : (
+                          <span className="dashboard-update-full-game">
+                            Unknown Game
+                          </span>
+                        )}
+                        <span className="dashboard-update-full-track">
+                          {metadataById[video.videoId]?.trackTitle ||
+                            video.title}
+                        </span>
+                      </div>
 
                       <div className="dashboard-update-row-actions">
                         <button
@@ -229,7 +276,7 @@ function NominationUpdateCard({
                           type="button"
                           onClick={(e) => {
                             e.stopPropagation();
-                            onPlayTrack(video);
+                            onPlayTrack(resolveTrack(video));
                           }}
                           title="Play now"
                         >
@@ -240,7 +287,7 @@ function NominationUpdateCard({
                           type="button"
                           onClick={(e) => {
                             e.stopPropagation();
-                            onAddTrack(video);
+                            onAddTrack([resolveTrack(video)]);
                           }}
                           title="Add to current playlist"
                         >
@@ -293,6 +340,14 @@ function NominationUpdateCard({
                   </span>
                 </h3>
                 <p className="dashboard-update-count">
+                  {update.gamefaqsUsername && (
+                    <>
+                      <span className="dashboard-update-gf-user">
+                        {update.gamefaqsUsername}
+                      </span>
+                      {' - '}
+                    </>
+                  )}
                   {nominationCount} {nominationCount === 1 ? 'item' : 'items'}
                 </p>
               </div>
@@ -303,7 +358,7 @@ function NominationUpdateCard({
 
             <div className="dashboard-update-peek-container">
               <div className="dashboard-update-peek-list">
-                {update.nominations.slice(0, 3).map((video, index) => (
+                {update.nominations.slice(0, 20).map((video, index) => (
                   <div
                     key={video.videoId}
                     className="dashboard-update-peek-row"
@@ -314,13 +369,57 @@ function NominationUpdateCard({
                     >
                       {index + 1}
                     </span>
-                    <span className="dashboard-update-peek-title">
-                      {metadataById[video.videoId]?.trackTitle || video.title}
-                    </span>
+                    <div className="dashboard-update-peek-content">
+                      <span className="dashboard-update-peek-game">
+                        {metadataById[video.videoId]?.gameTitle ||
+                          'Unknown Game'}
+                      </span>
+                      <span className="dashboard-update-peek-title">
+                        {metadataById[video.videoId]?.trackTitle || video.title}
+                      </span>
+                    </div>
+
+                    <div className="dashboard-update-peek-actions">
+                      <button
+                        className="peek-action-btn peek-action-btn-comments"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const rect = e.currentTarget.getBoundingClientRect();
+                          onShowComments?.(video, {
+                            top: rect.top,
+                            left: rect.left,
+                            width: rect.width,
+                            height: rect.height,
+                          });
+                        }}
+                        title="View comments"
+                      >
+                        <SpeechBubbleIcon />
+                      </button>
+                      <button
+                        className="peek-action-btn"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onAddTrack?.([resolveTrack(video)]);
+                        }}
+                        title="Add to playlist"
+                      >
+                        <PlaylistPlusIcon />
+                      </button>
+                      <button
+                        className="peek-action-btn peek-action-btn-play"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onPlayTrack?.(resolveTrack(video));
+                        }}
+                        title="Play now"
+                      >
+                        <PlayIcon />
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
-              <div className="dashboard-update-peek-fade" aria-hidden="true" />
             </div>
 
             <div className="dashboard-update-footer">
@@ -348,6 +447,20 @@ function NominationUpdateCard({
                   Add whole list
                 </button>
               </div>
+              <button
+                className="dashboard-update-expand-btn"
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onToggleExpand(update.userId);
+                }}
+                title="View full nomination list"
+              >
+                <svg viewBox="0 0 20 20" fill="currentColor">
+                  <path d="M11 3a1 1 0 100 2h2.586l-6.293 6.293a1 1 0 101.414 1.414L15 6.414V9a1 1 0 102 0V4a1 1 0 00-1-1h-5z" />
+                  <path d="M5 5a2 2 0 00-2 2v8a2 2 0 002 2h8a2 2 0 002-2v-3a1 1 0 10-2 0v3H5V7h3a1 1 0 000-2H5z" />
+                </svg>
+              </button>
             </div>
           </>
         )}
@@ -435,6 +548,7 @@ export default function HomePage({
   listenedStatusById = {},
   onAddToPlaylist,
   onPlayNow,
+  onShowComments,
   onNavigateToPlayer,
   onShowToast,
   isAuthReady = true,
@@ -458,6 +572,22 @@ export default function HomePage({
   const [maxVgmcNumber, setMaxVgmcNumber] = useState(24);
   const [trackMetadataById, setTrackMetadataById] = useState({});
   const [isShowingFallback, setIsShowingFallback] = useState(false);
+
+  const resolveTrack = useCallback(
+    (video) => {
+      const meta = trackMetadataById[video.videoId];
+      if (!meta) return video;
+      return {
+        ...video,
+        trackTitle: meta.trackTitle || video.trackTitle,
+        gameTitle: meta.gameTitle || video.gameTitle,
+        title: meta.trackTitle
+          ? `${meta.gameTitle} - ${meta.trackTitle}`
+          : video.title || meta.trackTitle || 'Unknown Track',
+      };
+    },
+    [trackMetadataById],
+  );
 
   const currentPlaylistIds = useMemo(
     () => new Set(currentPlaylist.map((video) => video.videoId)),
@@ -508,9 +638,6 @@ export default function HomePage({
     );
   }, [discoveryCandidates, featuredDiscoveryId, isShowingFallback]);
 
-  const activeFeaturedDiscoveryId =
-    featuredDiscoveryCandidate?.videoId ?? featuredDiscoveryId ?? null;
-
   const totalVisibleNominationCount = useMemo(
     () =>
       visibleNominationUpdates.reduce(
@@ -518,14 +645,6 @@ export default function HomePage({
         0,
       ),
     [visibleNominationUpdates],
-  );
-
-  const showActionNotice = useCallback(
-    (message) => {
-      if (!message) return;
-      onShowToast?.(message);
-    },
-    [onShowToast],
   );
 
   useEffect(() => {
@@ -703,77 +822,61 @@ export default function HomePage({
     };
   }, [supabase, discoveryCandidates, visibleNominationUpdates, isAuthReady]);
 
-  const handleQueueVideos = useCallback(
-    (videos, emptyMessage) => {
-      if (!videos?.length) {
-        showActionNotice(emptyMessage);
-        return;
-      }
-
-      const addResult = onAddToPlaylist?.(videos);
-      const addedCount =
-        typeof addResult === 'number'
-          ? addResult
-          : (addResult?.addedCount ?? 0);
-
-      showActionNotice(
-        addedCount > 0
-          ? addedCount === 1
-            ? 'Added 1 song to your current playlist'
-            : `Added ${addedCount} songs to your current playlist`
-          : emptyMessage,
+  const handleAddDiscoveryCandidate = useCallback(
+    (videoOrArray) => {
+      const videos = Array.isArray(videoOrArray)
+        ? videoOrArray
+        : [videoOrArray];
+      const resolved = videos.map((v) => resolveTrack(v));
+      onAddToPlaylist?.(resolved);
+      onShowToast?.(
+        `${resolved.length} ${resolved.length === 1 ? 'song' : 'songs'} added to playlist`,
       );
     },
-    [onAddToPlaylist, showActionNotice],
+    [onAddToPlaylist, onShowToast, resolveTrack],
+  );
+
+  const handlePlayDiscoveryCandidate = useCallback(
+    (video) => {
+      onPlayNow?.(resolveTrack(video));
+      onNavigateToPlayer?.();
+    },
+    [onPlayNow, onNavigateToPlayer, resolveTrack],
   );
 
   const handleAddWholeList = useCallback(
     (update) => {
-      handleQueueVideos(
-        update.nominations,
-        `${getDisplayProfileName(update.username)}'s nominations are already in your current playlist.`,
-      );
+      const resolved = update.nominations.map((v) => resolveTrack(v));
+      onAddToPlaylist?.(resolved);
+      onShowToast?.(`Added all ${resolved.length} songs to playlist`);
     },
-    [handleQueueVideos],
+    [onAddToPlaylist, onShowToast, resolveTrack],
   );
 
   const handleAddUpdates = useCallback(
     (update) => {
-      const nextVideos = update.nominations.filter(
-        (video) =>
-          !currentPlaylistIds.has(video.videoId) &&
-          !listenedStatusById[video.videoId],
+      const unplaced = update.nominations.filter(
+        (v) => !currentPlaylistIds.has(v.videoId),
       );
-      handleQueueVideos(
-        nextVideos,
-        `No unheard nominations from ${getDisplayProfileName(update.username)} for your current playlist.`,
-      );
-    },
-    [currentPlaylistIds, listenedStatusById, handleQueueVideos],
-  );
 
-  const handleAddDiscoveryCandidate = useCallback(
-    (candidate) => {
-      handleQueueVideos(
-        [candidate],
-        'That song is already in your current playlist.',
+      if (unplaced.length === 0) {
+        onShowToast?.('All songs from this list are already in your playlist');
+        return;
+      }
+
+      const resolved = unplaced.map((v) => resolveTrack(v));
+      onAddToPlaylist?.(resolved);
+      onShowToast?.(
+        `Added ${resolved.length} new ${resolved.length === 1 ? 'song' : 'songs'} to playlist`,
       );
     },
-    [handleQueueVideos],
-  );
-
-  const handlePlayDiscoveryCandidate = useCallback(
-    (candidate) => {
-      onPlayNow?.(candidate);
-      showActionNotice(`Playing ${candidate.title}`);
-    },
-    [onPlayNow, showActionNotice],
+    [currentPlaylistIds, onAddToPlaylist, onShowToast, resolveTrack],
   );
 
   const handleFindNewSong = useCallback(async () => {
     const nextCandidate = pickNextDiscoveryCandidate(
       discoveryCandidates,
-      activeFeaturedDiscoveryId,
+      featuredDiscoveryId,
     );
 
     if (nextCandidate) {
@@ -797,19 +900,19 @@ export default function HomePage({
             isVgmcUnplaced: true,
           });
           setIsShowingFallback(true);
-          showActionNotice('Showcasing a random unplaced VGMC track!');
+          onShowToast?.('Showcasing a random unplaced VGMC track!');
           return;
         }
       } catch {
-        showActionNotice('Failed to fetch a random unplaced track.');
+        onShowToast?.('Failed to fetch a random unplaced track.');
       }
     }
 
-    showActionNotice('No fresh nomination picks are available right now.');
+    onShowToast?.('No fresh nomination picks are available right now.');
   }, [
-    activeFeaturedDiscoveryId,
+    featuredDiscoveryId,
     discoveryCandidates,
-    showActionNotice,
+    onShowToast,
     listenedStatusById,
     supabase,
   ]);
@@ -1137,7 +1240,12 @@ export default function HomePage({
           summary={sectionSummaries.nominations}
         >
           {isDashboardLoading ? (
-            <DashboardMessage>Loading nomination updates…</DashboardMessage>
+            <div className="dashboard-nominations-loader">
+              <div
+                className="hero-loader-spinner"
+                aria-label="Loading nomination updates"
+              />
+            </div>
           ) : dashboardError ? (
             <DashboardMessage tone="danger">{dashboardError}</DashboardMessage>
           ) : visibleNominationUpdates.length === 0 ? (
@@ -1155,20 +1263,23 @@ export default function HomePage({
                   role="presentation"
                 />
               )}
-              <div className="dashboard-update-list animate-fade-in">
-                {visibleNominationUpdates.map((update) => (
-                  <NominationUpdateCard
-                    key={update.userId}
-                    update={update}
-                    metadataById={trackMetadataById}
-                    isExpanded={expandedUserId === update.userId}
-                    onToggleExpand={setExpandedUserId}
-                    onAddWholeList={handleAddWholeList}
-                    onAddUpdates={handleAddUpdates}
-                    onPlayTrack={handlePlayDiscoveryCandidate}
-                    onAddTrack={handleAddDiscoveryCandidate}
-                  />
-                ))}
+              <div className="dashboard-nominations-carousel-container animate-fade-in">
+                <ThreeDCarousel autoRotate={!expandedUserId}>
+                  {visibleNominationUpdates.map((update) => (
+                    <NominationUpdateCard
+                      key={update.userId}
+                      update={update}
+                      metadataById={trackMetadataById}
+                      isExpanded={expandedUserId === update.userId}
+                      onToggleExpand={setExpandedUserId}
+                      onAddWholeList={handleAddWholeList}
+                      onAddUpdates={handleAddUpdates}
+                      onPlayTrack={handlePlayDiscoveryCandidate}
+                      onAddTrack={handleAddDiscoveryCandidate}
+                      onShowComments={onShowComments}
+                    />
+                  ))}
+                </ThreeDCarousel>
               </div>
             </>
           )}

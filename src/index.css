@@ -475,7 +475,15 @@
 }
 
 .theme-light .dashboard-update-peek-title {
-  color: var(--text-primary);
+  color: #000; /* Solid black for song titles in light mode */
+}
+
+.theme-light .dashboard-update-title {
+  color: #000; /* Solid black for user names in light mode */
+}
+
+.theme-light .dashboard-update-card:hover .dashboard-update-title {
+  color: #000; /* Stay black on hover in light mode */
 }
 
 .theme-light .dashboard-update-peek-index {
@@ -483,12 +491,12 @@
   color: rgba(88, 28, 135, 0.9);
 }
 
-.theme-light .dashboard-update-peek-fade {
-  background: linear-gradient(
-    to bottom,
-    transparent 60%,
-    rgba(255, 255, 255, 0.8)
-  );
+.theme-light .dashboard-update-peek-row:nth-child(even) {
+  background: rgba(168, 85, 247, 0.08); /* Soft light purple zebra */
+}
+
+.theme-light .dashboard-update-full-track {
+  color: #000; /* Black song title in light mode modal */
 }
 
 .theme-light .dashboard-feature-card-hero {
@@ -1404,61 +1412,112 @@ body {
   /* Removed overflow: hidden to allow shadow/scale to overlap surroundings */
 }
 
-.dashboard-card-interactive {
-  cursor: pointer;
-}
-
-.dashboard-card-interactive:hover {
-  transform: translateY(-8px) scale(1.02);
-  border-color: var(--accent);
-  box-shadow:
-    0 24px 48px rgba(0, 0, 0, 0.3),
-    0 0 20px rgba(var(--accent-rgb), 0.2);
-  z-index: 10;
-}
-
 .dashboard-update-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 14px;
-  margin-bottom: 0px;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-rows: auto auto;
+  align-items: center; /* Vertical center for the first row (name/avatar) */
+  gap: 0 14px; /* Gap between columns, but not between rows for tighter alignment */
+  margin-bottom: 8px;
 }
 
 .dashboard-update-heading {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
+  display: contents; /* Let children participate in the grid */
 }
 
 .dashboard-update-title {
-  font-size: 1.1rem;
-  font-weight: 700;
-  color: var(--text-primary);
+  grid-column: 1;
+  grid-row: 1;
+  font-size: 19px; /* Decreased from 1.25rem (20px) */
+  font-weight: 800;
+  color: #b0b3b8; /* Even softer white (mid-grey) for dark mode */
   letter-spacing: -0.01em;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.dashboard-update-user-context {
+  grid-column: 2;
+  grid-row: 1 / span 2; /* Avatar spans both to remain centrally anchored */
+  align-self: center;
 }
 
 .dashboard-update-count {
+  grid-column: 1;
+  grid-row: 2;
   font-size: 0.85rem;
-  color: var(--text-secondary);
   font-weight: 500;
+  color: var(--text-secondary);
+  opacity: 0.8;
+  margin: 0;
+  margin-top: -2px; /* Tighter fit under the name */
+}
+
+.dashboard-update-gf-user {
+  color: #0ea5e9; /* More classic sky blue */
+  font-weight: 700;
+}
+
+.theme-light .dashboard-update-gf-user {
+  color: #0284c7; /* A bit more intense for light mode */
+}
+
+.dashboard-update-card:hover .dashboard-update-title {
+  color: #e2e8f0;
 }
 
 .dashboard-update-peek-container {
   position: relative;
   background: rgba(0, 0, 0, 0.2);
   border-radius: var(--radius-md);
-  padding: 12px;
-  min-height: 110px;
+  padding: 0;
+  /* Removing parent padding to let stripes touch edges */
+  overflow: hidden;
+  /* Ensure rounded corners clip the stripes */
   border: 1px solid var(--border);
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  /* Allow shrinking */
 }
 
 .dashboard-update-peek-list {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  max-height: 120px;
-  overflow: hidden;
+  gap: 0;
+  /* Removing gap entirely to allow equal-sized zebra stripes */
+  overflow-y: auto;
+  flex: 1;
+  padding: 0;
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+  transition: scrollbar-color 0.3s ease;
+}
+
+.dashboard-update-peek-list:hover {
+  scrollbar-color: var(--accent-dim) transparent;
+}
+
+/* For Webkit browsers (Chrome/Safari) */
+.dashboard-update-peek-list::-webkit-scrollbar {
+  width: 5px;
+}
+
+.dashboard-update-peek-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.dashboard-update-peek-list::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 10px;
+  transition: background 0.3s ease;
+}
+
+.dashboard-update-peek-list:hover::-webkit-scrollbar-thumb {
+  background: var(--accent-dim);
 }
 
 .dashboard-update-peek-row {
@@ -1467,12 +1526,45 @@ body {
   gap: 10px;
   font-size: 0.9rem;
   line-height: 1.4;
-  opacity: 0.9;
-  transition: opacity 0.2s ease;
+  opacity: 0.95;
+  transition: all 0.2s ease;
+  padding: 13px 16px 12px 16px;
+  /* Balanced height: 13px at top (extra pixel), 12px at bottom */
+  border-radius: 0;
+  margin: 0;
+  width: 100%;
+}
+
+.dashboard-update-peek-row:nth-child(even) {
+  background: rgba(0, 0, 0, 0.2);
+  /* Deeper "dark grey" for dark mode zebra */
+}
+
+.dashboard-update-peek-row:hover .dashboard-update-peek-index {
+  flex: 0 0 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-surface);
+  color: var(--text-secondary);
+  border-radius: 6px;
+  font-weight: 700;
+  font-size: 0.8rem;
+  border: 1px solid var(--border);
+}
+
+.dashboard-nominations-loader {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 480px;
+  width: 100%;
 }
 
 .dashboard-update-peek-row:hover {
   opacity: 1;
+  background: rgba(255, 255, 255, 0.08);
 }
 
 .dashboard-update-peek-index {
@@ -1489,27 +1581,92 @@ body {
   border: 1px solid var(--border);
 }
 
+.dashboard-update-peek-content {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
+
+.dashboard-update-peek-game {
+  font-size: 9px;
+  /* One size smaller than the previous 10px */
+  font-weight: 900;
+  /* Extra bold as requested */
+  color: var(--accent-light);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.2;
+  opacity: 0.8;
+}
+
 .dashboard-update-peek-title {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  color: var(--text-secondary);
+  color: #b0b3b8; /* Even softer grey for song titles in dark mode */
+  font-size: 15px; /* Decreased from 16px */
+  font-weight: 800;
+  line-height: 1.2;
 }
 
-.dashboard-update-peek-fade {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background: linear-gradient(
-    to bottom,
-    transparent 60%,
-    rgba(22, 22, 34, 0.9)
-  );
-  border-radius: var(--radius-md);
+.dashboard-update-peek-actions {
+  display: none;
+  align-items: center;
+  gap: 12px;
+  padding-left: 8px;
+  animation: peekActionFadeIn 0.2s ease-out;
+}
+
+.dashboard-update-peek-row:hover .dashboard-update-peek-actions {
+  display: flex;
+}
+
+.peek-action-btn {
+  background: none;
+  border: none;
+  padding: 4px;
+  cursor: pointer;
+  color: var(--text-secondary);
+  opacity: 0.6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  border-radius: 6px;
+}
+
+.peek-action-btn:hover {
+  opacity: 1;
+  color: var(--accent-light);
+  background: var(--bg-glass);
+  transform: translateY(-1px);
+}
+
+.peek-action-btn-comments:hover {
+  color: var(--accent-info);
+}
+
+.peek-action-btn-play:hover {
+  color: #10b981; /* Green for play */
+}
+
+@keyframes peekActionFadeIn {
+  from {
+    opacity: 0;
+    transform: translateX(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
 
 .dashboard-update-footer {
-  margin-top: auto;
+  margin-top: 12px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1526,7 +1683,37 @@ body {
   transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-.dashboard-card-interactive:hover .dashboard-update-user-context {
+.dashboard-update-expand-btn {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: var(--bg-glass);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: var(--shadow-sm);
+  margin-left: auto;
+  /* Push to right if inside a flex container with other items */
+}
+
+.dashboard-update-expand-btn:hover {
+  background: var(--bg-glass-hover);
+  border-color: var(--accent);
+  color: var(--accent);
+  transform: scale(1.1) translateY(-2px);
+  box-shadow: 0 4px 12px var(--accent-glow);
+}
+
+.dashboard-update-expand-btn svg {
+  width: 18px;
+  height: 18px;
+}
+
+.dashboard-update-card:hover .dashboard-update-user-context {
   transform: scale(1.1);
 }
 
@@ -2938,9 +3125,9 @@ body {
 }
 
 .mobile-topbar-front.with-detached-player {
-  grid-template-rows: calc(
-      var(--mobile-detached-player-base-visible-height) + 12px
-    ) var(--mobile-topbar-shell-h);
+  grid-template-rows:
+    calc(var(--mobile-detached-player-base-visible-height) + 12px)
+    var(--mobile-topbar-shell-h);
   gap: 0;
   padding: 0 12px;
   background: transparent;
@@ -5661,6 +5848,61 @@ button.playlist-search-indicator:hover {
 .theme-light .database-context-menu {
   background: rgba(255, 255, 255, 0.98);
   box-shadow: 0 10px 30px rgba(15, 23, 42, 0.12);
+}
+
+.dashboard-update-full-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 18px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  transition: all 0.2s ease;
+}
+
+.dashboard-update-full-row:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: var(--accent-dim);
+  transform: translateX(4px);
+}
+
+.dashboard-update-full-row-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.dashboard-update-full-track {
+  color: #cbd5e1; /* Proportional to carousel list color */
+  font-weight: 800;
+  font-size: 16px;
+  line-height: 1.3;
+  letter-spacing: -0.01em;
+}
+
+.dashboard-update-full-game {
+  color: var(--accent-light);
+  font-size: 9px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  line-height: 1.2;
+  opacity: 0.9;
+}
+
+.dashboard-update-full-index {
+  flex: 0 0 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--accent-dim);
+  color: white;
+  border-radius: 8px;
+  font-weight: 800;
+  font-size: 0.85rem;
 }
 
 .database-context-menu-item {
@@ -10019,14 +10261,14 @@ body.is-resizing .resize-handle {
 /* Specific Desktop Layout: Center in active area to the right of navigation */
 @media (min-width: 961px) {
   .dashboard-card-modal-content {
+    /* Horizontal: Center relative to the area right of the 96px sidebar */
     left: calc(50% + 48px) !important;
-    /* Offset for 96px sidebar */
-    top: calc(50% - 22px) !important;
-    /* Center with slight upward shift */
+    /* Vertical: Center in the space between TopBar and bottom of viewport */
+    top: calc(var(--topbar-h) + (100dvh - var(--topbar-h)) / 2) !important;
     transform: translate(-50%, -50%) !important;
     max-width: 800px !important;
-    max-height: calc(100vh - 200px) !important;
-    width: min(680px, 85vw - 96px) !important;
+    max-height: calc(100vh - var(--topbar-h) - 60px) !important;
+    width: min(720px, 85vw - 96px) !important;
   }
 }
 
@@ -10428,9 +10670,9 @@ body.is-resizing .resize-handle {
 
 /* ─── Footer Feedback Popover ─── */
 .footer-feedback-popover {
-  position: absolute !important;
-  bottom: calc(var(--footer-player-h) + 16px) !important;
-  right: 12px !important;
+  position: absolute;
+  bottom: calc(var(--footer-player-h) + 16px);
+  right: 12px;
   width: 400px !important;
   max-width: calc(100vw - 24px) !important;
   height: min(520px, 70vh) !important;
@@ -10439,23 +10681,28 @@ body.is-resizing .resize-handle {
   background: var(--bg-surface) !important;
   border: 1px solid var(--border) !important;
   box-shadow: 0 12px 48px rgba(0, 0, 0, 0.6) !important;
-  transform: none !important;
+  transform: none;
   opacity: 1 !important;
   pointer-events: auto !important;
   animation: footerPopoverFadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
   display: flex !important;
   flex-direction: column !important;
+  transition: opacity 0.2s ease !important; /* Pure fade transition */
+}
+
+.footer-feedback-popover.is-anchored {
+  transition: transform 0s !important; /* Kill any slide-in from parent classes */
+  transform: none !important;
+  animation: footerPopoverFadeIn 0.2s ease-out !important;
 }
 
 @keyframes footerPopoverFadeIn {
   from {
     opacity: 0;
-    transform: translateY(12px) scale(0.98);
   }
 
   to {
     opacity: 1;
-    transform: translateY(0) scale(1);
   }
 }
 
@@ -10515,4 +10762,219 @@ body.is-resizing .resize-handle {
 /* Ensure the popover works in the detached footer context */
 .player-surface-mini .footer-feedback-popover {
   top: auto !important;
+}
+
+/* ─── 3D Carousel Component ─── */
+.threed-carousel-container {
+  position: relative;
+  width: 100%;
+  height: 600px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  overflow: visible;
+  margin: 10px 0 30px;
+  perspective: 1400px;
+}
+
+.threed-carousel-stage {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.threed-carousel-item {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  max-width: 580px;
+  max-height: 540px;
+  transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: transform, opacity;
+  display: flex;
+  flex-direction: column;
+}
+
+.threed-carousel-item:not(.active) {
+  cursor: pointer;
+}
+
+.threed-carousel-item:not(.active) > * {
+  pointer-events: none;
+  user-select: none;
+}
+
+.threed-carousel-item .dashboard-update-card {
+  height: 100%;
+  flex: 1;
+}
+
+/* Add a subtle glow and solid background to the active card */
+.threed-carousel-item.active {
+  filter: drop-shadow(0 0 30px var(--accent-glow));
+}
+
+.dashboard-card-close-btn {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #ef4444;
+  /* Solid red */
+  color: white;
+  border-radius: 50%;
+  border: none;
+  font-size: 1.1rem;
+  font-weight: 800;
+  cursor: pointer;
+  z-index: 110;
+  transition: all 0.2s ease;
+  line-height: 1;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  margin-left: auto;
+  /* Push to far right of header flexbox */
+}
+
+.dashboard-card-close-btn:hover {
+  background: #dc2626;
+  transform: scale(1.1) rotate(90deg);
+}
+
+.dashboard-card-close-btn svg {
+  width: 14px;
+  height: 14px;
+}
+
+.dashboard-modal-header {
+  justify-content: flex-start !important;
+  align-items: center !important;
+  gap: 20px !important;
+  margin-bottom: 24px !important;
+  display: flex;
+}
+
+.threed-carousel-item.active .dashboard-update-card {
+  background: var(--bg-surface) !important;
+  opacity: 1 !important;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+}
+
+/* Bold typography for the active (featured) card list */
+.threed-carousel-item.active .dashboard-update-title {
+  font-size: 23px; /* Decreased from 1.5rem (24px) */
+  /* Hero boost for the active contributor's name */
+}
+
+.threed-carousel-item.active .dashboard-update-peek-row {
+  font-size: 1.2rem; /* Decreased from 1.25rem (~20px to ~19px) */
+  gap: 14px;
+}
+
+.threed-carousel-item.active .dashboard-update-peek-title {
+  font-size: 17px; /* Decreased from 18px */
+  color: #cbd5e1; /* Slightly brighter for active card to stay featured but still soft */
+}
+
+.theme-light .threed-carousel-item.active .dashboard-update-peek-title {
+  color: #000; /* Ensure active card is also black in light mode */
+}
+
+.threed-carousel-item.active .dashboard-update-peek-game {
+  font-size: 10.5px;
+  /* Slightly larger for active but still smaller relative to title */
+  font-weight: 900;
+}
+
+.threed-carousel-nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--bg-glass);
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 100;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  backdrop-filter: blur(12px);
+}
+
+.threed-carousel-nav:hover {
+  background: var(--bg-glass-hover);
+  border-color: var(--accent);
+  color: var(--accent);
+  transform: translateY(-50%) scale(1.15);
+  box-shadow: 0 0 20px var(--accent-glow);
+}
+
+.threed-carousel-prev {
+  left: 20px;
+}
+
+.threed-carousel-next {
+  right: 20px;
+}
+
+.threed-carousel-nav svg {
+  width: 24px;
+  height: 24px;
+}
+
+.threed-carousel-dots {
+  position: absolute;
+  bottom: -30px;
+  display: flex;
+  gap: 8px;
+  z-index: 100;
+}
+
+.threed-carousel-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--border);
+  border: none;
+  cursor: pointer;
+  transition: all var(--transition);
+  padding: 0;
+}
+
+.threed-carousel-dot.active {
+  background: var(--accent);
+  width: 20px;
+  border-radius: 4px;
+}
+
+.dashboard-nominations-carousel-container {
+  grid-column: 1 / -1;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+.dashboard-nominations-section .dashboard-pane-body {
+  overflow: visible !important;
+  padding: 0 !important;
+}
+
+/* Responsive adjustments */
+@media (max-width: 960px) {
+  .threed-carousel-container {
+    height: 420px;
+  }
+
+  .threed-carousel-item {
+    max-width: 320px;
+  }
 }
