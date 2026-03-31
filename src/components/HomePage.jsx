@@ -168,7 +168,7 @@ function ModalPortal({ children }) {
   return createPortal(children, target);
 }
 
-function NominationUpdateCard({
+export function NominationUpdateCard({
   update,
   metadataById = {},
   isExpanded = false,
