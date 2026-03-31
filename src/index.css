@@ -488,8 +488,11 @@
 }
 
 .theme-light .dashboard-update-peek-row:nth-child(even) {
-  background: rgba(168, 85, 247, 0.08);
-  /* Soft light purple zebra */
+  background: rgba(168, 85, 247, 0.08); /* Soft light purple zebra */
+}
+
+.theme-light .dashboard-update-full-track {
+  color: #000; /* Black song title in light mode modal */
 }
 
 .theme-light .dashboard-feature-card-hero {
@@ -1420,9 +1423,9 @@ body {
 }
 
 .dashboard-update-title {
-  font-size: 1.25rem;
+  font-size: 19px; /* Decreased from 1.25rem (20px) */
   font-weight: 800;
-  color: #cbd5e1;
+  color: #b0b3b8; /* Even softer white (mid-grey) for dark mode */
   letter-spacing: -0.01em;
   margin: 0;
   display: flex;
@@ -1557,8 +1560,8 @@ body {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  color: #cbd5e1; /* More pronounced grey for song titles in dark mode */
-  font-size: 16px; /* Increased from 15px */
+  color: #b0b3b8; /* Even softer grey for song titles in dark mode */
+  font-size: 15px; /* Decreased from 16px */
   font-weight: 800;
   line-height: 1.2;
 }
@@ -3023,9 +3026,9 @@ body {
 }
 
 .mobile-topbar-front.with-detached-player {
-  grid-template-rows: calc(
-      var(--mobile-detached-player-base-visible-height) + 12px
-    ) var(--mobile-topbar-shell-h);
+  grid-template-rows:
+    calc(var(--mobile-detached-player-base-visible-height) + 12px)
+    var(--mobile-topbar-shell-h);
   gap: 0;
   padding: 0 12px;
   background: transparent;
@@ -5773,17 +5776,21 @@ button.playlist-search-indicator:hover {
 }
 
 .dashboard-update-full-track {
-  color: var(--accent-light);
-  font-weight: 700;
-  font-size: 1.05rem;
+  color: #cbd5e1; /* Proportional to carousel list color */
+  font-weight: 800;
+  font-size: 16px;
+  line-height: 1.3;
   letter-spacing: -0.01em;
 }
 
 .dashboard-update-full-game {
-  color: var(--text-secondary);
-  font-size: 0.85rem;
-  font-weight: 600;
-  opacity: 0.8;
+  color: var(--accent-light);
+  font-size: 9px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  line-height: 1.2;
+  opacity: 0.9;
 }
 
 .dashboard-update-full-index {
@@ -10747,18 +10754,18 @@ body.is-resizing .resize-handle {
 
 /* Bold typography for the active (featured) card list */
 .threed-carousel-item.active .dashboard-update-title {
-  font-size: 1.5rem;
+  font-size: 23px; /* Decreased from 1.5rem (24px) */
   /* Hero boost for the active contributor's name */
 }
 
 .threed-carousel-item.active .dashboard-update-peek-row {
-  font-size: 1.25rem; /* Significant increase as requested */
+  font-size: 1.2rem; /* Decreased from 1.25rem (~20px to ~19px) */
   gap: 14px;
 }
 
 .threed-carousel-item.active .dashboard-update-peek-title {
-  font-size: 18px; /* Proportional increase for featured card */
-  color: #e2e8f0; /* Slightly brighter for active card to stay featured */
+  font-size: 17px; /* Decreased from 18px */
+  color: #cbd5e1; /* Slightly brighter for active card to stay featured but still soft */
 }
 
 .theme-light .threed-carousel-item.active .dashboard-update-peek-title {

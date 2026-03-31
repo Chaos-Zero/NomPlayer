@@ -219,15 +219,19 @@ function NominationUpdateCard({
                         {index + 1}
                       </span>
                       <div className="dashboard-update-full-row-content">
+                        {metadataById[video.videoId]?.gameTitle ? (
+                          <span className="dashboard-update-full-game">
+                            {metadataById[video.videoId].gameTitle}
+                          </span>
+                        ) : (
+                          <span className="dashboard-update-full-game">
+                            Unknown Game
+                          </span>
+                        )}
                         <span className="dashboard-update-full-track">
                           {metadataById[video.videoId]?.trackTitle ||
                             video.title}
                         </span>
-                        {metadataById[video.videoId]?.gameTitle && (
-                          <span className="dashboard-update-full-game">
-                            {metadataById[video.videoId].gameTitle}
-                          </span>
-                        )}
                       </div>
 
                       <div className="dashboard-update-row-actions">
