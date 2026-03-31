@@ -199,6 +199,9 @@ function NominationUpdateCard({
                     {nominationCount} {nominationCount === 1 ? 'item' : 'items'}
                   </p>
                 </div>
+                <div className="dashboard-update-user-context">
+                  <DashboardAvatar update={update} />
+                </div>
               </div>
 
               <div className="dashboard-update-full-list">
@@ -274,9 +277,6 @@ function NominationUpdateCard({
                     Add whole list
                   </button>
                 </div>
-                <div className="dashboard-update-user-context">
-                  <DashboardAvatar update={update} />
-                </div>
               </div>
             </div>
           </ModalPortal>
@@ -295,6 +295,9 @@ function NominationUpdateCard({
                 <p className="dashboard-update-count">
                   {nominationCount} {nominationCount === 1 ? 'item' : 'items'}
                 </p>
+              </div>
+              <div className="dashboard-update-user-context">
+                <DashboardAvatar update={update} />
               </div>
             </div>
 
@@ -344,9 +347,6 @@ function NominationUpdateCard({
                 >
                   Add whole list
                 </button>
-              </div>
-              <div className="dashboard-update-user-context">
-                <DashboardAvatar update={update} />
               </div>
             </div>
           </>
