@@ -1167,7 +1167,12 @@ export default function HomePage({
           summary={sectionSummaries.nominations}
         >
           {isDashboardLoading ? (
-            <DashboardMessage>Loading nomination updates…</DashboardMessage>
+            <div className="dashboard-nominations-loader">
+              <div
+                className="hero-loader-spinner"
+                aria-label="Loading nomination updates"
+              />
+            </div>
           ) : dashboardError ? (
             <DashboardMessage tone="danger">{dashboardError}</DashboardMessage>
           ) : visibleNominationUpdates.length === 0 ? (
