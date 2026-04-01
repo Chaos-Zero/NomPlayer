@@ -7970,7 +7970,7 @@ button.playlist-search-indicator:hover {
   display: flex;
   flex-direction: column;
   height: 100%;
-  background: var(--bg-base);
+  background: var(--bg-deep);
   color: var(--text-primary);
   position: relative;
   overflow: hidden;
@@ -7998,15 +7998,6 @@ button.playlist-search-indicator:hover {
 /* ==========================================================================
    TRACK DATABASE PAGE
    ========================================================================== */
-
-.database-container {
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  background: var(--bg-deep);
-  overflow: hidden;
-  position: relative;
-}
 
 .database-container.has-footer-player .table-wrapper {
   padding-bottom: calc(var(--footer-player-h) + 60px);
@@ -8242,6 +8233,7 @@ button.playlist-search-indicator:hover {
   border-collapse: collapse;
   font-size: 0.875rem;
   table-layout: fixed;
+  transition: opacity 0.4s ease;
 }
 
 .sidebar-open .database-table {
@@ -8636,13 +8628,6 @@ body.is-resizing .resize-handle {
   display: flex;
   justify-content: center;
   align-items: center;
-}
-
-.database-loading-text {
-  font-size: 1.25rem;
-  color: var(--text-secondary);
-  font-weight: 500;
-  letter-spacing: 0.05rem;
 }
 
 /* Community Panel */
@@ -9146,10 +9131,6 @@ body.is-resizing .resize-handle {
 }
 
 /* ─── Database View Loading UX ─── */
-.database-main-content {
-  position: relative;
-}
-
 .database-loading-overlay {
   position: absolute;
   inset: 0;
@@ -9175,10 +9156,6 @@ body.is-resizing .resize-handle {
   font-weight: 600;
   letter-spacing: 0.05em;
   opacity: 0.8;
-}
-
-.database-table {
-  transition: opacity 0.4s ease;
 }
 
 .database-table.is-loading {
