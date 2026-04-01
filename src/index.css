@@ -1442,6 +1442,8 @@ body {
   grid-column: 2;
   grid-row: 1 / span 2; /* Avatar spans both to remain centrally anchored */
   align-self: center;
+  flex-shrink: 0;
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 .dashboard-update-count {
@@ -1520,21 +1522,6 @@ body {
   background: var(--accent-dim);
 }
 
-.dashboard-update-peek-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-size: 0.9rem;
-  line-height: 1.4;
-  opacity: 0.95;
-  transition: all 0.2s ease;
-  padding: 13px 16px 12px 16px;
-  /* Balanced height: 13px at top (extra pixel), 12px at bottom */
-  border-radius: 0;
-  margin: 0;
-  width: 100%;
-}
-
 .dashboard-update-peek-row:nth-child(even) {
   background: rgba(0, 0, 0, 0.2);
   /* Deeper "dark grey" for dark mode zebra */
@@ -1560,32 +1547,6 @@ body {
   justify-content: center;
   min-height: 480px;
   width: 100%;
-}
-
-.dashboard-update-peek-row:hover {
-  opacity: 1;
-  background: rgba(255, 255, 255, 0.08);
-}
-
-.dashboard-update-peek-index {
-  flex: 0 0 20px;
-  height: 20px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--bg-glass);
-  border-radius: 6px;
-  font-size: 0.75rem;
-  font-weight: 700;
-  color: var(--accent-light);
-  border: 1px solid var(--border);
-}
-
-.dashboard-update-peek-content {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-  flex: 1;
 }
 
 .dashboard-update-peek-game {
@@ -1766,16 +1727,6 @@ body {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-}
-
-.dashboard-update-actions {
-  display: flex;
-  gap: 8px;
-}
-
-.dashboard-update-user-context {
-  flex-shrink: 0;
-  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 .dashboard-update-expand-btn {
