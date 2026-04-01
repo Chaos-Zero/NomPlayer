@@ -5891,23 +5891,6 @@ button.playlist-search-indicator:hover {
   box-shadow: 0 10px 30px rgba(15, 23, 42, 0.12);
 }
 
-.dashboard-update-full-row {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  padding: 14px 18px;
-  background: rgba(255, 255, 255, 0.03);
-  border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  transition: all 0.2s ease;
-}
-
-.dashboard-update-full-row:hover {
-  background: rgba(255, 255, 255, 0.06);
-  border-color: var(--accent-dim);
-  transform: translateX(4px);
-}
-
 .dashboard-update-full-row-content {
   flex: 1;
   display: flex;
@@ -5931,19 +5914,6 @@ button.playlist-search-indicator:hover {
   letter-spacing: 0.05em;
   line-height: 1.2;
   opacity: 0.9;
-}
-
-.dashboard-update-full-index {
-  flex: 0 0 28px;
-  height: 28px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--accent-dim);
-  color: white;
-  border-radius: 8px;
-  font-weight: 800;
-  font-size: 0.85rem;
 }
 
 .database-context-menu-item {
