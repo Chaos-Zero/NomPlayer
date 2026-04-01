@@ -4803,20 +4803,6 @@ body {
   animation: fadeIn 0.3s ease;
 }
 
-.btn-save-feedback {
-  background: var(--accent);
-  color: white;
-  padding: 8px 18px;
-  font-weight: 600;
-  border-radius: var(--radius-md);
-  box-shadow: 0 4px 14px var(--accent-glow);
-}
-
-.btn-save-feedback:hover:not(:disabled) {
-  transform: translateY(-1px);
-  box-shadow: 0 6px 20px var(--accent-glow);
-}
-
 .theme-light .player-community-activity {
   background: rgba(240, 240, 245, 0.5);
 }
@@ -10848,12 +10834,6 @@ body.is-resizing .resize-handle {
 .theme-light .list-explorer-peer-note {
   color: #000000 !important;
   opacity: 0.9;
-}
-
-.theme-light .list-explorer-peer-rating {
-  background: rgba(124, 58, 237, 0.12) !important;
-  color: #4c1d95 !important;
-  border-color: rgba(124, 58, 237, 0.2) !important;
 }
 
 /* ─── Footer Feedback Popover ─── */
