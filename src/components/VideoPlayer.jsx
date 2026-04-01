@@ -23,6 +23,8 @@ import {
   PauseIcon,
   FastForwardIcon,
   PlaylistPlusIcon,
+  ShuffleIcon,
+  StopwatchIcon,
 } from './Icons.jsx';
 
 const VideoPlayer = forwardRef(function VideoPlayer(
@@ -38,6 +40,7 @@ const VideoPlayer = forwardRef(function VideoPlayer(
     isShuffleEnabled = false,
     onShuffle,
     isPreviewModeEnabled = false,
+    previewCountdown = 30,
     onTogglePreview,
     isSupported = false,
     isNominated = false,
@@ -211,12 +214,13 @@ const VideoPlayer = forwardRef(function VideoPlayer(
 
   // Track playback progress
   useEffect(() => {
-    const player = playerRef.current;
-    if (!player || !isPlaying) {
+    if (!isPlaying) {
       return undefined;
     }
 
     const intervalId = window.setInterval(() => {
+      const player = playerRef.current;
+      if (!player) return;
       try {
         const time = player.getCurrentTime();
         const dur = player.getDuration();
@@ -488,7 +492,7 @@ const VideoPlayer = forwardRef(function VideoPlayer(
               aria-label="Shuffle playlist"
               title="Shuffle playlist"
             >
-              <span aria-hidden="true">🔀</span>
+              <ShuffleIcon />
             </button>
             <button
               className={`player-overlay-chip preview${isPreviewModeEnabled ? ' active' : ''}`}
@@ -497,7 +501,10 @@ const VideoPlayer = forwardRef(function VideoPlayer(
               aria-label="Preview mode"
               title="Preview mode"
             >
-              <FastForwardIcon />
+              <StopwatchIcon
+                countdown={previewCountdown}
+                className="transport-icon transport-icon-preview"
+              />
             </button>
             <div className="item-fav-container">
               <button

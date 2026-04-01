@@ -20,151 +20,25 @@ import {
   lastSearchError,
 } from '../utils/searchPersistence.js';
 import UserMenu from './UserMenu.jsx';
+import {
+  PreviousIcon,
+  NextIcon,
+  PlayIcon,
+  PauseIcon,
+  ShuffleIcon,
+  PlaylistPlusIcon,
+  StopwatchIcon,
+  HeartIcon as SupportIcon,
+  HeartEmptyIcon,
+  StarIcon,
+  LockIcon,
+  SunIcon,
+  MoonIcon,
+  SearchIcon,
+} from './Icons.jsx';
 
 const API_KEY = import.meta.env.VITE_YT_API_KEY || '';
 const SUCCESS_FLASH_MS = 1000;
-
-function PreviousIcon() {
-  return (
-    <svg className="transport-icon" viewBox="0 0 20 20" aria-hidden="true">
-      <path d="M5 4.5C5 4.09 4.66 3.75 4.25 3.75C3.84 3.75 3.5 4.09 3.5 4.5V15.5C3.5 15.91 3.84 16.25 4.25 16.25C4.66 16.25 5 15.91 5 15.5V4.5Z" />
-      <path d="M15.75 4.6V15.4C15.75 15.99 15.09 16.34 14.6 16L7.11 10.6C6.7 10.31 6.7 9.69 7.11 9.4L14.6 4C15.09 3.66 15.75 4.01 15.75 4.6Z" />
-    </svg>
-  );
-}
-
-function NextIcon() {
-  return (
-    <svg className="transport-icon" viewBox="0 0 20 20" aria-hidden="true">
-      <path d="M15 4.5C15 4.09 15.34 3.75 15.75 3.75C16.16 3.75 16.5 4.09 16.5 4.5V15.5C16.5 15.91 16.16 16.25 15.75 16.25C15.34 16.25 15 15.91 15 15.5V4.5Z" />
-      <path d="M4.25 4.6V15.4C4.25 15.99 4.91 16.34 5.4 16L12.89 10.6C13.3 10.31 13.3 9.69 12.89 9.4L5.4 4C4.91 3.66 4.25 4.01 4.25 4.6Z" />
-    </svg>
-  );
-}
-
-function PlayIcon() {
-  return (
-    <svg
-      className="transport-icon transport-icon-play"
-      viewBox="0 0 20 20"
-      aria-hidden="true"
-    >
-      <path d="M6.25 4.67V15.33C6.25 15.91 6.89 16.27 7.39 15.96L15.75 10.63C16.22 10.33 16.22 9.67 15.75 9.37L7.39 4.04C6.89 3.73 6.25 4.09 6.25 4.67Z" />
-    </svg>
-  );
-}
-
-function SunIcon() {
-  return (
-    <svg
-      className="theme-toggle-icon"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <circle cx="12" cy="12" r="4" />
-      <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41" />
-    </svg>
-  );
-}
-
-function MoonIcon() {
-  return (
-    <svg
-      className="theme-toggle-icon"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z" />
-    </svg>
-  );
-}
-
-function PauseIcon() {
-  return (
-    <svg className="transport-icon" viewBox="0 0 20 20" aria-hidden="true">
-      <path d="M6.5 4.5C6.5 4.09 6.84 3.75 7.25 3.75H8.25C8.66 3.75 9 4.09 9 4.5V15.5C9 15.91 8.66 16.25 8.25 16.25H7.25C6.84 16.25 6.5 15.91 6.5 15.5V4.5Z" />
-      <path d="M11 4.5C11 4.09 11.34 3.75 11.75 3.75H12.75C13.16 3.75 13.5 4.09 13.5 4.5V15.5C13.5 15.91 13.16 16.25 12.75 16.25H11.75C11.34 16.25 11 15.91 11 15.5V4.5Z" />
-    </svg>
-  );
-}
-
-function PlaylistPlusIcon() {
-  return (
-    <svg
-      className="collection-icon"
-      viewBox="0 0 24 24"
-      aria-hidden="true"
-      fill="currentColor"
-    >
-      <path d="M14 10H2v2h12v-2zm0-4H2v2h12V6zm4 8v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zM2 16h8v-2H2v2z" />
-    </svg>
-  );
-}
-
-function SupportIcon() {
-  return (
-    <svg
-      className="collection-icon"
-      viewBox="0 0 20 20"
-      aria-hidden="true"
-      fill="currentColor"
-    >
-      <path d="M9.653 16.915a.75.75 0 0 1-.306-.06l-.004-.002-.007-.003-.016-.009a4.54 4.54 0 0 1-.21-.129 11.77 11.77 0 0 1-1.567-1.16 18.303 18.303 0 0 1-3.208-3.483C2.88 9.892 2 8.117 2 6.5 2 4.015 3.985 2 6.5 2c1.447 0 2.71.68 3.5 1.726.79-1.046 2.053-1.726 3.5-1.726 2.515 0 4.5 2.015 4.5 4.5 0 1.617-.88 3.392-2.331 5.564a18.301 18.301 0 0 1-3.208 3.483c-.563.446-1.1.815-1.567 1.16a4.39 4.39 0 0 1-.226.138l-.01.006-.003.002z" />
-    </svg>
-  );
-}
-
-function FastForwardIcon({ className = 'collection-icon' }) {
-  return (
-    <svg className={className} viewBox="0 0 20 20" aria-hidden="true">
-      <path d="M3.75 4.95v10.1c0 .58.64.94 1.14.64l6.45-4.98c.44-.34.44-1.08 0-1.42L4.89 4.31c-.5-.3-1.14.06-1.14.64Z" />
-      <path d="M10.5 4.95v10.1c0 .58.64.94 1.14.64l6.45-4.98c.44-.34.44-1.08 0-1.42l-6.45-4.98c-.5-.3-1.14.06-1.14.64Z" />
-    </svg>
-  );
-}
-
-function StopwatchIcon({ countdown = 30, className = 'transport-icon' }) {
-  return (
-    <svg className={className} viewBox="0 0 20 20" aria-hidden="true">
-      <circle
-        cx="10"
-        cy="11.2"
-        r="8.3"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.2"
-      />
-      <path
-        d="M10 2.9V1.4M7.8 1.4H12.2M15.8 5.4L16.8 4.4"
-        stroke="currentColor"
-        strokeWidth="1.2"
-        strokeLinecap="round"
-      />
-      <text
-        x="10"
-        y="11.7"
-        textAnchor="middle"
-        dominantBaseline="middle"
-        fontSize="10"
-        fontWeight="900"
-        fill="currentColor"
-        style={{ fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.3px' }}
-      >
-        {countdown}
-      </text>
-    </svg>
-  );
-}
 
 export default function TopBar({
   theme,
@@ -259,13 +133,17 @@ export default function TopBar({
     : isCurrentVideoSupported
       ? ` supported level-${currentSupportLevel}`
       : '';
-  const currentSupportGlyph = isCurrentVideoNominated
-    ? '★'
-    : isCurrentVideoSupported
-      ? currentSupportLevel === 3
-        ? '🔒'
-        : '♥'
-      : '♡';
+  const currentSupportGlyph = isCurrentVideoNominated ? (
+    <StarIcon />
+  ) : isCurrentVideoSupported ? (
+    currentSupportLevel === 3 ? (
+      <LockIcon />
+    ) : (
+      <SupportIcon />
+    )
+  ) : (
+    <HeartEmptyIcon />
+  );
   const hasTrackTitle =
     typeof currentVideo?.trackTitle === 'string' &&
     currentVideo.trackTitle.trim();
@@ -669,21 +547,19 @@ export default function TopBar({
         >
           {showModeButtons && (
             <button
-              className={`btn btn-icon shuffle-btn${isShuffleEnabled ? ' active' : ''}`}
+              className={`footer-control-btn shuffle${isShuffleEnabled ? ' active' : ''}`}
               onClick={onShuffle}
               title="Shuffle playlist"
               aria-label="Shuffle playlist"
               aria-pressed={isShuffleEnabled}
               tabIndex={hidden || hidePlaybackControls ? -1 : 0}
             >
-              <span className="shuffle-glyph" aria-hidden="true">
-                🔀
-              </span>
+              <ShuffleIcon />
             </button>
           )}
 
           <button
-            className="btn btn-icon"
+            className="footer-control-btn"
             onClick={onPrev}
             title="Previous"
             id={withIds ? 'prev-btn' : undefined}
@@ -694,7 +570,7 @@ export default function TopBar({
           </button>
 
           <button
-            className="btn btn-play"
+            className="footer-control-btn play-pause"
             onClick={() => setIsPlaying((p) => !p)}
             title={isPlaying ? 'Pause' : 'Play'}
             id={withIds ? 'play-pause-btn' : undefined}
@@ -715,7 +591,7 @@ export default function TopBar({
           </button>
 
           <button
-            className="btn btn-icon"
+            className="footer-control-btn"
             onClick={onNext}
             title="Next"
             id={withIds ? 'next-btn' : undefined}
@@ -727,7 +603,7 @@ export default function TopBar({
 
           {showModeButtons && (
             <button
-              className={`btn btn-icon${isPreviewModeEnabled ? ' active' : ''}`}
+              className={`footer-control-btn preview${isPreviewModeEnabled ? ' active' : ''}`}
               onClick={onTogglePreview}
               title="Preview mode"
               aria-label="Preview mode"
@@ -756,7 +632,7 @@ export default function TopBar({
           aria-label="Toggle catalog search"
           title="Search track catalog"
         >
-          <span className="mobile-search-icon-fixed">⌕</span>
+          <SearchIcon className="mobile-search-icon-fixed" />
         </button>
       )}
       <button
@@ -774,7 +650,7 @@ export default function TopBar({
         title={showNominationsList ? 'Hide Nominations' : 'Show Nominations'}
         aria-label="Toggle nominations list"
       >
-        ★
+        <StarIcon />
       </button>
 
       <button
@@ -1124,7 +1000,7 @@ export default function TopBar({
           id="nomination-toggle-btn"
           aria-label="Toggle nominations list"
         >
-          ★
+          <StarIcon />
         </button>
 
         <button

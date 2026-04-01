@@ -5,7 +5,7 @@ import {
   getDisplayProfileName,
   deriveProfileAvatarUrl,
 } from '../lib/playerState.js';
-import { SpeechBubbleIcon, HeartIcon, LockIcon } from './FavouritesPanel.jsx';
+import { SpeechBubbleIcon, HeartIcon, LockIcon } from './Icons.jsx';
 import { ContextMenuPortal } from './ContextMenuPortal';
 
 export default function FooterFeedbackPanel({

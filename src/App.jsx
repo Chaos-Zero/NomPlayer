@@ -33,11 +33,6 @@ import SupportLevelDropdown from './components/SupportLevelDropdown.jsx';
 import ExportVgmcModal from './components/ExportVgmcModal.jsx';
 import DeleteAccountConfirmDialog from './components/DeleteAccountConfirmDialog.jsx';
 import FooterFeedbackPanel from './components/FooterFeedbackPanel.jsx';
-import {
-  SpeechBubbleIcon,
-  HeartIcon,
-  LockIcon,
-} from './components/FavouritesPanel.jsx';
 const TrackDatabase = lazy(() => import('./components/TrackDatabase.jsx'));
 import useMediaQuery from './hooks/useMediaQuery.js';
 import {
@@ -87,6 +82,13 @@ import {
   PauseIcon,
   FastForwardIcon,
   PlaylistPlusIcon,
+  ShuffleIcon,
+  StopwatchIcon,
+  HeartIcon as SupportIcon,
+  HeartEmptyIcon,
+  StarIcon,
+  LockIcon,
+  SpeechBubbleIcon,
 } from './components/Icons.jsx';
 
 const LOGOUT_TRANSITION_MS = 260;
@@ -1471,6 +1473,11 @@ export default function App() {
   const currentPlaylistVideo =
     playlist.find((video) => video.videoId === currentVideoId) || null;
   const currentVideo = transientVideo || currentPlaylistVideo;
+
+  useEffect(() => {
+    setFooterCurrentTime(0);
+    setFooterDuration(0);
+  }, [currentVideo?.videoId]);
   const getCatalogTrackForVideo = useCallback(
     (video) => {
       if (!video?.videoId) {
@@ -1566,13 +1573,17 @@ export default function App() {
       : isCurrentVideoSupported
         ? ` supported level-${currentSupportLevel}`
         : '';
-  const currentSupportGlyph = isCurrentVideoNominated
-    ? '★'
-    : isCurrentVideoSupported
-      ? currentSupportLevel === 3
-        ? '🔒'
-        : '♥'
-      : '♡';
+  const currentSupportGlyph = isCurrentVideoNominated ? (
+    <StarIcon />
+  ) : isCurrentVideoSupported ? (
+    currentSupportLevel === 3 ? (
+      <LockIcon />
+    ) : (
+      <SupportIcon />
+    )
+  ) : (
+    <HeartEmptyIcon />
+  );
   const apiKeyMissing = !import.meta.env.VITE_YT_API_KEY;
   const guestImportCounts = guestImportState
     ? {
@@ -4005,6 +4016,7 @@ export default function App() {
         isShuffleEnabled={isShuffleEnabled}
         onShuffle={handleShufflePlaylist}
         isPreviewModeEnabled={isPreviewModeEnabled}
+        previewCountdown={previewCountdown}
         onTogglePreview={handleTogglePreviewMode}
         isSupported={isCurrentVideoSupported}
         onOpenSupportDropdown={(video, position) =>
@@ -4045,7 +4057,7 @@ export default function App() {
                 onClick={handleShufflePlaylist}
                 title="Shuffle"
               >
-                🔀
+                <ShuffleIcon />
               </button>
               <button
                 className="footer-control-btn"
@@ -4073,7 +4085,10 @@ export default function App() {
                 onClick={handleTogglePreviewMode}
                 title="Preview"
               >
-                <FastForwardIcon />
+                <StopwatchIcon
+                  countdown={previewCountdown}
+                  className="transport-icon transport-icon-preview"
+                />
               </button>
             </div>
             <div className="footer-progress-row">

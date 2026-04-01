@@ -30,12 +30,8 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { PointerSensor as CorePointerSensor } from '@dnd-kit/core';
-import {
-  SortableSupportItem,
-  SupportItem,
-  HeartIcon,
-  LockIcon,
-} from './FavouritesPanel';
+import { SortableSupportItem, SupportItem } from './FavouritesPanel.jsx';
+import { HeartIcon, LockIcon } from './Icons.jsx';
 import { ContextMenuPortal } from './ContextMenuPortal';
 import ExportIcon from './ExportIcon.jsx';
 import YouTubeIcon from './YouTubeIcon.jsx';
