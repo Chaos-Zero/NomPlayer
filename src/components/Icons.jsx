@@ -117,10 +117,10 @@ export function StopwatchIcon({
       />
       <text
         x="10"
-        y="11.2"
+        y="11.5"
         textAnchor="middle"
-        dominantBaseline="middle"
-        fontSize="10"
+        dominantBaseline="central"
+        fontSize="9"
         fontWeight="900"
         fill="currentColor"
         style={{ fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.3px' }}

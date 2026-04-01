@@ -2943,8 +2943,8 @@ body {
 }
 
 .transport-icon-preview {
-  width: 24px;
-  height: 24px;
+  width: 28px;
+  height: 28px;
 }
 
 .collection-toggle-btn {
@@ -3638,6 +3638,11 @@ body {
 .mobile-playback-inline .transport-icon-play {
   width: 18px;
   height: 18px;
+}
+
+.mobile-playback-inline .footer-control-btn.play-pause .transport-icon-preview {
+  width: 32px;
+  height: 32px;
 }
 
 .mobile-playback-floating {
@@ -11264,6 +11269,11 @@ body.is-resizing .resize-handle {
 .footer-control-btn svg {
   width: 20px;
   height: 20px;
+}
+
+.footer-control-btn.preview svg {
+  width: 28px;
+  height: 28px;
 }
 
 .footer-progress-row {
