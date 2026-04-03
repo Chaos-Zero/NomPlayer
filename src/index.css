@@ -1382,10 +1382,16 @@ body {
   perspective: 1200px;
   transform-style: preserve-3d;
   animation: fade-in 0.4s ease-out;
-  max-height: calc(
-    4 * 260px + 3 * 24px + 64px + 10px
-  ); /* 4 rows + gaps + padding + buffer */
+  max-height: 1176px; /* Precise cut after 4 rows (4*260 + 3*24 + 64 padding) */
   overflow: hidden;
+  mask-image: linear-gradient(to bottom, black 95%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to bottom, black 95%, transparent 100%);
+}
+
+.discovery-grid-card-wrapper {
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 /* Discovery Card Overlay (Inside TiltedCard) */

@@ -788,7 +788,7 @@ export default function HomePage({
       currentPlaylistIds,
       listenedStatusById,
       excludeUserId: authUser?.id ?? null,
-      limit: 100,
+      limit: 200, // Increased for larger pool
       ignoreFilterVideoIds: featuredDiscoveryId ? [featuredDiscoveryId] : [],
     });
     return [...candidates].sort(
@@ -808,43 +808,56 @@ export default function HomePage({
     if (discoveryCandidates.length === 0 && unplacedFallbackTracks.length === 0)
       return;
 
-    // 1. Gather potential candidates
-    const rawCandidates = [...discoveryCandidates];
-    const fallbackList = unplacedFallbackTracks.map((track) => ({
-      videoId: track.videoId,
-      title: track.displayTitle,
-      thumbnail:
-        track.sourceThumbnailUrl || getYouTubeThumbnailUrl(track.videoId),
-      isFallback: true,
-      supportCount1: track.supportCount1,
-      supportCount2: track.supportCount2,
-      supportCount3: track.supportCount3,
-      gameTitle: track.gameTitle,
-      trackTitle: track.trackTitle,
-      displayTitle: track.displayTitle,
-    }));
-
-    // 2. Combine and initial filter for unstarted songs only
-    const pool = [...rawCandidates, ...fallbackList].filter((item) => {
+    // 1. Separate candidates and fallbacks
+    const nominationPool = [...discoveryCandidates].filter((item) => {
       const status = listenedStatusById[item.videoId];
       return !status || (status !== 'complete' && status !== 'partial');
     });
 
-    // 3. De-duplicate
+    const fallbackPool = unplacedFallbackTracks
+      .map((track) => ({
+        videoId: track.videoId,
+        title: track.displayTitle,
+        thumbnail:
+          track.sourceThumbnailUrl || getYouTubeThumbnailUrl(track.videoId),
+        isFallback: true,
+        supportCount1: track.supportCount1,
+        supportCount2: track.supportCount2,
+        supportCount3: track.supportCount3,
+        gameTitle: track.gameTitle,
+        trackTitle: track.trackTitle,
+        displayTitle: track.displayTitle,
+      }))
+      .filter((item) => {
+        const status = listenedStatusById[item.videoId];
+        return !status || (status !== 'complete' && status !== 'partial');
+      });
+
+    // 2. Shuffle both independently (Fisher-Yates)
+    const shuffleArray = (array) => {
+      const shuffled = [...array];
+      for (let i = shuffled.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+      }
+      return shuffled;
+    };
+
+    const shuffledNominations = shuffleArray(nominationPool);
+    const shuffledFallbacks = shuffleArray(fallbackPool);
+
+    // 3. Combine with prioritization (Nominations first, then fill with fallbacks)
+    const combinedPool = [...shuffledNominations, ...shuffledFallbacks];
+
+    // 4. De-duplicate (in case a track is in both lists)
     const uniqueMap = new Map();
-    pool.forEach((item) => {
+    combinedPool.forEach((item) => {
       if (!uniqueMap.has(item.videoId)) uniqueMap.set(item.videoId, item);
     });
     const uniquePool = Array.from(uniqueMap.values());
 
-    // 4. Shuffle (Fisher-Yates)
-    for (let i = uniquePool.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [uniquePool[i], uniquePool[j]] = [uniquePool[j], uniquePool[i]];
-    }
-
-    // 5. Commit to persistent state
-    setPersistentDiscoveryItems(uniquePool.slice(0, 24));
+    // 5. Commit to persistent state (140 items to ensure grid stays full on resize)
+    setPersistentDiscoveryItems(uniquePool.slice(0, 140));
   }, [
     discoveryCandidates,
     unplacedFallbackTracks,
@@ -915,7 +928,7 @@ export default function HomePage({
       try {
         const { data } = await fetchPagedTracks(supabase, {
           viewMode: 'unplaced',
-          limit: 80,
+          limit: 150, // Increased for larger backfill pool
           sortColumn: 'submissions',
           sortAsc: false,
         });
