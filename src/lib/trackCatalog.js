@@ -30,7 +30,7 @@ function normalizeCatalogVideo(video) {
   };
 }
 
-function normalizeTournamentRows(value) {
+export function normalizeTournamentRows(value) {
   if (!Array.isArray(value)) {
     return [];
   }
@@ -81,7 +81,7 @@ function normalizeTournamentRows(value) {
     .filter(Boolean);
 }
 
-function normalizeTrackCatalogEntry(entry) {
+export function normalizeTrackCatalogEntry(entry) {
   if (!entry || typeof entry !== 'object') {
     return null;
   }
