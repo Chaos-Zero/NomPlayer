@@ -166,6 +166,12 @@ function normalizeTrackCatalogEntry(entry) {
         : typeof entry.retiredByTournamentName === 'string'
           ? entry.retiredByTournamentName
           : '',
+    supportCount1:
+      Number(entry.support_count_1) || Number(entry.supportCount1) || 0,
+    supportCount2:
+      Number(entry.support_count_2) || Number(entry.supportCount2) || 0,
+    supportCount3:
+      Number(entry.support_count_3) || Number(entry.supportCount3) || 0,
     tournaments,
   };
 }
@@ -192,6 +198,9 @@ export function mapTrackCatalogEntryToVideo(entry) {
     displayTitle: normalizedEntry.displayTitle,
     isRetired: normalizedEntry.isRetired,
     retiredByTournamentName: normalizedEntry.retiredByTournamentName,
+    supportCount1: normalizedEntry.supportCount1,
+    supportCount2: normalizedEntry.supportCount2,
+    supportCount3: normalizedEntry.supportCount3,
   };
 }
 
@@ -312,7 +321,10 @@ export async function fetchTrackCatalogByVideoIds(supabase, videoIds) {
         source_title,
         source_channel_title,
         source_thumbnail_url,
-        tournaments
+        tournaments,
+        support_count_1,
+        support_count_2,
+        support_count_3
       `,
     )
     .in('source_external_id', normalizedIds);
@@ -351,7 +363,10 @@ export async function fetchAllTracks(supabase) {
           source_title,
           source_channel_title,
           source_thumbnail_url,
-          tournaments
+          tournaments,
+          support_count_1,
+          support_count_2,
+          support_count_3
         `,
       )
       .range(from, from + pageSize - 1);
@@ -424,7 +439,10 @@ export async function fetchPagedTracks(
         source_title,
         source_channel_title,
         source_thumbnail_url,
-        tournaments
+        tournaments,
+        support_count_1,
+        support_count_2,
+        support_count_3
       `,
     { count: 'exact' },
   );

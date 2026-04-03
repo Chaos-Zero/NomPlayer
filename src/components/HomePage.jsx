@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import DiscordIcon from './DiscordIcon.jsx';
 import ScrollingText from './ScrollingText.jsx';
+import { getYouTubeThumbnailUrl } from '../utils/youtube.js';
 import useMediaQuery from '../hooks/useMediaQuery.js';
 import {
   buildDiscoveryCandidates,
@@ -23,6 +24,8 @@ import {
 import ThreeDCarousel from './ThreeDCarousel.jsx';
 import { ContextMenuPortal } from './ContextMenuPortal.jsx';
 import TiltedCard from './TiltedCard.jsx';
+import DiscoveryMarqueeGrid from './DiscoveryMarqueeGrid.jsx';
+import { HeartIcon, LockIcon } from './Icons.jsx';
 
 const DASHBOARD_REFRESH_LIMIT = 8;
 
@@ -48,21 +51,6 @@ const SpeechBubbleIcon = ({ size = 14 }) => (
   </svg>
 );
 
-const HeartIcon = ({ size = 16 }) => (
-  <svg viewBox="0 0 20 20" fill="currentColor" width={size} height={size}>
-    <path d="M9.653 16.915l-.005-.003-.019-.01a20.759 20.759 0 0 1-1.162-.682 22.045 22.045 0 0 1-2.582-1.9C4.045 12.733 2 10.352 2 7.5a4.5 4.5 0 0 1 8-2.828A4.5 4.5 0 0 1 18 7.5c0 2.852-2.044 5.233-3.885 6.82a22.049 22.049 0 0 1-3.744 2.582 20.77 20.77 0 0 1-1.162.682l-.019.01-.005.003L9.653 16.915z" />
-  </svg>
-);
-
-const LockIcon = ({ size = 16 }) => (
-  <svg viewBox="0 0 20 20" fill="currentColor" width={size} height={size}>
-    <path
-      fillRule="evenodd"
-      d="M10 1a4.5 4.5 0 0 0-4.5 4.5V9H5a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6a2 2 0 0 0-2-2h-.5V5.5A4.5 4.5 0 0 0 10 1Zm3 8H7V5.5a3 3 0 1 1 6 0V9Z"
-      clipRule="evenodd"
-    />
-  </svg>
-);
 const MOBILE_DASHBOARD_COLLAPSE_DEFAULTS = {
   overview: false,
   nominations: false,
@@ -626,15 +614,25 @@ export function NominationUpdateCard({
   );
 }
 
-function DiscoveryGridItem({ candidate, metadata, onAdd, onPlayNow }) {
-  const title = metadata
-    ? `${metadata.gameTitle} - ${metadata.trackTitle}`
-    : candidate.title;
+function DiscoveryGridItem({ candidate, metadata, onPlayNow }) {
+  const title =
+    metadata?.trackTitle || candidate?.trackTitle
+      ? `${metadata?.gameTitle || candidate?.gameTitle || ''} - ${metadata?.trackTitle || candidate?.trackTitle}`.replace(
+          /^ - /,
+          '',
+        )
+      : metadata?.displayTitle ||
+        candidate?.displayTitle ||
+        candidate?.title ||
+        'Unknown Track';
+
+  const { supportCount1, supportCount2, supportCount3 } = metadata || {};
 
   return (
     <div
       className="discovery-grid-card-wrapper"
-      onClick={() => onPlayNow(candidate)}
+      title="Double-click to play"
+      onDoubleClick={() => onPlayNow(candidate)}
     >
       <TiltedCard
         imageSrc={candidate.thumbnail}
@@ -643,30 +641,57 @@ function DiscoveryGridItem({ candidate, metadata, onAdd, onPlayNow }) {
         containerWidth="100%"
         imageHeight="260px"
         imageWidth="100%"
-        rotateAmplitude={2}
+        rotateAmplitude={5}
         scaleOnHover={1.05}
         showMobileWarning={false}
         showTooltip={false}
         displayOverlayContent={true}
         overlayContent={
           <div className="discovery-card-overlay">
-            <h3 className="discovery-card-title">{title}</h3>
-            <div className="discovery-card-stats">
-              <span className="discovery-card-stat">
-                {candidate.nominationCount} pick
-                {candidate.nominationCount === 1 ? '' : 's'}
-              </span>
+            <div className="discovery-card-top">
+              <h3 className="discovery-card-title">{title}</h3>
             </div>
-            <button
-              className="discovery-card-add-btn"
-              onClick={(e) => {
-                e.stopPropagation();
-                onAdd(candidate);
-              }}
-              title="Add to playlist"
-            >
-              +
-            </button>
+
+            <div className="discovery-card-bottom">
+              <div className="discovery-card-support-row">
+                {candidate.nominationCount > 1 && (
+                  <div
+                    className="discovery-support-stat nominators"
+                    title={`${candidate.nominationCount} Users Nominated`}
+                  >
+                    <SpeechBubbleIcon size={14} />
+                    <span>{candidate.nominationCount}</span>
+                  </div>
+                )}
+                {supportCount1 > 0 && (
+                  <div
+                    className="discovery-support-stat normal"
+                    title={`${supportCount1} Normal Supports`}
+                  >
+                    <HeartIcon />
+                    <span>{supportCount1}</span>
+                  </div>
+                )}
+                {supportCount2 > 0 && (
+                  <div
+                    className="discovery-support-stat strong"
+                    title={`${supportCount2} Strong Supports`}
+                  >
+                    <HeartIcon />
+                    <span>{supportCount2}</span>
+                  </div>
+                )}
+                {supportCount3 > 0 && (
+                  <div
+                    className="discovery-support-stat highest"
+                    title={`${supportCount3} Highest Supports`}
+                  >
+                    <LockIcon />
+                    <span>{supportCount3}</span>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         }
       />
@@ -712,6 +737,8 @@ export default function HomePage({
 }) {
   const isMobileLayout = useMediaQuery('(max-width: 960px)');
   const [nominationUpdates, setNominationUpdates] = useState([]);
+  const [unplacedFallbackTracks, setUnplacedFallbackTracks] = useState([]);
+  const [persistentDiscoveryItems, setPersistentDiscoveryItems] = useState([]);
   const [vgmcThreads, setVgmcThreads] = useState([]);
   const [dashboardError, setDashboardError] = useState('');
   const [updatesError, setUpdatesError] = useState('');
@@ -775,6 +802,56 @@ export default function HomePage({
     featuredDiscoveryId,
   ]);
 
+  // Handle persistent Discovery population (only once per load/refresh)
+  useEffect(() => {
+    if (persistentDiscoveryItems.length > 0) return;
+    if (discoveryCandidates.length === 0 && unplacedFallbackTracks.length === 0)
+      return;
+
+    // 1. Gather potential candidates
+    const rawCandidates = [...discoveryCandidates];
+    const fallbackList = unplacedFallbackTracks.map((track) => ({
+      videoId: track.videoId,
+      title: track.displayTitle,
+      thumbnail:
+        track.sourceThumbnailUrl || getYouTubeThumbnailUrl(track.videoId),
+      isFallback: true,
+      supportCount1: track.supportCount1,
+      supportCount2: track.supportCount2,
+      supportCount3: track.supportCount3,
+      gameTitle: track.gameTitle,
+      trackTitle: track.trackTitle,
+      displayTitle: track.displayTitle,
+    }));
+
+    // 2. Combine and initial filter for unstarted songs only
+    const pool = [...rawCandidates, ...fallbackList].filter((item) => {
+      const status = listenedStatusById[item.videoId];
+      return !status || (status !== 'complete' && status !== 'partial');
+    });
+
+    // 3. De-duplicate
+    const uniqueMap = new Map();
+    pool.forEach((item) => {
+      if (!uniqueMap.has(item.videoId)) uniqueMap.set(item.videoId, item);
+    });
+    const uniquePool = Array.from(uniqueMap.values());
+
+    // 4. Shuffle (Fisher-Yates)
+    for (let i = uniquePool.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [uniquePool[i], uniquePool[j]] = [uniquePool[j], uniquePool[i]];
+    }
+
+    // 5. Commit to persistent state
+    setPersistentDiscoveryItems(uniquePool.slice(0, 24));
+  }, [
+    discoveryCandidates,
+    unplacedFallbackTracks,
+    persistentDiscoveryItems.length,
+    listenedStatusById,
+  ]);
+
   // Pin the first discovery candidate as the featured one if none is set
   // This prevents the card from rotating when the first track's status changes during playback
   useEffect(() => {
@@ -831,6 +908,25 @@ export default function HomePage({
     }
 
     loadDashboardUpdates();
+
+    // Fetch several unplaced tracks for grid fallback
+    async function loadMarqueeFallbacks() {
+      if (!supabase) return;
+      try {
+        const { data } = await fetchPagedTracks(supabase, {
+          viewMode: 'unplaced',
+          limit: 80,
+          sortColumn: 'submissions',
+          sortAsc: false,
+        });
+        if (isActive && data) {
+          setUnplacedFallbackTracks(data);
+        }
+      } catch (err) {
+        console.warn('Failed to load marquee fallbacks:', err);
+      }
+    }
+    loadMarqueeFallbacks();
 
     return () => {
       isActive = false;
@@ -1461,23 +1557,23 @@ export default function HomePage({
           onToggleCollapse={() => toggleMobileSection('discover')}
           summary={sectionSummaries.discover}
         >
-          {discoveryCandidates.length === 0 ? (
+          {persistentDiscoveryItems.length === 0 ? (
             <DashboardMessage>
               You are caught up for now. When more nomination lists appear, new
               discovery picks will show here.
             </DashboardMessage>
           ) : (
-            <div className="dashboard-discovery-grid animate-fade-in">
-              {discoveryCandidates.slice(0, 24).map((candidate) => (
+            <DiscoveryMarqueeGrid>
+              {persistentDiscoveryItems.map((candidate) => (
                 <DiscoveryGridItem
                   key={candidate.videoId}
                   candidate={candidate}
-                  metadata={trackMetadataById[candidate.videoId]}
+                  metadata={trackMetadataById[candidate.videoId] || candidate}
                   onAdd={handleAddDiscoveryCandidate}
                   onPlayNow={handlePlayDiscoveryCandidate}
                 />
               ))}
-            </div>
+            </DiscoveryMarqueeGrid>
           )}
         </DashboardSection>
 

@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { useMotionValue, useSpring } from 'framer-motion';
+import { motion, useMotionValue, useSpring } from 'framer-motion'; // eslint-disable-line no-unused-vars
 import './TiltedCard.css';
 
 const springValues = {
