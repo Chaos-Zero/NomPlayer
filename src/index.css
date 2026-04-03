@@ -1374,6 +1374,88 @@ body {
   gap: 12px;
 }
 
+.dashboard-discovery-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 24px;
+  width: 100%;
+}
+
+.discovery-grid-card-wrapper {
+  position: relative;
+  border-radius: 15px;
+  overflow: hidden;
+  cursor: pointer;
+  background: var(--bg-surface);
+  transition: transform 0.3s ease;
+}
+
+.discovery-card-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 16px;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.9) 0%, transparent 60%);
+  color: white;
+  pointer-events: none;
+}
+
+.discovery-card-title {
+  font-size: 16px;
+  font-weight: 700;
+  margin: 0;
+  color: #fff;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+  line-height: 1.3;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  line-clamp: 2;
+  overflow: hidden;
+}
+
+.discovery-card-stats {
+  display: flex;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.discovery-card-stat {
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--support-gold);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.discovery-card-add-btn {
+  position: absolute;
+  right: 12px;
+  top: 12px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(124, 58, 237, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: white;
+  font-size: 20px;
+  font-weight: 400;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  pointer-events: auto;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.discovery-card-add-btn:hover {
+  background: #8b5cf6;
+  transform: scale(1.1);
+}
+
 .dashboard-update-card,
 .dashboard-feature-card,
 .dashboard-discovery-row,

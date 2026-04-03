@@ -22,6 +22,7 @@ import {
 } from '../lib/trackCatalog.js';
 import ThreeDCarousel from './ThreeDCarousel.jsx';
 import { ContextMenuPortal } from './ContextMenuPortal.jsx';
+import TiltedCard from './TiltedCard.jsx';
 
 const DASHBOARD_REFRESH_LIMIT = 8;
 
@@ -625,56 +626,51 @@ export function NominationUpdateCard({
   );
 }
 
-function DiscoveryRow({ candidate, metadata, onAdd, onPlayNow }) {
-  const nominatorNames = candidate.nominators
-    .slice(0, 3)
-    .map((nominator) => getDisplayProfileName(nominator.username))
-    .join(', ');
+function DiscoveryGridItem({ candidate, metadata, onAdd, onPlayNow }) {
+  const title = metadata
+    ? `${metadata.gameTitle} - ${metadata.trackTitle}`
+    : candidate.title;
 
   return (
-    <article className="dashboard-discovery-row">
-      <img
-        className="dashboard-discovery-thumb"
-        src={candidate.thumbnail}
-        alt=""
-        loading="lazy"
+    <div
+      className="discovery-grid-card-wrapper"
+      onClick={() => onPlayNow(candidate)}
+    >
+      <TiltedCard
+        imageSrc={candidate.thumbnail}
+        altText={title}
+        containerHeight="260px"
+        containerWidth="100%"
+        imageHeight="260px"
+        imageWidth="100%"
+        rotateAmplitude={2}
+        scaleOnHover={1.05}
+        showMobileWarning={false}
+        showTooltip={false}
+        displayOverlayContent={true}
+        overlayContent={
+          <div className="discovery-card-overlay">
+            <h3 className="discovery-card-title">{title}</h3>
+            <div className="discovery-card-stats">
+              <span className="discovery-card-stat">
+                {candidate.nominationCount} pick
+                {candidate.nominationCount === 1 ? '' : 's'}
+              </span>
+            </div>
+            <button
+              className="discovery-card-add-btn"
+              onClick={(e) => {
+                e.stopPropagation();
+                onAdd(candidate);
+              }}
+              title="Add to playlist"
+            >
+              +
+            </button>
+          </div>
+        }
       />
-
-      <div className="dashboard-discovery-copy">
-        <div className="dashboard-discovery-title-row">
-          <h3 className="dashboard-discovery-title">
-            {metadata
-              ? `${metadata.gameTitle} - ${metadata.trackTitle}`
-              : candidate.title}
-          </h3>
-          <span className="dashboard-chip dashboard-chip-warm">
-            {candidate.nominationCount} pick
-            {candidate.nominationCount === 1 ? '' : 's'}
-          </span>
-        </div>
-
-        <p className="dashboard-discovery-meta">
-          Nominated by {nominatorNames}
-        </p>
-      </div>
-
-      <div className="dashboard-discovery-actions">
-        <button
-          className="dashboard-inline-btn"
-          type="button"
-          onClick={() => onPlayNow(candidate)}
-        >
-          Listen now
-        </button>
-        <button
-          className="dashboard-inline-btn dashboard-inline-btn-primary"
-          type="button"
-          onClick={() => onAdd(candidate)}
-        >
-          Add
-        </button>
-      </div>
-    </article>
+    </div>
   );
 }
 
@@ -760,23 +756,24 @@ export default function HomePage({
     [authUser?.id, nominationUpdates],
   );
 
-  const discoveryCandidates = useMemo(
-    () =>
-      buildDiscoveryCandidates(visibleNominationUpdates, {
-        currentPlaylistIds,
-        listenedStatusById,
-        excludeUserId: authUser?.id ?? null,
-        limit: 100,
-        ignoreFilterVideoIds: featuredDiscoveryId ? [featuredDiscoveryId] : [],
-      }),
-    [
-      authUser?.id,
+  const discoveryCandidates = useMemo(() => {
+    const candidates = buildDiscoveryCandidates(visibleNominationUpdates, {
       currentPlaylistIds,
       listenedStatusById,
-      visibleNominationUpdates,
-      featuredDiscoveryId,
-    ],
-  );
+      excludeUserId: authUser?.id ?? null,
+      limit: 100,
+      ignoreFilterVideoIds: featuredDiscoveryId ? [featuredDiscoveryId] : [],
+    });
+    return [...candidates].sort(
+      (a, b) => b.nominationCount - a.nominationCount,
+    );
+  }, [
+    authUser?.id,
+    currentPlaylistIds,
+    listenedStatusById,
+    visibleNominationUpdates,
+    featuredDiscoveryId,
+  ]);
 
   // Pin the first discovery candidate as the featured one if none is set
   // This prevents the card from rotating when the first track's status changes during playback
@@ -1470,9 +1467,9 @@ export default function HomePage({
               discovery picks will show here.
             </DashboardMessage>
           ) : (
-            <div className="dashboard-discovery-list animate-fade-in">
-              {discoveryCandidates.slice(0, 5).map((candidate) => (
-                <DiscoveryRow
+            <div className="dashboard-discovery-grid animate-fade-in">
+              {discoveryCandidates.slice(0, 24).map((candidate) => (
+                <DiscoveryGridItem
                   key={candidate.videoId}
                   candidate={candidate}
                   metadata={trackMetadataById[candidate.videoId]}
