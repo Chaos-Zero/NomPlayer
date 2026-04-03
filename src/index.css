@@ -1394,7 +1394,7 @@ body {
   inset: 0;
   display: flex;
   flex-direction: column;
-  justify-content: space-between; /* Title top, stats bottom */
+  justify-content: space-between;
   padding: 40px 16px 16px;
   background: linear-gradient(
     to bottom,
@@ -1438,11 +1438,13 @@ body {
   line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
+  opacity: 0; /* Hidden by default */
   transform: translateY(-5px);
-  transition: transform 0.4s ease;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .tilted-card-inner:hover .discovery-card-title {
+  opacity: 1;
   transform: translateY(0);
 }
 
