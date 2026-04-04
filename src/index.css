@@ -926,7 +926,6 @@ body {
 }
 
 .dashboard-home-shell .home-sections {
-  padding: 28px;
   display: flex;
   flex-direction: column;
   gap: 48px;
@@ -1253,7 +1252,7 @@ body {
 }
 
 .dashboard-pane-copy {
-  max-width: 56ch;
+  max-width: none;
   color: var(--text-secondary);
   font-size: 14px;
   line-height: 1.6;

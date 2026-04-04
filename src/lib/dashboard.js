@@ -88,7 +88,6 @@ export function buildDiscoveryCandidates(
   nominationUpdates,
   {
     currentPlaylistIds = new Set(),
-    listenedStatusById = {},
     excludeUserId = null,
     limit = 8,
     ignoreFilterVideoIds = [],
@@ -109,8 +108,6 @@ export function buildDiscoveryCandidates(
 
       if (!ignoreSet.has(nomination.videoId)) {
         if (currentPlaylistIds.has(nomination.videoId)) continue;
-        // User requested ONLY show if user has NOT started them (falsy status)
-        if (listenedStatusById[nomination.videoId]) continue;
       }
 
       userNewNoms.push({

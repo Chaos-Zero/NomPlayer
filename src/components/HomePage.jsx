@@ -786,18 +786,15 @@ export default function HomePage({
   const discoveryCandidates = useMemo(() => {
     const candidates = buildDiscoveryCandidates(visibleNominationUpdates, {
       currentPlaylistIds,
-      listenedStatusById,
       excludeUserId: authUser?.id ?? null,
       limit: 200, // Increased for larger pool
       ignoreFilterVideoIds: featuredDiscoveryId ? [featuredDiscoveryId] : [],
     });
-    return [...candidates].sort(
-      (a, b) => b.nominationCount - a.nominationCount,
-    );
+    // Shuffle candidates to prioritize variety over popularity
+    return [...candidates].sort(() => Math.random() - 0.5);
   }, [
     authUser?.id,
     currentPlaylistIds,
-    listenedStatusById,
     visibleNominationUpdates,
     featuredDiscoveryId,
   ]);
