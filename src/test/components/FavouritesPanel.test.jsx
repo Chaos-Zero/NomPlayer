@@ -96,13 +96,13 @@ describe('FavouritesPanel', () => {
     vi.clearAllMocks();
   });
 
-  it('queues a support item on double click without playing it immediately', () => {
+  it('plays a support item on double click immediately', () => {
     const { props } = renderPanel();
 
     fireEvent.doubleClick(screen.getByLabelText('Support Alpha'));
 
-    expect(props.onAddToPlaylist).toHaveBeenCalledWith([alpha]);
-    expect(props.onPlayNow).not.toHaveBeenCalled();
+    expect(props.onPlayNow).toHaveBeenCalledWith(alpha);
+    expect(props.onAddToPlaylist).not.toHaveBeenCalled();
   });
 
   it('loads a direct video into the support list from the footer adder', async () => {

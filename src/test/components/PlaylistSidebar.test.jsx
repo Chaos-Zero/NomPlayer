@@ -211,7 +211,7 @@ describe('PlaylistSidebar', () => {
     const headerActions = container.querySelector('.sidebar-header-actions');
 
     expect(headerMain).toHaveTextContent('Playlist');
-    expect(headerMain).toHaveTextContent('1 videos');
+    expect(headerMain).toHaveTextContent('1 video');
     expect(headerActions?.children).toHaveLength(3);
     expect(screen.getByRole('button', { name: 'Select' })).toBeInTheDocument();
   });
