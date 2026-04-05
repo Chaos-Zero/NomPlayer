@@ -471,15 +471,18 @@
 }
 
 .theme-light .dashboard-update-peek-title {
-  color: #000; /* Solid black for song titles in light mode */
+  color: #000;
+  /* Solid black for song titles in light mode */
 }
 
 .theme-light .dashboard-update-title {
-  color: #000; /* Solid black for user names in light mode */
+  color: #000;
+  /* Solid black for user names in light mode */
 }
 
 .theme-light .dashboard-update-card:hover .dashboard-update-title {
-  color: #000; /* Stay black on hover in light mode */
+  color: #000;
+  /* Stay black on hover in light mode */
 }
 
 .theme-light .dashboard-update-peek-index {
@@ -488,11 +491,13 @@
 }
 
 .theme-light .dashboard-update-peek-row:nth-child(even) {
-  background: rgba(168, 85, 247, 0.08); /* Soft light purple zebra */
+  background: rgba(168, 85, 247, 0.08);
+  /* Soft light purple zebra */
 }
 
 .theme-light .dashboard-update-full-track {
-  color: #000; /* Black song title in light mode modal */
+  color: #000;
+  /* Black song title in light mode modal */
 }
 
 .theme-light .dashboard-feature-card-hero {
@@ -1381,7 +1386,8 @@ body {
   perspective: 1200px;
   transform-style: preserve-3d;
   animation: fade-in 0.4s ease-out;
-  max-height: 1160px; /* Cut before the 5th row starts (~1168px) */
+  max-height: 1160px;
+  /* Cut before the 5th row starts (~1168px) */
   overflow: hidden;
   mask-image: linear-gradient(to bottom, black 99%, transparent 100%);
   -webkit-mask-image: linear-gradient(to bottom, black 99%, transparent 100%);
@@ -1443,7 +1449,8 @@ body {
   line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
-  opacity: 0; /* Hidden by default */
+  opacity: 0;
+  /* Hidden by default */
   transform: translateY(-5px);
   transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -1485,12 +1492,15 @@ body {
 .discovery-support-stat.normal {
   color: #fbbf24;
 }
+
 .discovery-support-stat.strong {
   color: #ff2d78;
 }
+
 .discovery-support-stat.highest {
   color: #ffb700;
 }
+
 .discovery-support-stat.nominators {
   color: #38bdf8;
 }
@@ -1564,21 +1574,26 @@ body {
   display: grid;
   grid-template-columns: 1fr auto;
   grid-template-rows: auto auto;
-  align-items: center; /* Vertical center for the first row (name/avatar) */
-  gap: 0 14px; /* Gap between columns, but not between rows for tighter alignment */
+  align-items: center;
+  /* Vertical center for the first row (name/avatar) */
+  gap: 0 14px;
+  /* Gap between columns, but not between rows for tighter alignment */
   margin-bottom: 8px;
 }
 
 .dashboard-update-heading {
-  display: contents; /* Let children participate in the grid */
+  display: contents;
+  /* Let children participate in the grid */
 }
 
 .dashboard-update-title {
   grid-column: 1;
   grid-row: 1;
-  font-size: 19px; /* Decreased from 1.25rem (20px) */
+  font-size: 19px;
+  /* Decreased from 1.25rem (20px) */
   font-weight: 800;
-  color: #b0b3b8; /* Even softer white (mid-grey) for dark mode */
+  color: #b0b3b8;
+  /* Even softer white (mid-grey) for dark mode */
   letter-spacing: -0.01em;
   margin: 0;
   display: flex;
@@ -1588,7 +1603,8 @@ body {
 
 .dashboard-update-user-context {
   grid-column: 2;
-  grid-row: 1 / span 2; /* Avatar spans both to remain centrally anchored */
+  grid-row: 1 / span 2;
+  /* Avatar spans both to remain centrally anchored */
   align-self: center;
   flex-shrink: 0;
   transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
@@ -1602,16 +1618,19 @@ body {
   color: var(--text-secondary);
   opacity: 0.8;
   margin: 0;
-  margin-top: -2px; /* Tighter fit under the name */
+  margin-top: -2px;
+  /* Tighter fit under the name */
 }
 
 .dashboard-update-gf-user {
-  color: #0ea5e9; /* More classic sky blue */
+  color: #0ea5e9;
+  /* More classic sky blue */
   font-weight: 700;
 }
 
 .theme-light .dashboard-update-gf-user {
-  color: #0284c7; /* A bit more intense for light mode */
+  color: #0284c7;
+  /* A bit more intense for light mode */
 }
 
 .dashboard-update-card:hover .dashboard-update-title {
@@ -1733,13 +1752,15 @@ body {
 }
 
 .dashboard-update-peek-row.has-activity .dashboard-update-peek-content {
-  padding-right: 32px; /* Reserve space for the activity/speech bubble icon */
+  padding-right: 32px;
+  /* Reserve space for the activity/speech bubble icon */
 }
 
 /* On hover, let the action toolbar naturally push the text more,
    but keep the padding if activity is also present */
 .dashboard-update-peek-row:hover .dashboard-update-peek-content {
-  padding-right: 8px; /* Reduce default padding to maximize icon space */
+  padding-right: 8px;
+  /* Reduce default padding to maximize icon space */
 }
 
 .dashboard-update-peek-row.has-activity:hover .dashboard-update-peek-content {
@@ -1750,28 +1771,36 @@ body {
   .dashboard-update-peek-actions {
     display: none !important;
   }
+
   .dashboard-update-peek-row.has-activity .dashboard-update-peek-actions {
     display: flex !important;
     gap: 0;
   }
+
   .peek-action-btn-add,
   .peek-action-btn-support,
   .peek-action-btn-play {
     display: none !important;
   }
+
   /* Style the comment icon on mobile to match the activity symbol's importance */
   .dashboard-update-peek-row.has-activity .peek-action-btn-comments {
     color: var(--support-gold) !important;
     opacity: 1 !important;
   }
+
   .peek-action-btn-activity {
-    display: none !important; /* Hide the non-interactive bubble on mobile in favor of the interactive one */
+    display: none !important;
+    /* Hide the non-interactive bubble on mobile in favor of the interactive one */
   }
+
   .dashboard-update-peek-row .dashboard-update-peek-content {
     padding-right: 8px;
   }
+
   .dashboard-update-peek-row.has-activity .dashboard-update-peek-content {
-    padding-right: 0; /* Toolbar takes the space naturally */
+    padding-right: 0;
+    /* Toolbar takes the space naturally */
   }
 }
 
@@ -1869,6 +1898,7 @@ body {
   display: flex;
   flex-direction: column;
 }
+
 .dashboard-update-footer {
   margin-top: 12px;
   display: flex;
@@ -3313,9 +3343,9 @@ body {
 }
 
 .mobile-topbar-front.with-detached-player {
-  grid-template-rows:
-    calc(var(--mobile-detached-player-base-visible-height) + 12px)
-    var(--mobile-topbar-shell-h);
+  grid-template-rows: calc(
+      var(--mobile-detached-player-base-visible-height) + 12px
+    ) var(--mobile-topbar-shell-h);
   gap: 0;
   padding: 0 12px;
   background: transparent;
@@ -5333,6 +5363,7 @@ body {
     opacity: 0;
     transform: translateY(-10px) scale(0.98);
   }
+
   to {
     opacity: 1;
     transform: translateY(0) scale(1);
@@ -6245,7 +6276,8 @@ button.playlist-search-indicator:hover {
 }
 
 .dashboard-update-full-track {
-  color: #cbd5e1; /* Proportional to carousel list color */
+  color: #cbd5e1;
+  /* Proportional to carousel list color */
   font-weight: 800;
   font-size: 16px;
   line-height: 1.3;
@@ -10869,6 +10901,7 @@ body.is-resizing .resize-handle {
     opacity: 0;
     transform: translateY(8px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -11028,7 +11061,8 @@ body.is-resizing .resize-handle {
   border: 1px solid var(--border) !important;
   box-shadow: 0 12px 48px rgba(0, 0, 0, 0.6) !important;
   transform: none !important;
-  opacity: 0; /* Star hidden and fade in precisely via JS */
+  opacity: 0;
+  /* Star hidden and fade in precisely via JS */
   pointer-events: auto !important;
   animation: footerPopoverFadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
   display: flex !important;
@@ -11037,7 +11071,8 @@ body.is-resizing .resize-handle {
 }
 
 .footer-feedback-popover.is-anchored {
-  transition: transform 0s !important; /* Kill any slide-in from parent classes */
+  transition: transform 0s !important;
+  /* Kill any slide-in from parent classes */
   transform: none !important;
   animation: footerPopoverFadeIn 0.2s ease-out !important;
 }
@@ -11241,22 +11276,27 @@ body.is-resizing .resize-handle {
 
 /* Bold typography for the active (featured) card list */
 .threed-carousel-item.active .dashboard-update-title {
-  font-size: 23px; /* Decreased from 1.5rem (24px) */
+  font-size: 23px;
+  /* Decreased from 1.5rem (24px) */
   /* Hero boost for the active contributor's name */
 }
 
 .threed-carousel-item.active .dashboard-update-peek-row {
-  font-size: 1.2rem; /* Decreased from 1.25rem (~20px to ~19px) */
+  font-size: 1.2rem;
+  /* Decreased from 1.25rem (~20px to ~19px) */
   gap: 14px;
 }
 
 .threed-carousel-item.active .dashboard-update-peek-title {
-  font-size: 17px; /* Decreased from 18px */
-  color: #cbd5e1; /* Slightly brighter for active card to stay featured but still soft */
+  font-size: 17px;
+  /* Decreased from 18px */
+  color: #cbd5e1;
+  /* Slightly brighter for active card to stay featured but still soft */
 }
 
 .theme-light .threed-carousel-item.active .dashboard-update-peek-title {
-  color: #000; /* Ensure active card is also black in light mode */
+  color: #000;
+  /* Ensure active card is also black in light mode */
 }
 
 .threed-carousel-item.active .dashboard-update-peek-game {
@@ -11353,7 +11393,6 @@ body.is-resizing .resize-handle {
   }
 }
 
-/* Redesigned Premium Footer */
 .detached-footer-premium-container {
   display: grid;
   grid-template-columns: 1fr 2fr 1fr;
@@ -11539,6 +11578,7 @@ body.is-resizing .resize-handle {
 
 @media (max-width: 960px) {
   .detached-footer-premium-container {
-    display: none; /* App.jsx doesn't render it on mobile anyway */
+    display: none;
+    /* App.jsx doesn't render it on mobile anyway */
   }
 }

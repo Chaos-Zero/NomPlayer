@@ -1560,7 +1560,7 @@ export default function HomePage({
           title="Discover"
           eyebrow="Recommended"
           tone="manage"
-          caption="Songs other users nominated that are still missing from your current playlist."
+          caption="Check out some of this years Nominations from the community."
           className="dashboard-section-discover"
           isMobileLayout={isMobileLayout}
           isCollapsed={isMobileLayout && mobileCollapsedSections.discover}
