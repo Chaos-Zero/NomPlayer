@@ -1122,24 +1122,48 @@ export default function PlaylistSidebar({
               </button>
             </>
           )}
-          {authUser && (
+          {activePlaylistView.type === 'community' && (
             <button
               className="playlist-context-menu-item"
               type="button"
               role="menuitem"
-              onClick={() => handleUpdateMetadata(contextMenu.videos)}
+              onClick={() => {
+                onAddDirectItems(contextMenu.videos);
+                setContextMenu(null);
+                if (selectionMode) {
+                  setSelectionMode(false);
+                }
+              }}
             >
-              Update Metadata
+              Add{' '}
+              {contextMenu.videos.length > 1
+                ? `(${contextMenu.videos.length}) `
+                : ''}
+              to Playlist
             </button>
           )}
-          <button
-            className="playlist-context-menu-item danger"
-            type="button"
-            role="menuitem"
-            onClick={() => handleRemove(contextMenu.video.videoId)}
-          >
-            Remove from Playlist
-          </button>
+          {activePlaylistView.type !== 'community' && (
+            <>
+              {authUser && (
+                <button
+                  className="playlist-context-menu-item"
+                  type="button"
+                  role="menuitem"
+                  onClick={() => handleUpdateMetadata(contextMenu.videos)}
+                >
+                  Update Metadata
+                </button>
+              )}
+              <button
+                className="playlist-context-menu-item danger"
+                type="button"
+                role="menuitem"
+                onClick={() => handleRemove(contextMenu.video.videoId)}
+              >
+                Remove from Playlist
+              </button>
+            </>
+          )}
         </ContextMenuPortal>
       )}
     </div>

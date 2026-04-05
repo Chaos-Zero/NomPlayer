@@ -2950,7 +2950,9 @@ export default function App() {
       if (activePlaylistView.type === 'community') {
         const track = sidebarTracks.find((t) => t.videoId === videoId);
         if (track) {
-          transientResumeVideoIdRef.current = null;
+          if (!transientVideo) {
+            transientResumeVideoIdRef.current = currentVideoIdRef.current;
+          }
           setTransientVideo({
             ...track,
             source: 'community-view',
@@ -2972,6 +2974,24 @@ export default function App() {
   );
 
   const handlePrev = useCallback(() => {
+    if (transientVideo?.source === 'community-view') {
+      const currentIndex = sidebarTracks.findIndex(
+        (v) => v.videoId === transientVideo.videoId,
+      );
+      if (currentIndex > 0) {
+        const prevTrack = sidebarTracks[currentIndex - 1];
+        setTransientVideo({
+          ...prevTrack,
+          source: 'community-view',
+          communityUserId: transientVideo.communityUserId,
+        });
+        if (isPlaying) {
+          markVideoStarted(prevTrack.videoId);
+        }
+        return;
+      }
+    }
+
     const resolvedPlayOrderIds = resolvePlayOrderIds(
       playlistRef.current,
       shuffleOrderIdsRef.current,
@@ -2994,34 +3014,58 @@ export default function App() {
       markVideoStarted(previousVideoId);
     }
     setCurrentVideoId(previousVideoId);
-  }, [isPlaying, markVideoStarted]);
+  }, [sidebarTracks, transientVideo, isPlaying, markVideoStarted]);
 
   const handleNext = useCallback(() => {
+    if (transientVideo?.source === 'community-view') {
+      const currentIndex = sidebarTracks.findIndex(
+        (v) => v.videoId === transientVideo.videoId,
+      );
+      if (currentIndex >= 0 && currentIndex < sidebarTracks.length - 1) {
+        const nextTrack = sidebarTracks[currentIndex + 1];
+        setTransientVideo({
+          ...nextTrack,
+          source: 'community-view',
+          communityUserId: transientVideo.communityUserId,
+        });
+        if (isPlaying) {
+          markVideoStarted(nextTrack.videoId);
+        }
+        return;
+      }
+    }
+
     const resolvedPlayOrderIds = resolvePlayOrderIds(
       playlistRef.current,
       shuffleOrderIdsRef.current,
     );
     if (resolvedPlayOrderIds.length === 0) return;
 
+    const resumeVideoId = transientResumeVideoIdRef.current;
     transientResumeVideoIdRef.current = null;
     setTransientVideo(null);
     hasReachedPlaylistEndRef.current = false;
 
-    const activeVideoId = currentVideoIdRef.current ?? resolvedPlayOrderIds[0];
+    const activeVideoId =
+      (transientVideo ? resumeVideoId : currentVideoIdRef.current) ??
+      resolvedPlayOrderIds[0];
     const currentPlayIndex = Math.max(
       0,
       resolvedPlayOrderIds.indexOf(activeVideoId),
     );
-    const nextVideoId =
-      resolvedPlayOrderIds[
-        Math.min(currentPlayIndex + 1, resolvedPlayOrderIds.length - 1)
-      ];
+
+    // If we're resuming, use the resume point directly. Otherwise advance.
+    const nextVideoId = transientVideo
+      ? activeVideoId
+      : resolvedPlayOrderIds[
+          Math.min(currentPlayIndex + 1, resolvedPlayOrderIds.length - 1)
+        ];
 
     if (isPlaying) {
       markVideoStarted(nextVideoId);
     }
     setCurrentVideoId(nextVideoId);
-  }, [isPlaying, markVideoStarted]);
+  }, [sidebarTracks, transientVideo, isPlaying, markVideoStarted]);
 
   const handleVideoEnd = useCallback(() => {
     if (!isPlaying) return;
@@ -3030,6 +3074,25 @@ export default function App() {
       if (!isPreviewModeEnabled) {
         markVideoCompleted(transientVideo.videoId);
       }
+
+      // Check if we can advance within the community view
+      if (transientVideo.source === 'community-view') {
+        const currentIndex = sidebarTracks.findIndex(
+          (v) => v.videoId === transientVideo.videoId,
+        );
+        if (currentIndex >= 0 && currentIndex < sidebarTracks.length - 1) {
+          const nextTrack = sidebarTracks[currentIndex + 1];
+          setTransientVideo({
+            ...nextTrack,
+            source: 'community-view',
+            communityUserId: transientVideo.communityUserId,
+          });
+          markVideoStarted(nextTrack.videoId);
+          setIsPlaying(true);
+          return;
+        }
+      }
+
       const resumeVideoId = transientResumeVideoIdRef.current;
       transientResumeVideoIdRef.current = null;
       setTransientVideo(null);
