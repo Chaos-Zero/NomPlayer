@@ -68,20 +68,28 @@ export function normalizeNominationDashboardUpdate(entry) {
 
 export async function fetchDashboardNominationUpdates(
   supabase,
-  limitCount = 8,
+  limitCount = null,
 ) {
   if (!supabase) return [];
 
-  const { data, error } = await supabase.rpc('get_dashboard_nomination_lists', {
-    limit_count: limitCount,
-  });
+  const { data, error } = await supabase.rpc(
+    'get_community_nominations_catalog',
+  );
 
   if (error) {
     throw error;
   }
 
   const rows = Array.isArray(data) ? data : [];
-  return rows.map(normalizeNominationDashboardUpdate).filter(Boolean);
+  const normalized = rows
+    .map(normalizeNominationDashboardUpdate)
+    .filter(Boolean);
+
+  if (limitCount !== null && limitCount > 0) {
+    return normalized.slice(0, limitCount);
+  }
+
+  return normalized;
 }
 
 export function buildDiscoveryCandidates(

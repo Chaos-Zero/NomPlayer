@@ -97,6 +97,7 @@ const DISCORD_OAUTH_SILENT_PENDING_KEY = 'discord_oauth_silent_pending';
 const AUTH_SYNC_IDLE_MS = 1800;
 const AUTH_SYNC_STORAGE_KEY_PREFIX = 'yt_auth_sync';
 const THEME_STORAGE_KEY = 'nom-theme';
+const SIDEBAR_VIEW_STORAGE_KEY = 'nom-active-sidebar-view';
 
 function loadStoredList(storageKey, fallbackKey = null) {
   try {
@@ -213,6 +214,7 @@ function createAccountPersistedPlayerState(state) {
     showOriginalOrder: state?.showOriginalOrder,
     supportList: state?.supportList,
     nominationList: state?.nominationList,
+    transientVideo: state?.transientVideo,
   });
 }
 
@@ -433,7 +435,9 @@ export default function App() {
   const [listenedStatusById, setListenedStatusById] = useState(
     initialPlayerState.listenedStatusById,
   );
-  const [transientVideo, setTransientVideo] = useState(null);
+  const [transientVideo, setTransientVideo] = useState(
+    initialPlayerState.transientVideo,
+  );
   const transientResumeVideoIdRef = useRef(null);
   const [flashVideoIds, setFlashVideoIds] = useState([]);
   const [isPlaylistCollapsed, setIsPlaylistCollapsed] = useState(
@@ -444,7 +448,23 @@ export default function App() {
   const [isPreviewModeEnabled, setIsPreviewModeEnabled] = useState(false);
   const isPlayingRef = useRef(false);
   const activePageRef = useRef('home');
+  const [activePlaylistView, setActivePlaylistView] = useState(() => {
+    try {
+      const stored = localStorage.getItem(SIDEBAR_VIEW_STORAGE_KEY);
+      return stored ? JSON.parse(stored) : { type: 'personal' };
+    } catch {
+      return { type: 'personal' };
+    }
+  });
+  const [communityNominations, setCommunityNominations] = useState([]);
   const hasReachedPlaylistEndRef = useRef(false);
+
+  useEffect(() => {
+    localStorage.setItem(
+      SIDEBAR_VIEW_STORAGE_KEY,
+      JSON.stringify(activePlaylistView),
+    );
+  }, [activePlaylistView]);
 
   // Playback
   const [isPlaying, setIsPlaying] = useState(false);
@@ -563,6 +583,22 @@ export default function App() {
   const [discordAuthUrl, setDiscordAuthUrl] = useState('');
   const authUserIdRef = useRef(null);
 
+  const fetchCommunityCatalog = useCallback(async () => {
+    if (!supabase) return;
+    try {
+      const { fetchDashboardNominationUpdates } =
+        await import('./lib/dashboard.js');
+      const updates = await fetchDashboardNominationUpdates(supabase);
+      setCommunityNominations(updates);
+    } catch (error) {
+      console.error('Failed to fetch community nominations catalog:', error);
+    }
+  }, [supabase]);
+
+  useEffect(() => {
+    fetchCommunityCatalog();
+  }, [fetchCommunityCatalog]);
+
   useEffect(
     () => () => {
       if (supportToastTimeoutRef.current) {
@@ -653,6 +689,7 @@ export default function App() {
         supportList,
         nominationList,
         customPlaylists,
+        transientVideo,
       }),
     [
       playlist,
@@ -663,6 +700,7 @@ export default function App() {
       supportList,
       nominationList,
       customPlaylists,
+      transientVideo,
     ],
   );
 
@@ -1459,9 +1497,57 @@ export default function App() {
     showOriginalOrder,
   ]);
 
-  const currentDisplayIndex = transientVideo
-    ? null
-    : displayPlaylist.findIndex((video) => video.videoId === currentVideoId);
+  const sidebarTracks = useMemo(() => {
+    if (activePlaylistView.type === 'community') {
+      const communityUser = communityNominations.find(
+        (u) => u.userId === activePlaylistView.userId,
+      );
+      if (communityUser) {
+        return communityUser.nominations.map((nom, index) => {
+          const catalogEntry = catalogTrackByVideoId[nom.videoId];
+          return {
+            ...nom,
+            loadIndex: index,
+            title:
+              catalogEntry?.displayTitle ||
+              catalogEntry?.sourceTitle ||
+              nom.title ||
+              nom.videoId,
+            thumbnail:
+              catalogEntry?.sourceThumbnailUrl ||
+              nom.thumbnail ||
+              getYouTubeThumbnailUrl(nom.videoId),
+            channelTitle:
+              catalogEntry?.sourceChannelTitle || nom.channelTitle || '',
+            trackId: catalogEntry?.trackId ?? null,
+            gameTitle: catalogEntry?.gameTitle ?? nom.gameTitle ?? '',
+            trackTitle: catalogEntry?.trackTitle ?? nom.trackTitle ?? '',
+            displayTitle: catalogEntry?.displayTitle ?? nom.displayTitle ?? '',
+            isRetired: Boolean(catalogEntry?.isRetired),
+            retiredByTournamentName:
+              catalogEntry?.retiredByTournamentName ||
+              nom.retiredByTournamentName ||
+              '',
+          };
+        });
+      }
+    }
+    return displayPlaylist;
+  }, [
+    activePlaylistView,
+    communityNominations,
+    displayPlaylist,
+    catalogTrackByVideoId,
+  ]);
+
+  const currentDisplayIndex = useMemo(() => {
+    const activeVideoId = transientVideo?.videoId || currentVideoId;
+    if (!activeVideoId) return null;
+    const index = sidebarTracks.findIndex(
+      (video) => video.videoId === activeVideoId,
+    );
+    return index < 0 ? null : index;
+  }, [sidebarTracks, transientVideo, currentVideoId]);
   const isPlayerPage = activePage === 'player';
   const isDatabasePage = activePage === 'database';
   const isListExplorerPage = activePage === 'listExplorer';
@@ -2840,19 +2926,49 @@ export default function App() {
 
   // ── Navigation ──────────────────────────────────────────────────
   const goToVideo = useCallback(
-    (videoId) => {
+    (videoId, forcePlay = false) => {
+      // Check sidebarTracks instead of playlistRef if we want to allow playing from community view
       if (!playlistRef.current.some((video) => video.videoId === videoId))
         return;
 
       transientResumeVideoIdRef.current = null;
       setTransientVideo(null);
       hasReachedPlaylistEndRef.current = false;
-      if (isPlaying) {
+
+      const shouldPlay = isPlaying || forcePlay;
+      if (shouldPlay) {
         markVideoStarted(videoId);
+        setIsPlaying(true);
       }
       setCurrentVideoId(videoId);
     },
     [isPlaying, markVideoStarted],
+  );
+
+  const handleSidebarSelect = useCallback(
+    (videoId, forcePlay = false) => {
+      if (activePlaylistView.type === 'community') {
+        const track = sidebarTracks.find((t) => t.videoId === videoId);
+        if (track) {
+          transientResumeVideoIdRef.current = null;
+          setTransientVideo({
+            ...track,
+            source: 'community-view',
+            communityUserId: activePlaylistView.userId,
+          });
+          setCurrentVideoId(null);
+
+          const shouldPlay = isPlaying || forcePlay;
+          if (shouldPlay) {
+            markVideoStarted(videoId);
+            setIsPlaying(true);
+          }
+        }
+      } else {
+        goToVideo(videoId, forcePlay);
+      }
+    },
+    [activePlaylistView, sidebarTracks, isPlaying, markVideoStarted, goToVideo],
   );
 
   const handlePrev = useCallback(() => {
@@ -4360,10 +4476,8 @@ export default function App() {
             className={`sidebar app-sidebar${effectivePlaylistCollapsed ? ' collapsed' : ''}${shouldRenderDesktopPlaylistOverlay ? ' overlay-sidebar' : ''}`}
           >
             <PlaylistSidebar
-              playlist={displayPlaylist}
-              currentIndex={
-                currentDisplayIndex < 0 ? null : currentDisplayIndex
-              }
+              playlist={sidebarTracks}
+              currentIndex={currentDisplayIndex}
               flashVideoIds={flashVideoIds}
               isShuffleEnabled={isShuffleEnabled}
               isPreviewModeEnabled={isPreviewModeEnabled}
@@ -4382,7 +4496,7 @@ export default function App() {
                 );
               }}
               onToggleOrderView={handleTogglePlaylistOrderView}
-              onSelect={goToVideo}
+              onSelect={handleSidebarSelect}
               onReorder={handleReorderPlaylist}
               supportList={supportList}
               nominationList={nominationList}
@@ -4402,6 +4516,9 @@ export default function App() {
               onExport={handleOpenExportModal}
               onSavePlaylist={handleCreateYTPlaylist}
               activePage={activePage}
+              activePlaylistView={activePlaylistView}
+              onSwitchView={setActivePlaylistView}
+              communityNominations={communityNominations}
             />
             {!effectivePlaylistCollapsed && apiKeyMissing && (
               <div className="api-key-notice">

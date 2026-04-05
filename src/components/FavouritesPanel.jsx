@@ -443,7 +443,7 @@ export default function FavouritesPanel({
   }
 
   function handleDoubleQueue(video) {
-    handleQueueVideos([video]);
+    onPlayNow(video);
   }
 
   function normalizeAddResult(videos, addResult) {

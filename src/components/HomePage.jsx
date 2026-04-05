@@ -900,7 +900,7 @@ export default function HomePage({
       try {
         const data = await fetchDashboardNominationUpdates(
           supabase,
-          DASHBOARD_REFRESH_LIMIT,
+          null, // Fetch all for catalog usage
         );
         if (!isActive) return;
         setNominationUpdates(data);
@@ -1530,7 +1530,7 @@ export default function HomePage({
                 <ThreeDCarousel
                   autoRotate={!expandedUserId && !isFeedbackPanelOpen}
                 >
-                  {visibleNominationUpdates.map((update) => (
+                  {visibleNominationUpdates.slice(0, 10).map((update) => (
                     <NominationUpdateCard
                       key={update.userId}
                       update={update}

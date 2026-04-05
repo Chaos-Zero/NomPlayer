@@ -1,6 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import DiscordIcon from './DiscordIcon.jsx';
-import { parseStoredProfileUsername } from '../lib/playerState.js';
+import {
+  parseStoredProfileUsername,
+  getDisplayProfileName,
+} from '../lib/playerState.js';
 
 function UserIcon() {
   return (
@@ -97,7 +100,9 @@ export default function UserMenu({
                   {displayIdentity.provider === 'discord' && (
                     <DiscordIcon className="profile-provider-icon user-menu-provider-icon" />
                   )}
-                  <span>{displayIdentity.displayName}</span>
+                  <span>
+                    {getDisplayProfileName(displayIdentity.displayName)}
+                  </span>
                 </span>
                 {secondaryLabel && (
                   <span className="user-menu-email">{secondaryLabel}</span>

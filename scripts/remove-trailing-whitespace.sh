@@ -9,16 +9,17 @@ cd "$repo_root"
 
 # Get all staged files (excluding deletions)
 # Using -z to handle spaces in filenames
-staged_files=$(git diff --cached --name-only --diff-filter=ACMR -z | xargs -0)
+mapfile -d '' staged_files < <(git diff --cached --name-only --diff-filter=ACMR -z)
 
-if [[ -z "$staged_files" ]]; then
+if [[ ${#staged_files[@]} -eq 0 ]]; then
   exit 0
 fi
 
-for file in $staged_files; do
-  # Skip binary files and this script itself
-  if [[ -f "$file" ]] && ! grep -qI $'\0' "$file" && [[ "$file" != "scripts/remove-trailing-whitespace.sh" ]]; then
+for file in "${staged_files[@]}"; do
+  # Skip binary files, this script itself, and only process files that exist
+  if [[ -f "$file" ]] && grep -qI . "$file" && [[ "$file" != "scripts/remove-trailing-whitespace.sh" ]]; then
     # 1. Remove trailing whitespace from all lines
+    # Using [ \t]*$ is more explicit for some sed versions
     sed -i 's/[[:space:]]*$//' "$file"
 
     # 2. Ensure exactly one newline at EOF using perl

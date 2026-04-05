@@ -504,6 +504,7 @@ function SortableListExplorerCard({
       style={isDraggingStyle}
       className={`list-explorer-card ${isSelected ? 'selected' : ''} ${isDragging ? 'dragging' : ''} ${isReadOnly ? 'read-only' : ''} ${isSupportList ? 'is-support-list' : ''}`}
       onClick={() => onSelect?.(video.videoId)}
+      onDoubleClick={() => onPlayNow(video)}
       onContextMenu={(e) => onContextMenu?.(e, video)}
     >
       <div className="list-explorer-card-inner">
