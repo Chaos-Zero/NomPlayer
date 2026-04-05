@@ -562,6 +562,7 @@ function ListExplorerColumn({
   onExport,
   onSavePlaylist,
   globalCommentedVideoIds = null,
+  onPlayCommunityList = null,
 }) {
   const [addUrl, setAddUrl] = useState('');
   const { setNodeRef } = useDroppable({
@@ -623,6 +624,22 @@ function ListExplorerColumn({
           )}
         </div>
         <div className="list-explorer-column-actions">
+          {videos && videos.length > 0 && (
+            <button
+              className="list-explorer-column-btn"
+              onClick={() => {
+                if (id.startsWith('peer-')) {
+                  const userId = id.replace('peer-', '');
+                  onPlayCommunityList?.(userId);
+                } else {
+                  onPlayNow?.(videos[0]);
+                }
+              }}
+              title="Start this list"
+            >
+              <PlayIcon />
+            </button>
+          )}
           {canAddAll && videos && videos.length > 0 && (
             <button
               className="list-explorer-column-btn"
@@ -752,6 +769,7 @@ export default function ListExplorer({
   onExport,
   onSavePlaylist,
   onOpenSupportDropdown,
+  onPlayCommunityList,
 }) {
   const [focusedListId, setFocusedListId] = useState(null);
   const [activeCustomPlaylistId, setActiveCustomPlaylistId] = useState(null);
@@ -1849,6 +1867,7 @@ export default function ListExplorer({
                 }
                 canAddAll={true}
                 onAddAll={() => handleAddAllToCurrent(col.videos)}
+                onPlayCommunityList={onPlayCommunityList}
                 isReadOnly={true}
                 onExport={onExport}
                 onSavePlaylist={onSavePlaylist}

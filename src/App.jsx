@@ -2970,7 +2970,49 @@ export default function App() {
         goToVideo(videoId, forcePlay);
       }
     },
-    [activePlaylistView, sidebarTracks, isPlaying, markVideoStarted, goToVideo],
+    [
+      activePlaylistView,
+      sidebarTracks,
+      isPlaying,
+      markVideoStarted,
+      goToVideo,
+      transientVideo,
+    ],
+  );
+
+  const handlePlayCommunityList = useCallback(
+    (userId) => {
+      const communityUser = communityNominations.find(
+        (u) => u.userId === userId,
+      );
+      if (!communityUser || communityUser.nominations.length === 0) return;
+
+      // Switch to community view and start playback
+      setActivePlaylistView({ type: 'community', userId });
+
+      // Note: handleSidebarSelect expects activePlaylistView to be updated.
+      // Since it's a callback with dependencies, we need a slight delay or handle it manually.
+      // Easiest is to set transient state manually here for immediate playback.
+      const track = communityUser.nominations[0];
+      const trackWithProperId = {
+        ...track,
+        videoId: track.videoId || track.video_id || track.id,
+      };
+
+      if (!transientVideo) {
+        transientResumeVideoIdRef.current = currentVideoIdRef.current;
+      }
+
+      setTransientVideo({
+        ...trackWithProperId,
+        source: 'community-view',
+        communityUserId: userId,
+      });
+      setCurrentVideoId(null);
+      markVideoStarted(trackWithProperId.videoId);
+      setIsPlaying(true);
+    },
+    [communityNominations, currentVideoIdRef, markVideoStarted, transientVideo],
   );
 
   const handlePrev = useCallback(() => {
@@ -3146,6 +3188,7 @@ export default function App() {
     markVideoCompleted,
     markVideoStarted,
     transientVideo,
+    sidebarTracks,
   ]);
 
   // ── Shuffle ─────────────────────────────────────────────────────
@@ -4529,6 +4572,7 @@ export default function App() {
               }
               onExport={handleOpenExportModal}
               onSavePlaylist={handleCreateYTPlaylist}
+              onPlayCommunityList={handlePlayCommunityList}
             />
           )}
           {persistentPlayer}
