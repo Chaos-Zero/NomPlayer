@@ -7,7 +7,7 @@ export default function ExportVgmcModal({ isOpen, tracks, onClose }) {
 
   const formattedText = tracks
     .map((track) => {
-      const game = track.gameTitle || 'Unknown Game';
+      const game = track.gameTitle || 'Metadata Needed';
       const title = track.trackTitle || track.title || 'Unknown Track';
       const url = `https://www.youtube.com/watch?v=${track.videoId}`;
       return `+ ${game} | ${title} | ${url}`;

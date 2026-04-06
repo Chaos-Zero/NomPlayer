@@ -10,7 +10,11 @@ import {
   deriveProfileAvatarUrl,
 } from '../lib/playerState.js';
 import { ingestYouTubeTrackSources } from '../lib/trackCatalog.js';
-import { fetchCommunityFeedback, upsertUserFeedback } from '../lib/feedback.js';
+import {
+  fetchCommunityFeedback,
+  upsertUserFeedback,
+  deleteUserFeedback,
+} from '../lib/feedback.js';
 import {
   DndContext,
   closestCenter,
@@ -31,7 +35,7 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import { PointerSensor as CorePointerSensor } from '@dnd-kit/core';
 import { SortableSupportItem, SupportItem } from './FavouritesPanel.jsx';
-import { HeartIcon, LockIcon } from './Icons.jsx';
+import { HeartIcon, LockIcon, PencilIcon, XIcon } from './Icons.jsx';
 import { ContextMenuPortal } from './ContextMenuPortal';
 import ExportIcon from './ExportIcon.jsx';
 import YouTubeIcon from './YouTubeIcon.jsx';
@@ -141,12 +145,16 @@ class CustomPointerSensor extends CorePointerSensor {
 function TrackInfoPanel({
   track,
   communityData,
-  isLoading,
+  isLoadingData,
+  isSaving,
   onClose,
   authUser,
   onUpdateComment,
   onSaveFeedback,
+  onDeleteFeedback,
+  userProfile,
 }) {
+  const [isEditing, setIsEditing] = useState(false);
   const [supportersMenu, setSupportersMenu] = useState(null);
   const personalFeedback = useMemo(() => {
     if (!track || !communityData.feedback || !authUser?.id)
@@ -182,6 +190,7 @@ function TrackInfoPanel({
     note: personalFeedback.note,
     rating: personalFeedback.rating,
     videoId: track?.videoId,
+    isLoading: isLoadingData,
   });
 
   if (
@@ -196,12 +205,60 @@ function TrackInfoPanel({
     });
     setLocalComment(personalFeedback.note || track?.comment || '');
     setLocalRating(personalFeedback.rating || '');
+
+    // Default to collapsed if feedback exists, or open for new (Wait for load per User Request)
+    if (!isLoadingData) {
+      if (!personalFeedback.rating && !personalFeedback.note) {
+        setIsEditing(true);
+      } else {
+        setIsEditing(false);
+      }
+    }
   }
 
-  const peerFeedback = useMemo(() => {
-    if (!track || !communityData.feedback) return [];
-    return communityData.feedback.filter((f) => f.user_id !== authUser?.id);
-  }, [track, communityData.feedback, authUser?.id]);
+  // Trigger sync on load status change specifically
+  if (isLoadingData !== prevSync.isLoading) {
+    setPrevSync((prev) => ({ ...prev, isLoading: isLoadingData }));
+
+    // When loading finishes, decide whether to show or hide the input
+    if (!isLoadingData) {
+      const hasFeedback = personalFeedback.rating || personalFeedback.note;
+      if (!hasFeedback) {
+        setIsEditing(true);
+      } else {
+        setIsEditing(false);
+      }
+    }
+  }
+
+  // Trigger sync on load status change specifically
+  if (isLoadingData !== prevSync.isLoading) {
+    setPrevSync((prev) => ({ ...prev, isLoading: isLoadingData }));
+
+    // When loading finishes, decide whether to show or hide the input
+    if (!isLoadingData) {
+      const hasFeedback = personalFeedback.rating || personalFeedback.note;
+      if (!hasFeedback) {
+        setIsEditing(true);
+      } else {
+        setIsEditing(false);
+      }
+    }
+  }
+
+  const hasChanges = useMemo(() => {
+    const savedRating = personalFeedback.rating || '';
+    const savedNote = personalFeedback.note || track?.comment || '';
+
+    return (
+      String(localRating) !== String(savedRating) || localComment !== savedNote
+    );
+  }, [localRating, localComment, personalFeedback, track?.comment]);
+
+  // Merged community feedback (no longer filtering our own)
+  const communityList = useMemo(() => {
+    return communityData.feedback || [];
+  }, [communityData.feedback]);
 
   const supportSummary = useMemo(() => {
     const list = communityData.supports || {};
@@ -287,16 +344,31 @@ function TrackInfoPanel({
             </div>
 
             <div className="list-explorer-info-content">
-              {authUser && (
+              {authUser && isEditing && (
                 <section className="list-explorer-info-section">
-                  <div
-                    style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                    }}
-                  >
+                  <div className="section-header-row">
                     <h4>Your Feedback</h4>
+                    {userProfile && (
+                      <div className="user-feedback-identity">
+                        <img
+                          src={deriveProfileAvatarUrl(
+                            userProfile,
+                            userProfile.avatar_url,
+                          )}
+                          alt=""
+                          className="list-explorer-peer-avatar miniature"
+                          onError={(e) => {
+                            e.target.style.display = 'none';
+                          }}
+                        />
+                        <span className="list-explorer-peer-user">
+                          {getDisplayProfileName(
+                            userProfile.username,
+                            'Anonymous',
+                          )}
+                        </span>
+                      </div>
+                    )}
                   </div>
                   <div className="list-explorer-info-personal">
                     <div className="list-explorer-info-rating-row">
@@ -322,25 +394,68 @@ function TrackInfoPanel({
                       value={localComment}
                       onChange={handleCommentChange}
                     />
-                    <div className="list-explorer-info-feedback-actions">
-                      <button
-                        className="btn-save-feedback"
-                        onClick={() =>
-                          onSaveFeedback(localRating, localComment)
-                        }
-                        disabled={isLoading}
-                      >
-                        {isLoading ? 'Saving...' : 'Save Feedback'}
-                      </button>
-                    </div>
+                    {(hasChanges ||
+                      isSaving ||
+                      personalFeedback.rating ||
+                      personalFeedback.note) && (
+                      <div className="feedback-save-row">
+                        <div className="feedback-save-row-left">
+                          {hasChanges && (
+                            <button
+                              className="btn btn-primary btn-save-feedback"
+                              onClick={() => {
+                                onSaveFeedback(localRating, localComment);
+                                setIsEditing(false);
+                              }}
+                              disabled={isSaving}
+                            >
+                              {isSaving ? 'Saving...' : 'Save Feedback'}
+                            </button>
+                          )}
+                          <button
+                            className="btn btn-ghost"
+                            onClick={() => {
+                              setLocalComment(
+                                personalFeedback.note || track?.comment || '',
+                              );
+                              setLocalRating(personalFeedback.rating || '');
+                              if (
+                                personalFeedback.rating ||
+                                personalFeedback.note
+                              ) {
+                                setIsEditing(false);
+                              }
+                            }}
+                            disabled={isSaving}
+                          >
+                            Discard
+                          </button>
+                        </div>
+
+                        {(personalFeedback.rating || personalFeedback.note) &&
+                          !hasChanges && (
+                            <button
+                              className="btn btn-ghost btn-delete-feedback"
+                              onClick={onDeleteFeedback}
+                              disabled={isSaving}
+                              style={{
+                                color: 'var(--text-dim)',
+                                fontSize: '11px',
+                              }}
+                            >
+                              Delete Feedback
+                            </button>
+                          )}
+                      </div>
+                    )}
                   </div>
                 </section>
               )}
 
-              <section className="list-explorer-info-section">
-                <h4>Community Support</h4>
-                <div className="list-explorer-support-summary">
-                  {supportSummary.total > 0 ? (
+              {supportSummary.total > 0 && (
+                <section className="list-explorer-info-section">
+                  <h4>Community Support</h4>
+                  <div className="list-explorer-support-summary">
                     <div className="list-explorer-support-icons">
                       {supportSummary[3]?.count > 0 && (
                         <button
@@ -376,28 +491,27 @@ function TrackInfoPanel({
                         </button>
                       )}
                     </div>
-                  ) : (
-                    <div className="list-explorer-support-empty">
-                      No community support yet.
-                    </div>
-                  )}
-                </div>
-              </section>
+                  </div>
+                </section>
+              )}
 
               <section className="list-explorer-info-section community">
                 <h4>Community Activity</h4>
-                {isLoading ? (
+                {isLoadingData ? (
                   <p className="list-explorer-info-loading">
                     Loading community data...
                   </p>
-                ) : peerFeedback.length === 0 ? (
+                ) : communityList.length === 0 ? (
                   <p className="list-explorer-info-empty">
                     No community feedback yet.
                   </p>
                 ) : (
                   <div className="list-explorer-peer-list">
-                    {peerFeedback.map((f, i) => (
-                      <div key={i} className="list-explorer-peer-item">
+                    {communityList.map((f, i) => (
+                      <div
+                        key={i}
+                        className={`list-explorer-peer-item${f.user_id === authUser?.id ? ' is-owner' : ''}`}
+                      >
                         <img
                           src={deriveProfileAvatarUrl(
                             f.profiles,
@@ -424,6 +538,41 @@ function TrackInfoPanel({
                             <p className="list-explorer-peer-note">{f.note}</p>
                           )}
                         </div>
+
+                        {f.user_id === authUser?.id && (
+                          <div className="list-explorer-peer-actions">
+                            <button
+                              className="btn btn-ghost btn-edit-activity"
+                              title="Edit Feedback"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setIsEditing(true);
+                                // Scroll to top of the panel content
+                                const content = e.currentTarget.closest(
+                                  '.list-explorer-info-content-wrapper',
+                                );
+                                if (content) {
+                                  content.scrollTo({
+                                    top: 0,
+                                    behavior: 'smooth',
+                                  });
+                                }
+                              }}
+                            >
+                              <PencilIcon className="activity-action-icon" />
+                            </button>
+                            <button
+                              className="btn btn-ghost btn-delete-activity"
+                              title="Delete Feedback"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onDeleteFeedback();
+                              }}
+                            >
+                              <XIcon className="activity-action-icon" />
+                            </button>
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -485,7 +634,8 @@ function SortableListExplorerCard({
     isDragging,
   } = useSortable({
     id: sortableId,
-    disabled: isReadOnly,
+    // Always allow dragging so items can be copied to other lists
+    disabled: false,
   });
 
   const isDraggingStyle = {
@@ -504,20 +654,24 @@ function SortableListExplorerCard({
       style={isDraggingStyle}
       className={`list-explorer-card ${isSelected ? 'selected' : ''} ${isDragging ? 'dragging' : ''} ${isReadOnly ? 'read-only' : ''} ${isSupportList ? 'is-support-list' : ''}`}
       onClick={() => onSelect?.(video.videoId)}
+      onDoubleClick={() => onPlayNow(video)}
       onContextMenu={(e) => onContextMenu?.(e, video)}
     >
       <div className="list-explorer-card-inner">
-        {!isReadOnly && (
-          <div
-            className="drag-handle"
-            {...attributes}
-            {...listeners}
-            aria-label="Drag to reorder"
-            title="Drag to reorder"
-          >
-            ⠿
-          </div>
-        )}
+        {/* Always show drag handle so items can be picked up from any column */}
+        <div
+          className="drag-handle"
+          {...attributes}
+          {...listeners}
+          aria-label="Drag to copy or reorder"
+          title={
+            isReadOnly
+              ? 'Drag to copy to another list'
+              : 'Drag to reorder or move'
+          }
+        >
+          ⠿
+        </div>
         <div className="list-explorer-card-main">
           <SupportItem
             video={video}
@@ -561,6 +715,8 @@ function ListExplorerColumn({
   onExport,
   onSavePlaylist,
   globalCommentedVideoIds = null,
+  onPlayCommunityList = null,
+  userToggle = null,
 }) {
   const [addUrl, setAddUrl] = useState('');
   const { setNodeRef } = useDroppable({
@@ -622,6 +778,82 @@ function ListExplorerColumn({
           )}
         </div>
         <div className="list-explorer-column-actions">
+          {videos && videos.length > 0 && (
+            <button
+              className="list-explorer-column-btn"
+              onClick={() => {
+                if (id.startsWith('peer-')) {
+                  const userId = id.replace('peer-', '');
+                  onPlayCommunityList?.(userId);
+                } else {
+                  onPlayNow?.(videos[0]);
+                }
+              }}
+              title="Start this list"
+            >
+              <PlayIcon />
+            </button>
+          )}
+          {userToggle && (
+            <button
+              className={`list-explorer-column-btn column-user-toggle ${!userToggle.active ? 'is-inactive' : ''}`}
+              onClick={userToggle.onToggle}
+              title={
+                userToggle.active
+                  ? 'Hide my nominations'
+                  : 'Show my nominations'
+              }
+            >
+              <img
+                src={deriveProfileAvatarUrl(
+                  userToggle.user,
+                  userToggle.user?.avatar_url,
+                )}
+                alt="My toggle"
+                className="column-user-avatar"
+              />
+            </button>
+          )}
+          {userToggle && (
+            <button
+              className={`list-explorer-column-btn column-user-toggle ${!userToggle.active ? 'is-inactive' : ''}`}
+              onClick={userToggle.onToggle}
+              title={
+                userToggle.active
+                  ? 'Hide my nominations'
+                  : 'Show my nominations'
+              }
+            >
+              <img
+                src={deriveProfileAvatarUrl(
+                  userToggle.user,
+                  userToggle.user?.avatar_url,
+                )}
+                alt="My toggle"
+                className="column-user-avatar"
+              />
+            </button>
+          )}
+          {userToggle && (
+            <button
+              className={`list-explorer-column-btn column-user-toggle ${!userToggle.active ? 'is-inactive' : ''}`}
+              onClick={userToggle.onToggle}
+              title={
+                userToggle.active
+                  ? 'Hide my nominations'
+                  : 'Show my nominations'
+              }
+            >
+              <img
+                src={deriveProfileAvatarUrl(
+                  userToggle.user,
+                  userToggle.user?.avatar_url,
+                )}
+                alt="My toggle"
+                className="column-user-avatar"
+              />
+            </button>
+          )}
           {canAddAll && videos && videos.length > 0 && (
             <button
               className="list-explorer-column-btn"
@@ -751,6 +983,7 @@ export default function ListExplorer({
   onExport,
   onSavePlaylist,
   onOpenSupportDropdown,
+  onPlayCommunityList,
 }) {
   const [focusedListId, setFocusedListId] = useState(null);
   const [activeCustomPlaylistId, setActiveCustomPlaylistId] = useState(null);
@@ -763,6 +996,7 @@ export default function ListExplorer({
     feedback: [],
     supports: {},
   });
+  const [showMyNominations, setShowMyNominations] = useState(true);
   const [isLoadingCommunity, setIsLoadingCommunity] = useState(false);
   const [dragButton, setDragButton] = useState(0);
   const gridRef = useRef(null);
@@ -943,14 +1177,24 @@ export default function ListExplorer({
     if (id === 'nominations') return nominationList;
     if (id === 'support') return supportList;
     if (id === 'current') return playlist;
+    if (id === 'new-nominations') return newNominations;
+    if (id.startsWith('peer-')) {
+      const userId = id.replace('peer-', '');
+      const peer = peerColumns.find((c) => c.user_id === userId);
+      return peer?.videos || [];
+    }
     return customPlaylists.find((pl) => pl.id === id)?.videos || [];
   };
 
   const setListById = (id, newList) => {
+    // Only allow updates to user's own lists
     if (id === 'nominations') onUpdateNominationList(newList);
     else if (id === 'support') onUpdateSupportList(newList);
     else if (id === 'current') onUpdatePlaylist(newList);
-    else {
+    else if (id === 'new-nominations' || id.startsWith('peer-')) {
+      // These are read-only columns for the current user session
+      return;
+    } else {
       onUpdateCustomPlaylists(
         customPlaylists.map((pl) =>
           pl.id === id ? { ...pl, videos: newList } : pl,
@@ -1043,9 +1287,15 @@ export default function ListExplorer({
         );
 
         // Logic: Move if Right-click OR Support -> Nominations. Otherwise Copy.
+        // Rule: If dragging FROM a read-only list, it MUST be a copy.
+        const isSourceReadOnly =
+          sourceListId === 'new-nominations' ||
+          sourceListId.startsWith('peer-');
+
         const shouldMove =
-          dragButton === 2 ||
-          (sourceListId === 'support' && targetListId === 'nominations');
+          !isSourceReadOnly &&
+          (dragButton === 2 ||
+            (sourceListId === 'support' && targetListId === 'nominations'));
 
         if (!alreadyInTarget) {
           // Rule: Nomination and Support cannot overlap
@@ -1611,12 +1861,14 @@ export default function ListExplorer({
           key={selectedTrack?.videoId || 'none'}
           track={selectedTrack}
           communityData={communityData}
-          isLoading={isLoadingCommunity || isSavingFeedback}
+          isLoadingData={isLoadingCommunity}
+          isSaving={isSavingFeedback}
           onClose={() => {
             setSelectedTrackId(null);
             setSelectedColumnId(null);
           }}
           authUser={authUser}
+          userProfile={authUser?.profile}
           onUpdateComment={(videoId, comment) =>
             handleUpdateComment(
               selectedTrackId ? findListId(selectedTrackId) : null,
@@ -1624,6 +1876,47 @@ export default function ListExplorer({
               comment,
             )
           }
+          onDeleteFeedback={async () => {
+            if (!supabase || !authUser || !selectedTrack) return;
+            if (
+              !window.confirm(
+                'Delete your feedback for this track? This cannot be undone.',
+              )
+            )
+              return;
+
+            setIsSavingFeedback(true);
+            try {
+              let trackId = selectedTrack.trackId || selectedTrack.id;
+              if (!trackId || !/^[0-9a-f-]{36}$/i.test(trackId)) {
+                // Ingest if somehow track info lost UUID
+                const ingested = await ingestYouTubeTrackSources(supabase, [
+                  selectedTrack,
+                ]);
+                if (ingested && ingested.length > 0) {
+                  trackId = ingested[0].track_id;
+                }
+              }
+
+              if (!trackId) throw new Error('Could not identify track.');
+
+              await deleteUserFeedback(supabase, authUser.id, trackId);
+              // Refresh community data
+              setCommunityData((prev) => ({
+                ...prev,
+                feedback: prev.feedback.filter(
+                  (f) => f.user_id !== authUser.id,
+                ),
+              }));
+
+              onShowToast?.('Feedback deleted.', 'dashboard');
+            } catch (err) {
+              console.error('Delete failed:', err);
+              onShowToast?.('Failed to delete feedback.', 'error');
+            } finally {
+              setIsSavingFeedback(false);
+            }
+          }}
           onSaveFeedback={async (rating, note) => {
             if (!supabase || !authUser || !selectedTrack) return;
             setIsSavingFeedback(true);
@@ -1688,13 +1981,22 @@ export default function ListExplorer({
             <ListExplorerColumn
               id="nominations"
               title="Nominations"
-              subtitle={`${nominationList.length} tracks`}
-              videos={nominationList}
+              subtitle={`${showMyNominations ? nominationList.length : 0} tracks`}
+              videos={showMyNominations ? nominationList : []}
               isFocused={focusedListId === 'nominations'}
               onFocus={() => setFocusedListId('nominations')}
               onUnfocus={() => setFocusedListId(null)}
               onPlayNow={onPlayNow}
               colorVar="--accent"
+              userToggle={
+                authUser?.profile
+                  ? {
+                      user: authUser.profile,
+                      active: showMyNominations,
+                      onToggle: () => setShowMyNominations(!showMyNominations),
+                    }
+                  : null
+              }
               onUpdateComment={(videoId, comment) =>
                 handleUpdateComment('nominations', videoId, comment)
               }
@@ -1848,6 +2150,7 @@ export default function ListExplorer({
                 }
                 canAddAll={true}
                 onAddAll={() => handleAddAllToCurrent(col.videos)}
+                onPlayCommunityList={onPlayCommunityList}
                 isReadOnly={true}
                 onExport={onExport}
                 onSavePlaylist={onSavePlaylist}

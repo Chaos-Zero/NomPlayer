@@ -2,11 +2,11 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import DiscordIcon from './DiscordIcon.jsx';
 import ScrollingText from './ScrollingText.jsx';
+import { getYouTubeThumbnailUrl } from '../utils/youtube.js';
 import useMediaQuery from '../hooks/useMediaQuery.js';
 import {
   buildDiscoveryCandidates,
   fetchDashboardNominationUpdates,
-  fetchDashboardVgmcUpdates,
   pickNextDiscoveryCandidate,
 } from '../lib/dashboard.js';
 import {
@@ -22,6 +22,9 @@ import {
 } from '../lib/trackCatalog.js';
 import ThreeDCarousel from './ThreeDCarousel.jsx';
 import { ContextMenuPortal } from './ContextMenuPortal.jsx';
+import TiltedCard from './TiltedCard.jsx';
+import DiscoveryMarqueeGrid from './DiscoveryMarqueeGrid.jsx';
+import { HeartIcon, LockIcon } from './Icons.jsx';
 
 const DASHBOARD_REFRESH_LIMIT = 8;
 
@@ -47,32 +50,15 @@ const SpeechBubbleIcon = ({ size = 14 }) => (
   </svg>
 );
 
-const HeartIcon = ({ size = 16 }) => (
-  <svg viewBox="0 0 20 20" fill="currentColor" width={size} height={size}>
-    <path d="M9.653 16.915l-.005-.003-.019-.01a20.759 20.759 0 0 1-1.162-.682 22.045 22.045 0 0 1-2.582-1.9C4.045 12.733 2 10.352 2 7.5a4.5 4.5 0 0 1 8-2.828A4.5 4.5 0 0 1 18 7.5c0 2.852-2.044 5.233-3.885 6.82a22.049 22.049 0 0 1-3.744 2.582 20.77 20.77 0 0 1-1.162.682l-.019.01-.005.003L9.653 16.915z" />
-  </svg>
-);
-
-const LockIcon = ({ size = 16 }) => (
-  <svg viewBox="0 0 20 20" fill="currentColor" width={size} height={size}>
-    <path
-      fillRule="evenodd"
-      d="M10 1a4.5 4.5 0 0 0-4.5 4.5V9H5a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6a2 2 0 0 0-2-2h-.5V5.5A4.5 4.5 0 0 0 10 1Zm3 8H7V5.5a3 3 0 1 1 6 0V9Z"
-      clipRule="evenodd"
-    />
-  </svg>
-);
 const MOBILE_DASHBOARD_COLLAPSE_DEFAULTS = {
   overview: false,
   nominations: false,
   discover: true,
-  updates: true,
 };
 const DESKTOP_DASHBOARD_COLLAPSE_DEFAULTS = {
   overview: false,
   nominations: false,
   discover: false,
-  updates: false,
 };
 
 function DashboardSection({
@@ -178,6 +164,18 @@ function NominationEmptyCard() {
   );
 }
 
+function NominationUpdateSkeleton() {
+  return (
+    <div className="dashboard-update-peek-container">
+      <div className="dashboard-update-skeleton-row">
+        <div className="dashboard-update-skeleton-item" />
+        <div className="dashboard-update-skeleton-item medium" />
+        <div className="dashboard-update-skeleton-item short" />
+      </div>
+    </div>
+  );
+}
+
 function ModalPortal({ children }) {
   if (typeof document === 'undefined') return null;
   const target = document.getElementById('modal-root');
@@ -201,6 +199,7 @@ export function NominationUpdateCard({
   globalCommentedVideoIds = new Set(),
   isFeedbackPanelOpen = false,
   resolveTrack,
+  isMetadataLoading = false,
 }) {
   const displayIdentity = parseStoredProfileUsername(update.username);
   const nominationCount = update.nominations.length;
@@ -303,7 +302,7 @@ export function NominationUpdateCard({
         )}
         <div className="dashboard-update-peek-content">
           <span className="dashboard-update-peek-game">
-            {metadataById[video.videoId]?.gameTitle || 'Unknown Game'}
+            {metadataById[video.videoId]?.gameTitle || 'Metadata Needed'}
           </span>
           <span className="dashboard-update-peek-title">
             {metadataById[video.videoId]?.trackTitle || video.title}
@@ -449,7 +448,9 @@ export function NominationUpdateCard({
               </div>
 
               <div className="dashboard-update-peek-container dashboard-modal-body">
-                {update.nominations && update.nominations.length > 0 ? (
+                {isMetadataLoading ? (
+                  <NominationUpdateSkeleton />
+                ) : update.nominations && update.nominations.length > 0 ? (
                   <div className="dashboard-update-peek-list">
                     {update.nominations.map((video, index) =>
                       renderPeekRowActivity(video, index),
@@ -520,11 +521,15 @@ export function NominationUpdateCard({
             </div>
 
             <div className="dashboard-update-peek-container">
-              <div className="dashboard-update-peek-list">
-                {update.nominations
-                  .slice(0, 20)
-                  .map((video, index) => renderPeekRowActivity(video, index))}
-              </div>
+              {isMetadataLoading ? (
+                <NominationUpdateSkeleton />
+              ) : (
+                <div className="dashboard-update-peek-list">
+                  {update.nominations
+                    .slice(0, 20)
+                    .map((video, index) => renderPeekRowActivity(video, index))}
+                </div>
+              )}
             </div>
 
             <div className="dashboard-update-footer">
@@ -625,75 +630,88 @@ export function NominationUpdateCard({
   );
 }
 
-function DiscoveryRow({ candidate, metadata, onAdd, onPlayNow }) {
-  const nominatorNames = candidate.nominators
-    .slice(0, 3)
-    .map((nominator) => getDisplayProfileName(nominator.username))
-    .join(', ');
+function DiscoveryGridItem({ candidate, metadata, onPlayNow }) {
+  const title =
+    metadata?.trackTitle || candidate?.trackTitle
+      ? `${metadata?.gameTitle || candidate?.gameTitle || ''} - ${metadata?.trackTitle || candidate?.trackTitle}`.replace(
+          /^ - /,
+          '',
+        )
+      : metadata?.displayTitle ||
+        candidate?.displayTitle ||
+        candidate?.title ||
+        'Unknown Track';
+
+  const { supportCount1, supportCount2, supportCount3 } = metadata || {};
 
   return (
-    <article className="dashboard-discovery-row">
-      <img
-        className="dashboard-discovery-thumb"
-        src={candidate.thumbnail}
-        alt=""
-        loading="lazy"
-      />
-
-      <div className="dashboard-discovery-copy">
-        <div className="dashboard-discovery-title-row">
-          <h3 className="dashboard-discovery-title">
-            {metadata
-              ? `${metadata.gameTitle} - ${metadata.trackTitle}`
-              : candidate.title}
-          </h3>
-          <span className="dashboard-chip dashboard-chip-warm">
-            {candidate.nominationCount} pick
-            {candidate.nominationCount === 1 ? '' : 's'}
-          </span>
-        </div>
-
-        <p className="dashboard-discovery-meta">
-          Nominated by {nominatorNames}
-        </p>
-      </div>
-
-      <div className="dashboard-discovery-actions">
-        <button
-          className="dashboard-inline-btn"
-          type="button"
-          onClick={() => onPlayNow(candidate)}
-        >
-          Listen now
-        </button>
-        <button
-          className="dashboard-inline-btn dashboard-inline-btn-primary"
-          type="button"
-          onClick={() => onAdd(candidate)}
-        >
-          Add
-        </button>
-      </div>
-    </article>
-  );
-}
-
-function VgmcThreadItem({ thread }) {
-  return (
-    <a
-      className="dashboard-thread-item"
-      href={thread.url}
-      target="_blank"
-      rel="noreferrer"
+    <div
+      className="discovery-grid-card-wrapper"
+      title="Double-click to play"
+      onDoubleClick={() => onPlayNow(candidate)}
     >
-      <span className="dashboard-thread-icon" aria-hidden="true">
-        #
-      </span>
-      <span className="dashboard-thread-copy">
-        <span className="dashboard-thread-title">{thread.title}</span>
-        <span className="dashboard-thread-meta">Open thread</span>
-      </span>
-    </a>
+      <TiltedCard
+        imageSrc={candidate.thumbnail}
+        altText={title}
+        containerHeight="260px"
+        containerWidth="100%"
+        imageHeight="260px"
+        imageWidth="100%"
+        rotateAmplitude={5}
+        scaleOnHover={1.05}
+        showMobileWarning={false}
+        showTooltip={false}
+        displayOverlayContent={true}
+        overlayContent={
+          <div className="discovery-card-overlay">
+            <div className="discovery-card-top">
+              <h3 className="discovery-card-title">{title}</h3>
+            </div>
+
+            <div className="discovery-card-bottom">
+              <div className="discovery-card-support-row">
+                {candidate.nominationCount > 1 && (
+                  <div
+                    className="discovery-support-stat nominators"
+                    title={`${candidate.nominationCount} Users Nominated`}
+                  >
+                    <SpeechBubbleIcon size={14} />
+                    <span>{candidate.nominationCount}</span>
+                  </div>
+                )}
+                {supportCount1 > 0 && (
+                  <div
+                    className="discovery-support-stat normal"
+                    title={`${supportCount1} Normal Supports`}
+                  >
+                    <HeartIcon />
+                    <span>{supportCount1}</span>
+                  </div>
+                )}
+                {supportCount2 > 0 && (
+                  <div
+                    className="discovery-support-stat strong"
+                    title={`${supportCount2} Strong Supports`}
+                  >
+                    <HeartIcon />
+                    <span>{supportCount2}</span>
+                  </div>
+                )}
+                {supportCount3 > 0 && (
+                  <div
+                    className="discovery-support-stat highest"
+                    title={`${supportCount3} Highest Supports`}
+                  >
+                    <LockIcon />
+                    <span>{supportCount3}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        }
+      />
+    </div>
   );
 }
 
@@ -716,11 +734,10 @@ export default function HomePage({
 }) {
   const isMobileLayout = useMediaQuery('(max-width: 960px)');
   const [nominationUpdates, setNominationUpdates] = useState([]);
-  const [vgmcThreads, setVgmcThreads] = useState([]);
+  const [unplacedFallbackTracks, setUnplacedFallbackTracks] = useState([]);
+  const [persistentDiscoveryItems, setPersistentDiscoveryItems] = useState([]);
   const [dashboardError, setDashboardError] = useState('');
-  const [updatesError, setUpdatesError] = useState('');
   const [isDashboardLoading, setIsDashboardLoading] = useState(true);
-  const [isUpdatesLoading, setIsUpdatesLoading] = useState(true);
   const [isExtraLoading, setIsExtraLoading] = useState(true);
   const [expandedUserId, setExpandedUserId] = useState(null);
   const [featuredDiscoveryId, setFeaturedDiscoveryId] = useState(null);
@@ -733,6 +750,7 @@ export default function HomePage({
   const [maxVgmcNumber, setMaxVgmcNumber] = useState(24);
   const [trackMetadataById, setTrackMetadataById] = useState({});
   const [isShowingFallback, setIsShowingFallback] = useState(false);
+  const [isMetadataLoading, setIsMetadataLoading] = useState(true);
 
   const resolveTrack = useCallback(
     (video) => {
@@ -760,23 +778,84 @@ export default function HomePage({
     [authUser?.id, nominationUpdates],
   );
 
-  const discoveryCandidates = useMemo(
-    () =>
-      buildDiscoveryCandidates(visibleNominationUpdates, {
-        currentPlaylistIds,
-        listenedStatusById,
-        excludeUserId: authUser?.id ?? null,
-        limit: 100,
-        ignoreFilterVideoIds: featuredDiscoveryId ? [featuredDiscoveryId] : [],
-      }),
-    [
-      authUser?.id,
+  const discoveryCandidates = useMemo(() => {
+    const candidates = buildDiscoveryCandidates(visibleNominationUpdates, {
       currentPlaylistIds,
-      listenedStatusById,
-      visibleNominationUpdates,
-      featuredDiscoveryId,
-    ],
-  );
+      excludeUserId: authUser?.id ?? null,
+      limit: 200, // Increased for larger pool
+      ignoreFilterVideoIds: featuredDiscoveryId ? [featuredDiscoveryId] : [],
+    });
+    // Shuffle candidates to prioritize variety over popularity
+    return [...candidates].sort(() => Math.random() - 0.5);
+  }, [
+    authUser?.id,
+    currentPlaylistIds,
+    visibleNominationUpdates,
+    featuredDiscoveryId,
+  ]);
+
+  // Handle persistent Discovery population (only once per load/refresh)
+  useEffect(() => {
+    if (persistentDiscoveryItems.length > 0) return;
+    if (discoveryCandidates.length === 0 && unplacedFallbackTracks.length === 0)
+      return;
+
+    // 1. Separate candidates and fallbacks
+    const nominationPool = [...discoveryCandidates].filter((item) => {
+      const status = listenedStatusById[item.videoId];
+      return !status || (status !== 'complete' && status !== 'partial');
+    });
+
+    const fallbackPool = unplacedFallbackTracks
+      .map((track) => ({
+        videoId: track.videoId,
+        title: track.displayTitle,
+        thumbnail:
+          track.sourceThumbnailUrl || getYouTubeThumbnailUrl(track.videoId),
+        isFallback: true,
+        supportCount1: track.supportCount1,
+        supportCount2: track.supportCount2,
+        supportCount3: track.supportCount3,
+        gameTitle: track.gameTitle,
+        trackTitle: track.trackTitle,
+        displayTitle: track.displayTitle,
+      }))
+      .filter((item) => {
+        const status = listenedStatusById[item.videoId];
+        return !status || (status !== 'complete' && status !== 'partial');
+      });
+
+    // 2. Shuffle both independently (Fisher-Yates)
+    const shuffleArray = (array) => {
+      const shuffled = [...array];
+      for (let i = shuffled.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+      }
+      return shuffled;
+    };
+
+    const shuffledNominations = shuffleArray(nominationPool);
+    const shuffledFallbacks = shuffleArray(fallbackPool);
+
+    // 3. Combine with prioritization (Nominations first, then fill with fallbacks)
+    const combinedPool = [...shuffledNominations, ...shuffledFallbacks];
+
+    // 4. De-duplicate (in case a track is in both lists)
+    const uniqueMap = new Map();
+    combinedPool.forEach((item) => {
+      if (!uniqueMap.has(item.videoId)) uniqueMap.set(item.videoId, item);
+    });
+    const uniquePool = Array.from(uniqueMap.values());
+
+    // 5. Commit to persistent state (140 items to ensure grid stays full on resize)
+    setPersistentDiscoveryItems(uniquePool.slice(0, 140));
+  }, [
+    discoveryCandidates,
+    unplacedFallbackTracks,
+    persistentDiscoveryItems.length,
+    listenedStatusById,
+  ]);
 
   // Pin the first discovery candidate as the featured one if none is set
   // This prevents the card from rotating when the first track's status changes during playback
@@ -816,7 +895,7 @@ export default function HomePage({
       try {
         const data = await fetchDashboardNominationUpdates(
           supabase,
-          DASHBOARD_REFRESH_LIMIT,
+          null, // Fetch all for catalog usage
         );
         if (!isActive) return;
         setNominationUpdates(data);
@@ -835,39 +914,29 @@ export default function HomePage({
 
     loadDashboardUpdates();
 
+    // Fetch several unplaced tracks for grid fallback
+    async function loadMarqueeFallbacks() {
+      if (!supabase) return;
+      try {
+        const { data } = await fetchPagedTracks(supabase, {
+          viewMode: 'unplaced',
+          limit: 150, // Increased for larger backfill pool
+          sortColumn: 'submissions',
+          sortAsc: false,
+        });
+        if (isActive && data) {
+          setUnplacedFallbackTracks(data);
+        }
+      } catch (err) {
+        console.warn('Failed to load marquee fallbacks:', err);
+      }
+    }
+    loadMarqueeFallbacks();
+
     return () => {
       isActive = false;
     };
   }, [supabase, isAuthReady]);
-
-  useEffect(() => {
-    if (!isAuthReady) return undefined;
-    let isActive = true;
-
-    async function loadVgmcUpdates() {
-      try {
-        const threads = await fetchDashboardVgmcUpdates(
-          DASHBOARD_REFRESH_LIMIT,
-        );
-        if (!isActive) return;
-        setVgmcThreads(threads);
-        setUpdatesError('');
-      } catch (error) {
-        if (!isActive) return;
-        setUpdatesError(error.message || 'Could not load GameFAQs updates.');
-      } finally {
-        if (isActive) {
-          setIsUpdatesLoading(false);
-        }
-      }
-    }
-
-    loadVgmcUpdates();
-
-    return () => {
-      isActive = false;
-    };
-  }, [isAuthReady]);
 
   useEffect(() => {
     if (!isAuthReady) return undefined;
@@ -975,6 +1044,10 @@ export default function HomePage({
         setTrackMetadataById((prev) => ({ ...prev, ...metaMap }));
       } catch (err) {
         console.error('Failed to enrich track metadata:', err);
+      } finally {
+        if (isActive) {
+          setIsMetadataLoading(false);
+        }
       }
     }
     enrichTrackMetadata();
@@ -1102,27 +1175,17 @@ export default function HomePage({
       overview:
         !isAuthReady || isDashboardLoading
           ? 'Loading current dashboard stats'
-          : `${visibleNominationUpdates.length} lists, ${discoveryCandidates.length} picks, ${vgmcThreads.length} threads`,
-      nominations:
-        !isAuthReady || isDashboardLoading
-          ? 'Loading updated lists'
-          : `${visibleNominationUpdates.length} updated lists`,
+          : `${visibleNominationUpdates.length} lists, ${discoveryCandidates.length} picks`,
       discover:
         !isAuthReady || isDashboardLoading
           ? 'Loading picks'
           : discoveryCandidates.length === 0
             ? 'You are caught up'
             : `${discoveryCandidates.length} discovery picks`,
-      updates:
-        !isAuthReady || isUpdatesLoading
-          ? 'Loading GameFAQs threads'
-          : `${vgmcThreads.length} VGMC threads`,
     }),
     [
       discoveryCandidates.length,
       isDashboardLoading,
-      isUpdatesLoading,
-      vgmcThreads.length,
       visibleNominationUpdates.length,
       isAuthReady,
     ],
@@ -1427,7 +1490,7 @@ export default function HomePage({
                 <ThreeDCarousel
                   autoRotate={!expandedUserId && !isFeedbackPanelOpen}
                 >
-                  {visibleNominationUpdates.map((update) => (
+                  {visibleNominationUpdates.slice(0, 10).map((update) => (
                     <NominationUpdateCard
                       key={update.userId}
                       update={update}
@@ -1445,6 +1508,7 @@ export default function HomePage({
                       globalCommentedVideoIds={globalCommentedVideoIds}
                       isFeedbackPanelOpen={isFeedbackPanelOpen}
                       resolveTrack={resolveTrack}
+                      isMetadataLoading={isMetadataLoading}
                     />
                   ))}
                 </ThreeDCarousel>
@@ -1457,63 +1521,30 @@ export default function HomePage({
           title="Discover"
           eyebrow="Recommended"
           tone="manage"
-          caption="Songs other users nominated that are still missing from your current playlist."
+          caption="Check out some of this years Nominations from the community."
           className="dashboard-section-discover"
           isMobileLayout={isMobileLayout}
           isCollapsed={isMobileLayout && mobileCollapsedSections.discover}
           onToggleCollapse={() => toggleMobileSection('discover')}
           summary={sectionSummaries.discover}
         >
-          {discoveryCandidates.length === 0 ? (
+          {persistentDiscoveryItems.length === 0 ? (
             <DashboardMessage>
               You are caught up for now. When more nomination lists appear, new
               discovery picks will show here.
             </DashboardMessage>
           ) : (
-            <div className="dashboard-discovery-list animate-fade-in">
-              {discoveryCandidates.slice(0, 5).map((candidate) => (
-                <DiscoveryRow
+            <DiscoveryMarqueeGrid>
+              {persistentDiscoveryItems.map((candidate) => (
+                <DiscoveryGridItem
                   key={candidate.videoId}
                   candidate={candidate}
-                  metadata={trackMetadataById[candidate.videoId]}
+                  metadata={trackMetadataById[candidate.videoId] || candidate}
                   onAdd={handleAddDiscoveryCandidate}
                   onPlayNow={handlePlayDiscoveryCandidate}
                 />
               ))}
-            </div>
-          )}
-        </DashboardSection>
-
-        <DashboardSection
-          title="VGMC Updates"
-          eyebrow="GameFAQs"
-          tone="updates"
-          caption="Live threads from the GameFAQs Contests board with VGMC in the title."
-          className="dashboard-section-updates"
-          isMobileLayout={isMobileLayout}
-          isCollapsed={isMobileLayout && mobileCollapsedSections.updates}
-          onToggleCollapse={() => toggleMobileSection('updates')}
-          summary={sectionSummaries.updates}
-        >
-          {isUpdatesLoading ? (
-            <div className="dashboard-nominations-loader">
-              <div
-                className="hero-loader-spinner"
-                aria-label="Loading GameFAQs threads"
-              />
-            </div>
-          ) : updatesError ? (
-            <DashboardMessage tone="danger">{updatesError}</DashboardMessage>
-          ) : vgmcThreads.length === 0 ? (
-            <DashboardMessage>
-              No VGMC threads were found on the contests board right now.
-            </DashboardMessage>
-          ) : (
-            <div className="dashboard-thread-list animate-fade-in">
-              {vgmcThreads.map((thread) => (
-                <VgmcThreadItem key={thread.url} thread={thread} />
-              ))}
-            </div>
+            </DiscoveryMarqueeGrid>
           )}
         </DashboardSection>
       </div>

@@ -53,6 +53,7 @@ const VideoPlayer = forwardRef(function VideoPlayer(
     showMetadata = true,
     supabase,
     authUser,
+    userProfile,
     onShowToast,
     onProgressUpdate,
   },
@@ -206,7 +207,7 @@ const VideoPlayer = forwardRef(function VideoPlayer(
     if (
       !isPlaying &&
       document.visibilityState === 'visible' &&
-      !resumeAfterVisibilityRef.current
+      document.hasFocus()
     ) {
       clearVisibilityResumeTracking();
     }
@@ -249,7 +250,10 @@ const VideoPlayer = forwardRef(function VideoPlayer(
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'hidden') {
-        resumeAfterVisibilityRef.current = isPlayingRef.current;
+        const playerState = playerRef.current?.getPlayerState?.();
+        const isActuallyPlaying = playerState === 1 || playerState === 3;
+        resumeAfterVisibilityRef.current =
+          isActuallyPlaying && isPlayingRef.current;
         return;
       }
 
@@ -265,7 +269,10 @@ const VideoPlayer = forwardRef(function VideoPlayer(
     };
 
     const handleWindowBlur = () => {
-      resumeAfterVisibilityRef.current = isPlayingRef.current;
+      const playerState = playerRef.current?.getPlayerState?.();
+      const isActuallyPlaying = playerState === 1 || playerState === 3;
+      resumeAfterVisibilityRef.current =
+        isActuallyPlaying && isPlayingRef.current;
     };
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
@@ -557,6 +564,7 @@ const VideoPlayer = forwardRef(function VideoPlayer(
                   videoId={video.videoId}
                   supabase={supabase}
                   authUser={authUser}
+                  userProfile={userProfile}
                   onShowToast={onShowToast}
                 />
               </div>
