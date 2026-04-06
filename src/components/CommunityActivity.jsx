@@ -107,7 +107,10 @@ export default function CommunityActivity({
 
         const [feedback, { data: supportData }] = await Promise.all([
           fetchCommunityFeedback(supabase, tid),
-          supabase.from('track_supports').select('level').eq('track_id', tid),
+          supabase
+            .from('track_supports')
+            .select('level, user_id')
+            .eq('track_id', tid),
         ]);
 
         if (active) {
