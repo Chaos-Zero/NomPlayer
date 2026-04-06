@@ -116,6 +116,9 @@ describe('track catalog helpers', () => {
       displayTitle: 'Gamma Game - Skyline',
       isRetired: true,
       retiredByTournamentName: 'VGMC 6',
+      supportCount1: 0,
+      supportCount2: 0,
+      supportCount3: 0,
     });
   });
 

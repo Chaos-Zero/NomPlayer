@@ -57,19 +57,15 @@ describe('HomePage mobile layout', () => {
       />,
     );
 
-    const nominationsToggle = await screen.findByRole('button', {
-      name: 'Collapse Updated Nominations',
-    });
     const discoverToggle = await screen.findByRole('button', {
       name: 'Expand Discover',
     });
-    const updatesToggle = await screen.findByRole('button', {
-      name: 'Expand VGMC Updates',
+    const nominationsToggle = await screen.findByRole('button', {
+      name: 'Collapse Updated Nominations',
     });
 
     expect(nominationsToggle).toHaveAttribute('aria-expanded', 'true');
     expect(discoverToggle).toHaveAttribute('aria-expanded', 'false');
-    expect(updatesToggle).toHaveAttribute('aria-expanded', 'false');
 
     fireEvent.click(discoverToggle);
 

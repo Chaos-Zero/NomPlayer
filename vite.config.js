@@ -1,3 +1,4 @@
+// trigger re-optimize 1
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { fetchGameFaqsThreadsFromRss } from './src/lib/dashboard.js';

@@ -21,6 +21,7 @@ import ExportIcon from './ExportIcon.jsx';
 import YouTubeIcon from './YouTubeIcon.jsx';
 import ScrollingText from './ScrollingText.jsx';
 import useMediaQuery from '../hooks/useMediaQuery.js';
+import { getDisplayProfileName } from '../lib/playerState.js';
 
 function FastForwardIcon() {
   return (
@@ -33,8 +34,26 @@ function FastForwardIcon() {
 
 function ChevronIcon() {
   return (
-    <svg viewBox="0 0 20 20" aria-hidden="true">
-      <path d="M7.25 4.75 12.5 10l-5.25 5.25" />
+    <svg
+      viewBox="0 0 20 20"
+      aria-hidden="true"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+    >
+      <path
+        d="M5 7.5L10 12.5L15 7.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function MusicIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor">
+      <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z" />
     </svg>
   );
 }
@@ -132,10 +151,12 @@ function PlaylistItem({
       onClick={() => {
         if (selectionMode) {
           onToggleSelected(video.videoId);
-          return;
         }
-
-        onSelect(video.videoId);
+      }}
+      onDoubleClick={() => {
+        if (!selectionMode) {
+          onSelect(video.videoId, true);
+        }
       }}
       onContextMenu={(event) => onOpenContextMenu(event, video)}
       role="button"
@@ -345,7 +366,12 @@ export default function PlaylistSidebar({
   onExport,
   onSavePlaylist,
   activePage,
+  activePlaylistView = { type: 'personal' },
+  onSwitchView,
+  communityNominations = [],
 }) {
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const dropdownRef = useRef(null);
   const sensors = useSensors(
     useSensor(PointerSensor),
     useSensor(KeyboardSensor, {
@@ -444,6 +470,20 @@ export default function PlaylistSidebar({
     };
   }, [isCollapsed, isMobileLayout, onToggleCollapse]);
 
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsDropdownOpen(false);
+      }
+    }
+    if (isDropdownOpen) {
+      window.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      window.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isDropdownOpen]);
+
   function handleCollapseTabPointerDown(event) {
     if (!isMobileLayout) return;
 
@@ -513,14 +553,117 @@ export default function PlaylistSidebar({
   }
 
   function renderHeader() {
+    const isCommunityView = activePlaylistView.type === 'community';
+    const activeUser = isCommunityView
+      ? communityNominations.find((u) => u.userId === activePlaylistView.userId)
+      : null;
+
+    const displayTitle = isCommunityView
+      ? getDisplayProfileName(activeUser?.username) || 'Community'
+      : 'Playlist';
+
+    const currentAvatar = isCommunityView ? activeUser?.avatarUrl : null;
+
     return (
       <div className="sidebar-header">
-        <div className="sidebar-header-main">
-          <span className="sidebar-title">Playlist</span>
-          <span className="sidebar-count">{playlist.length} videos</span>
+        <div
+          className="sidebar-header-main community-dropdown-wrapper"
+          ref={dropdownRef}
+        >
+          <button
+            className={`community-view-trigger${isDropdownOpen ? ' active' : ''}`}
+            onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+            aria-expanded={isDropdownOpen}
+            aria-haspopup="listbox"
+          >
+            <div className="community-view-avatar-slot">
+              {currentAvatar ? (
+                <img
+                  src={currentAvatar}
+                  alt=""
+                  className="community-view-avatar"
+                />
+              ) : (
+                <div className="community-view-avatar-fallback">
+                  {isCommunityView ? '👤' : <MusicIcon />}
+                </div>
+              )}
+            </div>
+            <div className="community-view-text">
+              <span className="sidebar-title">{displayTitle}</span>
+              <span className="sidebar-count">
+                {playlist.length} {playlist.length === 1 ? 'video' : 'videos'}
+              </span>
+            </div>
+            <span className="community-view-chevron">
+              <ChevronIcon />
+            </span>
+          </button>
+
+          {isDropdownOpen && (
+            <div className="community-view-dropdown" role="listbox">
+              <div className="community-view-dropdown-scroll">
+                <button
+                  className={`community-option${!isCommunityView ? ' selected' : ''}`}
+                  onClick={() => {
+                    onSwitchView({ type: 'personal' });
+                    setIsDropdownOpen(false);
+                  }}
+                  role="option"
+                  aria-selected={!isCommunityView}
+                >
+                  <div className="community-option-avatar">
+                    <div className="community-view-avatar-fallback">
+                      <MusicIcon />
+                    </div>
+                  </div>
+                  <div className="community-option-info">
+                    <span className="community-option-name">My Playlist</span>
+                  </div>
+                </button>
+
+                <div className="community-dropdown-divider">
+                  Community Nominations
+                </div>
+
+                {communityNominations.map((item) => (
+                  <button
+                    key={item.userId}
+                    className={`community-option${isCommunityView && activePlaylistView.userId === item.userId ? ' selected' : ''}`}
+                    onClick={() => {
+                      onSwitchView({ type: 'community', userId: item.userId });
+                      setIsDropdownOpen(false);
+                    }}
+                    role="option"
+                    aria-selected={
+                      isCommunityView &&
+                      activePlaylistView.userId === item.userId
+                    }
+                  >
+                    <div className="community-option-avatar">
+                      {item.avatarUrl ? (
+                        <img src={item.avatarUrl} alt="" />
+                      ) : (
+                        <div className="community-view-avatar-fallback">👤</div>
+                      )}
+                    </div>
+                    <div className="community-option-info">
+                      <span className="community-option-name">
+                        {getDisplayProfileName(item.username)}
+                      </span>
+                      <span className="community-option-count">
+                        {item.nominations.length} nominations
+                      </span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="sidebar-header-actions">
+          {/* ... existing actions ... */}
           {isMobileLayout && (
             <>
               <button
@@ -979,24 +1122,48 @@ export default function PlaylistSidebar({
               </button>
             </>
           )}
-          {authUser && (
+          {activePlaylistView.type === 'community' && (
             <button
               className="playlist-context-menu-item"
               type="button"
               role="menuitem"
-              onClick={() => handleUpdateMetadata(contextMenu.videos)}
+              onClick={() => {
+                onAddDirectItems(contextMenu.videos);
+                setContextMenu(null);
+                if (selectionMode) {
+                  setSelectionMode(false);
+                }
+              }}
             >
-              Update Metadata
+              Add{' '}
+              {contextMenu.videos.length > 1
+                ? `(${contextMenu.videos.length}) `
+                : ''}
+              to Playlist
             </button>
           )}
-          <button
-            className="playlist-context-menu-item danger"
-            type="button"
-            role="menuitem"
-            onClick={() => handleRemove(contextMenu.video.videoId)}
-          >
-            Remove from Playlist
-          </button>
+          {activePlaylistView.type !== 'community' && (
+            <>
+              {authUser && (
+                <button
+                  className="playlist-context-menu-item"
+                  type="button"
+                  role="menuitem"
+                  onClick={() => handleUpdateMetadata(contextMenu.videos)}
+                >
+                  Update Metadata
+                </button>
+              )}
+              <button
+                className="playlist-context-menu-item danger"
+                type="button"
+                role="menuitem"
+                onClick={() => handleRemove(contextMenu.video.videoId)}
+              >
+                Remove from Playlist
+              </button>
+            </>
+          )}
         </ContextMenuPortal>
       )}
     </div>

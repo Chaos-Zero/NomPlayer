@@ -124,8 +124,7 @@ export function normalizePersistedPlayerState(
     playlistIdSet,
   );
   const currentVideoId =
-    typeof rawState?.currentVideoId === 'string' &&
-    playlistIdSet.has(rawState.currentVideoId)
+    typeof rawState?.currentVideoId === 'string'
       ? rawState.currentVideoId
       : (playlist[0]?.videoId ?? null);
 
@@ -159,6 +158,7 @@ export function normalizePersistedPlayerState(
           }))
           .filter((pl) => pl.videos.length >= 0)
       : [],
+    transientVideo: normalizeVideoEntry(rawState?.transientVideo),
   };
 }
 
