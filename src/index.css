@@ -11490,6 +11490,22 @@ body.is-resizing .resize-handle {
   display: flex;
 }
 
+.dashboard-modal-header .dashboard-update-heading {
+  display: flex !important;
+  align-items: baseline !important;
+  gap: 12px !important;
+  flex: 1;
+}
+
+.dashboard-modal-header .dashboard-update-user-context {
+  align-self: center !important;
+}
+
+.dashboard-modal-header .dashboard-update-count {
+  grid-row: auto !important;
+  margin-top: 0 !important;
+}
+
 .threed-carousel-item.active .dashboard-update-card {
   background: var(--bg-surface) !important;
   opacity: 1 !important;
