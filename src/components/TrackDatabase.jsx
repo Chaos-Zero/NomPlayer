@@ -9,7 +9,7 @@ import {
 import { getDisplayProfileName } from '../lib/playerState.js';
 import { ContextMenuPortal } from './ContextMenuPortal';
 import {
-  fetchPagedTracks,
+  fetchFilteredTracks,
   fetchMaxVgmcNumber,
   bulkUpdateTracks,
 } from '../lib/trackCatalog.js';
@@ -21,8 +21,8 @@ import {
 import DuplicateReviewModal from './DuplicateReviewModal.jsx';
 import { DotLottiePlayer } from '@dotlottie/react-player';
 import useMediaQuery from '../hooks/useMediaQuery.js';
+import { useVirtualizer } from '@tanstack/react-virtual';
 
-const PAGE_SIZE = 150;
 const VIEW_MODES = [
   { id: 'all', label: 'All Tracks' },
   { id: 'most_submitted', label: 'Most Submitted' },
@@ -213,7 +213,7 @@ const TrackRow = memo(
     onDiscardRow,
     onSetExpandedCell,
     onOpenContextMenu,
-    lastElementRef,
+    measureRef,
   }) => {
     const isDirty = !!pendingChanges;
     const vgmcElements = track.tournaments.map((t, i) => {
@@ -281,7 +281,7 @@ const TrackRow = memo(
         className={`${isSelected ? 'selected' : ''} ${track.isRetired ? 'retired' : ''}`}
         onClick={() => onRowClick(track)}
         onContextMenu={(e) => onOpenContextMenu(e, track)}
-        ref={lastElementRef}
+        ref={measureRef}
       >
         <td
           className={`col-index ${expandedCellCol === 'index' ? 'expanded-cell' : ''}`}
@@ -487,10 +487,7 @@ export default function TrackDatabase({
   const [tracks, setTracks] = useState([]);
   const [userFeedback, setUserFeedback] = useState({});
   const [loading, setLoading] = useState(true);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const [hasMore, setHasMore] = useState(true);
   const [totalCount, setTotalCount] = useState(0);
-  const [offset, setOffset] = useState(0);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
@@ -548,7 +545,6 @@ export default function TrackDatabase({
   }, [isEditMode]);
 
   const loadingIdRef = useRef(0);
-  const observer = useRef();
 
   // Debounce search term
   useEffect(() => {
@@ -695,8 +691,6 @@ export default function TrackDatabase({
 
       setLoading(true);
       setTracks([]);
-      setOffset(0);
-      setHasMore(true);
 
       if (tableWrapperRef.current) {
         tableWrapperRef.current.scrollTop = 0;
@@ -709,26 +703,25 @@ export default function TrackDatabase({
           setUserFeedback(feedback);
         }
 
-        const { data, totalCount: count } = await fetchPagedTracks(supabase, {
-          offset: 0,
-          limit: PAGE_SIZE,
-          searchTerm: debouncedSearchTerm,
-          vgmcFilter,
-          viewMode,
-          authUserId: authUser?.id,
-          userFeedback: feedback,
-          listenedStatusById,
-          sortColumn,
-          sortAsc,
-          maxVgmc,
-        });
+        const { data, totalCount: count } = await fetchFilteredTracks(
+          supabase,
+          {
+            searchTerm: debouncedSearchTerm,
+            vgmcFilter,
+            viewMode,
+            authUserId: authUser?.id,
+            userFeedback: feedback,
+            listenedStatusById,
+            sortColumn,
+            sortAsc,
+            maxVgmc,
+          },
+        );
 
         if (currentLoadingId !== loadingIdRef.current) return;
 
         setTracks(data);
         setTotalCount(count);
-        setOffset(PAGE_SIZE);
-        setHasMore(data.length < count);
       } catch (err) {
         if (currentLoadingId !== loadingIdRef.current) return;
         console.error('Error loading initial data:', err);
@@ -755,69 +748,20 @@ export default function TrackDatabase({
     sortAsc,
   ]);
 
-  const loadMore = useCallback(async () => {
-    if (loading || loadingMore || !hasMore || !supabase) return;
-    const currentLoadingId = loadingIdRef.current;
+  const rowVirtualizer = useVirtualizer({
+    count: tracks.length,
+    getScrollElement: () => tableWrapperRef.current,
+    estimateSize: () => 52,
+    overscan: 10,
+  });
 
-    setLoadingMore(true);
-    try {
-      const { data, totalCount: count } = await fetchPagedTracks(supabase, {
-        offset: offset,
-        limit: PAGE_SIZE,
-        searchTerm: debouncedSearchTerm,
-        vgmcFilter,
-        viewMode,
-        authUserId: authUser?.id,
-        userFeedback: userFeedback,
-        listenedStatusById,
-        sortColumn,
-        sortAsc,
-        maxVgmc,
-      });
-
-      if (currentLoadingId !== loadingIdRef.current) return;
-
-      setTracks((prev) => [...prev, ...data]);
-      setOffset((prev) => prev + PAGE_SIZE);
-      setHasMore(offset + data.length < count);
-    } catch (err) {
-      if (currentLoadingId !== loadingIdRef.current) return;
-      console.error('Error loading more tracks:', err);
-    } finally {
-      if (currentLoadingId === loadingIdRef.current) {
-        setLoadingMore(false);
-      }
-    }
-  }, [
-    supabase,
-    authUser,
-    offset,
-    loading,
-    loadingMore,
-    hasMore,
-    debouncedSearchTerm,
-    vgmcFilter,
-    viewMode,
-    userFeedback,
-    listenedStatusById,
-    sortColumn,
-    sortAsc,
-    maxVgmc,
-  ]);
-
-  const lastElementRef = useCallback(
-    (node) => {
-      if (loading) return;
-      if (observer.current) observer.current.disconnect();
-      observer.current = new IntersectionObserver((entries) => {
-        if (entries[0].isIntersecting && hasMore) {
-          loadMore();
-        }
-      });
-      if (node) observer.current.observe(node);
-    },
-    [loading, hasMore, loadMore],
-  );
+  const virtualItems = rowVirtualizer.getVirtualItems();
+  const paddingTop = virtualItems.length > 0 ? virtualItems[0].start : 0;
+  const paddingBottom =
+    virtualItems.length > 0
+      ? rowVirtualizer.getTotalSize() -
+        virtualItems[virtualItems.length - 1].end
+      : 0;
 
   const handleUpdateRating = useCallback(
     async (trackId, rating) => {
@@ -1265,13 +1209,16 @@ export default function TrackDatabase({
                 </th>
                 <th
                   className="col-comment"
+                  onClick={() => handleSort('comments')}
                   style={{
                     width: columnWidths.comment,
                     minWidth: columnWidths.comment,
                     maxWidth: columnWidths.comment,
                   }}
                 >
-                  <div className="header-label">Comment</div>
+                  <div className="header-label">
+                    Comment {sortColumn === 'comments' && (sortAsc ? '↑' : '↓')}
+                  </div>
                   <div
                     className="resize-handle"
                     onMouseDown={(e) => handleResizeStart(e, 'comment')}
@@ -1288,13 +1235,22 @@ export default function TrackDatabase({
               </tr>
             </thead>
             <tbody>
-              {tracks.map((track, index) => {
-                const isTrigger = index > 0 && index % 100 === 49;
+              {paddingTop > 0 && (
+                <tr>
+                  <td
+                    style={{ height: `${paddingTop}px`, padding: 0 }}
+                    colSpan={isEditMode ? 9 : 8}
+                  />
+                </tr>
+              )}
+              {virtualItems.map((virtualRow) => {
+                const track = tracks[virtualRow.index];
+                if (!track) return null;
                 return (
                   <TrackRow
                     key={track.trackId}
                     track={track}
-                    index={index}
+                    index={virtualRow.index}
                     isSelected={selectedTrack?.trackId === track.trackId}
                     feedback={userFeedback[track.trackId] || {}}
                     isEditMode={isEditMode}
@@ -1314,13 +1270,20 @@ export default function TrackDatabase({
                     onDiscardRow={handleDiscardRow}
                     onSetExpandedCell={setExpandedCell}
                     onOpenContextMenu={handleOpenContextMenu}
-                    lastElementRef={isTrigger ? lastElementRef : null}
+                    measureRef={virtualRow.measureRef}
                   />
                 );
               })}
+              {paddingBottom > 0 && (
+                <tr>
+                  <td
+                    style={{ height: `${paddingBottom}px`, padding: 0 }}
+                    colSpan={isEditMode ? 9 : 8}
+                  />
+                </tr>
+              )}
             </tbody>
           </table>
-          {loadingMore && <div className="load-more-indicator">Loading...</div>}
         </main>
 
         {showSidebar && (

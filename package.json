@@ -30,6 +30,7 @@
     "@dnd-kit/utilities": "^3.2.2",
     "@dotlottie/react-player": "^1.6.19",
     "@supabase/supabase-js": "^2.99.2",
+    "@tanstack/react-virtual": "^3.13.23",
     "framer-motion": "^12.38.0",
     "lightswind": "^3.1.21",
     "lottie-react": "^2.4.1",

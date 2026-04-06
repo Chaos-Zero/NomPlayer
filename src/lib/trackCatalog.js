@@ -409,11 +409,73 @@ export async function fetchMaxVgmcNumber(supabase) {
 
   return max || 24;
 }
-export async function fetchPagedTracks(
+let memoryCatalog = null;
+
+async function getFullCatalog(supabase) {
+  if (memoryCatalog) return memoryCatalog;
+
+  // 1. Load static snapshot
+  let snapshot = [];
+  let exportedAt = new Date(0).toISOString();
+  try {
+    const mod = await import('../data/catalogSnapshot.json');
+    const catalogData = mod.default || mod;
+    snapshot = catalogData.tracks || [];
+    exportedAt = catalogData.exportedAt || exportedAt;
+  } catch (e) {
+    console.warn('Failed to load static catalog snapshot', e);
+  }
+
+  if (!supabase) return snapshot;
+
+  // 2. Fetch Delta & Stats concurrently
+  const [deltaRes, statsRes] = await Promise.all([
+    supabase.from('track_catalog').select('*').gt('updated_at', exportedAt),
+    supabase
+      .from('track_stats_summary')
+      .select('track_id, total_comments, average_rating'),
+  ]);
+
+  const deltaTracks = deltaRes.data || [];
+  const statsList = statsRes.data || [];
+
+  const statsMap = {};
+  for (const s of statsList) statsMap[s.track_id] = s;
+
+  const deltaMap = {};
+  for (const t of deltaTracks) deltaMap[t.track_id] = t;
+
+  const merged = [];
+  for (const t of snapshot) {
+    if (deltaMap[t.track_id]) {
+      merged.push(deltaMap[t.track_id]);
+      delete deltaMap[t.track_id];
+    } else {
+      merged.push(t);
+    }
+  }
+  for (const key in deltaMap) {
+    merged.push(deltaMap[key]);
+  }
+
+  // Attach stats formatting seamlessly
+  for (const t of merged) {
+    const s = statsMap[t.track_id];
+    t.totalComments = s ? s.total_comments : 0;
+    t.averageRating = s ? s.average_rating : 0;
+  }
+
+  memoryCatalog = merged;
+  return memoryCatalog;
+}
+
+export function clearCatalogCache() {
+  memoryCatalog = null;
+}
+
+export async function fetchFilteredTracks(
   supabase,
   {
-    offset = 0,
-    limit = 50,
     searchTerm = '',
     vgmcFilter = '',
     viewMode = 'all',
@@ -422,31 +484,11 @@ export async function fetchPagedTracks(
     sortColumn = 'vgmc',
     sortAsc = true,
     maxVgmc = 0,
+    limit,
+    offset = 0,
   } = {},
 ) {
-  if (!supabase) return { data: [], totalCount: 0 };
-
-  let query = supabase.from('track_catalog').select(
-    `
-        track_id,
-        game_title,
-        track_title,
-        display_title,
-        is_retired,
-        retired_by_tournament_name,
-        source_external_id,
-        source_url,
-        submitted_url,
-        source_title,
-        source_channel_title,
-        source_thumbnail_url,
-        tournaments,
-        support_count_1,
-        support_count_2,
-        support_count_3
-      `,
-    { count: 'exact' },
-  );
+  let catalog = await getFullCatalog(supabase);
 
   // Search filter
   if (searchTerm) {
@@ -454,14 +496,18 @@ export async function fetchPagedTracks(
       .trim()
       .split(/\s+/)
       .filter((w) => w.length >= 2);
+    // Note: cleanStr should be defined in this file
     const words = rawWords.map((w) => cleanStr(w)).filter((w) => w.length > 0);
 
     if (words.length > 0) {
-      // For each word, ensure it matches at least one of the fields (AND logic between words)
-      words.forEach((word) => {
-        query = query.or(
-          `game_title.ilike.%${word}%,track_title.ilike.%${word}%,display_title.ilike.%${word}%`,
-        );
+      catalog = catalog.filter((t) => {
+        return words.every((word) => {
+          return (
+            (t.game_title && cleanStr(t.game_title).includes(word)) ||
+            (t.track_title && cleanStr(t.track_title).includes(word)) ||
+            (t.display_title && cleanStr(t.display_title).includes(word))
+          );
+        });
       });
     }
   }
@@ -469,83 +515,111 @@ export async function fetchPagedTracks(
   // VGMC Filter
   if (vgmcFilter) {
     if (maxVgmc > 0 && Number(vgmcFilter) === maxVgmc + 1) {
-      // interpreted as "Prospective"
-      query = query.filter('tournaments', 'eq', '[]');
+      catalog = catalog.filter(
+        (t) => !t.tournaments || t.tournaments.length === 0,
+      );
     } else {
-      query = query.filter(
-        'tournaments',
-        'cs',
-        `[{"sequence_number": ${vgmcFilter}}]`,
+      catalog = catalog.filter(
+        (t) =>
+          t.tournaments &&
+          t.tournaments.some(
+            (trn) => trn.sequence_number === Number(vgmcFilter),
+          ),
       );
     }
   }
 
   // View Mode Filters
   if (viewMode === 'prospective') {
-    query = query.filter('tournaments', 'eq', '[]');
-  } else if (viewMode === 'rated' || viewMode === 'unrated') {
-    const ratedIds = Object.keys(userFeedback).filter(
-      (id) => userFeedback[id]?.rating,
+    catalog = catalog.filter(
+      (t) => !t.tournaments || t.tournaments.length === 0,
     );
-    if (viewMode === 'rated') {
-      if (ratedIds.length === 0) {
-        return { data: [], totalCount: 0 };
-      }
-      query = query.in('track_id', ratedIds);
-    } else if (viewMode === 'unrated') {
-      if (ratedIds.length > 0) {
-        query = query.not('track_id', 'in', `(${ratedIds.join(',')})`);
-      }
-    }
+  } else if (viewMode === 'rated') {
+    const ratedIds = new Set(
+      Object.keys(userFeedback).filter((id) => userFeedback[id]?.rating),
+    );
+    catalog = catalog.filter((t) => ratedIds.has(t.track_id));
+  } else if (viewMode === 'unrated') {
+    const ratedIds = new Set(
+      Object.keys(userFeedback).filter((id) => userFeedback[id]?.rating),
+    );
+    catalog = catalog.filter((t) => !ratedIds.has(t.track_id));
   } else if (viewMode === 'unplaced') {
-    query = query.filter('has_result', 'eq', false);
+    catalog = catalog.filter((t) => !t.has_result);
   } else if (viewMode === 'placed') {
-    query = query.filter('has_result', 'eq', true);
+    catalog = catalog.filter((t) => t.has_result);
   } else if (viewMode === 'retired') {
-    query = query.filter('is_retired', 'eq', true);
+    catalog = catalog.filter((t) => t.is_retired);
   } else if (viewMode === 'history_recovery') {
-    const partialVideoIds = Object.keys(listenedStatusById).filter(
-      (id) => listenedStatusById[id] === 'partial',
+    const partialVideoIds = new Set(
+      Object.keys(listenedStatusById).filter(
+        (id) => listenedStatusById[id] === 'partial',
+      ),
     );
-    if (partialVideoIds.length === 0) {
-      return { data: [], totalCount: 0 };
-    }
-    query = query.in('source_external_id', partialVideoIds);
+    if (partialVideoIds.size === 0) return { data: [], totalCount: 0 };
+    catalog = catalog.filter((t) => partialVideoIds.has(t.source_external_id));
   }
 
   // Sorting logic
-  if (sortColumn === 'vgmc') {
-    query = query
-      .order('tournaments->0->sequence_number', {
-        ascending: sortAsc,
-        nullsFirst: false,
-      })
-      .order('game_title', { ascending: true });
-  } else if (sortColumn === 'game') {
-    query = query.order('game_title', { ascending: sortAsc });
-  } else if (sortColumn === 'track') {
-    query = query.order('track_title', { ascending: sortAsc });
-  } else if (sortColumn === 'submissions') {
-    query = query.order('tournament_count', { ascending: sortAsc });
-  } else if (sortColumn === 'rating') {
-    // Handling rating sorting (this might need a join or careful handling if sorting by user feedback)
-    // For now, let's sort by game_title if rating is hard to sort server-side without a join
-    query = query.order('game_title', { ascending: true });
-  } else {
-    query = query.order('game_title', { ascending: true });
-  }
+  catalog.sort((a, b) => {
+    let diff = 0;
+    if (sortColumn === 'vgmc') {
+      const aSeq = a.tournaments?.[0]?.sequence_number ?? 999;
+      const bSeq = b.tournaments?.[0]?.sequence_number ?? 999;
+      diff = aSeq - bSeq;
+      if (diff === 0)
+        diff = (a.game_title || '').localeCompare(b.game_title || '');
+    } else if (sortColumn === 'game') {
+      diff = (a.game_title || '').localeCompare(b.game_title || '');
+    } else if (sortColumn === 'track') {
+      diff = (a.track_title || '').localeCompare(b.track_title || '');
+    } else if (sortColumn === 'submissions') {
+      diff = (a.tournament_count || 0) - (b.tournament_count || 0);
+    } else if (sortColumn === 'rating') {
+      const aRating = userFeedback[a.track_id]?.rating;
+      const bRating = userFeedback[b.track_id]?.rating;
 
-  const { data, error, count } = await query.range(offset, offset + limit - 1);
+      if (aRating && !bRating) return -1;
+      if (!aRating && bRating) return 1;
 
-  if (error) {
-    throw error;
+      if (aRating && bRating) {
+        diff = Number(aRating) - Number(bRating);
+        if (diff === 0)
+          diff = (a.game_title || '').localeCompare(b.game_title || '');
+      } else {
+        diff = (a.game_title || '').localeCompare(b.game_title || '');
+      }
+    } else if (sortColumn === 'comments') {
+      diff = (a.totalComments || 0) - (b.totalComments || 0);
+      if (diff === 0)
+        diff = (a.game_title || '').localeCompare(b.game_title || '');
+    } else {
+      diff = (a.game_title || '').localeCompare(b.game_title || '');
+    }
+    return sortAsc ? diff : -diff;
+  });
+
+  const totalCount = catalog.length;
+  if (limit) {
+    catalog = catalog.slice(offset, offset + limit);
   }
 
   return {
-    data: (data || []).map(normalizeTrackCatalogEntry).filter(Boolean),
-    totalCount: count || 0,
+    data: catalog
+      .map((p) => {
+        const normalized = normalizeTrackCatalogEntry(p);
+        if (normalized) {
+          normalized.averageRating = p.averageRating;
+          normalized.totalComments = p.totalComments;
+        }
+        return normalized;
+      })
+      .filter(Boolean),
+    totalCount,
   };
 }
+
+export const fetchPagedTracks = fetchFilteredTracks;
 
 export async function bulkUpdateTracks(supabase, updatesMap) {
   if (!supabase || !updatesMap || Object.keys(updatesMap).length === 0) {
