@@ -144,6 +144,15 @@ export default function FooterFeedbackPanel({
     setLocalRating(personalFeedback.rating || '');
   }, [personalFeedback]);
 
+  const hasChanges = useMemo(() => {
+    const savedRating = personalFeedback.rating || '';
+    const savedNote = personalFeedback.note || '';
+
+    return (
+      String(localRating) !== String(savedRating) || localComment !== savedNote
+    );
+  }, [localRating, localComment, personalFeedback]);
+
   const peerFeedback = useMemo(() => {
     if (!track || !communityData.feedback) return [];
     return communityData.feedback.filter((f) => f.user_id !== authUser?.id);
@@ -351,15 +360,17 @@ export default function FooterFeedbackPanel({
                   value={localComment}
                   onChange={(e) => setLocalComment(e.target.value)}
                 />
-                <div className="list-explorer-info-feedback-actions footer-actions">
-                  <button
-                    className="btn-save-feedback"
-                    onClick={handleSaveFeedback}
-                    disabled={isSaving}
-                  >
-                    {isSaving ? 'Saving...' : 'Save Feedback'}
-                  </button>
-                </div>
+                {(hasChanges || isSaving) && (
+                  <div className="list-explorer-info-feedback-actions footer-actions">
+                    <button
+                      className="btn-save-feedback"
+                      onClick={handleSaveFeedback}
+                      disabled={isSaving}
+                    >
+                      {isSaving ? 'Saving...' : 'Save Feedback'}
+                    </button>
+                  </div>
+                )}
               </div>
             </section>
           )}

@@ -7,7 +7,6 @@ import useMediaQuery from '../hooks/useMediaQuery.js';
 import {
   buildDiscoveryCandidates,
   fetchDashboardNominationUpdates,
-  fetchDashboardVgmcUpdates,
   pickNextDiscoveryCandidate,
 } from '../lib/dashboard.js';
 import {
@@ -55,13 +54,11 @@ const MOBILE_DASHBOARD_COLLAPSE_DEFAULTS = {
   overview: false,
   nominations: false,
   discover: true,
-  updates: true,
 };
 const DESKTOP_DASHBOARD_COLLAPSE_DEFAULTS = {
   overview: false,
   nominations: false,
   discover: false,
-  updates: false,
 };
 
 function DashboardSection({
@@ -699,25 +696,6 @@ function DiscoveryGridItem({ candidate, metadata, onPlayNow }) {
   );
 }
 
-function VgmcThreadItem({ thread }) {
-  return (
-    <a
-      className="dashboard-thread-item"
-      href={thread.url}
-      target="_blank"
-      rel="noreferrer"
-    >
-      <span className="dashboard-thread-icon" aria-hidden="true">
-        #
-      </span>
-      <span className="dashboard-thread-copy">
-        <span className="dashboard-thread-title">{thread.title}</span>
-        <span className="dashboard-thread-meta">Open thread</span>
-      </span>
-    </a>
-  );
-}
-
 export default function HomePage({
   supabase,
   authUser = null,
@@ -739,11 +717,8 @@ export default function HomePage({
   const [nominationUpdates, setNominationUpdates] = useState([]);
   const [unplacedFallbackTracks, setUnplacedFallbackTracks] = useState([]);
   const [persistentDiscoveryItems, setPersistentDiscoveryItems] = useState([]);
-  const [vgmcThreads, setVgmcThreads] = useState([]);
   const [dashboardError, setDashboardError] = useState('');
-  const [updatesError, setUpdatesError] = useState('');
   const [isDashboardLoading, setIsDashboardLoading] = useState(true);
-  const [isUpdatesLoading, setIsUpdatesLoading] = useState(true);
   const [isExtraLoading, setIsExtraLoading] = useState(true);
   const [expandedUserId, setExpandedUserId] = useState(null);
   const [featuredDiscoveryId, setFeaturedDiscoveryId] = useState(null);
@@ -942,35 +917,6 @@ export default function HomePage({
       isActive = false;
     };
   }, [supabase, isAuthReady]);
-
-  useEffect(() => {
-    if (!isAuthReady) return undefined;
-    let isActive = true;
-
-    async function loadVgmcUpdates() {
-      try {
-        const threads = await fetchDashboardVgmcUpdates(
-          DASHBOARD_REFRESH_LIMIT,
-        );
-        if (!isActive) return;
-        setVgmcThreads(threads);
-        setUpdatesError('');
-      } catch (error) {
-        if (!isActive) return;
-        setUpdatesError(error.message || 'Could not load GameFAQs updates.');
-      } finally {
-        if (isActive) {
-          setIsUpdatesLoading(false);
-        }
-      }
-    }
-
-    loadVgmcUpdates();
-
-    return () => {
-      isActive = false;
-    };
-  }, [isAuthReady]);
 
   useEffect(() => {
     if (!isAuthReady) return undefined;
@@ -1205,27 +1151,17 @@ export default function HomePage({
       overview:
         !isAuthReady || isDashboardLoading
           ? 'Loading current dashboard stats'
-          : `${visibleNominationUpdates.length} lists, ${discoveryCandidates.length} picks, ${vgmcThreads.length} threads`,
-      nominations:
-        !isAuthReady || isDashboardLoading
-          ? 'Loading updated lists'
-          : `${visibleNominationUpdates.length} updated lists`,
+          : `${visibleNominationUpdates.length} lists, ${discoveryCandidates.length} picks`,
       discover:
         !isAuthReady || isDashboardLoading
           ? 'Loading picks'
           : discoveryCandidates.length === 0
             ? 'You are caught up'
             : `${discoveryCandidates.length} discovery picks`,
-      updates:
-        !isAuthReady || isUpdatesLoading
-          ? 'Loading GameFAQs threads'
-          : `${vgmcThreads.length} VGMC threads`,
     }),
     [
       discoveryCandidates.length,
       isDashboardLoading,
-      isUpdatesLoading,
-      vgmcThreads.length,
       visibleNominationUpdates.length,
       isAuthReady,
     ],
@@ -1584,39 +1520,6 @@ export default function HomePage({
                 />
               ))}
             </DiscoveryMarqueeGrid>
-          )}
-        </DashboardSection>
-
-        <DashboardSection
-          title="VGMC Updates"
-          eyebrow="GameFAQs"
-          tone="updates"
-          caption="Live threads from the GameFAQs Contests board with VGMC in the title."
-          className="dashboard-section-updates"
-          isMobileLayout={isMobileLayout}
-          isCollapsed={isMobileLayout && mobileCollapsedSections.updates}
-          onToggleCollapse={() => toggleMobileSection('updates')}
-          summary={sectionSummaries.updates}
-        >
-          {isUpdatesLoading ? (
-            <div className="dashboard-nominations-loader">
-              <div
-                className="hero-loader-spinner"
-                aria-label="Loading GameFAQs threads"
-              />
-            </div>
-          ) : updatesError ? (
-            <DashboardMessage tone="danger">{updatesError}</DashboardMessage>
-          ) : vgmcThreads.length === 0 ? (
-            <DashboardMessage>
-              No VGMC threads were found on the contests board right now.
-            </DashboardMessage>
-          ) : (
-            <div className="dashboard-thread-list animate-fade-in">
-              {vgmcThreads.map((thread) => (
-                <VgmcThreadItem key={thread.url} thread={thread} />
-              ))}
-            </div>
           )}
         </DashboardSection>
       </div>

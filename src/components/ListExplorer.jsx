@@ -141,7 +141,8 @@ class CustomPointerSensor extends CorePointerSensor {
 function TrackInfoPanel({
   track,
   communityData,
-  isLoading,
+  isLoadingData,
+  isSaving,
   onClose,
   authUser,
   onUpdateComment,
@@ -197,6 +198,15 @@ function TrackInfoPanel({
     setLocalComment(personalFeedback.note || track?.comment || '');
     setLocalRating(personalFeedback.rating || '');
   }
+
+  const hasChanges = useMemo(() => {
+    const savedRating = personalFeedback.rating || '';
+    const savedNote = personalFeedback.note || track?.comment || '';
+
+    return (
+      String(localRating) !== String(savedRating) || localComment !== savedNote
+    );
+  }, [localRating, localComment, personalFeedback, track?.comment]);
 
   const peerFeedback = useMemo(() => {
     if (!track || !communityData.feedback) return [];
@@ -322,17 +332,19 @@ function TrackInfoPanel({
                       value={localComment}
                       onChange={handleCommentChange}
                     />
-                    <div className="list-explorer-info-feedback-actions">
-                      <button
-                        className="btn-save-feedback"
-                        onClick={() =>
-                          onSaveFeedback(localRating, localComment)
-                        }
-                        disabled={isLoading}
-                      >
-                        {isLoading ? 'Saving...' : 'Save Feedback'}
-                      </button>
-                    </div>
+                    {(hasChanges || isSaving) && (
+                      <div className="list-explorer-info-feedback-actions">
+                        <button
+                          className="btn-save-feedback"
+                          onClick={() =>
+                            onSaveFeedback(localRating, localComment)
+                          }
+                          disabled={isSaving}
+                        >
+                          {isSaving ? 'Saving...' : 'Save Feedback'}
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </section>
               )}
@@ -386,7 +398,7 @@ function TrackInfoPanel({
 
               <section className="list-explorer-info-section community">
                 <h4>Community Activity</h4>
-                {isLoading ? (
+                {isLoadingData ? (
                   <p className="list-explorer-info-loading">
                     Loading community data...
                   </p>
@@ -485,7 +497,8 @@ function SortableListExplorerCard({
     isDragging,
   } = useSortable({
     id: sortableId,
-    disabled: isReadOnly,
+    // Always allow dragging so items can be copied to other lists
+    disabled: false,
   });
 
   const isDraggingStyle = {
@@ -508,17 +521,20 @@ function SortableListExplorerCard({
       onContextMenu={(e) => onContextMenu?.(e, video)}
     >
       <div className="list-explorer-card-inner">
-        {!isReadOnly && (
-          <div
-            className="drag-handle"
-            {...attributes}
-            {...listeners}
-            aria-label="Drag to reorder"
-            title="Drag to reorder"
-          >
-            ⠿
-          </div>
-        )}
+        {/* Always show drag handle so items can be picked up from any column */}
+        <div
+          className="drag-handle"
+          {...attributes}
+          {...listeners}
+          aria-label="Drag to copy or reorder"
+          title={
+            isReadOnly
+              ? 'Drag to copy to another list'
+              : 'Drag to reorder or move'
+          }
+        >
+          ⠿
+        </div>
         <div className="list-explorer-card-main">
           <SupportItem
             video={video}
@@ -962,14 +978,24 @@ export default function ListExplorer({
     if (id === 'nominations') return nominationList;
     if (id === 'support') return supportList;
     if (id === 'current') return playlist;
+    if (id === 'new-nominations') return newNominations;
+    if (id.startsWith('peer-')) {
+      const userId = id.replace('peer-', '');
+      const peer = peerColumns.find((c) => c.user_id === userId);
+      return peer?.videos || [];
+    }
     return customPlaylists.find((pl) => pl.id === id)?.videos || [];
   };
 
   const setListById = (id, newList) => {
+    // Only allow updates to user's own lists
     if (id === 'nominations') onUpdateNominationList(newList);
     else if (id === 'support') onUpdateSupportList(newList);
     else if (id === 'current') onUpdatePlaylist(newList);
-    else {
+    else if (id === 'new-nominations' || id.startsWith('peer-')) {
+      // These are read-only columns for the current user session
+      return;
+    } else {
       onUpdateCustomPlaylists(
         customPlaylists.map((pl) =>
           pl.id === id ? { ...pl, videos: newList } : pl,
@@ -1062,9 +1088,15 @@ export default function ListExplorer({
         );
 
         // Logic: Move if Right-click OR Support -> Nominations. Otherwise Copy.
+        // Rule: If dragging FROM a read-only list, it MUST be a copy.
+        const isSourceReadOnly =
+          sourceListId === 'new-nominations' ||
+          sourceListId.startsWith('peer-');
+
         const shouldMove =
-          dragButton === 2 ||
-          (sourceListId === 'support' && targetListId === 'nominations');
+          !isSourceReadOnly &&
+          (dragButton === 2 ||
+            (sourceListId === 'support' && targetListId === 'nominations'));
 
         if (!alreadyInTarget) {
           // Rule: Nomination and Support cannot overlap
@@ -1630,7 +1662,8 @@ export default function ListExplorer({
           key={selectedTrack?.videoId || 'none'}
           track={selectedTrack}
           communityData={communityData}
-          isLoading={isLoadingCommunity || isSavingFeedback}
+          isLoadingData={isLoadingCommunity}
+          isSaving={isSavingFeedback}
           onClose={() => {
             setSelectedTrackId(null);
             setSelectedColumnId(null);
