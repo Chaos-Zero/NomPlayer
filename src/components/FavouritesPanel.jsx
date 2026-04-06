@@ -24,14 +24,20 @@ import { HeartIcon, LockIcon, SpeechBubbleIcon } from './Icons.jsx';
 const PANEL_CLOSE_MS = 240;
 
 function getPlaylistItemDisplay(video) {
+  const isUnknown = (str) =>
+    !str ||
+    str.trim().toLowerCase() === 'metadata needed' ||
+    str.trim().toLowerCase() === 'unknown track';
+
   const hasTrackTitle =
-    typeof video?.trackTitle === 'string' && video.trackTitle.trim();
+    typeof video?.trackTitle === 'string' && !isUnknown(video.trackTitle);
   const hasGameTitle =
-    typeof video?.gameTitle === 'string' && video.gameTitle.trim();
+    typeof video?.gameTitle === 'string' && !isUnknown(video.gameTitle);
+
   const hasCatalogMetadata = Boolean(hasTrackTitle || hasGameTitle);
 
   return {
-    gameTitle: hasCatalogMetadata ? video.gameTitle : '',
+    gameTitle: hasCatalogMetadata ? video.gameTitle : 'Metadata Needed',
     trackTitle: hasCatalogMetadata ? video.trackTitle : video.title,
     hasCatalogMetadata,
   };
@@ -127,41 +133,44 @@ export function SupportItem({
         }}
       >
         <div className="playlist-item-title" style={{ fontSize: 12 }}>
-          {display.hasCatalogMetadata ? (
-            <div className="playlist-item-title-meta">
-              {display.gameTitle && (
-                <div
-                  className="meta-game-title"
-                  style={{ fontSize: 11, opacity: 0.8, marginBottom: 2 }}
-                >
-                  {display.gameTitle}
-                </div>
-              )}
-              <div className="meta-track-title">
-                {display.trackTitle}
-                {hasComments && (
-                  <span
-                    className="track-comment-indicator"
-                    title="Has community comments"
-                  >
-                    <SpeechBubbleIcon />
-                  </span>
+          <div
+            key={`${video.videoId}:${display.hasCatalogMetadata ? 'meta' : 'raw'}`}
+            className={`playlist-item-title-container ${display.hasCatalogMetadata ? 'is-metadata' : 'is-raw'}`}
+          >
+            {display.hasCatalogMetadata ? (
+              <div className="playlist-item-title-meta">
+                {display.gameTitle && (
+                  <div className="meta-game-title">{display.gameTitle}</div>
                 )}
+                <div className="meta-track-title">
+                  {display.trackTitle}
+                  {hasComments && (
+                    <span
+                      className="track-comment-indicator"
+                      title="Has community comments"
+                    >
+                      <SpeechBubbleIcon />
+                    </span>
+                  )}
+                </div>
               </div>
-            </div>
-          ) : (
-            <div className="playlist-item-title-raw">
-              {display.trackTitle || video.videoId}
-              {hasComments && (
-                <span
-                  className="track-comment-indicator"
-                  title="Has community comments"
-                >
-                  <SpeechBubbleIcon />
-                </span>
-              )}
-            </div>
-          )}
+            ) : (
+              <div className="playlist-item-title-raw">
+                <div className="meta-game-placeholder">Metadata Needed</div>
+                <div className="meta-track-raw-title">
+                  {display.trackTitle || video.videoId}
+                  {hasComments && (
+                    <span
+                      className="track-comment-indicator"
+                      title="Has community comments"
+                    >
+                      <SpeechBubbleIcon />
+                    </span>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
         {!display.hasCatalogMetadata && video.channelTitle && (
           <div className="playlist-item-meta">{video.channelTitle}</div>

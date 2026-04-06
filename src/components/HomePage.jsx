@@ -164,6 +164,18 @@ function NominationEmptyCard() {
   );
 }
 
+function NominationUpdateSkeleton() {
+  return (
+    <div className="dashboard-update-peek-container">
+      <div className="dashboard-update-skeleton-row">
+        <div className="dashboard-update-skeleton-item" />
+        <div className="dashboard-update-skeleton-item medium" />
+        <div className="dashboard-update-skeleton-item short" />
+      </div>
+    </div>
+  );
+}
+
 function ModalPortal({ children }) {
   if (typeof document === 'undefined') return null;
   const target = document.getElementById('modal-root');
@@ -187,6 +199,7 @@ export function NominationUpdateCard({
   globalCommentedVideoIds = new Set(),
   isFeedbackPanelOpen = false,
   resolveTrack,
+  isMetadataLoading = false,
 }) {
   const displayIdentity = parseStoredProfileUsername(update.username);
   const nominationCount = update.nominations.length;
@@ -289,7 +302,7 @@ export function NominationUpdateCard({
         )}
         <div className="dashboard-update-peek-content">
           <span className="dashboard-update-peek-game">
-            {metadataById[video.videoId]?.gameTitle || 'Unknown Game'}
+            {metadataById[video.videoId]?.gameTitle || 'Metadata Needed'}
           </span>
           <span className="dashboard-update-peek-title">
             {metadataById[video.videoId]?.trackTitle || video.title}
@@ -435,7 +448,9 @@ export function NominationUpdateCard({
               </div>
 
               <div className="dashboard-update-peek-container dashboard-modal-body">
-                {update.nominations && update.nominations.length > 0 ? (
+                {isMetadataLoading ? (
+                  <NominationUpdateSkeleton />
+                ) : update.nominations && update.nominations.length > 0 ? (
                   <div className="dashboard-update-peek-list">
                     {update.nominations.map((video, index) =>
                       renderPeekRowActivity(video, index),
@@ -506,11 +521,15 @@ export function NominationUpdateCard({
             </div>
 
             <div className="dashboard-update-peek-container">
-              <div className="dashboard-update-peek-list">
-                {update.nominations
-                  .slice(0, 20)
-                  .map((video, index) => renderPeekRowActivity(video, index))}
-              </div>
+              {isMetadataLoading ? (
+                <NominationUpdateSkeleton />
+              ) : (
+                <div className="dashboard-update-peek-list">
+                  {update.nominations
+                    .slice(0, 20)
+                    .map((video, index) => renderPeekRowActivity(video, index))}
+                </div>
+              )}
             </div>
 
             <div className="dashboard-update-footer">
@@ -731,6 +750,7 @@ export default function HomePage({
   const [maxVgmcNumber, setMaxVgmcNumber] = useState(24);
   const [trackMetadataById, setTrackMetadataById] = useState({});
   const [isShowingFallback, setIsShowingFallback] = useState(false);
+  const [isMetadataLoading, setIsMetadataLoading] = useState(true);
 
   const resolveTrack = useCallback(
     (video) => {
@@ -1024,6 +1044,10 @@ export default function HomePage({
         setTrackMetadataById((prev) => ({ ...prev, ...metaMap }));
       } catch (err) {
         console.error('Failed to enrich track metadata:', err);
+      } finally {
+        if (isActive) {
+          setIsMetadataLoading(false);
+        }
       }
     }
     enrichTrackMetadata();
@@ -1484,6 +1508,7 @@ export default function HomePage({
                       globalCommentedVideoIds={globalCommentedVideoIds}
                       isFeedbackPanelOpen={isFeedbackPanelOpen}
                       resolveTrack={resolveTrack}
+                      isMetadataLoading={isMetadataLoading}
                     />
                   ))}
                 </ThreeDCarousel>

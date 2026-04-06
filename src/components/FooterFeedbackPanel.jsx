@@ -376,7 +376,7 @@ export default function FooterFeedbackPanel({
       <div className="list-explorer-info-header footer-header">
         <div className="footer-feedback-track-info">
           <div className="footer-feedback-game-title">
-            {track?.gameTitle || track?.game || 'Unknown Game'}
+            {track?.gameTitle || track?.game || 'Metadata Needed'}
           </div>
           <div className="footer-feedback-track-title">
             {track?.trackTitle || track?.title || 'Unknown Track'}

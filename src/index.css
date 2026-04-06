@@ -5988,6 +5988,72 @@ button.playlist-search-indicator:hover {
   font-weight: 600;
 }
 
+/* Metadata Enrichment Transitions */
+@keyframes metadataFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(2px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.playlist-item-title-container {
+  position: relative;
+  width: 100%;
+}
+
+.playlist-item-title-meta,
+.playlist-item-title-raw {
+  transition:
+    opacity 0.5s ease,
+    transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.playlist-item-title-meta {
+  animation: metadataFadeIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  display: flex !important;
+  flex-direction: column;
+}
+
+.meta-game-title,
+.meta-game-placeholder {
+  font-size: 11px;
+  color: var(--text-secondary);
+  opacity: 0.8;
+  margin-bottom: 2px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.meta-game-placeholder {
+  opacity: 0.5;
+  font-style: italic;
+  color: var(--gold);
+}
+
+.playlist-item-title-raw {
+  opacity: 0.6;
+  font-style: italic;
+}
+
+.meta-track-raw-title {
+  font-size: 12px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.playlist-item-title-meta .meta-track-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
 .playlist-item-title-scroll {
   width: 100%;
   min-width: 0;
@@ -10541,6 +10607,43 @@ body.is-resizing .resize-handle {
   to {
     transform: rotate(360deg);
   }
+}
+
+@keyframes skeleton-shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.dashboard-update-skeleton-row {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 8px 12px;
+}
+
+.dashboard-update-skeleton-item {
+  height: 38px;
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.03) 25%,
+    rgba(255, 255, 255, 0.06) 50%,
+    rgba(255, 255, 255, 0.03) 75%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 2s infinite linear;
+  border-radius: 8px;
+  width: 100%;
+}
+
+.dashboard-update-skeleton-item.short {
+  width: 60%;
+}
+.dashboard-update-skeleton-item.medium {
+  width: 85%;
 }
 
 @media (max-width: 960px) {
