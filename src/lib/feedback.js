@@ -73,3 +73,16 @@ export async function fetchCommunityFeedback(supabase, trackId) {
 
   return data || [];
 }
+export async function deleteUserFeedback(supabase, userId, trackId) {
+  if (!supabase || !userId || !trackId) return;
+
+  const { error } = await supabase
+    .from('track_user_feedback')
+    .delete()
+    .eq('user_id', userId)
+    .eq('track_id', trackId);
+
+  if (error) {
+    throw error;
+  }
+}

@@ -53,6 +53,7 @@ const VideoPlayer = forwardRef(function VideoPlayer(
     showMetadata = true,
     supabase,
     authUser,
+    userProfile,
     onShowToast,
     onProgressUpdate,
   },
@@ -559,6 +560,7 @@ const VideoPlayer = forwardRef(function VideoPlayer(
                   videoId={video.videoId}
                   supabase={supabase}
                   authUser={authUser}
+                  userProfile={userProfile}
                   onShowToast={onShowToast}
                 />
               </div>

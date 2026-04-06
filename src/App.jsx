@@ -4253,6 +4253,7 @@ export default function App() {
         showMetadata={isPlayerPage}
         supabase={supabase}
         authUser={authUser}
+        userProfile={userProfile}
         onShowToast={showDefaultAppToast}
       />
 
@@ -4830,6 +4831,7 @@ export default function App() {
             track={feedbackTrack || currentVideo}
             supabase={supabase}
             authUser={authUser}
+            userProfile={userProfile}
             anchorRect={feedbackPosition}
             onClose={handleCloseFeedbackPanel}
             onShowToast={showDefaultAppToast}

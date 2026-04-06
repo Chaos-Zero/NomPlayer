@@ -1,16 +1,21 @@
 import React, { useEffect, useState, useMemo, useRef } from 'react';
-import { fetchCommunityFeedback, upsertUserFeedback } from '../lib/feedback.js';
+import {
+  fetchCommunityFeedback,
+  upsertUserFeedback,
+  deleteUserFeedback,
+} from '../lib/feedback.js';
 import {
   getDisplayProfileName,
   deriveProfileAvatarUrl,
 } from '../lib/playerState.js';
-import { HeartIcon, LockIcon } from './Icons.jsx';
+import { HeartIcon, LockIcon, PencilIcon, XIcon } from './Icons.jsx';
 import { ContextMenuPortal } from './ContextMenuPortal';
 
 export default function CommunityActivity({
   videoId,
   supabase,
   authUser,
+  userProfile,
   onShowToast,
 }) {
   const [trackId, setTrackId] = useState(null);
@@ -30,6 +35,7 @@ export default function CommunityActivity({
   });
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
 
   const textareaRef = useRef(null);
 
@@ -48,11 +54,6 @@ export default function CommunityActivity({
       pendingFeedback.note !== userFeedback.note
     );
   }, [pendingFeedback, userFeedback]);
-
-  const peerFeedback = useMemo(() => {
-    if (!communityData.feedback) return [];
-    return communityData.feedback.filter((f) => f.user_id !== authUser?.id);
-  }, [communityData.feedback, authUser?.id]);
 
   const supportSummary = useMemo(() => {
     const list = communityData.supports || {};
@@ -192,6 +193,13 @@ export default function CommunityActivity({
           };
           setUserFeedback(initialUserFeedback);
           setPendingFeedback(initialUserFeedback);
+
+          // Default to collapsed if feedback exists, or open for new
+          if (!initialUserFeedback.rating && !initialUserFeedback.note) {
+            setIsEditing(true);
+          } else {
+            setIsEditing(false);
+          }
         }
       } catch (err) {
         console.error('Error fetching community activity:', err);
@@ -219,9 +227,42 @@ export default function CommunityActivity({
       setUserFeedback(pendingFeedback);
 
       onShowToast?.('Feedback saved successfully!');
+      setIsEditing(false);
     } catch (err) {
       console.error('Failed to save feedback:', err);
       onShowToast?.('Failed to save feedback.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleDeleteFeedback = async () => {
+    if (!supabase || !authUser || !trackId) return;
+
+    if (
+      !window.confirm(
+        'Delete your feedback for this track? This cannot be undone.',
+      )
+    ) {
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      await deleteUserFeedback(supabase, authUser.id, trackId);
+
+      // Refresh local data
+      const feedback = await fetchCommunityFeedback(supabase, trackId);
+      setCommunityData((prev) => ({ ...prev, feedback }));
+
+      const clearedFeedback = { rating: 0, note: '' };
+      setUserFeedback(clearedFeedback);
+      setPendingFeedback(clearedFeedback);
+
+      onShowToast?.('Feedback deleted.');
+    } catch (err) {
+      console.error('Failed to delete feedback:', err);
+      onShowToast?.('Failed to delete feedback.');
     } finally {
       setIsSaving(false);
     }
@@ -323,84 +364,134 @@ export default function CommunityActivity({
         </ContextMenuPortal>
       )}
 
-      {/* ─── Your Feedback Editor (Always Shown) ─── */}
-      <section className="list-explorer-info-section user-feedback">
-        <h4>YOUR FEEDBACK</h4>
-        {!trackId ? (
-          <p className="list-explorer-info-empty" style={{ opacity: 0.6 }}>
-            Identifying track data...
-          </p>
-        ) : (
-          <>
-            <div className="list-explorer-info-rating-row">
-              <span className="label">Rating</span>
-              <select
-                className="list-explorer-info-rating-select"
-                value={pendingFeedback.rating}
+      {/* ─── Your Feedback Editor (Conditional) ─── */}
+      {isEditing && (
+        <section className="list-explorer-info-section user-feedback">
+          <div className="section-header-row">
+            <h4>YOUR FEEDBACK</h4>
+            {authUser && userProfile && (
+              <div className="user-feedback-identity">
+                <img
+                  src={deriveProfileAvatarUrl(
+                    userProfile,
+                    userProfile.avatar_url,
+                  )}
+                  alt=""
+                  className="list-explorer-peer-avatar miniature"
+                  onError={(e) => {
+                    e.target.style.display = 'none';
+                  }}
+                />
+                <span className="list-explorer-peer-user">
+                  {getDisplayProfileName(userProfile.username, 'Anonymous')}
+                </span>
+              </div>
+            )}
+          </div>
+          {!trackId ? (
+            <p className="list-explorer-info-empty" style={{ opacity: 0.6 }}>
+              Identifying track data...
+            </p>
+          ) : (
+            <>
+              <div className="list-explorer-info-rating-row">
+                <span className="label">Rating</span>
+                <select
+                  className="list-explorer-info-rating-select"
+                  value={pendingFeedback.rating}
+                  onChange={(e) =>
+                    setPendingFeedback((prev) => ({
+                      ...prev,
+                      rating: parseInt(e.target.value),
+                    }))
+                  }
+                  disabled={!authUser}
+                >
+                  <option value="0">-</option>
+                  {[...Array(10)].map((_, i) => (
+                    <option key={i + 1} value={i + 1}>
+                      {i + 1}/10
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <textarea
+                ref={textareaRef}
+                className="list-explorer-info-note-editor"
+                placeholder={
+                  authUser
+                    ? 'Add a note for the community...'
+                    : 'Log in to add feedback'
+                }
+                value={pendingFeedback.note}
                 onChange={(e) =>
                   setPendingFeedback((prev) => ({
                     ...prev,
-                    rating: parseInt(e.target.value),
+                    note: e.target.value,
                   }))
                 }
                 disabled={!authUser}
-              >
-                <option value="0">-</option>
-                {[...Array(10)].map((_, i) => (
-                  <option key={i + 1} value={i + 1}>
-                    {i + 1}/10
-                  </option>
-                ))}
-              </select>
-            </div>
-            <textarea
-              ref={textareaRef}
-              className="list-explorer-info-note-editor"
-              placeholder={
-                authUser
-                  ? 'Add a note for the community...'
-                  : 'Log in to add feedback'
-              }
-              value={pendingFeedback.note}
-              onChange={(e) =>
-                setPendingFeedback((prev) => ({
-                  ...prev,
-                  note: e.target.value,
-                }))
-              }
-              disabled={!authUser}
-              rows={1}
-              style={{ minHeight: '38px', overflow: 'hidden', resize: 'none' }}
-            />
-            {isModified && (
+                rows={1}
+                style={{
+                  minHeight: '38px',
+                  overflow: 'hidden',
+                  resize: 'none',
+                }}
+              />
               <div className="feedback-save-row">
-                <button
-                  className="btn btn-primary btn-save-feedback"
-                  onClick={handleSaveFeedback}
-                  disabled={isSaving}
-                >
-                  {isSaving ? 'Saving...' : 'Save Feedback'}
-                </button>
-                <button
-                  className="btn btn-ghost"
-                  onClick={() => setPendingFeedback(userFeedback)}
-                  disabled={isSaving}
-                >
-                  Discard
-                </button>
+                <div className="feedback-save-row-left">
+                  {isModified && (
+                    <>
+                      <button
+                        className="btn btn-primary btn-save-feedback"
+                        onClick={handleSaveFeedback}
+                        disabled={isSaving}
+                      >
+                        {isSaving ? 'Saving...' : 'Save Feedback'}
+                      </button>
+                      <button
+                        className="btn btn-ghost"
+                        onClick={() => {
+                          setPendingFeedback(userFeedback);
+                          if (userFeedback.rating || userFeedback.note) {
+                            setIsEditing(false);
+                          }
+                        }}
+                        disabled={isSaving}
+                      >
+                        Discard
+                      </button>
+                    </>
+                  )}
+                </div>
+
+                {(userFeedback.rating > 0 || userFeedback.note) &&
+                  !isModified && (
+                    <button
+                      className="btn btn-ghost btn-delete-feedback"
+                      onClick={handleDeleteFeedback}
+                      disabled={isSaving}
+                      style={{ color: 'var(--text-dim)', fontSize: '12px' }}
+                    >
+                      Delete Feedback
+                    </button>
+                  )}
               </div>
-            )}
-          </>
-        )}
-      </section>
+            </>
+          )}
+        </section>
+      )}
 
       {/* ─── Community Activity List (Conditional) ─── */}
-      {peerFeedback.length > 0 && (
+      {communityData.feedback.length > 0 && (
         <section className="list-explorer-info-section community">
           <h4>COMMUNITY ACTIVITY</h4>
           <div className="list-explorer-peer-list">
-            {peerFeedback.map((f, i) => (
-              <div key={i} className="list-explorer-peer-item">
+            {communityData.feedback.map((f, i) => (
+              <div
+                key={i}
+                className={`list-explorer-peer-item${f.user_id === authUser?.id ? ' is-owner' : ''}`}
+              >
                 <img
                   src={
                     f.profiles
@@ -431,6 +522,38 @@ export default function CommunityActivity({
                     <p className="list-explorer-peer-note">{f.note}</p>
                   )}
                 </div>
+
+                {f.user_id === authUser?.id && (
+                  <div className="list-explorer-peer-actions">
+                    <button
+                      className="btn btn-ghost btn-edit-activity"
+                      title="Edit Feedback"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setIsEditing(true);
+                        // Find and scroll to the top of the community activity section
+                        const container = e.currentTarget.closest(
+                          '.player-community-activity',
+                        );
+                        if (container) {
+                          container.scrollTo({ top: 0, behavior: 'smooth' });
+                        }
+                      }}
+                    >
+                      <PencilIcon className="activity-action-icon" />
+                    </button>
+                    <button
+                      className="btn btn-ghost btn-delete-activity"
+                      title="Delete Feedback"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteFeedback();
+                      }}
+                    >
+                      <XIcon className="activity-action-icon" />
+                    </button>
+                  </div>
+                )}
               </div>
             ))}
           </div>

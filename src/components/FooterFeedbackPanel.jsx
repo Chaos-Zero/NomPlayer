@@ -1,17 +1,28 @@
 import { useEffect, useMemo, useState } from 'react';
-import { fetchCommunityFeedback, upsertUserFeedback } from '../lib/feedback.js';
+import {
+  fetchCommunityFeedback,
+  upsertUserFeedback,
+  deleteUserFeedback,
+} from '../lib/feedback.js';
 import { ingestYouTubeTrackSources } from '../lib/trackCatalog.js';
 import {
   getDisplayProfileName,
   deriveProfileAvatarUrl,
 } from '../lib/playerState.js';
-import { SpeechBubbleIcon, HeartIcon, LockIcon } from './Icons.jsx';
+import {
+  SpeechBubbleIcon,
+  HeartIcon,
+  LockIcon,
+  PencilIcon,
+  XIcon,
+} from './Icons.jsx';
 import { ContextMenuPortal } from './ContextMenuPortal';
 
 export default function FooterFeedbackPanel({
   track,
   supabase,
   authUser,
+  userProfile,
   onClose,
   onShowToast,
   anchorRect,
@@ -115,6 +126,7 @@ export default function FooterFeedbackPanel({
   });
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
   const [localComment, setLocalComment] = useState('');
   const [localRating, setLocalRating] = useState('');
 
@@ -142,6 +154,13 @@ export default function FooterFeedbackPanel({
   useEffect(() => {
     setLocalComment(personalFeedback.note || '');
     setLocalRating(personalFeedback.rating || '');
+
+    // Default to collapsed if feedback exists, or open for new
+    if (!personalFeedback.rating && !personalFeedback.note) {
+      setIsEditing(true);
+    } else {
+      setIsEditing(false);
+    }
   }, [personalFeedback]);
 
   const hasChanges = useMemo(() => {
@@ -152,11 +171,6 @@ export default function FooterFeedbackPanel({
       String(localRating) !== String(savedRating) || localComment !== savedNote
     );
   }, [localRating, localComment, personalFeedback]);
-
-  const peerFeedback = useMemo(() => {
-    if (!track || !communityData.feedback) return [];
-    return communityData.feedback.filter((f) => f.user_id !== authUser?.id);
-  }, [track, communityData.feedback, authUser?.id]);
 
   const supportSummary = useMemo(() => {
     const list = communityData.supports || {};
@@ -289,9 +303,48 @@ export default function FooterFeedbackPanel({
       const feedback = await fetchCommunityFeedback(supabase, trackId);
       setCommunityData((prev) => ({ ...prev, feedback }));
       onShowToast?.('Feedback saved successfully!', 'dashboard');
+      setIsEditing(false);
     } catch (err) {
       console.error('Save failed:', err);
       onShowToast?.('Failed to save feedback.', 'error');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleDeleteFeedback = async () => {
+    if (!supabase || !authUser || !track) return;
+
+    if (
+      !window.confirm(
+        'Delete your feedback for this track? This cannot be undone.',
+      )
+    ) {
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      let trackId = track.trackId;
+      if (!trackId || !/^[0-9a-f-]{36}$/i.test(trackId)) {
+        const ingested = await ingestYouTubeTrackSources(supabase, [track]);
+        if (ingested && ingested.length > 0) {
+          trackId = ingested[0].track_id;
+        }
+      }
+
+      if (!trackId) throw new Error('Could not identify track.');
+
+      await deleteUserFeedback(supabase, authUser.id, trackId);
+
+      const feedback = await fetchCommunityFeedback(supabase, trackId);
+      setCommunityData((prev) => ({ ...prev, feedback }));
+      setLocalComment('');
+      setLocalRating('');
+      onShowToast?.('Feedback deleted.', 'dashboard');
+    } catch (err) {
+      console.error('Delete failed:', err);
+      onShowToast?.('Failed to delete feedback.', 'error');
     } finally {
       setIsSaving(false);
     }
@@ -333,9 +386,29 @@ export default function FooterFeedbackPanel({
       </div>
       <div className="list-explorer-info-content-wrapper footer-feedback-wrapper">
         <div className="list-explorer-info-content">
-          {authUser && (
+          {authUser && isEditing && (
             <section className="list-explorer-info-section">
-              <h4>YOUR FEEDBACK</h4>
+              <div className="section-header-row">
+                <h4>YOUR FEEDBACK</h4>
+                {userProfile && (
+                  <div className="user-feedback-identity">
+                    <img
+                      src={deriveProfileAvatarUrl(
+                        userProfile,
+                        userProfile.avatar_url,
+                      )}
+                      alt=""
+                      className="list-explorer-peer-avatar miniature"
+                      onError={(e) => {
+                        e.target.style.display = 'none';
+                      }}
+                    />
+                    <span className="list-explorer-peer-user">
+                      {getDisplayProfileName(userProfile.username, 'Anonymous')}
+                    </span>
+                  </div>
+                )}
+              </div>
               <div className="list-explorer-info-personal">
                 <div className="list-explorer-info-rating-row">
                   <span className="label">Rating:</span>
@@ -360,15 +433,37 @@ export default function FooterFeedbackPanel({
                   value={localComment}
                   onChange={(e) => setLocalComment(e.target.value)}
                 />
-                {(hasChanges || isSaving) && (
+                {(hasChanges ||
+                  isSaving ||
+                  personalFeedback.rating ||
+                  personalFeedback.note) && (
                   <div className="list-explorer-info-feedback-actions footer-actions">
-                    <button
-                      className="btn-save-feedback"
-                      onClick={handleSaveFeedback}
-                      disabled={isSaving}
-                    >
-                      {isSaving ? 'Saving...' : 'Save Feedback'}
-                    </button>
+                    <div className="feedback-save-row-left">
+                      {hasChanges && (
+                        <button
+                          className="btn-save-feedback"
+                          onClick={handleSaveFeedback}
+                          disabled={isSaving}
+                        >
+                          {isSaving ? 'Saving...' : 'Save Feedback'}
+                        </button>
+                      )}
+                    </div>
+                    {(personalFeedback.rating || personalFeedback.note) &&
+                      !hasChanges && (
+                        <button
+                          className="btn-delete-feedback btn btn-ghost"
+                          onClick={handleDeleteFeedback}
+                          disabled={isSaving}
+                          style={{
+                            color: 'var(--text-dim)',
+                            fontSize: '12px',
+                            padding: '0 8px',
+                          }}
+                        >
+                          Delete Feedback
+                        </button>
+                      )}
                   </div>
                 )}
               </div>
@@ -429,14 +524,17 @@ export default function FooterFeedbackPanel({
               >
                 <div className="hero-loader-spinner" />
               </div>
-            ) : peerFeedback.length === 0 ? (
+            ) : communityData.feedback.length === 0 ? (
               <p className="list-explorer-info-empty">
                 No community feedback yet.
               </p>
             ) : (
               <div className="list-explorer-peer-list">
-                {peerFeedback.map((f, i) => (
-                  <div key={i} className="list-explorer-peer-item">
+                {communityData.feedback.map((f, i) => (
+                  <div
+                    key={i}
+                    className={`list-explorer-peer-item${f.user_id === authUser?.id ? ' is-owner' : ''}`}
+                  >
                     <img
                       src={deriveProfileAvatarUrl(
                         f.profiles,
@@ -463,6 +561,31 @@ export default function FooterFeedbackPanel({
                         <p className="list-explorer-peer-note">{f.note}</p>
                       )}
                     </div>
+
+                    {f.user_id === authUser?.id && (
+                      <div className="list-explorer-peer-actions">
+                        <button
+                          className="btn btn-ghost btn-edit-activity"
+                          title="Edit Feedback"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setIsEditing(true);
+                          }}
+                        >
+                          <PencilIcon className="activity-action-icon" />
+                        </button>
+                        <button
+                          className="btn btn-ghost btn-delete-activity"
+                          title="Delete Feedback"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteFeedback();
+                          }}
+                        >
+                          <XIcon className="activity-action-icon" />
+                        </button>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
