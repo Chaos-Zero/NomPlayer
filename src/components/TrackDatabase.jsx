@@ -213,7 +213,8 @@ const TrackRow = memo(
     onDiscardRow,
     onSetExpandedCell,
     onOpenContextMenu,
-    measureRef,
+    onPlayNow,
+    measureElement,
   }) => {
     const isDirty = !!pendingChanges;
     const vgmcElements = track.tournaments.map((t, i) => {
@@ -280,8 +281,20 @@ const TrackRow = memo(
       <tr
         className={`${isSelected ? 'selected' : ''} ${track.isRetired ? 'retired' : ''}`}
         onClick={() => onRowClick(track)}
+        onDoubleClick={(e) => {
+          e.preventDefault();
+          if (window.getSelection) {
+            window.getSelection().removeAllRanges();
+          }
+          if (onPlayNow) onPlayNow(track);
+        }}
+        onMouseDown={(e) => {
+          if (e.detail > 1) {
+            e.preventDefault();
+          }
+        }}
         onContextMenu={(e) => onOpenContextMenu(e, track)}
-        ref={measureRef}
+        ref={measureElement}
       >
         <td
           className={`col-index ${expandedCellCol === 'index' ? 'expanded-cell' : ''}`}
@@ -751,8 +764,8 @@ export default function TrackDatabase({
   const rowVirtualizer = useVirtualizer({
     count: tracks.length,
     getScrollElement: () => tableWrapperRef.current,
-    estimateSize: () => 52,
-    overscan: 10,
+    estimateSize: () => 53,
+    overscan: 20,
   });
 
   const virtualItems = rowVirtualizer.getVirtualItems();
@@ -1066,7 +1079,11 @@ export default function TrackDatabase({
       </header>
 
       <div className="database-main-content">
-        <main className="table-wrapper" ref={tableWrapperRef}>
+        <main
+          className="table-wrapper"
+          ref={tableWrapperRef}
+          style={{ overflowAnchor: 'none' }}
+        >
           {loading && (
             <div
               className={`database-loading-overlay ${tracks.length === 0 ? 'initial' : ''}`}
@@ -1270,7 +1287,8 @@ export default function TrackDatabase({
                     onDiscardRow={handleDiscardRow}
                     onSetExpandedCell={setExpandedCell}
                     onOpenContextMenu={handleOpenContextMenu}
-                    measureRef={virtualRow.measureRef}
+                    onPlayNow={onPlayNow}
+                    measureElement={virtualRow.measureElement}
                   />
                 );
               })}
