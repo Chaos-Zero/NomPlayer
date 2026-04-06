@@ -203,11 +203,7 @@ const VideoPlayer = forwardRef(function VideoPlayer(
   useEffect(() => {
     isPlayingRef.current = isPlaying;
 
-    if (
-      !isPlaying &&
-      document.visibilityState === 'visible' &&
-      !resumeAfterVisibilityRef.current
-    ) {
+    if (!isPlaying) {
       clearVisibilityResumeTracking();
     }
   }, [clearVisibilityResumeTracking, isPlaying]);
@@ -249,7 +245,10 @@ const VideoPlayer = forwardRef(function VideoPlayer(
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'hidden') {
-        resumeAfterVisibilityRef.current = isPlayingRef.current;
+        const playerState = playerRef.current?.getPlayerState?.();
+        const isActuallyPlaying = playerState === 1 || playerState === 3;
+        resumeAfterVisibilityRef.current =
+          isActuallyPlaying && isPlayingRef.current;
         return;
       }
 
@@ -265,7 +264,10 @@ const VideoPlayer = forwardRef(function VideoPlayer(
     };
 
     const handleWindowBlur = () => {
-      resumeAfterVisibilityRef.current = isPlayingRef.current;
+      const playerState = playerRef.current?.getPlayerState?.();
+      const isActuallyPlaying = playerState === 1 || playerState === 3;
+      resumeAfterVisibilityRef.current =
+        isActuallyPlaying && isPlayingRef.current;
     };
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
