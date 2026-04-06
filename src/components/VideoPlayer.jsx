@@ -204,7 +204,11 @@ const VideoPlayer = forwardRef(function VideoPlayer(
   useEffect(() => {
     isPlayingRef.current = isPlaying;
 
-    if (!isPlaying) {
+    if (
+      !isPlaying &&
+      document.visibilityState === 'visible' &&
+      document.hasFocus()
+    ) {
       clearVisibilityResumeTracking();
     }
   }, [clearVisibilityResumeTracking, isPlaying]);
