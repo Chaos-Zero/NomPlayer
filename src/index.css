@@ -11698,3 +11698,69 @@ body.is-resizing .resize-handle {
     /* App.jsx doesn't render it on mobile anyway */
   }
 }
+
+.column-user-toggle {
+  padding: 0 !important;
+  width: 24px !important;
+  height: 24px !important;
+  border-radius: 50% !important;
+  overflow: hidden;
+  border: 1px solid var(--accent) !important;
+  transition: all 0.3s ease !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  margin-left: 6px;
+  background: var(--bg-surface) !important;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.column-user-toggle.is-inactive {
+  filter: grayscale(1) opacity(0.5);
+  border-color: var(--text-muted) !important;
+}
+
+.column-user-toggle:hover {
+  transform: scale(1.1);
+  border-color: var(--accent-light) !important;
+}
+
+.column-user-avatar {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.column-user-toggle {
+  padding: 0 !important;
+  width: 24px !important;
+  height: 24px !important;
+  border-radius: 50% !important;
+  overflow: hidden;
+  border: 1px solid var(--accent) !important;
+  transition: all 0.3s ease !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  margin-left: 6px;
+  background: var(--bg-surface) !important;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.column-user-toggle.is-inactive {
+  filter: grayscale(1) opacity(0.5);
+  border-color: var(--text-muted) !important;
+}
+
+.column-user-toggle:hover {
+  transform: scale(1.1);
+  border-color: var(--accent-light) !important;
+}
+
+.column-user-avatar {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}

@@ -190,6 +190,7 @@ function TrackInfoPanel({
     note: personalFeedback.note,
     rating: personalFeedback.rating,
     videoId: track?.videoId,
+    isLoading: isLoadingData,
   });
 
   if (
@@ -205,11 +206,43 @@ function TrackInfoPanel({
     setLocalComment(personalFeedback.note || track?.comment || '');
     setLocalRating(personalFeedback.rating || '');
 
-    // Default to collapsed if feedback exists, or open for new
-    if (!personalFeedback.rating && !personalFeedback.note) {
-      setIsEditing(true);
-    } else {
-      setIsEditing(false);
+    // Default to collapsed if feedback exists, or open for new (Wait for load per User Request)
+    if (!isLoadingData) {
+      if (!personalFeedback.rating && !personalFeedback.note) {
+        setIsEditing(true);
+      } else {
+        setIsEditing(false);
+      }
+    }
+  }
+
+  // Trigger sync on load status change specifically
+  if (isLoadingData !== prevSync.isLoading) {
+    setPrevSync((prev) => ({ ...prev, isLoading: isLoadingData }));
+
+    // When loading finishes, decide whether to show or hide the input
+    if (!isLoadingData) {
+      const hasFeedback = personalFeedback.rating || personalFeedback.note;
+      if (!hasFeedback) {
+        setIsEditing(true);
+      } else {
+        setIsEditing(false);
+      }
+    }
+  }
+
+  // Trigger sync on load status change specifically
+  if (isLoadingData !== prevSync.isLoading) {
+    setPrevSync((prev) => ({ ...prev, isLoading: isLoadingData }));
+
+    // When loading finishes, decide whether to show or hide the input
+    if (!isLoadingData) {
+      const hasFeedback = personalFeedback.rating || personalFeedback.note;
+      if (!hasFeedback) {
+        setIsEditing(true);
+      } else {
+        setIsEditing(false);
+      }
     }
   }
 
@@ -419,10 +452,10 @@ function TrackInfoPanel({
                 </section>
               )}
 
-              <section className="list-explorer-info-section">
-                <h4>Community Support</h4>
-                <div className="list-explorer-support-summary">
-                  {supportSummary.total > 0 ? (
+              {supportSummary.total > 0 && (
+                <section className="list-explorer-info-section">
+                  <h4>Community Support</h4>
+                  <div className="list-explorer-support-summary">
                     <div className="list-explorer-support-icons">
                       {supportSummary[3]?.count > 0 && (
                         <button
@@ -458,13 +491,9 @@ function TrackInfoPanel({
                         </button>
                       )}
                     </div>
-                  ) : (
-                    <div className="list-explorer-support-empty">
-                      No community support yet.
-                    </div>
-                  )}
-                </div>
-              </section>
+                  </div>
+                </section>
+              )}
 
               <section className="list-explorer-info-section community">
                 <h4>Community Activity</h4>
@@ -687,6 +716,7 @@ function ListExplorerColumn({
   onSavePlaylist,
   globalCommentedVideoIds = null,
   onPlayCommunityList = null,
+  userToggle = null,
 }) {
   const [addUrl, setAddUrl] = useState('');
   const { setNodeRef } = useDroppable({
@@ -762,6 +792,66 @@ function ListExplorerColumn({
               title="Start this list"
             >
               <PlayIcon />
+            </button>
+          )}
+          {userToggle && (
+            <button
+              className={`list-explorer-column-btn column-user-toggle ${!userToggle.active ? 'is-inactive' : ''}`}
+              onClick={userToggle.onToggle}
+              title={
+                userToggle.active
+                  ? 'Hide my nominations'
+                  : 'Show my nominations'
+              }
+            >
+              <img
+                src={deriveProfileAvatarUrl(
+                  userToggle.user,
+                  userToggle.user?.avatar_url,
+                )}
+                alt="My toggle"
+                className="column-user-avatar"
+              />
+            </button>
+          )}
+          {userToggle && (
+            <button
+              className={`list-explorer-column-btn column-user-toggle ${!userToggle.active ? 'is-inactive' : ''}`}
+              onClick={userToggle.onToggle}
+              title={
+                userToggle.active
+                  ? 'Hide my nominations'
+                  : 'Show my nominations'
+              }
+            >
+              <img
+                src={deriveProfileAvatarUrl(
+                  userToggle.user,
+                  userToggle.user?.avatar_url,
+                )}
+                alt="My toggle"
+                className="column-user-avatar"
+              />
+            </button>
+          )}
+          {userToggle && (
+            <button
+              className={`list-explorer-column-btn column-user-toggle ${!userToggle.active ? 'is-inactive' : ''}`}
+              onClick={userToggle.onToggle}
+              title={
+                userToggle.active
+                  ? 'Hide my nominations'
+                  : 'Show my nominations'
+              }
+            >
+              <img
+                src={deriveProfileAvatarUrl(
+                  userToggle.user,
+                  userToggle.user?.avatar_url,
+                )}
+                alt="My toggle"
+                className="column-user-avatar"
+              />
             </button>
           )}
           {canAddAll && videos && videos.length > 0 && (
@@ -906,6 +996,7 @@ export default function ListExplorer({
     feedback: [],
     supports: {},
   });
+  const [showMyNominations, setShowMyNominations] = useState(true);
   const [isLoadingCommunity, setIsLoadingCommunity] = useState(false);
   const [dragButton, setDragButton] = useState(0);
   const gridRef = useRef(null);
@@ -1890,13 +1981,22 @@ export default function ListExplorer({
             <ListExplorerColumn
               id="nominations"
               title="Nominations"
-              subtitle={`${nominationList.length} tracks`}
-              videos={nominationList}
+              subtitle={`${showMyNominations ? nominationList.length : 0} tracks`}
+              videos={showMyNominations ? nominationList : []}
               isFocused={focusedListId === 'nominations'}
               onFocus={() => setFocusedListId('nominations')}
               onUnfocus={() => setFocusedListId(null)}
               onPlayNow={onPlayNow}
               colorVar="--accent"
+              userToggle={
+                authUser?.profile
+                  ? {
+                      user: authUser.profile,
+                      active: showMyNominations,
+                      onToggle: () => setShowMyNominations(!showMyNominations),
+                    }
+                  : null
+              }
               onUpdateComment={(videoId, comment) =>
                 handleUpdateComment('nominations', videoId, comment)
               }

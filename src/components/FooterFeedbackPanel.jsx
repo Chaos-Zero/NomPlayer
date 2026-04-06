@@ -152,16 +152,18 @@ export default function FooterFeedbackPanel({
   }, [track, communityData.feedback, authUser?.id]);
 
   useEffect(() => {
+    if (isLoading) return;
+
     setLocalComment(personalFeedback.note || '');
     setLocalRating(personalFeedback.rating || '');
 
-    // Default to collapsed if feedback exists, or open for new
+    // Default to collapsed if feedback exists, or open for new (Wait for load per User Request)
     if (!personalFeedback.rating && !personalFeedback.note) {
       setIsEditing(true);
     } else {
       setIsEditing(false);
     }
-  }, [personalFeedback]);
+  }, [personalFeedback, isLoading]);
 
   const hasChanges = useMemo(() => {
     const savedRating = personalFeedback.rating || '';
