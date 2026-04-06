@@ -1,3 +1,5 @@
+import { checkContent } from '../utils/profanityFilter.js';
+
 export async function fetchUserFeedback(supabase, userId) {
   if (!supabase || !userId) return {};
 
@@ -22,6 +24,16 @@ export async function fetchUserFeedback(supabase, userId) {
 
 export async function upsertUserFeedback(supabase, userId, trackId, feedback) {
   if (!supabase || !userId || !trackId) return null;
+
+  // Profanity Filter Check
+  if (feedback.note) {
+    const { isBlocked, message } = checkContent(feedback.note);
+    if (isBlocked) {
+      const error = new Error(message);
+      error.isValidationError = true;
+      throw error;
+    }
+  }
 
   const { data, error } = await supabase
     .from('track_user_feedback')

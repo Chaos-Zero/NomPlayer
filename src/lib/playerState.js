@@ -1,3 +1,4 @@
+import { checkContent } from '../utils/profanityFilter.js';
 export const PLAYER_STATE_STORAGE_KEY = 'yt_player_state';
 export const SUPPORT_LIST_STORAGE_KEY = 'yt_support_list';
 export const NOMINATION_LIST_STORAGE_KEY = 'yt_nominations_list';
@@ -456,6 +457,25 @@ export async function fetchUserProfile(supabase, userId) {
 }
 
 export async function upsertUserProfile(supabase, profile) {
+  // Profanity Filter Check
+  if (profile.username) {
+    const { isBlocked, message } = checkContent(profile.username);
+    if (isBlocked) {
+      const error = new Error(message);
+      error.isValidationError = true;
+      throw error;
+    }
+  }
+
+  if (profile.gamefaqs_username) {
+    const { isBlocked, message } = checkContent(profile.gamefaqs_username);
+    if (isBlocked) {
+      const error = new Error(message);
+      error.isValidationError = true;
+      throw error;
+    }
+  }
+
   const { data, error } = await supabase
     .from('profiles')
     .upsert(profile, {

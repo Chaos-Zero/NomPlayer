@@ -1,4 +1,5 @@
 import { getYouTubeThumbnailUrl, parseYouTubeInput } from '../utils/youtube.js';
+import { checkContent } from '../utils/profanityFilter.js';
 
 function normalizeCatalogVideo(video) {
   if (!video || typeof video !== 'object') return null;
@@ -558,10 +559,24 @@ export async function bulkUpdateTracks(supabase, updatesMap) {
     const trackPayload = {};
     const sourcePayload = {};
 
-    if (fields.gameTitle !== undefined)
+    if (fields.gameTitle !== undefined) {
+      const { isBlocked, message } = checkContent(fields.gameTitle);
+      if (isBlocked) {
+        const error = new Error(message);
+        error.isValidationError = true;
+        throw error;
+      }
       trackPayload.canonical_game_title = fields.gameTitle;
-    if (fields.trackTitle !== undefined)
+    }
+    if (fields.trackTitle !== undefined) {
+      const { isBlocked, message } = checkContent(fields.trackTitle);
+      if (isBlocked) {
+        const error = new Error(message);
+        error.isValidationError = true;
+        throw error;
+      }
       trackPayload.canonical_track_title = fields.trackTitle;
+    }
 
     if (fields.sourceUrl !== undefined) {
       sourcePayload.source_url = fields.sourceUrl;

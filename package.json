@@ -34,6 +34,7 @@
     "lightswind": "^3.1.21",
     "lottie-react": "^2.4.1",
     "motion": "^12.38.0",
+    "obscenity": "^0.4.6",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
     "react-youtube": "^10.1.0"

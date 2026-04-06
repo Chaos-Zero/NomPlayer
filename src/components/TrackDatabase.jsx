@@ -967,7 +967,11 @@ export default function TrackDatabase({
       setRefreshKey((k) => k + 1);
     } catch (err) {
       console.error('Error saving track:', err);
-      onShowToast?.('Failed to save change.');
+      if (err.isValidationError) {
+        onShowToast?.(err.message);
+      } else {
+        onShowToast?.('Failed to save change.');
+      }
     } finally {
       setIsSaving(false);
     }

@@ -233,7 +233,11 @@ export default function CommunityActivity({
       setIsEditing(false);
     } catch (err) {
       console.error('Failed to save feedback:', err);
-      onShowToast?.('Failed to save feedback.');
+      if (err.isValidationError) {
+        onShowToast?.(err.message);
+      } else {
+        onShowToast?.('Failed to save feedback.');
+      }
     } finally {
       setIsSaving(false);
     }
