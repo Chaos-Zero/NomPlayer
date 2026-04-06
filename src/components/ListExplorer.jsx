@@ -10,7 +10,11 @@ import {
   deriveProfileAvatarUrl,
 } from '../lib/playerState.js';
 import { ingestYouTubeTrackSources } from '../lib/trackCatalog.js';
-import { fetchCommunityFeedback, upsertUserFeedback } from '../lib/feedback.js';
+import {
+  fetchCommunityFeedback,
+  upsertUserFeedback,
+  deleteUserFeedback,
+} from '../lib/feedback.js';
 import {
   DndContext,
   closestCenter,
@@ -31,7 +35,7 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import { PointerSensor as CorePointerSensor } from '@dnd-kit/core';
 import { SortableSupportItem, SupportItem } from './FavouritesPanel.jsx';
-import { HeartIcon, LockIcon } from './Icons.jsx';
+import { HeartIcon, LockIcon, PencilIcon, XIcon } from './Icons.jsx';
 import { ContextMenuPortal } from './ContextMenuPortal';
 import ExportIcon from './ExportIcon.jsx';
 import YouTubeIcon from './YouTubeIcon.jsx';
@@ -147,7 +151,10 @@ function TrackInfoPanel({
   authUser,
   onUpdateComment,
   onSaveFeedback,
+  onDeleteFeedback,
+  userProfile,
 }) {
+  const [isEditing, setIsEditing] = useState(false);
   const [supportersMenu, setSupportersMenu] = useState(null);
   const personalFeedback = useMemo(() => {
     if (!track || !communityData.feedback || !authUser?.id)
@@ -197,6 +204,13 @@ function TrackInfoPanel({
     });
     setLocalComment(personalFeedback.note || track?.comment || '');
     setLocalRating(personalFeedback.rating || '');
+
+    // Default to collapsed if feedback exists, or open for new
+    if (!personalFeedback.rating && !personalFeedback.note) {
+      setIsEditing(true);
+    } else {
+      setIsEditing(false);
+    }
   }
 
   const hasChanges = useMemo(() => {
@@ -208,10 +222,10 @@ function TrackInfoPanel({
     );
   }, [localRating, localComment, personalFeedback, track?.comment]);
 
-  const peerFeedback = useMemo(() => {
-    if (!track || !communityData.feedback) return [];
-    return communityData.feedback.filter((f) => f.user_id !== authUser?.id);
-  }, [track, communityData.feedback, authUser?.id]);
+  // Merged community feedback (no longer filtering our own)
+  const communityList = useMemo(() => {
+    return communityData.feedback || [];
+  }, [communityData.feedback]);
 
   const supportSummary = useMemo(() => {
     const list = communityData.supports || {};
@@ -297,16 +311,31 @@ function TrackInfoPanel({
             </div>
 
             <div className="list-explorer-info-content">
-              {authUser && (
+              {authUser && isEditing && (
                 <section className="list-explorer-info-section">
-                  <div
-                    style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                    }}
-                  >
+                  <div className="section-header-row">
                     <h4>Your Feedback</h4>
+                    {userProfile && (
+                      <div className="user-feedback-identity">
+                        <img
+                          src={deriveProfileAvatarUrl(
+                            userProfile,
+                            userProfile.avatar_url,
+                          )}
+                          alt=""
+                          className="list-explorer-peer-avatar miniature"
+                          onError={(e) => {
+                            e.target.style.display = 'none';
+                          }}
+                        />
+                        <span className="list-explorer-peer-user">
+                          {getDisplayProfileName(
+                            userProfile.username,
+                            'Anonymous',
+                          )}
+                        </span>
+                      </div>
+                    )}
                   </div>
                   <div className="list-explorer-info-personal">
                     <div className="list-explorer-info-rating-row">
@@ -332,17 +361,58 @@ function TrackInfoPanel({
                       value={localComment}
                       onChange={handleCommentChange}
                     />
-                    {(hasChanges || isSaving) && (
-                      <div className="list-explorer-info-feedback-actions">
-                        <button
-                          className="btn-save-feedback"
-                          onClick={() =>
-                            onSaveFeedback(localRating, localComment)
-                          }
-                          disabled={isSaving}
-                        >
-                          {isSaving ? 'Saving...' : 'Save Feedback'}
-                        </button>
+                    {(hasChanges ||
+                      isSaving ||
+                      personalFeedback.rating ||
+                      personalFeedback.note) && (
+                      <div className="feedback-save-row">
+                        <div className="feedback-save-row-left">
+                          {hasChanges && (
+                            <button
+                              className="btn btn-primary btn-save-feedback"
+                              onClick={() => {
+                                onSaveFeedback(localRating, localComment);
+                                setIsEditing(false);
+                              }}
+                              disabled={isSaving}
+                            >
+                              {isSaving ? 'Saving...' : 'Save Feedback'}
+                            </button>
+                          )}
+                          <button
+                            className="btn btn-ghost"
+                            onClick={() => {
+                              setLocalComment(
+                                personalFeedback.note || track?.comment || '',
+                              );
+                              setLocalRating(personalFeedback.rating || '');
+                              if (
+                                personalFeedback.rating ||
+                                personalFeedback.note
+                              ) {
+                                setIsEditing(false);
+                              }
+                            }}
+                            disabled={isSaving}
+                          >
+                            Discard
+                          </button>
+                        </div>
+
+                        {(personalFeedback.rating || personalFeedback.note) &&
+                          !hasChanges && (
+                            <button
+                              className="btn btn-ghost btn-delete-feedback"
+                              onClick={onDeleteFeedback}
+                              disabled={isSaving}
+                              style={{
+                                color: 'var(--text-dim)',
+                                fontSize: '11px',
+                              }}
+                            >
+                              Delete Feedback
+                            </button>
+                          )}
                       </div>
                     )}
                   </div>
@@ -402,14 +472,17 @@ function TrackInfoPanel({
                   <p className="list-explorer-info-loading">
                     Loading community data...
                   </p>
-                ) : peerFeedback.length === 0 ? (
+                ) : communityList.length === 0 ? (
                   <p className="list-explorer-info-empty">
                     No community feedback yet.
                   </p>
                 ) : (
                   <div className="list-explorer-peer-list">
-                    {peerFeedback.map((f, i) => (
-                      <div key={i} className="list-explorer-peer-item">
+                    {communityList.map((f, i) => (
+                      <div
+                        key={i}
+                        className={`list-explorer-peer-item${f.user_id === authUser?.id ? ' is-owner' : ''}`}
+                      >
                         <img
                           src={deriveProfileAvatarUrl(
                             f.profiles,
@@ -436,6 +509,41 @@ function TrackInfoPanel({
                             <p className="list-explorer-peer-note">{f.note}</p>
                           )}
                         </div>
+
+                        {f.user_id === authUser?.id && (
+                          <div className="list-explorer-peer-actions">
+                            <button
+                              className="btn btn-ghost btn-edit-activity"
+                              title="Edit Feedback"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setIsEditing(true);
+                                // Scroll to top of the panel content
+                                const content = e.currentTarget.closest(
+                                  '.list-explorer-info-content-wrapper',
+                                );
+                                if (content) {
+                                  content.scrollTo({
+                                    top: 0,
+                                    behavior: 'smooth',
+                                  });
+                                }
+                              }}
+                            >
+                              <PencilIcon className="activity-action-icon" />
+                            </button>
+                            <button
+                              className="btn btn-ghost btn-delete-activity"
+                              title="Delete Feedback"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onDeleteFeedback();
+                              }}
+                            >
+                              <XIcon className="activity-action-icon" />
+                            </button>
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -1669,6 +1777,7 @@ export default function ListExplorer({
             setSelectedColumnId(null);
           }}
           authUser={authUser}
+          userProfile={authUser?.profile}
           onUpdateComment={(videoId, comment) =>
             handleUpdateComment(
               selectedTrackId ? findListId(selectedTrackId) : null,
@@ -1676,6 +1785,47 @@ export default function ListExplorer({
               comment,
             )
           }
+          onDeleteFeedback={async () => {
+            if (!supabase || !authUser || !selectedTrack) return;
+            if (
+              !window.confirm(
+                'Delete your feedback for this track? This cannot be undone.',
+              )
+            )
+              return;
+
+            setIsSavingFeedback(true);
+            try {
+              let trackId = selectedTrack.trackId || selectedTrack.id;
+              if (!trackId || !/^[0-9a-f-]{36}$/i.test(trackId)) {
+                // Ingest if somehow track info lost UUID
+                const ingested = await ingestYouTubeTrackSources(supabase, [
+                  selectedTrack,
+                ]);
+                if (ingested && ingested.length > 0) {
+                  trackId = ingested[0].track_id;
+                }
+              }
+
+              if (!trackId) throw new Error('Could not identify track.');
+
+              await deleteUserFeedback(supabase, authUser.id, trackId);
+              // Refresh community data
+              setCommunityData((prev) => ({
+                ...prev,
+                feedback: prev.feedback.filter(
+                  (f) => f.user_id !== authUser.id,
+                ),
+              }));
+
+              onShowToast?.('Feedback deleted.', 'dashboard');
+            } catch (err) {
+              console.error('Delete failed:', err);
+              onShowToast?.('Failed to delete feedback.', 'error');
+            } finally {
+              setIsSavingFeedback(false);
+            }
+          }}
           onSaveFeedback={async (rating, note) => {
             if (!supabase || !authUser || !selectedTrack) return;
             setIsSavingFeedback(true);

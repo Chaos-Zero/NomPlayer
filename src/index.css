@@ -10193,6 +10193,7 @@ body.is-resizing .resize-handle {
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   color: var(--gold);
+  font-family: inherit;
   font-size: 16px;
   font-weight: 700;
   padding: 4px 8px;
@@ -10213,6 +10214,7 @@ body.is-resizing .resize-handle {
   border-radius: var(--radius-md);
   padding: 12px;
   color: var(--text-primary);
+  font-family: inherit;
   font-size: 14px;
   line-height: 1.6;
   resize: vertical;
@@ -11008,17 +11010,14 @@ body.is-resizing .resize-handle {
   border: 1px solid rgba(255, 255, 255, 0.05);
   transition:
     background 0.2s ease,
-    border-color 0.2s ease,
-    max-height 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+    border-color 0.2s ease;
   position: relative;
   overflow: hidden;
-  max-height: 56px;
   align-items: flex-start;
 }
 
 .list-explorer-peer-item:hover {
   background: rgba(255, 255, 255, 0.05);
-  max-height: 500px;
 }
 
 .list-explorer-peer-item.is-owner {
