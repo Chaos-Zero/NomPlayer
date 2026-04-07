@@ -2669,9 +2669,7 @@ body {
 }
 
 .playlist-collapse-tab:hover {
-  color: var(--text-primary);
-  background: var(--bg-surface-hover);
-  border-color: var(--border-hover);
+  border-color: var(--accent);
 }
 
 .playlist-collapse-tab.collapsed {
