@@ -66,6 +66,49 @@ export function normalizeNominationDashboardUpdate(entry) {
   };
 }
 
+export async function loadStaticNominationUpdates(limitCount = null) {
+  try {
+    const mod = await import('../data/userNominationsSnapshot.json');
+    const catalogData = mod.default || mod;
+    const rows = Array.isArray(catalogData.users) ? catalogData.users : [];
+
+    const normalized = rows
+      .map(normalizeNominationDashboardUpdate)
+      .filter(Boolean);
+
+    if (limitCount !== null && limitCount > 0) {
+      return normalized.slice(0, limitCount);
+    }
+    return normalized;
+  } catch (e) {
+    console.warn('Failed to load static nominations snapshot', e);
+    return [];
+  }
+}
+
+export async function getFastSpotlightCandidate() {
+  const staticUpdates = await loadStaticNominationUpdates(4);
+  const candidates = [];
+  for (const update of staticUpdates) {
+    if (update.nominations && update.nominations.length > 0) {
+      candidates.push({
+        ...update.nominations[0],
+        nominators: [
+          {
+            userId: update.userId,
+            username: update.username,
+            avatarUrl: update.avatarUrl,
+          },
+        ],
+      });
+    }
+  }
+
+  if (candidates.length === 0) return null;
+  const randomIndex = Math.floor(Math.random() * candidates.length);
+  return candidates[randomIndex];
+}
+
 export async function fetchDashboardNominationUpdates(
   supabase,
   limitCount = null,

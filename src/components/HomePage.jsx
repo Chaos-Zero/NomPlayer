@@ -7,6 +7,8 @@ import useMediaQuery from '../hooks/useMediaQuery.js';
 import {
   buildDiscoveryCandidates,
   fetchDashboardNominationUpdates,
+  getFastSpotlightCandidate,
+  loadStaticNominationUpdates,
   pickNextDiscoveryCandidate,
 } from '../lib/dashboard.js';
 import {
@@ -741,6 +743,7 @@ export default function HomePage({
   const [isExtraLoading, setIsExtraLoading] = useState(true);
   const [expandedUserId, setExpandedUserId] = useState(null);
   const [featuredDiscoveryId, setFeaturedDiscoveryId] = useState(null);
+  const [fastSpotlightCandidate, setFastSpotlightCandidate] = useState(null);
   const [dbUnlistenedCount, setDbUnlistenedCount] = useState(null);
   const [prospectiveFallbackTrack, setProspectiveFallbackTrack] =
     useState(null);
@@ -779,19 +782,24 @@ export default function HomePage({
   );
 
   const discoveryCandidates = useMemo(() => {
-    const candidates = buildDiscoveryCandidates(visibleNominationUpdates, {
+    const rawCandidates = buildDiscoveryCandidates(visibleNominationUpdates, {
       currentPlaylistIds,
       excludeUserId: authUser?.id ?? null,
       limit: 200, // Increased for larger pool
-      ignoreFilterVideoIds: featuredDiscoveryId ? [featuredDiscoveryId] : [],
     });
+
+    const unlistenedCandidates = rawCandidates.filter((item) => {
+      const status = listenedStatusById[item.videoId];
+      return !status || (status !== 'complete' && status !== 'partial');
+    });
+
     // Shuffle candidates to prioritize variety over popularity
-    return [...candidates].sort(() => Math.random() - 0.5);
+    return unlistenedCandidates.sort(() => Math.random() - 0.5);
   }, [
     authUser?.id,
     currentPlaylistIds,
+    listenedStatusById,
     visibleNominationUpdates,
-    featuredDiscoveryId,
   ]);
 
   // Handle persistent Discovery population (only once per load/refresh)
@@ -892,6 +900,20 @@ export default function HomePage({
     let isActive = true;
 
     async function loadDashboardUpdates() {
+      // 1. Load fast spotlight candidate
+      const fastCandidate = await getFastSpotlightCandidate();
+      if (isActive && fastCandidate) {
+        setFastSpotlightCandidate(fastCandidate);
+      }
+
+      // 2. Load static snapshot instantly
+      const staticData = await loadStaticNominationUpdates();
+      if (isActive && staticData.length > 0) {
+        setNominationUpdates(staticData);
+        setIsDashboardLoading(false);
+      }
+
+      // 3. Refresh quietly in the background
       try {
         const data = await fetchDashboardNominationUpdates(
           supabase,
@@ -1107,6 +1129,8 @@ export default function HomePage({
   );
 
   const handleFindNewSong = useCallback(async () => {
+    setFastSpotlightCandidate(null);
+
     const nextCandidate = pickNextDiscoveryCandidate(
       discoveryCandidates,
       featuredDiscoveryId,
@@ -1242,7 +1266,9 @@ export default function HomePage({
         </div>
 
         <div className="dashboard-hero-spotlight">
-          {!isAuthReady || isDashboardLoading || isExtraLoading ? (
+          {!isAuthReady ||
+          ((isDashboardLoading || isExtraLoading) &&
+            !fastSpotlightCandidate) ? (
             <div className="dashboard-feature-card dashboard-feature-card-hero dashboard-hero-loader-placeholder">
               <div className="hero-loader-image-skeleton">
                 <div
@@ -1261,7 +1287,7 @@ export default function HomePage({
                 </div>
               </div>
             </div>
-          ) : featuredDiscoveryCandidate ? (
+          ) : fastSpotlightCandidate || featuredDiscoveryCandidate ? (
             <article className="dashboard-feature-card dashboard-feature-card-hero animate-fade-in">
               {isMobileLayout && (
                 <div className="dashboard-feature-mobile-header">
@@ -1272,7 +1298,9 @@ export default function HomePage({
                     className="dashboard-action-btn dashboard-action-btn-muted dashboard-action-btn-inline"
                     type="button"
                     onClick={() =>
-                      handlePlayDiscoveryCandidate(featuredDiscoveryCandidate)
+                      handlePlayDiscoveryCandidate(
+                        fastSpotlightCandidate || featuredDiscoveryCandidate,
+                      )
                     }
                   >
                     Listen Now
@@ -1281,7 +1309,10 @@ export default function HomePage({
               )}
               <img
                 className="dashboard-feature-thumb"
-                src={featuredDiscoveryCandidate.thumbnail}
+                src={
+                  (fastSpotlightCandidate || featuredDiscoveryCandidate)
+                    .thumbnail
+                }
                 alt=""
                 loading="lazy"
               />
@@ -1291,9 +1322,13 @@ export default function HomePage({
                 <h2 className="dashboard-feature-title">
                   <ScrollingText
                     text={
-                      trackMetadataById[featuredDiscoveryCandidate.videoId]
-                        ? `${trackMetadataById[featuredDiscoveryCandidate.videoId].gameTitle} - ${trackMetadataById[featuredDiscoveryCandidate.videoId].trackTitle}`
-                        : featuredDiscoveryCandidate.title
+                      trackMetadataById[
+                        (fastSpotlightCandidate || featuredDiscoveryCandidate)
+                          .videoId
+                      ]
+                        ? `${trackMetadataById[(fastSpotlightCandidate || featuredDiscoveryCandidate).videoId].gameTitle} - ${trackMetadataById[(fastSpotlightCandidate || featuredDiscoveryCandidate).videoId].trackTitle}`
+                        : (fastSpotlightCandidate || featuredDiscoveryCandidate)
+                            .title
                     }
                     truncateWhenStatic={true}
                   />
@@ -1306,7 +1341,9 @@ export default function HomePage({
                   )}
                   <p className="dashboard-feature-meta-nominators">
                     Nominated by{' '}
-                    {featuredDiscoveryCandidate.nominators
+                    {(
+                      fastSpotlightCandidate || featuredDiscoveryCandidate
+                    ).nominators
                       .map((nominator) =>
                         getDisplayProfileName(nominator.username),
                       )
@@ -1319,7 +1356,9 @@ export default function HomePage({
                       className="dashboard-action-btn dashboard-action-btn-muted"
                       type="button"
                       onClick={() =>
-                        handlePlayDiscoveryCandidate(featuredDiscoveryCandidate)
+                        handlePlayDiscoveryCandidate(
+                          fastSpotlightCandidate || featuredDiscoveryCandidate,
+                        )
                       }
                     >
                       Listen Now
@@ -1329,7 +1368,9 @@ export default function HomePage({
                     className="dashboard-action-btn"
                     type="button"
                     onClick={() =>
-                      handleAddDiscoveryCandidate(featuredDiscoveryCandidate)
+                      handleAddDiscoveryCandidate(
+                        fastSpotlightCandidate || featuredDiscoveryCandidate,
+                      )
                     }
                   >
                     Add to Playlist

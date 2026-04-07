@@ -1,7 +1,7 @@
 -- Supabase Migration: Add updated_at and stats aggregate
 
 -- 1. Create an aggregated view for fast sorting of user-generated stats
-CREATE OR REPLACE VIEW "public"."track_stats_summary" AS
+CREATE OR REPLACE VIEW "public"."track_stats_summary" WITH ("security_invoker"='true') AS
 SELECT
     t.id AS track_id,
     COALESCE(COUNT(tf.user_id), 0) AS total_comments,
