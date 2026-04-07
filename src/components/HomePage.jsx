@@ -27,6 +27,7 @@ import { ContextMenuPortal } from './ContextMenuPortal.jsx';
 import TiltedCard from './TiltedCard.jsx';
 import DiscoveryMarqueeGrid from './DiscoveryMarqueeGrid.jsx';
 import { HeartIcon, LockIcon } from './Icons.jsx';
+import { AnimatedGridPattern } from './AnimatedGridPattern.jsx';
 
 const DASHBOARD_REFRESH_LIMIT = 8;
 
@@ -1233,6 +1234,15 @@ export default function HomePage({
   return (
     <div className="home-shell dashboard-home-shell">
       <section className="dashboard-hero" aria-label="Dashboard overview">
+        <div className="dashboard-hero-bg">
+          <AnimatedGridPattern
+            numSquares={30}
+            maxOpacity={0.15}
+            duration={3}
+            repeatDelay={1}
+            className="dashboard-hero-animated-grid"
+          />
+        </div>
         <div className="dashboard-hero-copy">
           <span className="dashboard-hero-badge">Community Dashboard</span>
           <h1 className="dashboard-hero-title">NomPlayer</h1>

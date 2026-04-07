@@ -331,27 +331,30 @@
   background:
     radial-gradient(
       circle at top right,
-      rgba(56, 189, 248, 0.12),
-      transparent 28%
+      rgba(56, 189, 248, 0.2),
+      transparent 32%
     ),
     radial-gradient(
       circle at bottom left,
-      rgba(236, 72, 153, 0.08),
-      transparent 34%
+      rgba(236, 72, 153, 0.14),
+      transparent 38%
     ),
     linear-gradient(
       135deg,
-      rgba(236, 240, 255, 0.98),
-      rgba(248, 238, 255, 0.94) 46%,
-      rgba(240, 244, 255, 0.96)
+      rgba(220, 226, 245, 0.98),
+      rgba(228, 218, 247, 0.94) 46%,
+      rgba(224, 230, 248, 0.96)
     );
   box-shadow: none;
 }
 
-.theme-light .dashboard-hero::before {
-  background:
-    linear-gradient(90deg, rgba(100, 100, 180, 0.04) 1px, transparent 1px),
-    linear-gradient(rgba(100, 100, 180, 0.04) 1px, transparent 1px);
+.theme-light .dashboard-hero-animated-grid {
+  --grid-stroke: rgba(100, 100, 180, 0.12);
+  --grid-square: rgba(124, 58, 237, 0.15);
+  color: var(--grid-square);
+}
+.theme-light .dashboard-hero-animated-grid .hero-grid-pattern-path {
+  stroke: var(--grid-stroke);
 }
 
 .theme-light .dashboard-hero-badge {
@@ -978,16 +981,25 @@ body {
   overflow: hidden;
 }
 
-.dashboard-hero::before {
-  content: '';
+.dashboard-hero-bg {
   position: absolute;
   inset: 0;
-  background:
-    linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px),
-    linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px);
-  background-size: 24px 24px;
-  mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.8), transparent 92%);
+  z-index: 0;
   pointer-events: none;
+  overflow: hidden;
+}
+
+.dashboard-hero-animated-grid {
+  --grid-stroke: rgba(255, 255, 255, 0.06);
+  --grid-square: rgba(157, 95, 240, 0.28);
+  color: var(--grid-square);
+  mask-image: linear-gradient(180deg, rgba(0, 0, 0, 1), transparent 98%);
+  width: 100%;
+  height: 100%;
+}
+
+.dashboard-hero-animated-grid .hero-grid-pattern-path {
+  stroke: var(--grid-stroke);
 }
 
 .dashboard-hero-copy,
