@@ -92,7 +92,7 @@ export function AnimatedGridPattern({
         resizeObserver.disconnect();
       }
     };
-  }, []);
+  }, [generateSquares, numSquares]);
 
   return (
     <svg
