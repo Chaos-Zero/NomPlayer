@@ -2,6 +2,11 @@ set shell := ["bash", "-eu", "-o", "pipefail", "-c"]
 set dotenv-load := true
 
 deploy:
+    node scripts/exportCatalogSnapshot.js
+    node scripts/exportNominationsSnapshot.js
+    git add src/data/catalogSnapshot.json src/data/userNominationsSnapshot.json
+    MAX_STAGED_FILE_BYTES=31457280 git commit -m "Updating db json" || true
+    git push origin main
     git push github main
 
 supabase-start:

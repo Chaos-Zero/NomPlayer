@@ -4,7 +4,7 @@ set -euo pipefail
 repo_root="$(git rev-parse --show-toplevel)"
 cd "$repo_root"
 
-max_staged_file_bytes="${MAX_STAGED_FILE_BYTES:-2097152}"
+max_staged_file_bytes="${MAX_STAGED_FILE_BYTES:-31457280}" # 30MB default
 
 if ! git diff --cached --check --no-color; then
   cat >&2 <<'EOF'

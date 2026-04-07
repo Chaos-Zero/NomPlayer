@@ -33,5 +33,5 @@ public/NomPlayer_crumb1.png
 public/NomPlayer_crumb2.png
 public/NomPlayer_crumb3.png
 public/Nomplayer_icon_full.png
-src/data/catalogSnapshot.json
-src/data/userNominationsSnapshot.json
+# src/data/catalogSnapshot.json (now committed)
+# (snapshot files being committed)
