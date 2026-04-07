@@ -581,6 +581,8 @@ export default function App() {
   const [guestImportState, setGuestImportState] = useState(null);
   const [guestImportSelections, setGuestImportSelections] = useState(null);
   const [discordAuthUrl, setDiscordAuthUrl] = useState('');
+  const [isAddNominationHighlighted, setIsAddNominationHighlighted] =
+    useState(false);
   const authUserIdRef = useRef(null);
 
   const fetchCommunityCatalog = useCallback(async () => {
@@ -3253,6 +3255,13 @@ export default function App() {
     setShowNominationsList(false);
   }, []);
 
+  const handleOpenNominationsWithHighlight = useCallback(() => {
+    handleOpenNominationsList();
+    setIsAddNominationHighlighted(true);
+    // Auto-clear highlight after 5 seconds
+    setTimeout(() => setIsAddNominationHighlighted(false), 5000);
+  }, [handleOpenNominationsList]);
+
   const handleNominationsListExited = useCallback(() => {
     setRenderNominationsList(false);
   }, []);
@@ -4530,6 +4539,10 @@ export default function App() {
               }
               onShowComments={handleShowComments}
               onNavigateToPlayer={() => handleNavigate('player')}
+              onNavigateToExplorer={() => handleNavigate('explorer')}
+              onNavigateToDatabase={() => handleNavigate('database')}
+              onOpenPlaylist={() => setIsPlaylistCollapsed(false)}
+              onOpenNominationsAdding={handleOpenNominationsWithHighlight}
               onShowToast={(message) =>
                 showDefaultAppToast(message, 'dashboard')
               }
@@ -4736,6 +4749,7 @@ export default function App() {
           authUser={authUser}
           onExport={handleOpenExportModal}
           onSavePlaylist={handleCreateYTPlaylist}
+          highlightAdd={isAddNominationHighlighted}
         />
       )}
 

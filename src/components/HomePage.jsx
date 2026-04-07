@@ -26,33 +26,21 @@ import ThreeDCarousel from './ThreeDCarousel.jsx';
 import { ContextMenuPortal } from './ContextMenuPortal.jsx';
 import TiltedCard from './TiltedCard.jsx';
 import DiscoveryMarqueeGrid from './DiscoveryMarqueeGrid.jsx';
-import { HeartIcon, LockIcon } from './Icons.jsx';
+import {
+  HeartIcon,
+  LockIcon,
+  MusicIcon,
+  SearchIcon,
+  DatabaseIcon,
+  PlaylistPlusIcon,
+  PlayIcon,
+  SpeechBubbleIcon,
+} from './Icons.jsx';
+
 import { AnimatedGridPattern } from './AnimatedGridPattern.jsx';
 import TextType from './TextType.jsx';
 
 const DASHBOARD_REFRESH_LIMIT = 8;
-
-const PlayIcon = ({ size = 16 }) => (
-  <svg viewBox="0 0 24 24" fill="currentColor" width={size} height={size}>
-    <path d="M8 5v14l11-7z" />
-  </svg>
-);
-
-const PlaylistPlusIcon = ({ size = 16 }) => (
-  <svg viewBox="0 0 24 24" fill="currentColor" width={size} height={size}>
-    <path d="M14 10H2v2h12v-2zm0-4H2v2h12V6zm4 8v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zM2 16h8v-2H2v2z" />
-  </svg>
-);
-
-const SpeechBubbleIcon = ({ size = 14 }) => (
-  <svg viewBox="0 0 20 20" fill="currentColor" width={size} height={size}>
-    <path
-      fillRule="evenodd"
-      d="M10 2c-2.236 0-4.43.18-6.57.532a2.31 2.31 0 00-1.93 2.185c-.286 1.9-.447 3.832-.482 5.8a2.301 2.301 0 001.077 2.05L4 14.5V17a1 1 0 001.625.78L8.734 15.1c.42.025.84.042 1.266.05 2.236 0 4.43-.18 6.57-.532a2.31 2.31 0 001.93-2.185c.286-1.9.447-3.832.482-5.8a2.301 2.301 0 00-1.077-2.05L16 3.5V2h-6z"
-      clipRule="evenodd"
-    />
-  </svg>
-);
 
 const MOBILE_DASHBOARD_COLLAPSE_DEFAULTS = {
   overview: false,
@@ -728,7 +716,12 @@ export default function HomePage({
   onPlayNow,
   onShowComments,
   onNavigateToPlayer,
+  onNavigateToExplorer,
+  onNavigateToDatabase,
+  onOpenPlaylist,
+  onOpenNominationsAdding,
   onToggleSupport,
+
   onOpenSupportDropdown,
   supportStatusById = {},
   isFeedbackPanelOpen = false,
@@ -1264,8 +1257,46 @@ export default function HomePage({
               className="dashboard-action-btn dashboard-action-btn-primary"
               type="button"
               onClick={onNavigateToPlayer}
+              title="Open the full video player"
             >
-              Open player
+              <PlayIcon />
+              <span>Player</span>
+            </button>
+            <button
+              className="dashboard-action-btn dashboard-action-btn-secondary"
+              type="button"
+              onClick={onOpenNominationsAdding}
+              title="Add songs to your nomination list"
+            >
+              <PlaylistPlusIcon />
+              <span>Add Nominations</span>
+            </button>
+            <button
+              className="dashboard-action-btn dashboard-action-btn-secondary"
+              type="button"
+              onClick={onOpenPlaylist}
+              title="View your current playback queue"
+            >
+              <MusicIcon />
+              <span>View Playlist</span>
+            </button>
+            <button
+              className="dashboard-action-btn dashboard-action-btn-tertiary"
+              type="button"
+              onClick={onNavigateToExplorer}
+              title="Browse and manage all nomination lists"
+            >
+              <SearchIcon />
+              <span>Manage Lists</span>
+            </button>
+            <button
+              className="dashboard-action-btn dashboard-action-btn-tertiary"
+              type="button"
+              onClick={onNavigateToDatabase}
+              title="Access the full VGMC track database"
+            >
+              <DatabaseIcon />
+              <span>View DB</span>
             </button>
           </div>
 

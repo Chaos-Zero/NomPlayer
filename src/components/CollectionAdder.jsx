@@ -32,6 +32,7 @@ export default function CollectionAdder({
   emptyAddMessage,
   inputPlaceholder = 'Paste a YouTube video or playlist URL…',
   compact = false,
+  highlight = false,
 }) {
   const [urlValue, setUrlValue] = useState('');
   const [isOpen, setIsOpen] = useState(false);
@@ -224,7 +225,7 @@ export default function CollectionAdder({
 
   return (
     <div
-      className={`collection-adder tone-${tone}${compact ? ' compact' : ''}${isOpen ? ' open' : ''}${showSuccess ? ' success' : ''}`}
+      className={`collection-adder tone-${tone}${compact ? ' compact' : ''}${isOpen ? ' open' : ''}${showSuccess ? ' success' : ''}${highlight ? ' highlight-pulse' : ''}`}
     >
       {toastMessage && (
         <div

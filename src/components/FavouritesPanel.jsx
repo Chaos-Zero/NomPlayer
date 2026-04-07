@@ -330,6 +330,7 @@ export default function FavouritesPanel({
   onUpdateMetadata = () => {},
   onOpenSupportDropdown = () => {},
   authUser = null,
+  highlightAdd = false,
 }) {
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -713,6 +714,7 @@ export default function FavouritesPanel({
             tone={tone}
             addButtonLabel={addButtonLabel}
             onAddDirectItems={onAddDirectItems}
+            highlight={highlightAdd}
           />
         </div>
 
