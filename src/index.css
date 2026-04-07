@@ -1013,6 +1013,7 @@ body {
   flex-direction: column;
   gap: 18px;
   min-width: 0;
+  height: 100%;
 }
 
 .dashboard-hero-badge {
@@ -11897,67 +11898,75 @@ body.is-resizing .resize-handle {
   object-fit: cover;
 }
 
-/* --- Dynamic Stats: Glass Variant --- */
+/* --- Dynamic Stats: Space-Filling Anchor --- */
 .dynamic-stat-strip {
-  margin-top: 1.5rem;
+  display: flex !important; /* Override the 4-column grid from .dashboard-stat-strip */
+  flex-direction: column;
+  margin-top: auto;
   width: 100%;
+  padding-top: 1.5rem;
 }
 
 .dashboard-stat-card-consolidated {
   display: flex !important;
   align-items: center;
+  justify-content: center; /* Center content to feel more balanced across the width */
   background: var(--bg-glass);
-  backdrop-filter: blur(12px);
-  padding: 10px 20px;
-  border-radius: 14px;
+  backdrop-filter: blur(14px);
+  padding: 16px 32px;
+  border-radius: 18px;
   border: 1px solid var(--border);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
   transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-  min-height: 48px;
-  max-width: fit-content;
+  min-height: 64px;
+  width: 100%; /* Fill the width as requested */
+  max-width: 600px; /* But keep it readable */
 }
 
 .dashboard-stat-card-consolidated:hover {
-  transform: translateY(-2px);
+  transform: translateY(-4px);
   background: var(--bg-glass-hover);
   border-color: var(--border-hover);
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.2);
 }
 
 .dashboard-stat-label-box {
   display: flex;
   align-items: center;
+  width: 100%;
+  justify-content: center;
 }
 
 .dashboard-stat-label-rotation {
-  font-size: 1.15rem;
-  font-weight: 600;
+  font-size: 1.6rem; /* Restored some scale for impact */
+  font-weight: 700;
   color: var(--text-primary);
-  letter-spacing: 0.02em;
+  letter-spacing: -0.01em;
   display: flex;
   align-items: center;
-  line-height: normal;
+  line-height: 1.2;
+  white-space: nowrap; /* Prevent vertical wrapping */
 }
 
 /* Cursor Adaptation */
 .text-type__cursor {
   font-weight: 400;
-  margin-left: 2px;
+  margin-left: 4px;
   color: var(--accent);
-  font-size: 1.25rem;
+  font-size: 1.8rem;
 }
 
 .theme-light .dashboard-stat-card-consolidated {
-  background: rgba(255, 255, 255, 0.7);
-  border-color: rgba(0, 0, 0, 0.05);
+  background: rgba(255, 255, 255, 0.75);
+  border-color: rgba(0, 0, 0, 0.08);
 }
 
 @media (max-width: 960px) {
   .dashboard-stat-card-consolidated {
-    padding: 8px 16px;
-    min-height: 40px;
+    padding: 12px 24px;
+    min-height: 52px;
   }
   .dashboard-stat-label-rotation {
-    font-size: 1rem;
+    font-size: 1.3rem;
   }
 }

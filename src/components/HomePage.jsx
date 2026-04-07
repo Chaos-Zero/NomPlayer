@@ -1179,17 +1179,17 @@ export default function HomePage({
   const dashboardStats = useMemo(
     () => [
       {
-        label: 'Updated lists',
+        label: 'Nomination Lists',
         value: visibleNominationUpdates.length,
         accent: 'purple',
       },
       {
-        label: 'New nominations',
+        label: 'New Nominations',
         value: totalVisibleNominationCount,
         accent: 'orange',
       },
       {
-        label: authUser ? 'Songs remaining' : 'VGMC Nominations',
+        label: authUser ? 'Unheard from DB' : 'VGMC Nominations',
         value: dbUnlistenedCount || 0,
         accent: 'blue',
       },
