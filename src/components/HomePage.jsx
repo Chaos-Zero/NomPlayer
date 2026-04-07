@@ -28,6 +28,7 @@ import TiltedCard from './TiltedCard.jsx';
 import DiscoveryMarqueeGrid from './DiscoveryMarqueeGrid.jsx';
 import { HeartIcon, LockIcon } from './Icons.jsx';
 import { AnimatedGridPattern } from './AnimatedGridPattern.jsx';
+import TextType from './TextType.jsx';
 
 const DASHBOARD_REFRESH_LIMIT = 8;
 
@@ -1175,25 +1176,31 @@ export default function HomePage({
     supabase,
   ]);
 
-  const dashboardStats = [
-    {
-      label: 'Updated lists',
-      value: isDashboardLoading
-        ? '...'
-        : String(visibleNominationUpdates.length),
-      accent: 'purple',
-    },
-    {
-      label: 'New nominations',
-      value: isDashboardLoading ? '...' : String(totalVisibleNominationCount),
-      accent: 'orange',
-    },
-    {
-      label: authUser ? 'VGMC songs remaining' : 'VGMC Nominations',
-      value: dbUnlistenedCount === null ? '...' : String(dbUnlistenedCount),
-      accent: 'blue',
-    },
-  ];
+  const dashboardStats = useMemo(
+    () => [
+      {
+        label: 'Updated lists',
+        value: visibleNominationUpdates.length,
+        accent: 'purple',
+      },
+      {
+        label: 'New nominations',
+        value: totalVisibleNominationCount,
+        accent: 'orange',
+      },
+      {
+        label: authUser ? 'Songs remaining' : 'VGMC Nominations',
+        value: dbUnlistenedCount || 0,
+        accent: 'blue',
+      },
+    ],
+    [
+      visibleNominationUpdates.length,
+      totalVisibleNominationCount,
+      authUser,
+      dbUnlistenedCount,
+    ],
+  );
 
   const sectionSummaries = useMemo(
     () => ({
@@ -1262,16 +1269,30 @@ export default function HomePage({
             </button>
           </div>
 
-          <div className="dashboard-stat-strip">
-            {dashboardStats.map((stat) => (
-              <div
-                key={stat.label}
-                className={`dashboard-stat-card dashboard-stat-card-${stat.accent}`}
-              >
-                <span className="dashboard-stat-value">{stat.value}</span>
-                <span className="dashboard-stat-label">{stat.label}</span>
+          <div className="dashboard-stat-strip dynamic-stat-strip">
+            <div className={`dashboard-stat-card-consolidated`}>
+              <div className="dashboard-stat-label-box">
+                {!isDashboardLoading ? (
+                  <TextType
+                    text={dashboardStats.map((s) => `${s.value} ${s.label}`)}
+                    className="dashboard-stat-label-rotation"
+                    typingSpeed={60}
+                    deletingSpeed={30}
+                    pauseDuration={5000}
+                    showCursor={true}
+                    cursorCharacter="_"
+                    loop={true}
+                  />
+                ) : (
+                  <TextType
+                    text={['']}
+                    className="dashboard-stat-label-rotation"
+                    showCursor={true}
+                    cursorCharacter="_"
+                  />
+                )}
               </div>
-            ))}
+            </div>
           </div>
         </div>
 
