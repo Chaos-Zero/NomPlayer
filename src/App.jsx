@@ -4174,6 +4174,32 @@ export default function App() {
     ],
   );
 
+  const handleTogglePlaylist = useCallback(() => {
+    // If we're on the dashboard/other home views, we toggle the Desktop Overlay state
+    if (!isPlayerPage) {
+      setIsDesktopOverlayPlaylistOpen((prev) => !prev);
+      // Ensure it's never starting in a collapsed state when opened from here
+      setIsPlaylistCollapsed(false);
+    } else {
+      // If we're on the player page, we just toggle the regular collapse state
+      setIsPlaylistCollapsed((prev) => !prev);
+    }
+    // ensure we are looking at personal view
+    setActivePlaylistView({ type: 'personal' });
+  }, [isPlayerPage]);
+
+  const handleNavigateToPlayer = useCallback(() => {
+    handleNavigate('player');
+  }, [handleNavigate]);
+
+  const handleNavigateToExplorer = useCallback(() => {
+    handleNavigate('listExplorer');
+  }, [handleNavigate]);
+
+  const handleNavigateToDatabase = useCallback(() => {
+    handleNavigate('database');
+  }, [handleNavigate]);
+
   const shellIsCollapsed =
     isPlaylistCollapsed ||
     !isPlayerPage ||
@@ -4538,10 +4564,10 @@ export default function App() {
                 setSupportLevelDropdown({ video, position, direction: 'down' })
               }
               onShowComments={handleShowComments}
-              onNavigateToPlayer={() => handleNavigate('player')}
-              onNavigateToExplorer={() => handleNavigate('explorer')}
-              onNavigateToDatabase={() => handleNavigate('database')}
-              onOpenPlaylist={() => setIsPlaylistCollapsed(false)}
+              onNavigateToPlayer={handleNavigateToPlayer}
+              onNavigateToExplorer={handleNavigateToExplorer}
+              onNavigateToDatabase={handleNavigateToDatabase}
+              onOpenPlaylist={handleTogglePlaylist}
               onOpenNominationsAdding={handleOpenNominationsWithHighlight}
               onShowToast={(message) =>
                 showDefaultAppToast(message, 'dashboard')

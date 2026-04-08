@@ -35,10 +35,12 @@ import {
   PlaylistPlusIcon,
   PlayIcon,
   SpeechBubbleIcon,
+  StarIcon,
 } from './Icons.jsx';
 
 import { AnimatedGridPattern } from './AnimatedGridPattern.jsx';
 import TextType from './TextType.jsx';
+import Dock from './Dock.jsx';
 
 const DASHBOARD_REFRESH_LIMIT = 8;
 
@@ -746,6 +748,48 @@ export default function HomePage({
     MOBILE_DASHBOARD_COLLAPSE_DEFAULTS,
   );
   const [maxVgmcNumber, setMaxVgmcNumber] = useState(24);
+
+  const dockItems = useMemo(
+    () => [
+      {
+        icon: <PlayIcon />,
+        label: 'Player',
+        onClick: onNavigateToPlayer,
+        className: 'dashboard-action-btn-primary',
+      },
+      {
+        icon: <StarIcon />,
+        label: 'Add Nominations',
+        onClick: onOpenNominationsAdding,
+        className: 'dashboard-action-btn-secondary',
+      },
+      {
+        icon: <PlaylistPlusIcon />,
+        label: 'View Playlist',
+        onClick: onOpenPlaylist,
+        className: 'dashboard-action-btn-secondary',
+      },
+      {
+        icon: <SearchIcon />,
+        label: 'Manage Lists',
+        onClick: onNavigateToExplorer,
+        className: 'dashboard-action-btn-tertiary',
+      },
+      {
+        icon: <DatabaseIcon />,
+        label: 'View DB',
+        onClick: onNavigateToDatabase,
+        className: 'dashboard-action-btn-tertiary',
+      },
+    ],
+    [
+      onNavigateToPlayer,
+      onOpenNominationsAdding,
+      onOpenPlaylist,
+      onNavigateToExplorer,
+      onNavigateToDatabase,
+    ],
+  );
   const [trackMetadataById, setTrackMetadataById] = useState({});
   const [isShowingFallback, setIsShowingFallback] = useState(false);
   const [isMetadataLoading, setIsMetadataLoading] = useState(true);
@@ -1253,51 +1297,7 @@ export default function HomePage({
           </p>
 
           <div className="dashboard-hero-actions">
-            <button
-              className="dashboard-action-btn dashboard-action-btn-primary"
-              type="button"
-              onClick={onNavigateToPlayer}
-              title="Open the full video player"
-            >
-              <PlayIcon />
-              <span>Player</span>
-            </button>
-            <button
-              className="dashboard-action-btn dashboard-action-btn-secondary"
-              type="button"
-              onClick={onOpenNominationsAdding}
-              title="Add songs to your nomination list"
-            >
-              <PlaylistPlusIcon />
-              <span>Add Nominations</span>
-            </button>
-            <button
-              className="dashboard-action-btn dashboard-action-btn-secondary"
-              type="button"
-              onClick={onOpenPlaylist}
-              title="View your current playback queue"
-            >
-              <MusicIcon />
-              <span>View Playlist</span>
-            </button>
-            <button
-              className="dashboard-action-btn dashboard-action-btn-tertiary"
-              type="button"
-              onClick={onNavigateToExplorer}
-              title="Browse and manage all nomination lists"
-            >
-              <SearchIcon />
-              <span>Manage Lists</span>
-            </button>
-            <button
-              className="dashboard-action-btn dashboard-action-btn-tertiary"
-              type="button"
-              onClick={onNavigateToDatabase}
-              title="Access the full VGMC track database"
-            >
-              <DatabaseIcon />
-              <span>View DB</span>
-            </button>
+            <Dock items={dockItems} />
           </div>
 
           <div className="dashboard-stat-strip dynamic-stat-strip">
