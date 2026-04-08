@@ -409,6 +409,18 @@ export async function fetchMaxVgmcNumber(supabase) {
 
   return max || 24;
 }
+export async function findTrackInCatalog(supabase, videoId) {
+  if (!videoId) return null;
+  const catalog = await getFullCatalog(supabase);
+  const found = catalog.find(
+    (t) => t.source_external_id === videoId || t.videoId === videoId,
+  );
+  if (found) {
+    return normalizeTrackCatalogEntry(found);
+  }
+  return null;
+}
+
 let memoryCatalog = null;
 
 async function getFullCatalog(supabase) {

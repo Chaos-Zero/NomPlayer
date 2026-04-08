@@ -1209,6 +1209,7 @@ export default function ListExplorer({
   onSavePlaylist,
   onOpenSupportDropdown,
   onPlayCommunityList,
+  catalogTrackByVideoId,
 }) {
   const [focusedListId, setFocusedListId] = useState(null);
   const [activeCustomPlaylistId, setActiveCustomPlaylistId] = useState(null);
@@ -1230,6 +1231,7 @@ export default function ListExplorer({
   });
   const [isLoadingActivity, setIsLoadingActivity] = useState(false);
   const [isLoadingCommunity, setIsLoadingCommunity] = useState(false);
+  const [remoteTrackData, setRemoteTrackData] = useState(null);
   const [dragButton, setDragButton] = useState(0);
   const gridRef = useRef(null);
 
@@ -1239,6 +1241,12 @@ export default function ListExplorer({
       setActiveCustomPlaylistId(customPlaylists[0].id);
     }
   }, [customPlaylists, activeCustomPlaylistId]);
+
+  // Reset selection when switching views
+  useEffect(() => {
+    setSelectedTrackId(null);
+    setSelectedColumnId(null);
+  }, [explorerView]);
 
   const activeCustomPlaylist = useMemo(() => {
     if (!customPlaylists) return null;
@@ -1822,6 +1830,51 @@ export default function ListExplorer({
       );
       return !!track;
     });
+
+    // Fallback 1: Check in-memory catalog from App (covers local JSON snapshot)
+    if (!track && selectedTrackId && catalogTrackByVideoId?.[selectedTrackId]) {
+      const cat = catalogTrackByVideoId[selectedTrackId];
+      track = {
+        videoId: selectedTrackId,
+        id: selectedTrackId,
+        trackId: cat.trackId,
+        canonical_track_title: cat.trackTitle || cat.displayTitle || cat.title,
+        canonical_game_title: cat.gameTitle || cat.channelTitle,
+        isTransient: true,
+      };
+    }
+
+    // Fallback 2: Check loaded community activity data
+    if (!track && selectedTrackId) {
+      const allGroups = [
+        ...(activityData.personal || []),
+        ...(activityData.peer || []),
+        ...(activityData.highlights || []),
+      ];
+      const foundGroup = allGroups.find((g) => {
+        const vid = g.track?.track_sources?.[0]?.external_id || g.track_id;
+        return vid === selectedTrackId;
+      });
+      if (foundGroup && foundGroup.track) {
+        track = {
+          videoId: selectedTrackId,
+          id: selectedTrackId,
+          canonical_track_title: foundGroup.track.canonical_track_title,
+          canonical_game_title: foundGroup.track.canonical_game_title,
+          isTransient: true,
+        };
+      }
+    }
+
+    // Fallback 3: Check remote metadata state from catalog fetch
+    if (
+      !track &&
+      remoteTrackData &&
+      remoteTrackData.videoId === selectedTrackId
+    ) {
+      track = remoteTrackData;
+    }
+
     return track;
   }, [
     selectedTrackId,
@@ -1831,6 +1884,9 @@ export default function ListExplorer({
     activeCustomPlaylist,
     newNominations,
     peerColumns,
+    activityData,
+    remoteTrackData,
+    catalogTrackByVideoId,
   ]);
 
   // Fetch community data when selection changes
@@ -1842,17 +1898,55 @@ export default function ListExplorer({
 
     let active = true;
     setIsLoadingCommunity(true);
+    setRemoteTrackData(null); // Reset cache so we don't show ghost metadata
 
     const fetchData = async () => {
       try {
         // Fetch track metadata from catalog for track_id and tournament info
-        const { data: catalogData } = await supabase
-          .from('track_catalog')
-          .select('track_id, tournaments')
-          .eq('source_external_id', selectedTrackId)
-          .single();
+        // 1. Try to find the track in the full catalog (local JSON + remote)
+        let catalogData = null;
+        try {
+          const { findTrackInCatalog } = await import('../lib/trackCatalog.js');
+          catalogData = await findTrackInCatalog(supabase, selectedTrackId);
+        } catch (err) {
+          console.error('Error searching catalog:', err);
+        }
 
-        const trackIdForFeedback = catalogData?.track_id;
+        // 2. If not in catalog, fallback to a direct database fetch
+        if (!catalogData) {
+          try {
+            const { data } = await supabase
+              .from('track_catalog')
+              .select(
+                'track_id, canonical_track_title, canonical_game_title, tournaments(sequence_number), track_sources(external_id)',
+              )
+              .eq('source_external_id', selectedTrackId)
+              .maybeSingle();
+            catalogData = data;
+          } catch (err) {
+            console.error('Error fetching fallback catalog data:', err);
+          }
+        }
+
+        if (active && catalogData) {
+          // Update remote metadata cache so the panel can load
+          setRemoteTrackData({
+            videoId: selectedTrackId,
+            id: selectedTrackId,
+            trackId: catalogData.track_id || catalogData.trackId,
+            canonical_track_title:
+              catalogData.canonical_track_title ||
+              catalogData.trackTitle ||
+              catalogData.displayTitle,
+            canonical_game_title:
+              catalogData.canonical_game_title || catalogData.gameTitle,
+            tournaments: catalogData.tournaments,
+            isTransient: true,
+          });
+        }
+
+        const trackIdForFeedback =
+          catalogData?.track_id || catalogData?.trackId;
 
         // Fetch feedback (all users)
         let feedbackData = [];
@@ -2054,7 +2148,7 @@ export default function ListExplorer({
 
   return (
     <div
-      className={`list-explorer-container ${focusedListId ? 'has-focused' : ''} ${selectedTrackId ? 'has-selection' : ''}`}
+      className={`list-explorer-container ${focusedListId ? 'has-focused' : ''} ${selectedTrackId && explorerView !== 'comments' ? 'has-selection' : ''}`}
     >
       <div className="list-explorer-header">
         <div className="list-explorer-title-group">
@@ -2129,124 +2223,126 @@ export default function ListExplorer({
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
       >
-        <TrackInfoPanel
-          key={selectedTrack?.videoId || 'none'}
-          track={selectedTrack}
-          communityData={communityData}
-          isLoadingData={isLoadingCommunity}
-          isSaving={isSavingFeedback}
-          onClose={() => {
-            setSelectedTrackId(null);
-            setSelectedColumnId(null);
-          }}
-          authUser={authUser}
-          userProfile={authUser?.profile}
-          onUpdateComment={(videoId, comment) =>
-            handleUpdateComment(
-              selectedTrackId ? findListId(selectedTrackId) : null,
-              videoId,
-              comment,
-            )
-          }
-          onDeleteFeedback={async () => {
-            if (!supabase || !authUser || !selectedTrack) return;
-            if (
-              !window.confirm(
-                'Delete your feedback for this track? This cannot be undone.',
+        {explorerView !== 'comments' && (
+          <TrackInfoPanel
+            key={selectedTrack?.videoId || 'none'}
+            track={selectedTrack}
+            communityData={communityData}
+            isLoadingData={isLoadingCommunity}
+            isSaving={isSavingFeedback}
+            onClose={() => {
+              setSelectedTrackId(null);
+              setSelectedColumnId(null);
+            }}
+            authUser={authUser}
+            userProfile={authUser?.profile}
+            onUpdateComment={(videoId, comment) =>
+              handleUpdateComment(
+                selectedTrackId ? findListId(selectedTrackId) : null,
+                videoId,
+                comment,
               )
-            )
-              return;
-
-            setIsSavingFeedback(true);
-            try {
-              let trackId = selectedTrack.trackId || selectedTrack.id;
-              if (!trackId || !/^[0-9a-f-]{36}$/i.test(trackId)) {
-                // Ingest if somehow track info lost UUID
-                const ingested = await ingestYouTubeTrackSources(supabase, [
-                  selectedTrack,
-                ]);
-                if (ingested && ingested.length > 0) {
-                  trackId = ingested[0].track_id;
-                }
-              }
-
-              if (!trackId) throw new Error('Could not identify track.');
-
-              await deleteUserFeedback(supabase, authUser.id, trackId);
-              // Refresh community data
-              setCommunityData((prev) => ({
-                ...prev,
-                feedback: prev.feedback.filter(
-                  (f) => f.user_id !== authUser.id,
-                ),
-              }));
-
-              onShowToast?.('Feedback deleted.', 'dashboard');
-            } catch (err) {
-              console.error('Delete failed:', err);
-              onShowToast?.('Failed to delete feedback.', 'error');
-            } finally {
-              setIsSavingFeedback(false);
             }
-          }}
-          onSaveFeedback={async (rating, note) => {
-            if (!supabase || !authUser || !selectedTrack) return;
-            setIsSavingFeedback(true);
-            try {
-              let trackId = selectedTrack.trackId || selectedTrack.id;
-              // Ingest if missing UUID
-              if (!trackId || !/^[0-9a-f-]{36}$/i.test(trackId)) {
-                const ingested = await ingestYouTubeTrackSources(supabase, [
-                  selectedTrack,
-                ]);
-                if (ingested && ingested.length > 0) {
-                  trackId = ingested[0].track_id;
-                  // Update local list state
-                  const updateId = (list) =>
-                    list.map((v) =>
-                      v.videoId === selectedTrack.videoId
-                        ? { ...v, trackId }
-                        : v,
-                    );
-                  onUpdateNominationList(updateId(nominationList));
-                  onUpdateSupportList(updateId(supportList));
-                  onUpdatePlaylist(updateId(playlist));
-                }
-              }
-
-              if (!trackId) {
-                onShowToast('Could not link track for feedback.');
+            onDeleteFeedback={async () => {
+              if (!supabase || !authUser || !selectedTrack) return;
+              if (
+                !window.confirm(
+                  'Delete your feedback for this track? This cannot be undone.',
+                )
+              )
                 return;
+
+              setIsSavingFeedback(true);
+              try {
+                let trackId = selectedTrack.trackId || selectedTrack.id;
+                if (!trackId || !/^[0-9a-f-]{36}$/i.test(trackId)) {
+                  // Ingest if somehow track info lost UUID
+                  const ingested = await ingestYouTubeTrackSources(supabase, [
+                    selectedTrack,
+                  ]);
+                  if (ingested && ingested.length > 0) {
+                    trackId = ingested[0].track_id;
+                  }
+                }
+
+                if (!trackId) throw new Error('Could not identify track.');
+
+                await deleteUserFeedback(supabase, authUser.id, trackId);
+                // Refresh community data
+                setCommunityData((prev) => ({
+                  ...prev,
+                  feedback: prev.feedback.filter(
+                    (f) => f.user_id !== authUser.id,
+                  ),
+                }));
+
+                onShowToast?.('Feedback deleted.', 'dashboard');
+              } catch (err) {
+                console.error('Delete failed:', err);
+                onShowToast?.('Failed to delete feedback.', 'error');
+              } finally {
+                setIsSavingFeedback(false);
               }
+            }}
+            onSaveFeedback={async (rating, note) => {
+              if (!supabase || !authUser || !selectedTrack) return;
+              setIsSavingFeedback(true);
+              try {
+                let trackId = selectedTrack.trackId || selectedTrack.id;
+                // Ingest if missing UUID
+                if (!trackId || !/^[0-9a-f-]{36}$/i.test(trackId)) {
+                  const ingested = await ingestYouTubeTrackSources(supabase, [
+                    selectedTrack,
+                  ]);
+                  if (ingested && ingested.length > 0) {
+                    trackId = ingested[0].track_id;
+                    // Update local list state
+                    const updateId = (list) =>
+                      list.map((v) =>
+                        v.videoId === selectedTrack.videoId
+                          ? { ...v, trackId }
+                          : v,
+                      );
+                    onUpdateNominationList(updateId(nominationList));
+                    onUpdateSupportList(updateId(supportList));
+                    onUpdatePlaylist(updateId(playlist));
+                  }
+                }
 
-              await upsertUserFeedback(supabase, authUser.id, trackId, {
-                rating: rating || null,
-                note: note || null,
-              });
+                if (!trackId) {
+                  onShowToast('Could not link track for feedback.');
+                  return;
+                }
 
-              onShowToast('Feedback saved!');
+                await upsertUserFeedback(supabase, authUser.id, trackId, {
+                  rating: rating || null,
+                  note: note || null,
+                });
 
-              // If we added a note, it won't be in our "others" set anyway,
-              // but if we deleted a note (not possible here yet but good practice),
-              // we might want to refresh. Since it's our own note, no UI change needed for the balloon.
+                onShowToast('Feedback saved!');
 
-              // Refresh community feedback
-              const feedbackData = await fetchCommunityFeedback(
-                supabase,
-                trackId,
-              );
-              setCommunityData((prev) => ({
-                ...prev,
-                feedback: feedbackData || [],
-              }));
-            } catch (err) {
-              console.error('Error saving feedback:', err);
-              onShowToast('Failed to save feedback.');
-            } finally {
-              setIsSavingFeedback(false);
-            }
-          }}
-        />
+                // If we added a note, it won't be in our "others" set anyway,
+                // but if we deleted a note (not possible here yet but good practice),
+                // we might want to refresh. Since it's our own note, no UI change needed for the balloon.
+
+                // Refresh community feedback
+                const feedbackData = await fetchCommunityFeedback(
+                  supabase,
+                  trackId,
+                );
+                setCommunityData((prev) => ({
+                  ...prev,
+                  feedback: feedbackData || [],
+                }));
+              } catch (err) {
+                console.error('Error saving feedback:', err);
+                onShowToast('Failed to save feedback.');
+              } finally {
+                setIsSavingFeedback(false);
+              }
+            }}
+          />
+        )}
 
         <div className="list-explorer-layout">
           <AnimatePresence mode="wait">
@@ -2512,11 +2608,7 @@ export default function ListExplorer({
                 <CommentsView
                   data={activityData}
                   isLoading={isLoadingActivity}
-                  onSelectTrack={(vid) => {
-                    setSelectedTrackId(vid);
-                    // No specific column for activity cards, they are standalone
-                    setSelectedColumnId(null);
-                  }}
+                  onSelectTrack={() => {}}
                   onPlayNow={onPlayNow}
                 />
               </Motion.div>
