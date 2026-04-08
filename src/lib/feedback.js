@@ -111,6 +111,7 @@ export async function fetchDetailedUserActivity(
     .from('track_user_feedback')
     .select(
       `
+      track_id,
       rating,
       note,
       updated_at,
@@ -136,6 +137,7 @@ export async function fetchDetailedUserActivity(
       .from('track_user_feedback')
       .select(
         `
+        track_id,
         rating,
         note,
         updated_at,
@@ -168,6 +170,7 @@ export async function fetchDetailedUserActivity(
     .from('track_user_feedback')
     .select(
       `
+      track_id,
       rating,
       note,
       updated_at,

@@ -9940,6 +9940,7 @@ body.is-resizing .resize-handle {
   flex-direction: column;
   gap: 12px;
   transition: all var(--transition);
+  cursor: pointer;
 }
 
 .activity-card:hover {
@@ -9949,15 +9950,22 @@ body.is-resizing .resize-handle {
   box-shadow: var(--shadow-md);
 }
 
+.activity-card.grouped {
+  cursor: pointer;
+}
+
 .activity-card-header {
   display: flex;
   gap: 12px;
-  align-items: flex-start;
+  align-items: center;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 12px;
 }
 
 .activity-card-thumb {
-  width: 60px;
-  height: 60px;
+  width: 44px;
+  height: 44px;
   border-radius: var(--radius-md);
   object-fit: cover;
   flex-shrink: 0;
@@ -9991,11 +9999,7 @@ body.is-resizing .resize-handle {
   font-size: 12px;
   color: var(--text-secondary);
   font-weight: 500;
-}
-
-.activity-card-content {
-  position: relative;
-  /* Reusing list-explorer-peer-item styles for better consistency */
+  opacity: 0.8;
 }
 
 .activity-card-date {
@@ -10004,6 +10008,18 @@ body.is-resizing .resize-handle {
   font-weight: 500;
   white-space: nowrap;
   opacity: 0.7;
+}
+
+.activity-card-feedback-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.activity-card-feedback-list .list-explorer-peer-item {
+  margin: 0;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  box-shadow: none;
 }
 
 /* Compact Comment Indicator for List Cards */

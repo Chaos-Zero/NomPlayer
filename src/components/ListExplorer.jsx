@@ -986,33 +986,61 @@ function CommentsView({ data, isLoading, onSelectTrack }) {
     );
   }
 
-  const hasPersonal = data.personal && data.personal.length > 0;
-  const hasPeer = data.peer && data.peer.length > 0;
-  const hasHighlights = data.highlights && data.highlights.length > 0;
+  const groupData = (items) => {
+    const groups = {};
+    items.forEach((f) => {
+      // Use track_id from the feedback record if tracks object is missing
+      const trackId = f.tracks?.id || f.track_id;
+      if (!trackId) return;
 
-  if (!hasPersonal && !hasPeer && !hasHighlights) {
-    return (
-      <div className="comments-view-container empty">
-        <div className="list-explorer-list-empty">
-          No activity found yet. Start by adding ratings or comments to tracks!
-        </div>
-      </div>
-    );
-  }
+      if (!groups[trackId]) {
+        groups[trackId] = {
+          track: f.tracks,
+          items: [],
+          latestDate: new Date(f.updated_at),
+        };
+      }
+      groups[trackId].items.push(f);
+      const itemDate = new Date(f.updated_at);
+      if (itemDate > groups[trackId].latestDate) {
+        groups[trackId].latestDate = itemDate;
+      }
+    });
 
-  const renderCard = (f, type) => {
-    const track = f.tracks;
+    // Sort groups by latest activity date
+    return Object.values(groups).sort((a, b) => b.latestDate - a.latestDate);
+  };
+
+  const personalGroups = groupData(data.personal || []);
+
+  // Deduplicate community items by composite key (track_id + user_id) before grouping
+  const combinedCommunity = [...(data.peer || []), ...(data.highlights || [])];
+
+  const uniqueCommunity = Array.from(
+    new Map(
+      combinedCommunity.map((item) => [
+        `${item.track_id}-${item.user_id}`,
+        item,
+      ]),
+    ).values(),
+  );
+
+  const communityGroups = groupData(uniqueCommunity);
+
+  const renderGroupedCard = (group, isPersonal) => {
+    const { track, items, latestDate } = group;
+    // Fallback for track info if needed
     const sources = track?.track_sources || [];
     const videoId = sources[0]?.external_id;
     const thumbnail = `https://i.ytimg.com/vi/${videoId}/mqdefault.jpg`;
 
     return (
       <Motion.div
-        key={`${type}-${f.updated_at}-${f.user_id}`}
+        key={`${isPersonal ? 'p' : 'c'}-${track?.id || items[0]?.track_id}`}
         layout
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
-        className="activity-card"
+        className="activity-card grouped"
         onClick={() => videoId && onSelectTrack(videoId)}
       >
         <div className="activity-card-header">
@@ -1023,7 +1051,7 @@ function CommentsView({ data, isLoading, onSelectTrack }) {
                 {track?.canonical_track_title || 'Unknown Track'}
               </div>
               <div className="activity-card-date">
-                {new Date(f.updated_at).toLocaleDateString(undefined, {
+                {latestDate.toLocaleDateString(undefined, {
                   month: 'short',
                   day: 'numeric',
                 })}
@@ -1034,35 +1062,42 @@ function CommentsView({ data, isLoading, onSelectTrack }) {
             </div>
           </div>
         </div>
-        <div className="activity-card-content">
-          <div
-            className={`list-explorer-peer-item${type === 'personal' ? ' is-owner' : ''}`}
-          >
-            {type !== 'personal' && (
-              <img
-                src={deriveProfileAvatarUrl(f.profiles, f.profiles?.avatar_url)}
-                alt=""
-                className="list-explorer-peer-avatar"
-              />
-            )}
-            <div className="list-explorer-peer-content">
-              <div className="list-explorer-peer-header">
-                {type !== 'personal' ? (
-                  <span className="list-explorer-peer-user">
-                    {getDisplayProfileName(f.profiles?.username, 'Anonymous')}
-                  </span>
-                ) : (
-                  <span className="list-explorer-peer-user">You</span>
-                )}
-                {f.rating && (
-                  <span className="list-explorer-peer-rating">
-                    {f.rating}/10
-                  </span>
-                )}
+
+        <div className="activity-card-feedback-list">
+          {items.map((f, idx) => (
+            <div
+              key={`${f.id || idx}`}
+              className={`list-explorer-peer-item${isPersonal ? ' is-owner' : ''}`}
+            >
+              {!isPersonal && (
+                <img
+                  src={deriveProfileAvatarUrl(
+                    f.profiles,
+                    f.profiles?.avatar_url,
+                  )}
+                  alt=""
+                  className="list-explorer-peer-avatar"
+                />
+              )}
+              <div className="list-explorer-peer-content">
+                <div className="list-explorer-peer-header">
+                  {isPersonal ? (
+                    <span className="list-explorer-peer-user">You</span>
+                  ) : (
+                    <span className="list-explorer-peer-user">
+                      {getDisplayProfileName(f.profiles?.username, 'Anonymous')}
+                    </span>
+                  )}
+                  {f.rating && (
+                    <span className="list-explorer-peer-rating">
+                      {f.rating}/10
+                    </span>
+                  )}
+                </div>
+                {f.note && <p className="list-explorer-peer-note">{f.note}</p>}
               </div>
-              {f.note && <p className="list-explorer-peer-note">{f.note}</p>}
             </div>
-          </div>
+          ))}
         </div>
       </Motion.div>
     );
@@ -1072,8 +1107,8 @@ function CommentsView({ data, isLoading, onSelectTrack }) {
     <div className="comments-view-container">
       <div className="comments-view-section">
         <h3>Your Feedback</h3>
-        {hasPersonal ? (
-          data.personal.map((f) => renderCard(f, 'personal'))
+        {personalGroups.length > 0 ? (
+          personalGroups.map((g) => renderGroupedCard(g, true))
         ) : (
           <p className="list-explorer-view-indicator">
             You haven't left any comments yet.
@@ -1082,17 +1117,13 @@ function CommentsView({ data, isLoading, onSelectTrack }) {
       </div>
 
       <div className="comments-view-section">
-        {(hasPeer || hasHighlights) && (
-          <>
-            <h3>Community Interactions</h3>
-            {hasPeer && data.peer.map((f) => renderCard(f, 'peer'))}
-            {hasHighlights && (
-              <>
-                <h3 style={{ marginTop: '24px' }}>Community Highlights</h3>
-                {data.highlights.map((f) => renderCard(f, 'highlight'))}
-              </>
-            )}
-          </>
+        <h3>Community Interactions</h3>
+        {communityGroups.length > 0 ? (
+          communityGroups.map((g) => renderGroupedCard(g, false))
+        ) : (
+          <p className="list-explorer-view-indicator">
+            No community interactions found.
+          </p>
         )}
       </div>
     </div>
