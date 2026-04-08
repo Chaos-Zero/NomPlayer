@@ -15,6 +15,7 @@ import {
   upsertUserFeedback,
   deleteUserFeedback,
   fetchDetailedUserActivity,
+  fetchTrackStats,
 } from '../lib/feedback.js';
 import { motion as Motion, AnimatePresence } from 'framer-motion';
 import {
@@ -976,6 +977,45 @@ function ListExplorerColumn({
 }
 
 function CommentsView({ data, isLoading, onSelectTrack }) {
+  const groupedActivity = useMemo(() => {
+    if (!data) return [];
+    const groups = {};
+
+    const addToGroup = (f, type) => {
+      const trackId = f.tracks?.id;
+      if (!trackId) return;
+
+      if (!groups[trackId]) {
+        const sources = f.tracks?.track_sources || [];
+        groups[trackId] = {
+          track: f.tracks,
+          videoId: sources[0]?.external_id,
+          feedback: [],
+        };
+      }
+
+      groups[trackId].feedback.push({
+        ...f,
+        type,
+      });
+    };
+
+    data.personal.forEach((f) => addToGroup(f, 'personal'));
+    data.peer.forEach((f) => addToGroup(f, 'peer'));
+    data.highlights.forEach((f) => addToGroup(f, 'highlight'));
+
+    // Sort groups by the latest feedback update
+    return Object.values(groups).sort((a, b) => {
+      const latestA = Math.max(
+        ...a.feedback.map((f) => new Date(f.updated_at).getTime()),
+      );
+      const latestB = Math.max(
+        ...b.feedback.map((f) => new Date(f.updated_at).getTime()),
+      );
+      return latestB - latestA;
+    });
+  }, [data]);
+
   if (isLoading) {
     return (
       <div className="comments-view-container loading">
@@ -986,33 +1026,24 @@ function CommentsView({ data, isLoading, onSelectTrack }) {
     );
   }
 
-  const hasPersonal = data.personal && data.personal.length > 0;
-  const hasPeer = data.peer && data.peer.length > 0;
-  const hasHighlights = data.highlights && data.highlights.length > 0;
-
-  if (!hasPersonal && !hasPeer && !hasHighlights) {
-    return (
-      <div className="comments-view-container empty">
-        <div className="list-explorer-list-empty">
-          No activity found yet. Start by adding ratings or comments to tracks!
-        </div>
-      </div>
-    );
-  }
-
-  const renderCard = (f, type) => {
-    const track = f.tracks;
-    const sources = track?.track_sources || [];
-    const videoId = sources[0]?.external_id;
+  const renderGroup = (group) => {
+    const { track, videoId, feedback } = group;
     const thumbnail = `https://i.ytimg.com/vi/${videoId}/mqdefault.jpg`;
+
+    // Sort feedback within group: Personal first, then by date
+    const sortedFeedback = [...feedback].sort((a, b) => {
+      if (a.type === 'personal') return -1;
+      if (b.type === 'personal') return 1;
+      return new Date(b.updated_at) - new Date(a.updated_at);
+    });
 
     return (
       <Motion.div
-        key={`${type}-${f.updated_at}-${f.user_id}`}
+        key={track.id}
         layout
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
-        className="activity-card"
+        className="activity-card grouped"
         onClick={() => videoId && onSelectTrack(videoId)}
       >
         <div className="activity-card-header">
@@ -1022,78 +1053,91 @@ function CommentsView({ data, isLoading, onSelectTrack }) {
               <div className="activity-card-title">
                 {track?.canonical_track_title || 'Unknown Track'}
               </div>
-              <div className="activity-card-date">
-                {new Date(f.updated_at).toLocaleDateString(undefined, {
-                  month: 'short',
-                  day: 'numeric',
-                })}
-              </div>
             </div>
             <div className="activity-card-game">
               {track?.canonical_game_title || 'Unknown Game'}
             </div>
           </div>
         </div>
-        <div className="activity-card-content">
-          <div
-            className={`list-explorer-peer-item${type === 'personal' ? ' is-owner' : ''}`}
-          >
-            {type !== 'personal' && (
-              <img
-                src={deriveProfileAvatarUrl(f.profiles, f.profiles?.avatar_url)}
-                alt=""
-                className="list-explorer-peer-avatar"
-              />
-            )}
-            <div className="list-explorer-peer-content">
-              <div className="list-explorer-peer-header">
-                {type !== 'personal' ? (
-                  <span className="list-explorer-peer-user">
-                    {getDisplayProfileName(f.profiles?.username, 'Anonymous')}
-                  </span>
-                ) : (
-                  <span className="list-explorer-peer-user">You</span>
-                )}
-                {f.rating && (
-                  <span className="list-explorer-peer-rating">
-                    {f.rating}/10
-                  </span>
-                )}
+
+        <div className="activity-card-feedback-list">
+          {sortedFeedback.map((f, idx) => (
+            <div
+              key={`${f.type}-${idx}`}
+              className={`list-explorer-peer-item${f.type === 'personal' ? ' is-owner' : ''}`}
+            >
+              {f.type !== 'personal' && (
+                <img
+                  src={deriveProfileAvatarUrl(
+                    f.profiles,
+                    f.profiles?.avatar_url,
+                  )}
+                  alt=""
+                  className="list-explorer-peer-avatar"
+                />
+              )}
+              <div className="list-explorer-peer-content">
+                <div className="list-explorer-peer-header">
+                  <div className="list-explorer-peer-user-info">
+                    {f.type === 'personal' ? (
+                      <span className="list-explorer-peer-user">You</span>
+                    ) : (
+                      <span className="list-explorer-peer-user">
+                        {getDisplayProfileName(
+                          f.profiles?.username,
+                          'Anonymous',
+                        )}
+                      </span>
+                    )}
+                    {f.type === 'highlight' && (
+                      <span className="activity-type-badge">Highlight</span>
+                    )}
+                    {f.type === 'peer' && (
+                      <span className="activity-type-badge peer">
+                        Your Nomination
+                      </span>
+                    )}
+                  </div>
+                  <div className="list-explorer-peer-meta">
+                    {f.rating && (
+                      <span className="list-explorer-peer-rating">
+                        {f.rating}/10
+                      </span>
+                    )}
+                    <span className="activity-card-date">
+                      {new Date(f.updated_at).toLocaleDateString(undefined, {
+                        month: 'short',
+                        day: 'numeric',
+                      })}
+                    </span>
+                  </div>
+                </div>
+                {f.note && <p className="list-explorer-peer-note">{f.note}</p>}
               </div>
-              {f.note && <p className="list-explorer-peer-note">{f.note}</p>}
             </div>
-          </div>
+          ))}
         </div>
       </Motion.div>
     );
   };
 
-  return (
-    <div className="comments-view-container">
-      <div className="comments-view-section">
-        <h3>Your Feedback</h3>
-        {hasPersonal ? (
-          data.personal.map((f) => renderCard(f, 'personal'))
-        ) : (
-          <p className="list-explorer-view-indicator">
-            You haven't left any comments yet.
-          </p>
-        )}
+  if (groupedActivity.length === 0) {
+    return (
+      <div className="comments-view-container empty">
+        <div className="list-explorer-list-empty">
+          No activity found yet. Start by adding ratings or comments to tracks!
+        </div>
       </div>
+    );
+  }
 
+  return (
+    <div className="comments-view-container grouped">
       <div className="comments-view-section">
-        {(hasPeer || hasHighlights) && (
-          <>
-            <h3>Community Interactions</h3>
-            {hasPeer && data.peer.map((f) => renderCard(f, 'peer'))}
-            {hasHighlights && (
-              <>
-                <h3 style={{ marginTop: '24px' }}>Community Highlights</h3>
-                {data.highlights.map((f) => renderCard(f, 'highlight'))}
-              </>
-            )}
-          </>
-        )}
+        <h3>Community Activity & Feedback</h3>
+        <div className="activity-groups-list">
+          {groupedActivity.map((group) => renderGroup(group))}
+        </div>
       </div>
     </div>
   );
@@ -1141,6 +1185,8 @@ export default function ListExplorer({
   const [isLoadingActivity, setIsLoadingActivity] = useState(false);
   const [isLoadingCommunity, setIsLoadingCommunity] = useState(false);
   const [dragButton, setDragButton] = useState(0);
+  const [sortOrder, setSortOrder] = useState('default'); // 'default' | 'rating'
+  const [trackStats, setTrackStats] = useState({}); // { trackId: { average_rating, ... } }
   const gridRef = useRef(null);
 
   // Initialize active custom playlist if not set
@@ -1346,6 +1392,74 @@ export default function ListExplorer({
   };
 
   const [isSavingFeedback, setIsSavingFeedback] = useState(false);
+
+  useEffect(() => {
+    if (sortOrder !== 'rating' || !supabase) return;
+
+    // We need trackIds for fetching stats, but we might only have videoIds (YouTube IDs)
+    // Most videos in our lists SHOULD have trackId if they've been interacted with,
+    // but some might be raw YouTube IDs. Stats are track-based.
+
+    const trackIds = [
+      ...new Set(
+        [
+          ...nominationList.map((v) => v.trackId),
+          ...supportList.map((v) => v.trackId),
+          ...playlist.map((v) => v.trackId),
+          ...newNominations.map((v) => v.trackId),
+          ...peerColumns.flatMap((c) => c.videos.map((v) => v.trackId)),
+        ].filter(Boolean),
+      ),
+    ];
+
+    if (trackIds.length === 0) return;
+
+    const fetchStats = async () => {
+      const stats = await fetchTrackStats(supabase, trackIds);
+      const statsMap = {};
+      stats.forEach((s) => {
+        statsMap[s.track_id] = s;
+      });
+      setTrackStats(statsMap);
+    };
+
+    fetchStats();
+  }, [
+    sortOrder,
+    supabase,
+    nominationList,
+    supportList,
+    playlist,
+    newNominations,
+    peerColumns,
+  ]);
+
+  const getSortedVideos = useCallback(
+    (videos) => {
+      if (sortOrder !== 'rating') return videos;
+
+      return [...videos].sort((a, b) => {
+        const ratingA = a.trackId
+          ? trackStats[a.trackId]?.average_rating || 0
+          : 0;
+        const ratingB = b.trackId
+          ? trackStats[b.trackId]?.average_rating || 0
+          : 0;
+
+        if (ratingA !== ratingB) return ratingB - ratingA;
+
+        // Secondary sort by total comments if ratings equal
+        const commA = a.trackId
+          ? trackStats[a.trackId]?.total_comments || 0
+          : 0;
+        const commB = b.trackId
+          ? trackStats[b.trackId]?.total_comments || 0
+          : 0;
+        return commB - commA;
+      });
+    },
+    [sortOrder, trackStats],
+  );
 
   const handleDragStart = (event) => {
     const { active } = event;
@@ -1978,11 +2092,30 @@ export default function ListExplorer({
               <option value="lists">Manage Lists</option>
               <option value="comments">View Comments & Ratings</option>
             </select>
-            <div className="list-explorer-view-indicator">
-              {explorerView === 'lists'
-                ? 'Manage your lists and see community nominations'
-                : 'Your feedback and community interactions'}
-            </div>
+
+            {explorerView === 'lists' && (
+              <button
+                className={`list-explorer-sort-toggle ${sortOrder === 'rating' ? 'active' : ''}`}
+                onClick={() =>
+                  setSortOrder(sortOrder === 'default' ? 'rating' : 'default')
+                }
+                title="Sort by Rating"
+              >
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.5"
+                >
+                  <path d="M11 5h10M11 9h7M11 13h4M3 17l3 3 3-3M6 18V4" />
+                </svg>
+                <span>
+                  {sortOrder === 'rating' ? 'Sorted by Rating' : 'Default'}
+                </span>
+              </button>
+            )}
           </div>
         </div>
         <div className="list-explorer-global-actions">
@@ -2174,7 +2307,9 @@ export default function ListExplorer({
                   id="nominations"
                   title="Nominations"
                   subtitle={`${showMyNominations ? nominationList.length : 0} tracks`}
-                  videos={showMyNominations ? nominationList : []}
+                  videos={getSortedVideos(
+                    showMyNominations ? nominationList : [],
+                  )}
                   isFocused={focusedListId === 'nominations'}
                   onFocus={() => setFocusedListId('nominations')}
                   onUnfocus={() => setFocusedListId(null)}
@@ -2217,7 +2352,7 @@ export default function ListExplorer({
                   id="support"
                   title="Support List"
                   subtitle={`${supportList.length} tracks`}
-                  videos={supportList}
+                  videos={getSortedVideos(supportList)}
                   isFocused={focusedListId === 'support'}
                   onFocus={() => setFocusedListId('support')}
                   onUnfocus={() => setFocusedListId(null)}
@@ -2251,7 +2386,7 @@ export default function ListExplorer({
                     id="current"
                     title="Current Playlist"
                     subtitle={`${playlist.length} tracks`}
-                    videos={playlist}
+                    videos={getSortedVideos(playlist)}
                     isFocused={focusedListId === 'current'}
                     onFocus={() => setFocusedListId('current')}
                     onUnfocus={() => setFocusedListId(null)}
@@ -2282,7 +2417,7 @@ export default function ListExplorer({
                     id="new-nominations"
                     title="New Nominations"
                     subtitle={`${newNominations.length} tracks`}
-                    videos={newNominations}
+                    videos={getSortedVideos(newNominations)}
                     isFocused={focusedListId === 'new-nominations'}
                     onFocus={() => setFocusedListId('new-nominations')}
                     onUnfocus={() => setFocusedListId(null)}
@@ -2315,7 +2450,7 @@ export default function ListExplorer({
                     id={`peer-${col.user_id}`}
                     title={`${getDisplayProfileName(col.username)}'s Noms`}
                     subtitle={`${col.videos.length} tracks`}
-                    videos={col.videos}
+                    videos={getSortedVideos(col.videos)}
                     isFocused={focusedListId === `peer-${col.user_id}`}
                     onFocus={() => setFocusedListId(`peer-${col.user_id}`)}
                     onUnfocus={() => setFocusedListId(null)}
@@ -2356,7 +2491,7 @@ export default function ListExplorer({
                     id={activeCustomPlaylist.id}
                     title={activeCustomPlaylist.name}
                     subtitle={`${activeCustomPlaylist.videos.length} tracks`}
-                    videos={activeCustomPlaylist.videos}
+                    videos={getSortedVideos(activeCustomPlaylist.videos)}
                     isFocused={focusedListId === activeCustomPlaylist.id}
                     onFocus={() => setFocusedListId(activeCustomPlaylist.id)}
                     onUnfocus={() => setFocusedListId(null)}

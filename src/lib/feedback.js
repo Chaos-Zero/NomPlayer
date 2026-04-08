@@ -199,3 +199,19 @@ export async function fetchDetailedUserActivity(
     highlights: globalData || [],
   };
 }
+
+export async function fetchTrackStats(supabase, trackIds = []) {
+  if (!supabase || trackIds.length === 0) return [];
+
+  const { data, error } = await supabase
+    .from('track_stats_summary')
+    .select('track_id, average_rating, total_comments')
+    .in('track_id', trackIds);
+
+  if (error) {
+    console.error('Error fetching track stats:', error);
+    return [];
+  }
+
+  return data || [];
+}
