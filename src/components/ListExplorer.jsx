@@ -975,7 +975,7 @@ function ListExplorerColumn({
   );
 }
 
-function CommentsView({ data, isLoading, onSelectTrack }) {
+function CommentsView({ data, isLoading, onSelectTrack, onPlayNow }) {
   if (isLoading) {
     return (
       <div className="comments-view-container loading">
@@ -1012,20 +1012,8 @@ function CommentsView({ data, isLoading, onSelectTrack }) {
   };
 
   const personalGroups = groupData(data.personal || []);
-
-  // Deduplicate community items by composite key (track_id + user_id) before grouping
-  const combinedCommunity = [...(data.peer || []), ...(data.highlights || [])];
-
-  const uniqueCommunity = Array.from(
-    new Map(
-      combinedCommunity.map((item) => [
-        `${item.track_id}-${item.user_id}`,
-        item,
-      ]),
-    ).values(),
-  );
-
-  const communityGroups = groupData(uniqueCommunity);
+  const peerGroups = groupData(data.peer || []);
+  const highlightGroups = groupData(data.highlights || []);
 
   const renderGroupedCard = (group, isPersonal) => {
     const { track, items, latestDate } = group;
@@ -1036,12 +1024,21 @@ function CommentsView({ data, isLoading, onSelectTrack }) {
 
     return (
       <Motion.div
-        key={`${isPersonal ? 'p' : 'c'}-${track?.id || items[0]?.track_id}`}
+        key={`${isPersonal ? 'p' : 'c'}-${track?.id || items[0]?.user_id}`}
         layout
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         className="activity-card grouped"
         onClick={() => videoId && onSelectTrack(videoId)}
+        onDoubleClick={() => {
+          if (videoId) {
+            onPlayNow?.({
+              videoId,
+              canonical_track_title: track?.canonical_track_title,
+              canonical_game_title: track?.canonical_game_title,
+            });
+          }
+        }}
       >
         <div className="activity-card-header">
           <img src={thumbnail} alt="" className="activity-card-thumb" />
@@ -1066,7 +1063,7 @@ function CommentsView({ data, isLoading, onSelectTrack }) {
         <div className="activity-card-feedback-list">
           {items.map((f, idx) => (
             <div
-              key={`${f.id || idx}`}
+              key={`${f.id || f.user_id || idx}`}
               className={`list-explorer-peer-item${isPersonal ? ' is-owner' : ''}`}
             >
               {!isPersonal && (
@@ -1104,27 +1101,89 @@ function CommentsView({ data, isLoading, onSelectTrack }) {
   };
 
   return (
-    <div className="comments-view-container">
-      <div className="comments-view-section">
-        <h3>Your Feedback</h3>
-        {personalGroups.length > 0 ? (
-          personalGroups.map((g) => renderGroupedCard(g, true))
-        ) : (
-          <p className="list-explorer-view-indicator">
-            You haven't left any comments yet.
-          </p>
-        )}
+    <div className="list-explorer-grid comments-mode">
+      <div
+        className="list-explorer-column"
+        style={{ '--column-accent': 'var(--support-pink)' }}
+      >
+        <div className="list-explorer-column-header">
+          <div className="list-explorer-column-title-group">
+            <div className="list-explorer-column-title-row">
+              <h3>Your Feedback</h3>
+              <span className="list-explorer-column-subtitle">
+                {personalGroups.length} tracks
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div className="list-explorer-column-content">
+          <div className="list-explorer-list">
+            {personalGroups.length > 0 ? (
+              personalGroups.map((g) => renderGroupedCard(g, true))
+            ) : (
+              <div className="list-explorer-list-empty">
+                <span>You haven't left any comments yet.</span>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
-      <div className="comments-view-section">
-        <h3>Community Interactions</h3>
-        {communityGroups.length > 0 ? (
-          communityGroups.map((g) => renderGroupedCard(g, false))
-        ) : (
-          <p className="list-explorer-view-indicator">
-            No community interactions found.
-          </p>
-        )}
+      <div
+        className="list-explorer-column"
+        style={{ '--column-accent': 'var(--gold)' }}
+      >
+        <div className="list-explorer-column-header">
+          <div className="list-explorer-column-title-group">
+            <div className="list-explorer-column-title-row">
+              <h3>Nomination Comments</h3>
+              <span className="list-explorer-column-subtitle">
+                {peerGroups.length} tracks
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div className="list-explorer-column-content">
+          <div className="list-explorer-list">
+            {peerGroups.length > 0 ? (
+              peerGroups.map((g) => renderGroupedCard(g, false))
+            ) : (
+              <div className="list-explorer-list-empty">
+                <span>No comments on your nominations yet.</span>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <div
+        className="list-explorer-column"
+        style={{ '--column-accent': 'var(--text-muted)' }}
+      >
+        <div className="list-explorer-column-header">
+          <div className="list-explorer-column-title-group">
+            <div className="list-explorer-column-title-row">
+              <h3>Recent Comments</h3>
+              <span className="list-explorer-column-subtitle">
+                {highlightGroups.length} tracks
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div className="list-explorer-column-content">
+          <div className="list-explorer-list">
+            {highlightGroups.length > 0 ? (
+              highlightGroups.map((g) => renderGroupedCard(g, false))
+            ) : (
+              <div className="list-explorer-list-empty">
+                <span>No community interactions found.</span>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -2458,6 +2517,7 @@ export default function ListExplorer({
                     // No specific column for activity cards, they are standalone
                     setSelectedColumnId(null);
                   }}
+                  onPlayNow={onPlayNow}
                 />
               </Motion.div>
             )}
