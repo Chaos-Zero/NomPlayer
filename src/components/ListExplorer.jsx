@@ -14,7 +14,9 @@ import {
   fetchCommunityFeedback,
   upsertUserFeedback,
   deleteUserFeedback,
+  fetchDetailedUserActivity,
 } from '../lib/feedback.js';
+import { motion as Motion, AnimatePresence } from 'framer-motion';
 import {
   DndContext,
   closestCenter,
@@ -35,7 +37,13 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import { PointerSensor as CorePointerSensor } from '@dnd-kit/core';
 import { SortableSupportItem, SupportItem } from './FavouritesPanel.jsx';
-import { HeartIcon, LockIcon, PencilIcon, XIcon } from './Icons.jsx';
+import {
+  HeartIcon,
+  LockIcon,
+  PencilIcon,
+  XIcon,
+  SpeechBubbleIcon,
+} from './Icons.jsx';
 import { ContextMenuPortal } from './ContextMenuPortal';
 import ExportIcon from './ExportIcon.jsx';
 import YouTubeIcon from './YouTubeIcon.jsx';
@@ -624,6 +632,7 @@ function SortableListExplorerCard({
   onOpenSupportDropdown,
   isReadOnly = false,
   hasComments = false,
+  userComment = null,
 }) {
   const {
     attributes,
@@ -682,6 +691,7 @@ function SortableListExplorerCard({
             tone={isSupportList ? 'support' : undefined}
             itemAriaPrefix="List Explorer track"
             hasComments={hasComments}
+            userComment={userComment}
           />
         </div>
       </div>
@@ -954,11 +964,136 @@ function ListExplorerColumn({
                     (!!video.comment &&
                       (id.startsWith('peer-') || id === 'new-nominations'))
                   }
+                  userComment={video.comment}
                 />
               ))
             )}
           </div>
         </SortableContext>
+      </div>
+    </div>
+  );
+}
+
+function CommentsView({ data, isLoading, onSelectTrack }) {
+  if (isLoading) {
+    return (
+      <div className="comments-view-container loading">
+        <div className="list-explorer-info-loading">
+          Loading your community activity...
+        </div>
+      </div>
+    );
+  }
+
+  const hasPersonal = data.personal && data.personal.length > 0;
+  const hasPeer = data.peer && data.peer.length > 0;
+  const hasHighlights = data.highlights && data.highlights.length > 0;
+
+  if (!hasPersonal && !hasPeer && !hasHighlights) {
+    return (
+      <div className="comments-view-container empty">
+        <div className="list-explorer-list-empty">
+          No activity found yet. Start by adding ratings or comments to tracks!
+        </div>
+      </div>
+    );
+  }
+
+  const renderCard = (f, type) => {
+    const track = f.tracks;
+    const sources = track?.track_sources || [];
+    const videoId = sources[0]?.external_id;
+    const thumbnail = `https://i.ytimg.com/vi/${videoId}/mqdefault.jpg`;
+
+    return (
+      <Motion.div
+        key={`${type}-${f.updated_at}-${f.user_id}`}
+        layout
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="activity-card"
+        onClick={() => videoId && onSelectTrack(videoId)}
+      >
+        <div className="activity-card-header">
+          <img src={thumbnail} alt="" className="activity-card-thumb" />
+          <div className="activity-card-meta">
+            <div className="activity-card-title-row">
+              <div className="activity-card-title">
+                {track?.canonical_track_title || 'Unknown Track'}
+              </div>
+              <div className="activity-card-date">
+                {new Date(f.updated_at).toLocaleDateString(undefined, {
+                  month: 'short',
+                  day: 'numeric',
+                })}
+              </div>
+            </div>
+            <div className="activity-card-game">
+              {track?.canonical_game_title || 'Unknown Game'}
+            </div>
+          </div>
+        </div>
+        <div className="activity-card-content">
+          <div
+            className={`list-explorer-peer-item${type === 'personal' ? ' is-owner' : ''}`}
+          >
+            {type !== 'personal' && (
+              <img
+                src={deriveProfileAvatarUrl(f.profiles, f.profiles?.avatar_url)}
+                alt=""
+                className="list-explorer-peer-avatar"
+              />
+            )}
+            <div className="list-explorer-peer-content">
+              <div className="list-explorer-peer-header">
+                {type !== 'personal' ? (
+                  <span className="list-explorer-peer-user">
+                    {getDisplayProfileName(f.profiles?.username, 'Anonymous')}
+                  </span>
+                ) : (
+                  <span className="list-explorer-peer-user">You</span>
+                )}
+                {f.rating && (
+                  <span className="list-explorer-peer-rating">
+                    {f.rating}/10
+                  </span>
+                )}
+              </div>
+              {f.note && <p className="list-explorer-peer-note">{f.note}</p>}
+            </div>
+          </div>
+        </div>
+      </Motion.div>
+    );
+  };
+
+  return (
+    <div className="comments-view-container">
+      <div className="comments-view-section">
+        <h3>Your Feedback</h3>
+        {hasPersonal ? (
+          data.personal.map((f) => renderCard(f, 'personal'))
+        ) : (
+          <p className="list-explorer-view-indicator">
+            You haven't left any comments yet.
+          </p>
+        )}
+      </div>
+
+      <div className="comments-view-section">
+        {(hasPeer || hasHighlights) && (
+          <>
+            <h3>Community Interactions</h3>
+            {hasPeer && data.peer.map((f) => renderCard(f, 'peer'))}
+            {hasHighlights && (
+              <>
+                <h3 style={{ marginTop: '24px' }}>Community Highlights</h3>
+                {data.highlights.map((f) => renderCard(f, 'highlight'))}
+              </>
+            )}
+          </>
+        )}
       </div>
     </div>
   );
@@ -997,6 +1132,13 @@ export default function ListExplorer({
     supports: {},
   });
   const [showMyNominations, setShowMyNominations] = useState(true);
+  const [explorerView, setExplorerView] = useState('lists');
+  const [activityData, setActivityData] = useState({
+    personal: [],
+    peer: [],
+    highlights: [],
+  });
+  const [isLoadingActivity, setIsLoadingActivity] = useState(false);
   const [isLoadingCommunity, setIsLoadingCommunity] = useState(false);
   const [dragButton, setDragButton] = useState(0);
   const gridRef = useRef(null);
@@ -1791,6 +1933,35 @@ export default function ListExplorer({
     }
   }, [selectedTrackId, selectedColumnId]);
 
+  // Fetch user activity data when view switches to comments or on mount
+  useEffect(() => {
+    const fetchActivity = async () => {
+      if (!supabase || !authUser?.id) return;
+      setIsLoadingActivity(true);
+      try {
+        // Collect track IDs from nominations and support list for peer feedback lookup
+        const nominatedTrackIds = (nominationList || [])
+          .map((v) => v.trackId || v.id)
+          .filter((id) => id && /^[0-9a-f-]{36}$/i.test(id));
+
+        const data = await fetchDetailedUserActivity(
+          supabase,
+          authUser.id,
+          nominatedTrackIds,
+        );
+        setActivityData(data);
+      } catch (err) {
+        console.error('Failed to fetch activity:', err);
+      } finally {
+        setIsLoadingActivity(false);
+      }
+    };
+
+    if (explorerView === 'comments') {
+      fetchActivity();
+    }
+  }, [explorerView, supabase, authUser?.id, nominationList]);
+
   return (
     <div
       className={`list-explorer-container ${focusedListId ? 'has-focused' : ''} ${selectedTrackId ? 'has-selection' : ''}`}
@@ -1798,10 +1969,21 @@ export default function ListExplorer({
       <div className="list-explorer-header">
         <div className="list-explorer-title-group">
           <h1>List Explorer</h1>
-          <p>
-            Manage your lists, see other users' lists, and view info on each
-            track
-          </p>
+          <div className="list-explorer-view-selector-shell">
+            <select
+              className="list-explorer-view-selector"
+              value={explorerView}
+              onChange={(e) => setExplorerView(e.target.value)}
+            >
+              <option value="lists">Manage Lists</option>
+              <option value="comments">View Comments & Ratings</option>
+            </select>
+            <div className="list-explorer-view-indicator">
+              {explorerView === 'lists'
+                ? 'Manage your lists and see community nominations'
+                : 'Your feedback and community interactions'}
+            </div>
+          </div>
         </div>
         <div className="list-explorer-global-actions">
           <div className="list-explorer-toolbar">
@@ -1977,241 +2159,278 @@ export default function ListExplorer({
         />
 
         <div className="list-explorer-layout">
-          <div ref={gridRef} className="list-explorer-grid">
-            <ListExplorerColumn
-              id="nominations"
-              title="Nominations"
-              subtitle={`${showMyNominations ? nominationList.length : 0} tracks`}
-              videos={showMyNominations ? nominationList : []}
-              isFocused={focusedListId === 'nominations'}
-              onFocus={() => setFocusedListId('nominations')}
-              onUnfocus={() => setFocusedListId(null)}
-              onPlayNow={onPlayNow}
-              colorVar="--accent"
-              userToggle={
-                authUser?.profile
-                  ? {
-                      user: authUser.profile,
-                      active: showMyNominations,
-                      onToggle: () => setShowMyNominations(!showMyNominations),
+          <AnimatePresence mode="wait">
+            {explorerView === 'lists' ? (
+              <Motion.div
+                key="grid"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.3 }}
+                ref={gridRef}
+                className="list-explorer-grid"
+              >
+                <ListExplorerColumn
+                  id="nominations"
+                  title="Nominations"
+                  subtitle={`${showMyNominations ? nominationList.length : 0} tracks`}
+                  videos={showMyNominations ? nominationList : []}
+                  isFocused={focusedListId === 'nominations'}
+                  onFocus={() => setFocusedListId('nominations')}
+                  onUnfocus={() => setFocusedListId(null)}
+                  onPlayNow={onPlayNow}
+                  colorVar="--accent"
+                  userToggle={
+                    authUser?.profile
+                      ? {
+                          user: authUser.profile,
+                          active: showMyNominations,
+                          onToggle: () =>
+                            setShowMyNominations(!showMyNominations),
+                        }
+                      : null
+                  }
+                  onUpdateComment={(videoId, comment) =>
+                    handleUpdateComment('nominations', videoId, comment)
+                  }
+                  onRename={() => {}}
+                  onRemovePlaylist={() => {}}
+                  onRemove={(videoId) =>
+                    onUpdateNominationList(
+                      nominationList.filter((v) => v.videoId !== videoId),
+                    )
+                  }
+                  selectedTrackId={selectedTrackId}
+                  onSelectTrack={(vid) => {
+                    setSelectedTrackId(vid);
+                    setSelectedColumnId('nominations');
+                  }}
+                  onContextMenu={handleContextMenu}
+                  canAddAll={true}
+                  onAddAll={() => handleAddAllToCurrent(nominationList)}
+                  onExport={onExport}
+                  onSavePlaylist={onSavePlaylist}
+                  globalCommentedVideoIds={globalCommentedVideoIds}
+                />
+
+                <ListExplorerColumn
+                  id="support"
+                  title="Support List"
+                  subtitle={`${supportList.length} tracks`}
+                  videos={supportList}
+                  isFocused={focusedListId === 'support'}
+                  onFocus={() => setFocusedListId('support')}
+                  onUnfocus={() => setFocusedListId(null)}
+                  onPlayNow={onPlayNow}
+                  colorVar="--support-pink"
+                  onUpdateComment={(videoId, comment) =>
+                    handleUpdateComment('support', videoId, comment)
+                  }
+                  onRename={() => {}}
+                  onRemovePlaylist={() => {}}
+                  onRemove={(videoId) =>
+                    onUpdateSupportList(
+                      supportList.filter((v) => v.videoId !== videoId),
+                    )
+                  }
+                  selectedTrackId={selectedTrackId}
+                  onSelectTrack={(vid) => {
+                    setSelectedTrackId(vid);
+                    setSelectedColumnId('support');
+                  }}
+                  onContextMenu={handleContextMenu}
+                  canAddAll={true}
+                  onAddAll={() => handleAddAllToCurrent(supportList)}
+                  onExport={onExport}
+                  onSavePlaylist={onSavePlaylist}
+                  globalCommentedVideoIds={globalCommentedVideoIds}
+                />
+
+                {showCurrentPlaylist && (
+                  <ListExplorerColumn
+                    id="current"
+                    title="Current Playlist"
+                    subtitle={`${playlist.length} tracks`}
+                    videos={playlist}
+                    isFocused={focusedListId === 'current'}
+                    onFocus={() => setFocusedListId('current')}
+                    onUnfocus={() => setFocusedListId(null)}
+                    onPlayNow={onPlayNow}
+                    colorVar="--info"
+                    onUpdateComment={(videoId, comment) =>
+                      handleUpdateComment('current', videoId, comment)
                     }
-                  : null
-              }
-              onUpdateComment={(videoId, comment) =>
-                handleUpdateComment('nominations', videoId, comment)
-              }
-              onRename={() => {}}
-              onRemovePlaylist={() => {}}
-              onRemove={(videoId) =>
-                onUpdateNominationList(
-                  nominationList.filter((v) => v.videoId !== videoId),
-                )
-              }
-              selectedTrackId={selectedTrackId}
-              onSelectTrack={(vid) => {
-                setSelectedTrackId(vid);
-                setSelectedColumnId('nominations');
-              }}
-              onContextMenu={handleContextMenu}
-              canAddAll={true}
-              onAddAll={() => handleAddAllToCurrent(nominationList)}
-              onExport={onExport}
-              onSavePlaylist={onSavePlaylist}
-              globalCommentedVideoIds={globalCommentedVideoIds}
-            />
+                    onRename={() => {}}
+                    onRemovePlaylist={() => {}}
+                    onRemove={onRemoveFromPlaylist}
+                    selectedTrackId={selectedTrackId}
+                    onSelectTrack={(vid) => {
+                      setSelectedTrackId(vid);
+                      setSelectedColumnId('current');
+                    }}
+                    onContextMenu={handleContextMenu}
+                    canClose={true}
+                    onClose={() => setShowCurrentPlaylist(false)}
+                    onExport={onExport}
+                    onSavePlaylist={onSavePlaylist}
+                    globalCommentedVideoIds={globalCommentedVideoIds}
+                  />
+                )}
 
-            <ListExplorerColumn
-              id="support"
-              title="Support List"
-              subtitle={`${supportList.length} tracks`}
-              videos={supportList}
-              isFocused={focusedListId === 'support'}
-              onFocus={() => setFocusedListId('support')}
-              onUnfocus={() => setFocusedListId(null)}
-              onPlayNow={onPlayNow}
-              colorVar="--support-pink"
-              onUpdateComment={(videoId, comment) =>
-                handleUpdateComment('support', videoId, comment)
-              }
-              onRename={() => {}}
-              onRemovePlaylist={() => {}}
-              onRemove={(videoId) =>
-                onUpdateSupportList(
-                  supportList.filter((v) => v.videoId !== videoId),
-                )
-              }
-              selectedTrackId={selectedTrackId}
-              onSelectTrack={(vid) => {
-                setSelectedTrackId(vid);
-                setSelectedColumnId('support');
-              }}
-              onContextMenu={handleContextMenu}
-              canAddAll={true}
-              onAddAll={() => handleAddAllToCurrent(supportList)}
-              onExport={onExport}
-              onSavePlaylist={onSavePlaylist}
-              globalCommentedVideoIds={globalCommentedVideoIds}
-            />
+                {showNewNominations && (
+                  <ListExplorerColumn
+                    id="new-nominations"
+                    title="New Nominations"
+                    subtitle={`${newNominations.length} tracks`}
+                    videos={newNominations}
+                    isFocused={focusedListId === 'new-nominations'}
+                    onFocus={() => setFocusedListId('new-nominations')}
+                    onUnfocus={() => setFocusedListId(null)}
+                    onPlayNow={onPlayNow}
+                    colorVar="--accent"
+                    onUpdateComment={() => {}}
+                    onRename={() => {}}
+                    onRemovePlaylist={() => {}}
+                    onRemove={() => {}}
+                    selectedTrackId={selectedTrackId}
+                    onSelectTrack={(vid) => {
+                      setSelectedTrackId(vid);
+                      setSelectedColumnId('new-nominations');
+                    }}
+                    onContextMenu={handleContextMenu}
+                    canClose={true}
+                    onClose={() => setShowNewNominations(false)}
+                    canAddAll={true}
+                    onAddAll={() => handleAddAllToCurrent(newNominations)}
+                    isReadOnly={true}
+                    onExport={onExport}
+                    onSavePlaylist={onSavePlaylist}
+                    globalCommentedVideoIds={globalCommentedVideoIds}
+                  />
+                )}
 
-            {showCurrentPlaylist && (
-              <ListExplorerColumn
-                id="current"
-                title="Current Playlist"
-                subtitle={`${playlist.length} tracks`}
-                videos={playlist}
-                isFocused={focusedListId === 'current'}
-                onFocus={() => setFocusedListId('current')}
-                onUnfocus={() => setFocusedListId(null)}
-                onPlayNow={onPlayNow}
-                colorVar="--info"
-                onUpdateComment={(videoId, comment) =>
-                  handleUpdateComment('current', videoId, comment)
-                }
-                onRename={() => {}}
-                onRemovePlaylist={() => {}}
-                onRemove={onRemoveFromPlaylist}
-                selectedTrackId={selectedTrackId}
-                onSelectTrack={(vid) => {
-                  setSelectedTrackId(vid);
-                  setSelectedColumnId('current');
-                }}
-                onContextMenu={handleContextMenu}
-                canClose={true}
-                onClose={() => setShowCurrentPlaylist(false)}
-                onExport={onExport}
-                onSavePlaylist={onSavePlaylist}
-                globalCommentedVideoIds={globalCommentedVideoIds}
-              />
+                {peerColumns.map((col) => (
+                  <ListExplorerColumn
+                    key={col.user_id}
+                    id={`peer-${col.user_id}`}
+                    title={`${getDisplayProfileName(col.username)}'s Noms`}
+                    subtitle={`${col.videos.length} tracks`}
+                    videos={col.videos}
+                    isFocused={focusedListId === `peer-${col.user_id}`}
+                    onFocus={() => setFocusedListId(`peer-${col.user_id}`)}
+                    onUnfocus={() => setFocusedListId(null)}
+                    onPlayNow={onPlayNow}
+                    colorVar="--gold"
+                    onUpdateComment={() => {}}
+                    onRename={() => {}}
+                    onRemovePlaylist={() =>
+                      setPeerColumns(
+                        peerColumns.filter((c) => c.user_id !== col.user_id),
+                      )
+                    }
+                    selectedTrackId={selectedTrackId}
+                    onSelectTrack={(vid) => {
+                      setSelectedTrackId(vid);
+                      setSelectedColumnId(`peer-${col.user_id}`);
+                    }}
+                    onContextMenu={handleContextMenu}
+                    onRemove={() => {}}
+                    canClose={true}
+                    onClose={() =>
+                      setPeerColumns(
+                        peerColumns.filter((c) => c.user_id !== col.user_id),
+                      )
+                    }
+                    canAddAll={true}
+                    onAddAll={() => handleAddAllToCurrent(col.videos)}
+                    onPlayCommunityList={onPlayCommunityList}
+                    isReadOnly={true}
+                    onExport={onExport}
+                    onSavePlaylist={onSavePlaylist}
+                    globalCommentedVideoIds={globalCommentedVideoIds}
+                  />
+                ))}
+
+                {activeCustomPlaylist && (
+                  <ListExplorerColumn
+                    id={activeCustomPlaylist.id}
+                    title={activeCustomPlaylist.name}
+                    subtitle={`${activeCustomPlaylist.videos.length} tracks`}
+                    videos={activeCustomPlaylist.videos}
+                    isFocused={focusedListId === activeCustomPlaylist.id}
+                    onFocus={() => setFocusedListId(activeCustomPlaylist.id)}
+                    onUnfocus={() => setFocusedListId(null)}
+                    onPlayNow={onPlayNow}
+                    colorVar="--gold"
+                    onUpdateComment={(videoId, comment) =>
+                      handleUpdateComment(
+                        activeCustomPlaylist.id,
+                        videoId,
+                        comment,
+                      )
+                    }
+                    onRename={handleRenamePlaylist}
+                    onRemovePlaylist={handleRemovePlaylist}
+                    playlists={customPlaylists}
+                    activePlaylistId={activeCustomPlaylistId}
+                    onSelectPlaylist={setActiveCustomPlaylistId}
+                    onAddByUrl={(url) =>
+                      handleAddByUrl(activeCustomPlaylist.id, url)
+                    }
+                    selectedTrackId={selectedTrackId}
+                    onSelectTrack={(vid) => {
+                      setSelectedTrackId(vid);
+                      setSelectedColumnId(activeCustomPlaylist.id);
+                    }}
+                    onContextMenu={handleContextMenu}
+                    canClose={true}
+                    onClose={() => setActiveCustomPlaylistId(null)}
+                    canAddAll={true}
+                    onAddAll={() =>
+                      handleAddAllToCurrent(activeCustomPlaylist.videos)
+                    }
+                    onRemove={(videoId) => {
+                      onUpdateCustomPlaylists(
+                        customPlaylists.map((p) =>
+                          p.id === activeCustomPlaylist.id
+                            ? {
+                                ...p,
+                                videos: p.videos.filter(
+                                  (v) => v.videoId !== videoId,
+                                ),
+                              }
+                            : p,
+                        ),
+                      );
+                    }}
+                    onExport={onExport}
+                    onSavePlaylist={onSavePlaylist}
+                    globalCommentedVideoIds={globalCommentedVideoIds}
+                  />
+                )}
+              </Motion.div>
+            ) : (
+              <Motion.div
+                key="comments"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.3 }}
+                className="comments-view-scroll-shell"
+                style={{ flex: 1, overflow: 'hidden' }}
+              >
+                <CommentsView
+                  data={activityData}
+                  isLoading={isLoadingActivity}
+                  onSelectTrack={(vid) => {
+                    setSelectedTrackId(vid);
+                    // No specific column for activity cards, they are standalone
+                    setSelectedColumnId(null);
+                  }}
+                />
+              </Motion.div>
             )}
-
-            {showNewNominations && (
-              <ListExplorerColumn
-                id="new-nominations"
-                title="New Nominations"
-                subtitle={`${newNominations.length} tracks`}
-                videos={newNominations}
-                isFocused={focusedListId === 'new-nominations'}
-                onFocus={() => setFocusedListId('new-nominations')}
-                onUnfocus={() => setFocusedListId(null)}
-                onPlayNow={onPlayNow}
-                colorVar="--accent"
-                onUpdateComment={() => {}}
-                onRename={() => {}}
-                onRemovePlaylist={() => {}}
-                onRemove={() => {}}
-                selectedTrackId={selectedTrackId}
-                onSelectTrack={(vid) => {
-                  setSelectedTrackId(vid);
-                  setSelectedColumnId('new-nominations');
-                }}
-                onContextMenu={handleContextMenu}
-                canClose={true}
-                onClose={() => setShowNewNominations(false)}
-                canAddAll={true}
-                onAddAll={() => handleAddAllToCurrent(newNominations)}
-                isReadOnly={true}
-                onExport={onExport}
-                onSavePlaylist={onSavePlaylist}
-                globalCommentedVideoIds={globalCommentedVideoIds}
-              />
-            )}
-
-            {peerColumns.map((col) => (
-              <ListExplorerColumn
-                key={col.user_id}
-                id={`peer-${col.user_id}`}
-                title={`${getDisplayProfileName(col.username)}'s Noms`}
-                subtitle={`${col.videos.length} tracks`}
-                videos={col.videos}
-                isFocused={focusedListId === `peer-${col.user_id}`}
-                onFocus={() => setFocusedListId(`peer-${col.user_id}`)}
-                onUnfocus={() => setFocusedListId(null)}
-                onPlayNow={onPlayNow}
-                colorVar="--gold"
-                onUpdateComment={() => {}}
-                onRename={() => {}}
-                onRemovePlaylist={() =>
-                  setPeerColumns(
-                    peerColumns.filter((c) => c.user_id !== col.user_id),
-                  )
-                }
-                selectedTrackId={selectedTrackId}
-                onSelectTrack={(vid) => {
-                  setSelectedTrackId(vid);
-                  setSelectedColumnId(`peer-${col.user_id}`);
-                }}
-                onContextMenu={handleContextMenu}
-                onRemove={() => {}}
-                canClose={true}
-                onClose={() =>
-                  setPeerColumns(
-                    peerColumns.filter((c) => c.user_id !== col.user_id),
-                  )
-                }
-                canAddAll={true}
-                onAddAll={() => handleAddAllToCurrent(col.videos)}
-                onPlayCommunityList={onPlayCommunityList}
-                isReadOnly={true}
-                onExport={onExport}
-                onSavePlaylist={onSavePlaylist}
-                globalCommentedVideoIds={globalCommentedVideoIds}
-              />
-            ))}
-
-            {activeCustomPlaylist && (
-              <ListExplorerColumn
-                id={activeCustomPlaylist.id}
-                title={activeCustomPlaylist.name}
-                subtitle={`${activeCustomPlaylist.videos.length} tracks`}
-                videos={activeCustomPlaylist.videos}
-                isFocused={focusedListId === activeCustomPlaylist.id}
-                onFocus={() => setFocusedListId(activeCustomPlaylist.id)}
-                onUnfocus={() => setFocusedListId(null)}
-                onPlayNow={onPlayNow}
-                colorVar="--gold"
-                onUpdateComment={(videoId, comment) =>
-                  handleUpdateComment(activeCustomPlaylist.id, videoId, comment)
-                }
-                onRename={handleRenamePlaylist}
-                onRemovePlaylist={handleRemovePlaylist}
-                playlists={customPlaylists}
-                activePlaylistId={activeCustomPlaylistId}
-                onSelectPlaylist={setActiveCustomPlaylistId}
-                onAddByUrl={(url) =>
-                  handleAddByUrl(activeCustomPlaylist.id, url)
-                }
-                selectedTrackId={selectedTrackId}
-                onSelectTrack={(vid) => {
-                  setSelectedTrackId(vid);
-                  setSelectedColumnId(activeCustomPlaylist.id);
-                }}
-                onContextMenu={handleContextMenu}
-                canClose={true}
-                onClose={() => setActiveCustomPlaylistId(null)}
-                canAddAll={true}
-                onAddAll={() =>
-                  handleAddAllToCurrent(activeCustomPlaylist.videos)
-                }
-                onRemove={(videoId) => {
-                  onUpdateCustomPlaylists(
-                    customPlaylists.map((p) =>
-                      p.id === activeCustomPlaylist.id
-                        ? {
-                            ...p,
-                            videos: p.videos.filter(
-                              (v) => v.videoId !== videoId,
-                            ),
-                          }
-                        : p,
-                    ),
-                  );
-                }}
-                onExport={onExport}
-                onSavePlaylist={onSavePlaylist}
-                globalCommentedVideoIds={globalCommentedVideoIds}
-              />
-            )}
-          </div>
+          </AnimatePresence>
         </div>
 
         {contextMenu && (

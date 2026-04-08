@@ -98,3 +98,104 @@ export async function deleteUserFeedback(supabase, userId, trackId) {
     throw error;
   }
 }
+
+export async function fetchDetailedUserActivity(
+  supabase,
+  userId,
+  nominatedTrackIds = [],
+) {
+  if (!supabase || !userId) return { personal: [], peer: [] };
+
+  // Fetch personal feedback with track info
+  const { data: personalData, error: personalError } = await supabase
+    .from('track_user_feedback')
+    .select(
+      `
+      rating,
+      note,
+      updated_at,
+      tracks (
+        id,
+        canonical_game_title,
+        canonical_track_title,
+        track_sources (external_id)
+      )
+    `,
+    )
+    .eq('user_id', userId)
+    .order('updated_at', { ascending: false });
+
+  if (personalError) {
+    console.error('Error fetching personal feedback:', personalError);
+  }
+
+  // Fetch peer feedback on user's nominated tracks
+  let peerData = [];
+  if (nominatedTrackIds.length > 0) {
+    const { data, error: peerError } = await supabase
+      .from('track_user_feedback')
+      .select(
+        `
+        rating,
+        note,
+        updated_at,
+        user_id,
+        profiles (
+          username,
+          avatar_url
+        ),
+        tracks (
+          id,
+          canonical_game_title,
+          canonical_track_title,
+          track_sources (external_id)
+        )
+      `,
+      )
+      .in('track_id', nominatedTrackIds)
+      .neq('user_id', userId)
+      .order('updated_at', { ascending: false });
+
+    if (peerError) {
+      console.error('Error fetching peer feedback:', peerError);
+    } else {
+      peerData = data || [];
+    }
+  }
+
+  // Fetch some general community highlights (last 10 comments globally)
+  const { data: globalData, error: globalError } = await supabase
+    .from('track_user_feedback')
+    .select(
+      `
+      rating,
+      note,
+      updated_at,
+      user_id,
+      profiles (
+        username,
+        avatar_url
+      ),
+      tracks (
+        id,
+        canonical_game_title,
+        canonical_track_title,
+        track_sources (external_id)
+      )
+    `,
+    )
+    .not('note', 'is', null)
+    .neq('user_id', userId)
+    .order('updated_at', { ascending: false })
+    .limit(10);
+
+  if (globalError) {
+    console.error('Error fetching global highlights:', globalError);
+  }
+
+  return {
+    personal: personalData || [],
+    peer: peerData || [],
+    highlights: globalData || [],
+  };
+}

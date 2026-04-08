@@ -58,6 +58,7 @@ export function SupportItem({
   removeButtonAriaLabel,
   tone,
   hasComments = false,
+  userComment = null,
 }) {
   const [imgError, setImgError] = useState(false);
   const display = getPlaylistItemDisplay(video);
@@ -174,6 +175,12 @@ export function SupportItem({
         </div>
         {!display.hasCatalogMetadata && video.channelTitle && (
           <div className="playlist-item-meta">{video.channelTitle}</div>
+        )}
+        {userComment && (
+          <div className="card-comment-indicator" title={userComment}>
+            <SpeechBubbleIcon />
+            <span>{userComment}</span>
+          </div>
         )}
       </div>
 
