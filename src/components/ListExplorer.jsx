@@ -37,12 +37,14 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import { PointerSensor as CorePointerSensor } from '@dnd-kit/core';
 import { SortableSupportItem, SupportItem } from './FavouritesPanel.jsx';
+import { DotLottiePlayer } from '@dotlottie/react-player';
 import {
   HeartIcon,
   LockIcon,
   PencilIcon,
   XIcon,
   SpeechBubbleIcon,
+  FilterIcon,
 } from './Icons.jsx';
 import { ContextMenuPortal } from './ContextMenuPortal';
 import ExportIcon from './ExportIcon.jsx';
@@ -976,10 +978,20 @@ function ListExplorerColumn({
 }
 
 function CommentsView({ data, isLoading, onSelectTrack, onPlayNow }) {
+  const [sortMode, setSortMode] = useState('latest');
+
   if (isLoading) {
     return (
-      <div className="comments-view-container loading">
-        <div className="list-explorer-info-loading">
+      <div className="comments-view-loading-overlay">
+        <div className="lottie-player-container">
+          <DotLottiePlayer
+            src="/loading.lottie"
+            autoplay
+            loop
+            style={{ width: '144px', height: '144px' }}
+          />
+        </div>
+        <div className="database-loading-text">
           Loading your community activity...
         </div>
       </div>
@@ -998,6 +1010,7 @@ function CommentsView({ data, isLoading, onSelectTrack, onPlayNow }) {
           track: f.tracks,
           items: [],
           latestDate: new Date(f.updated_at),
+          avgRating: 0,
         };
       }
       groups[trackId].items.push(f);
@@ -1007,13 +1020,50 @@ function CommentsView({ data, isLoading, onSelectTrack, onPlayNow }) {
       }
     });
 
-    // Sort groups by latest activity date
-    return Object.values(groups).sort((a, b) => b.latestDate - a.latestDate);
+    // Calculate averages and sort groups
+    return Object.values(groups)
+      .map((g) => {
+        const ratings = g.items
+          .map((i) => i.rating)
+          .filter((r) => r !== null && r !== undefined);
+        const avg =
+          ratings.length > 0
+            ? ratings.reduce((sum, r) => sum + r, 0) / ratings.length
+            : 0;
+        return { ...g, avgRating: avg };
+      })
+      .sort((a, b) => b.latestDate - a.latestDate);
+  };
+
+  const cycleSortMode = () => {
+    if (sortMode === 'latest') setSortMode('rating_desc');
+    else if (sortMode === 'rating_desc') setSortMode('rating_asc');
+    else setSortMode('latest');
+  };
+
+  const getSortTooltip = () => {
+    if (sortMode === 'latest') return 'Sorted by: Newest Activity';
+    if (sortMode === 'rating_desc') return 'Sorted by: Highest Rated';
+    if (sortMode === 'rating_asc') return 'Sorted by: Lowest Rated';
+    return '';
   };
 
   const personalGroups = groupData(data.personal || []);
-  const peerGroups = groupData(data.peer || []);
+  let peerGroups = groupData(data.peer || []);
   const highlightGroups = groupData(data.highlights || []);
+
+  // Apply custom sorting ONLY to the peerGroups (Nomination Comments)
+  if (sortMode !== 'latest') {
+    peerGroups = [...peerGroups].sort((a, b) => {
+      if (sortMode === 'rating_desc') return b.avgRating - a.avgRating;
+      if (sortMode === 'rating_asc') {
+        if (a.avgRating === 0) return 1;
+        if (b.avgRating === 0) return -1;
+        return a.avgRating - b.avgRating;
+      }
+      return b.latestDate - a.latestDate;
+    });
+  }
 
   const renderGroupedCard = (group, isPersonal) => {
     const { track, items, latestDate } = group;
@@ -1158,9 +1208,23 @@ function CommentsView({ data, isLoading, onSelectTrack, onPlayNow }) {
           <div className="list-explorer-column-title-group">
             <div className="list-explorer-column-title-row">
               <h3>Nomination Comments</h3>
-              <span className="list-explorer-column-subtitle">
-                {peerGroups.length} tracks
-              </span>
+              <div className="list-explorer-column-header-actions">
+                <span className="list-explorer-column-subtitle">
+                  {peerGroups.length} tracks
+                </span>
+                <button
+                  className={`list-explorer-sort-btn ${sortMode !== 'latest' ? 'is-active' : ''}`}
+                  onClick={cycleSortMode}
+                  title={getSortTooltip()}
+                >
+                  <FilterIcon />
+                  {sortMode.includes('rating') && (
+                    <span className="sort-indicator">
+                      {sortMode === 'rating_desc' ? 'H' : 'L'}
+                    </span>
+                  )}
+                </button>
+              </div>
             </div>
           </div>
         </div>
