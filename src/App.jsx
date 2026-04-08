@@ -68,6 +68,7 @@ import {
   fetchTrackCatalogByVideoIds,
   ingestYouTubeTrackSources,
 } from './lib/trackCatalog.js';
+import { fetchDashboardNominationUpdates } from './lib/dashboard.js';
 import { getSupabaseClient, isSupabaseConfigured } from './lib/supabase.js';
 import {
   formatTime,
@@ -588,8 +589,6 @@ export default function App() {
   const fetchCommunityCatalog = useCallback(async () => {
     if (!supabase) return;
     try {
-      const { fetchDashboardNominationUpdates } =
-        await import('./lib/dashboard.js');
       const updates = await fetchDashboardNominationUpdates(supabase);
       setCommunityNominations(updates);
     } catch (error) {
