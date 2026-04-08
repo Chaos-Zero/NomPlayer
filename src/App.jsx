@@ -4612,6 +4612,7 @@ export default function App() {
               onExport={handleOpenExportModal}
               onSavePlaylist={handleCreateYTPlaylist}
               onPlayCommunityList={handlePlayCommunityList}
+              catalogTrackByVideoId={catalogTrackByVideoId}
             />
           )}
           {persistentPlayer}

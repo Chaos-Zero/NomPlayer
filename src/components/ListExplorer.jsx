@@ -14,7 +14,9 @@ import {
   fetchCommunityFeedback,
   upsertUserFeedback,
   deleteUserFeedback,
+  fetchDetailedUserActivity,
 } from '../lib/feedback.js';
+import { motion as Motion, AnimatePresence } from 'framer-motion';
 import {
   DndContext,
   closestCenter,
@@ -35,7 +37,15 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import { PointerSensor as CorePointerSensor } from '@dnd-kit/core';
 import { SortableSupportItem, SupportItem } from './FavouritesPanel.jsx';
-import { HeartIcon, LockIcon, PencilIcon, XIcon } from './Icons.jsx';
+import { DotLottiePlayer } from '@dotlottie/react-player';
+import {
+  HeartIcon,
+  LockIcon,
+  PencilIcon,
+  XIcon,
+  SpeechBubbleIcon,
+  FilterIcon,
+} from './Icons.jsx';
 import { ContextMenuPortal } from './ContextMenuPortal';
 import ExportIcon from './ExportIcon.jsx';
 import YouTubeIcon from './YouTubeIcon.jsx';
@@ -624,6 +634,7 @@ function SortableListExplorerCard({
   onOpenSupportDropdown,
   isReadOnly = false,
   hasComments = false,
+  userComment = null,
 }) {
   const {
     attributes,
@@ -682,6 +693,7 @@ function SortableListExplorerCard({
             tone={isSupportList ? 'support' : undefined}
             itemAriaPrefix="List Explorer track"
             hasComments={hasComments}
+            userComment={userComment}
           />
         </div>
       </div>
@@ -954,11 +966,308 @@ function ListExplorerColumn({
                     (!!video.comment &&
                       (id.startsWith('peer-') || id === 'new-nominations'))
                   }
+                  userComment={video.comment}
                 />
               ))
             )}
           </div>
         </SortableContext>
+      </div>
+    </div>
+  );
+}
+
+function CommentsView({ data, isLoading, onSelectTrack, onPlayNow }) {
+  const [sortMode, setSortMode] = useState('latest');
+
+  if (isLoading) {
+    return (
+      <div className="comments-view-loading-overlay">
+        <div className="lottie-player-container">
+          <DotLottiePlayer
+            src="/loading.lottie"
+            autoplay
+            loop
+            style={{ width: '144px', height: '144px' }}
+          />
+        </div>
+        <div className="database-loading-text">
+          Loading your community activity...
+        </div>
+      </div>
+    );
+  }
+
+  const groupData = (items) => {
+    const groups = {};
+    items.forEach((f) => {
+      // Use track_id from the feedback record if tracks object is missing
+      const trackId = f.tracks?.id || f.track_id;
+      if (!trackId) return;
+
+      if (!groups[trackId]) {
+        groups[trackId] = {
+          track: f.tracks,
+          items: [],
+          latestDate: new Date(f.updated_at),
+          avgRating: 0,
+        };
+      }
+      groups[trackId].items.push(f);
+      const itemDate = new Date(f.updated_at);
+      if (itemDate > groups[trackId].latestDate) {
+        groups[trackId].latestDate = itemDate;
+      }
+    });
+
+    // Calculate averages and sort groups
+    return Object.values(groups)
+      .map((g) => {
+        const ratings = g.items
+          .map((i) => i.rating)
+          .filter((r) => r !== null && r !== undefined);
+        const avg =
+          ratings.length > 0
+            ? ratings.reduce((sum, r) => sum + r, 0) / ratings.length
+            : 0;
+        return { ...g, avgRating: avg };
+      })
+      .sort((a, b) => b.latestDate - a.latestDate);
+  };
+
+  const cycleSortMode = () => {
+    if (sortMode === 'latest') setSortMode('rating_desc');
+    else if (sortMode === 'rating_desc') setSortMode('rating_asc');
+    else setSortMode('latest');
+  };
+
+  const getSortTooltip = () => {
+    if (sortMode === 'latest') return 'Sorted by: Newest Activity';
+    if (sortMode === 'rating_desc') return 'Sorted by: Highest Rated';
+    if (sortMode === 'rating_asc') return 'Sorted by: Lowest Rated';
+    return '';
+  };
+
+  const personalGroups = groupData(data.personal || []);
+  let peerGroups = groupData(data.peer || []);
+  const highlightGroups = groupData(data.highlights || []);
+
+  // Apply custom sorting ONLY to the peerGroups (Nomination Comments)
+  if (sortMode !== 'latest') {
+    peerGroups = [...peerGroups].sort((a, b) => {
+      if (sortMode === 'rating_desc') return b.avgRating - a.avgRating;
+      if (sortMode === 'rating_asc') {
+        if (a.avgRating === 0) return 1;
+        if (b.avgRating === 0) return -1;
+        return a.avgRating - b.avgRating;
+      }
+      return b.latestDate - a.latestDate;
+    });
+  }
+
+  const renderGroupedCard = (group, isPersonal) => {
+    const { track, items, latestDate } = group;
+    // Fallback for track info if needed
+    const sources = track?.track_sources || [];
+    const videoId = sources[0]?.external_id;
+    const thumbnail = `https://i.ytimg.com/vi/${videoId}/mqdefault.jpg`;
+
+    return (
+      <Motion.div
+        key={`${isPersonal ? 'p' : 'c'}-${track?.id || items[0]?.user_id}`}
+        layout
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="activity-card grouped"
+        onClick={() => videoId && onSelectTrack(videoId)}
+        onDoubleClick={() => {
+          if (videoId) {
+            onPlayNow?.({
+              videoId,
+              canonical_track_title: track?.canonical_track_title,
+              canonical_game_title: track?.canonical_game_title,
+            });
+          }
+        }}
+      >
+        <div className="activity-card-header">
+          <img src={thumbnail} alt="" className="activity-card-thumb" />
+          <div className="activity-card-meta">
+            <div className="activity-card-title-row">
+              <div className="activity-card-title">
+                {track?.canonical_track_title || 'Unknown Track'}
+              </div>
+              <div className="activity-card-date">
+                {latestDate.toLocaleDateString(undefined, {
+                  month: 'short',
+                  day: 'numeric',
+                })}
+              </div>
+            </div>
+            <div className="activity-card-game">
+              {track?.canonical_game_title || 'Unknown Game'}
+            </div>
+          </div>
+        </div>
+
+        <div className="activity-card-feedback-list">
+          {items.map((f, idx) => (
+            <div
+              key={`${f.id || f.user_id || idx}`}
+              className={`list-explorer-peer-item${isPersonal ? ' is-owner' : ''}`}
+            >
+              {!isPersonal && (
+                <img
+                  src={deriveProfileAvatarUrl(
+                    f.profiles,
+                    f.profiles?.avatar_url,
+                  )}
+                  alt=""
+                  className="list-explorer-peer-avatar"
+                />
+              )}
+              <div className="list-explorer-peer-content">
+                <div className="list-explorer-peer-header">
+                  {isPersonal ? (
+                    <span className="list-explorer-peer-user">You</span>
+                  ) : (
+                    <span className="list-explorer-peer-user">
+                      {getDisplayProfileName(f.profiles?.username, 'Anonymous')}
+                    </span>
+                  )}
+                  <div className="list-explorer-peer-indicators">
+                    {f.isSupported && (
+                      <span
+                        className={`list-explorer-peer-support level-${f.supportLevel}`}
+                        title={
+                          f.supportLevel === 3
+                            ? `Highest Support (Locked)`
+                            : f.supportLevel === 2
+                              ? `High Support`
+                              : `Normal Support`
+                        }
+                      >
+                        {f.supportLevel === 3 ? (
+                          <LockIcon className="indicator-icon" />
+                        ) : (
+                          <HeartIcon className="indicator-icon" />
+                        )}
+                      </span>
+                    )}
+                    {f.rating && (
+                      <span className="list-explorer-peer-rating">
+                        {f.rating}/10
+                      </span>
+                    )}
+                  </div>
+                </div>
+                {f.note && <p className="list-explorer-peer-note">{f.note}</p>}
+              </div>
+            </div>
+          ))}
+        </div>
+      </Motion.div>
+    );
+  };
+
+  return (
+    <div className="list-explorer-grid comments-mode">
+      <div
+        className="list-explorer-column"
+        style={{ '--column-accent': 'var(--support-pink)' }}
+      >
+        <div className="list-explorer-column-header">
+          <div className="list-explorer-column-title-group">
+            <div className="list-explorer-column-title-row">
+              <h3>Your Feedback</h3>
+              <span className="list-explorer-column-subtitle">
+                {personalGroups.length} tracks
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div className="list-explorer-column-content">
+          <div className="list-explorer-list">
+            {personalGroups.length > 0 ? (
+              personalGroups.map((g) => renderGroupedCard(g, true))
+            ) : (
+              <div className="list-explorer-list-empty">
+                <span>You haven't left any comments yet.</span>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <div
+        className="list-explorer-column"
+        style={{ '--column-accent': 'var(--gold)' }}
+      >
+        <div className="list-explorer-column-header">
+          <div className="list-explorer-column-title-group">
+            <div className="list-explorer-column-title-row">
+              <h3>Nomination Comments</h3>
+              <div className="list-explorer-column-header-actions">
+                <span className="list-explorer-column-subtitle">
+                  {peerGroups.length} tracks
+                </span>
+                <button
+                  className={`list-explorer-sort-btn ${sortMode !== 'latest' ? 'is-active' : ''}`}
+                  onClick={cycleSortMode}
+                  title={getSortTooltip()}
+                >
+                  <FilterIcon />
+                  {sortMode.includes('rating') && (
+                    <span className="sort-indicator">
+                      {sortMode === 'rating_desc' ? 'H' : 'L'}
+                    </span>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="list-explorer-column-content">
+          <div className="list-explorer-list">
+            {peerGroups.length > 0 ? (
+              peerGroups.map((g) => renderGroupedCard(g, false))
+            ) : (
+              <div className="list-explorer-list-empty">
+                <span>No comments on your nominations yet.</span>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <div
+        className="list-explorer-column"
+        style={{ '--column-accent': 'var(--text-muted)' }}
+      >
+        <div className="list-explorer-column-header">
+          <div className="list-explorer-column-title-group">
+            <div className="list-explorer-column-title-row">
+              <h3>Recent Comments</h3>
+              <span className="list-explorer-column-subtitle">
+                {highlightGroups.length} tracks
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div className="list-explorer-column-content">
+          <div className="list-explorer-list">
+            {highlightGroups.length > 0 ? (
+              highlightGroups.map((g) => renderGroupedCard(g, false))
+            ) : (
+              <div className="list-explorer-list-empty">
+                <span>No community interactions found.</span>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -984,6 +1293,7 @@ export default function ListExplorer({
   onSavePlaylist,
   onOpenSupportDropdown,
   onPlayCommunityList,
+  catalogTrackByVideoId,
 }) {
   const [focusedListId, setFocusedListId] = useState(null);
   const [activeCustomPlaylistId, setActiveCustomPlaylistId] = useState(null);
@@ -997,7 +1307,15 @@ export default function ListExplorer({
     supports: {},
   });
   const [showMyNominations, setShowMyNominations] = useState(true);
+  const [explorerView, setExplorerView] = useState('lists');
+  const [activityData, setActivityData] = useState({
+    personal: [],
+    peer: [],
+    highlights: [],
+  });
+  const [isLoadingActivity, setIsLoadingActivity] = useState(false);
   const [isLoadingCommunity, setIsLoadingCommunity] = useState(false);
+  const [remoteTrackData, setRemoteTrackData] = useState(null);
   const [dragButton, setDragButton] = useState(0);
   const gridRef = useRef(null);
 
@@ -1007,6 +1325,12 @@ export default function ListExplorer({
       setActiveCustomPlaylistId(customPlaylists[0].id);
     }
   }, [customPlaylists, activeCustomPlaylistId]);
+
+  // Reset selection when switching views
+  useEffect(() => {
+    setSelectedTrackId(null);
+    setSelectedColumnId(null);
+  }, [explorerView]);
 
   const activeCustomPlaylist = useMemo(() => {
     if (!customPlaylists) return null;
@@ -1590,6 +1914,51 @@ export default function ListExplorer({
       );
       return !!track;
     });
+
+    // Fallback 1: Check in-memory catalog from App (covers local JSON snapshot)
+    if (!track && selectedTrackId && catalogTrackByVideoId?.[selectedTrackId]) {
+      const cat = catalogTrackByVideoId[selectedTrackId];
+      track = {
+        videoId: selectedTrackId,
+        id: selectedTrackId,
+        trackId: cat.trackId,
+        canonical_track_title: cat.trackTitle || cat.displayTitle || cat.title,
+        canonical_game_title: cat.gameTitle || cat.channelTitle,
+        isTransient: true,
+      };
+    }
+
+    // Fallback 2: Check loaded community activity data
+    if (!track && selectedTrackId) {
+      const allGroups = [
+        ...(activityData.personal || []),
+        ...(activityData.peer || []),
+        ...(activityData.highlights || []),
+      ];
+      const foundGroup = allGroups.find((g) => {
+        const vid = g.track?.track_sources?.[0]?.external_id || g.track_id;
+        return vid === selectedTrackId;
+      });
+      if (foundGroup && foundGroup.track) {
+        track = {
+          videoId: selectedTrackId,
+          id: selectedTrackId,
+          canonical_track_title: foundGroup.track.canonical_track_title,
+          canonical_game_title: foundGroup.track.canonical_game_title,
+          isTransient: true,
+        };
+      }
+    }
+
+    // Fallback 3: Check remote metadata state from catalog fetch
+    if (
+      !track &&
+      remoteTrackData &&
+      remoteTrackData.videoId === selectedTrackId
+    ) {
+      track = remoteTrackData;
+    }
+
     return track;
   }, [
     selectedTrackId,
@@ -1599,6 +1968,9 @@ export default function ListExplorer({
     activeCustomPlaylist,
     newNominations,
     peerColumns,
+    activityData,
+    remoteTrackData,
+    catalogTrackByVideoId,
   ]);
 
   // Fetch community data when selection changes
@@ -1610,17 +1982,55 @@ export default function ListExplorer({
 
     let active = true;
     setIsLoadingCommunity(true);
+    setRemoteTrackData(null); // Reset cache so we don't show ghost metadata
 
     const fetchData = async () => {
       try {
         // Fetch track metadata from catalog for track_id and tournament info
-        const { data: catalogData } = await supabase
-          .from('track_catalog')
-          .select('track_id, tournaments')
-          .eq('source_external_id', selectedTrackId)
-          .single();
+        // 1. Try to find the track in the full catalog (local JSON + remote)
+        let catalogData = null;
+        try {
+          const { findTrackInCatalog } = await import('../lib/trackCatalog.js');
+          catalogData = await findTrackInCatalog(supabase, selectedTrackId);
+        } catch (err) {
+          console.error('Error searching catalog:', err);
+        }
 
-        const trackIdForFeedback = catalogData?.track_id;
+        // 2. If not in catalog, fallback to a direct database fetch
+        if (!catalogData) {
+          try {
+            const { data } = await supabase
+              .from('track_catalog')
+              .select(
+                'track_id, canonical_track_title, canonical_game_title, tournaments(sequence_number), track_sources(external_id)',
+              )
+              .eq('source_external_id', selectedTrackId)
+              .maybeSingle();
+            catalogData = data;
+          } catch (err) {
+            console.error('Error fetching fallback catalog data:', err);
+          }
+        }
+
+        if (active && catalogData) {
+          // Update remote metadata cache so the panel can load
+          setRemoteTrackData({
+            videoId: selectedTrackId,
+            id: selectedTrackId,
+            trackId: catalogData.track_id || catalogData.trackId,
+            canonical_track_title:
+              catalogData.canonical_track_title ||
+              catalogData.trackTitle ||
+              catalogData.displayTitle,
+            canonical_game_title:
+              catalogData.canonical_game_title || catalogData.gameTitle,
+            tournaments: catalogData.tournaments,
+            isTransient: true,
+          });
+        }
+
+        const trackIdForFeedback =
+          catalogData?.track_id || catalogData?.trackId;
 
         // Fetch feedback (all users)
         let feedbackData = [];
@@ -1791,63 +2201,105 @@ export default function ListExplorer({
     }
   }, [selectedTrackId, selectedColumnId]);
 
+  // Fetch user activity data when view switches to comments or on mount
+  useEffect(() => {
+    const fetchActivity = async () => {
+      if (!supabase || !authUser?.id) return;
+      setIsLoadingActivity(true);
+      try {
+        // Collect track IDs from nominations and support list for peer feedback lookup
+        const nominatedTrackIds = (nominationList || [])
+          .map((v) => v.trackId || v.id)
+          .filter((id) => id && /^[0-9a-f-]{36}$/i.test(id));
+
+        const data = await fetchDetailedUserActivity(
+          supabase,
+          authUser.id,
+          nominatedTrackIds,
+        );
+        setActivityData(data);
+      } catch (err) {
+        console.error('Failed to fetch activity:', err);
+      } finally {
+        setIsLoadingActivity(false);
+      }
+    };
+
+    if (explorerView === 'comments') {
+      fetchActivity();
+    }
+  }, [explorerView, supabase, authUser?.id, nominationList]);
+
   return (
     <div
-      className={`list-explorer-container ${focusedListId ? 'has-focused' : ''} ${selectedTrackId ? 'has-selection' : ''}`}
+      className={`list-explorer-container ${focusedListId ? 'has-focused' : ''} ${selectedTrackId && explorerView !== 'comments' ? 'has-selection' : ''}`}
     >
       <div className="list-explorer-header">
         <div className="list-explorer-title-group">
           <h1>List Explorer</h1>
-          <p>
-            Manage your lists, see other users' lists, and view info on each
-            track
-          </p>
-        </div>
-        <div className="list-explorer-global-actions">
-          <div className="list-explorer-toolbar">
-            <div className="toolbar-group">
-              <span className="toolbar-label">Show:</span>
-              <button
-                className={`toolbar-toggle ${showCurrentPlaylist ? 'active' : ''}`}
-                onClick={() => setShowCurrentPlaylist(!showCurrentPlaylist)}
-              >
-                Current Playlist
-              </button>
-              <button
-                className={`toolbar-toggle ${showNewNominations ? 'active' : ''}`}
-                onClick={() => setShowNewNominations(!showNewNominations)}
-              >
-                New Nominations
-              </button>
-            </div>
-            <div className="toolbar-separator" />
-            <div className="toolbar-group">
-              <span className="toolbar-label">Other Users:</span>
-              <select
-                className="toolbar-select"
-                onChange={(e) => {
-                  const user = allPeerLists.find(
-                    (u) => u.user_id === e.target.value,
-                  );
-                  if (user) togglePeerList(user);
-                  e.target.value = '';
-                }}
-                value=""
-              >
-                <option value="" disabled>
-                  Select a user...
-                </option>
-                {allPeerLists
-                  .filter((u) => u.user_id !== authUser?.id)
-                  .map((user) => (
-                    <option key={user.user_id} value={user.user_id}>
-                      {getDisplayProfileName(user.username)} (
-                      {user.nominations.length} songs)
-                    </option>
-                  ))}
-              </select>
+          <div className="list-explorer-view-selector-shell">
+            <select
+              className="list-explorer-view-selector"
+              value={explorerView}
+              onChange={(e) => setExplorerView(e.target.value)}
+            >
+              <option value="lists">Manage Lists</option>
+              <option value="comments">View Comments & Ratings</option>
+            </select>
+            <div className="list-explorer-view-indicator">
+              {explorerView === 'lists'
+                ? 'Manage your lists and see community nominations'
+                : 'Your feedback and community interactions'}
             </div>
           </div>
+        </div>
+        <div className="list-explorer-global-actions">
+          {explorerView === 'lists' && (
+            <div className="list-explorer-toolbar">
+              <div className="toolbar-group">
+                <span className="toolbar-label">Show:</span>
+                <button
+                  className={`toolbar-toggle ${showCurrentPlaylist ? 'active' : ''}`}
+                  onClick={() => setShowCurrentPlaylist(!showCurrentPlaylist)}
+                >
+                  Current Playlist
+                </button>
+                <button
+                  className={`toolbar-toggle ${showNewNominations ? 'active' : ''}`}
+                  onClick={() => setShowNewNominations(!showNewNominations)}
+                >
+                  New Nominations
+                </button>
+              </div>
+              <div className="toolbar-separator" />
+              <div className="toolbar-group">
+                <span className="toolbar-label">Other Users:</span>
+                <select
+                  className="toolbar-select"
+                  onChange={(e) => {
+                    const user = allPeerLists.find(
+                      (u) => u.user_id === e.target.value,
+                    );
+                    if (user) togglePeerList(user);
+                    e.target.value = '';
+                  }}
+                  value=""
+                >
+                  <option value="" disabled>
+                    Select a user...
+                  </option>
+                  {allPeerLists
+                    .filter((u) => u.user_id !== authUser?.id)
+                    .map((user) => (
+                      <option key={user.user_id} value={user.user_id}>
+                        {getDisplayProfileName(user.username)} (
+                        {user.nominations.length} songs)
+                      </option>
+                    ))}
+                </select>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -1857,361 +2309,397 @@ export default function ListExplorer({
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
       >
-        <TrackInfoPanel
-          key={selectedTrack?.videoId || 'none'}
-          track={selectedTrack}
-          communityData={communityData}
-          isLoadingData={isLoadingCommunity}
-          isSaving={isSavingFeedback}
-          onClose={() => {
-            setSelectedTrackId(null);
-            setSelectedColumnId(null);
-          }}
-          authUser={authUser}
-          userProfile={authUser?.profile}
-          onUpdateComment={(videoId, comment) =>
-            handleUpdateComment(
-              selectedTrackId ? findListId(selectedTrackId) : null,
-              videoId,
-              comment,
-            )
-          }
-          onDeleteFeedback={async () => {
-            if (!supabase || !authUser || !selectedTrack) return;
-            if (
-              !window.confirm(
-                'Delete your feedback for this track? This cannot be undone.',
+        {explorerView !== 'comments' && (
+          <TrackInfoPanel
+            key={selectedTrack?.videoId || 'none'}
+            track={selectedTrack}
+            communityData={communityData}
+            isLoadingData={isLoadingCommunity}
+            isSaving={isSavingFeedback}
+            onClose={() => {
+              setSelectedTrackId(null);
+              setSelectedColumnId(null);
+            }}
+            authUser={authUser}
+            userProfile={authUser?.profile}
+            onUpdateComment={(videoId, comment) =>
+              handleUpdateComment(
+                selectedTrackId ? findListId(selectedTrackId) : null,
+                videoId,
+                comment,
               )
-            )
-              return;
-
-            setIsSavingFeedback(true);
-            try {
-              let trackId = selectedTrack.trackId || selectedTrack.id;
-              if (!trackId || !/^[0-9a-f-]{36}$/i.test(trackId)) {
-                // Ingest if somehow track info lost UUID
-                const ingested = await ingestYouTubeTrackSources(supabase, [
-                  selectedTrack,
-                ]);
-                if (ingested && ingested.length > 0) {
-                  trackId = ingested[0].track_id;
-                }
-              }
-
-              if (!trackId) throw new Error('Could not identify track.');
-
-              await deleteUserFeedback(supabase, authUser.id, trackId);
-              // Refresh community data
-              setCommunityData((prev) => ({
-                ...prev,
-                feedback: prev.feedback.filter(
-                  (f) => f.user_id !== authUser.id,
-                ),
-              }));
-
-              onShowToast?.('Feedback deleted.', 'dashboard');
-            } catch (err) {
-              console.error('Delete failed:', err);
-              onShowToast?.('Failed to delete feedback.', 'error');
-            } finally {
-              setIsSavingFeedback(false);
             }
-          }}
-          onSaveFeedback={async (rating, note) => {
-            if (!supabase || !authUser || !selectedTrack) return;
-            setIsSavingFeedback(true);
-            try {
-              let trackId = selectedTrack.trackId || selectedTrack.id;
-              // Ingest if missing UUID
-              if (!trackId || !/^[0-9a-f-]{36}$/i.test(trackId)) {
-                const ingested = await ingestYouTubeTrackSources(supabase, [
-                  selectedTrack,
-                ]);
-                if (ingested && ingested.length > 0) {
-                  trackId = ingested[0].track_id;
-                  // Update local list state
-                  const updateId = (list) =>
-                    list.map((v) =>
-                      v.videoId === selectedTrack.videoId
-                        ? { ...v, trackId }
-                        : v,
-                    );
-                  onUpdateNominationList(updateId(nominationList));
-                  onUpdateSupportList(updateId(supportList));
-                  onUpdatePlaylist(updateId(playlist));
-                }
-              }
-
-              if (!trackId) {
-                onShowToast('Could not link track for feedback.');
+            onDeleteFeedback={async () => {
+              if (!supabase || !authUser || !selectedTrack) return;
+              if (
+                !window.confirm(
+                  'Delete your feedback for this track? This cannot be undone.',
+                )
+              )
                 return;
+
+              setIsSavingFeedback(true);
+              try {
+                let trackId = selectedTrack.trackId || selectedTrack.id;
+                if (!trackId || !/^[0-9a-f-]{36}$/i.test(trackId)) {
+                  // Ingest if somehow track info lost UUID
+                  const ingested = await ingestYouTubeTrackSources(supabase, [
+                    selectedTrack,
+                  ]);
+                  if (ingested && ingested.length > 0) {
+                    trackId = ingested[0].track_id;
+                  }
+                }
+
+                if (!trackId) throw new Error('Could not identify track.');
+
+                await deleteUserFeedback(supabase, authUser.id, trackId);
+                // Refresh community data
+                setCommunityData((prev) => ({
+                  ...prev,
+                  feedback: prev.feedback.filter(
+                    (f) => f.user_id !== authUser.id,
+                  ),
+                }));
+
+                onShowToast?.('Feedback deleted.', 'dashboard');
+              } catch (err) {
+                console.error('Delete failed:', err);
+                onShowToast?.('Failed to delete feedback.', 'error');
+              } finally {
+                setIsSavingFeedback(false);
               }
+            }}
+            onSaveFeedback={async (rating, note) => {
+              if (!supabase || !authUser || !selectedTrack) return;
+              setIsSavingFeedback(true);
+              try {
+                let trackId = selectedTrack.trackId || selectedTrack.id;
+                // Ingest if missing UUID
+                if (!trackId || !/^[0-9a-f-]{36}$/i.test(trackId)) {
+                  const ingested = await ingestYouTubeTrackSources(supabase, [
+                    selectedTrack,
+                  ]);
+                  if (ingested && ingested.length > 0) {
+                    trackId = ingested[0].track_id;
+                    // Update local list state
+                    const updateId = (list) =>
+                      list.map((v) =>
+                        v.videoId === selectedTrack.videoId
+                          ? { ...v, trackId }
+                          : v,
+                      );
+                    onUpdateNominationList(updateId(nominationList));
+                    onUpdateSupportList(updateId(supportList));
+                    onUpdatePlaylist(updateId(playlist));
+                  }
+                }
 
-              await upsertUserFeedback(supabase, authUser.id, trackId, {
-                rating: rating || null,
-                note: note || null,
-              });
+                if (!trackId) {
+                  onShowToast('Could not link track for feedback.');
+                  return;
+                }
 
-              onShowToast('Feedback saved!');
+                await upsertUserFeedback(supabase, authUser.id, trackId, {
+                  rating: rating || null,
+                  note: note || null,
+                });
 
-              // If we added a note, it won't be in our "others" set anyway,
-              // but if we deleted a note (not possible here yet but good practice),
-              // we might want to refresh. Since it's our own note, no UI change needed for the balloon.
+                onShowToast('Feedback saved!');
 
-              // Refresh community feedback
-              const feedbackData = await fetchCommunityFeedback(
-                supabase,
-                trackId,
-              );
-              setCommunityData((prev) => ({
-                ...prev,
-                feedback: feedbackData || [],
-              }));
-            } catch (err) {
-              console.error('Error saving feedback:', err);
-              onShowToast('Failed to save feedback.');
-            } finally {
-              setIsSavingFeedback(false);
-            }
-          }}
-        />
+                // If we added a note, it won't be in our "others" set anyway,
+                // but if we deleted a note (not possible here yet but good practice),
+                // we might want to refresh. Since it's our own note, no UI change needed for the balloon.
+
+                // Refresh community feedback
+                const feedbackData = await fetchCommunityFeedback(
+                  supabase,
+                  trackId,
+                );
+                setCommunityData((prev) => ({
+                  ...prev,
+                  feedback: feedbackData || [],
+                }));
+              } catch (err) {
+                console.error('Error saving feedback:', err);
+                onShowToast('Failed to save feedback.');
+              } finally {
+                setIsSavingFeedback(false);
+              }
+            }}
+          />
+        )}
 
         <div className="list-explorer-layout">
-          <div ref={gridRef} className="list-explorer-grid">
-            <ListExplorerColumn
-              id="nominations"
-              title="Nominations"
-              subtitle={`${showMyNominations ? nominationList.length : 0} tracks`}
-              videos={showMyNominations ? nominationList : []}
-              isFocused={focusedListId === 'nominations'}
-              onFocus={() => setFocusedListId('nominations')}
-              onUnfocus={() => setFocusedListId(null)}
-              onPlayNow={onPlayNow}
-              colorVar="--accent"
-              userToggle={
-                authUser?.profile
-                  ? {
-                      user: authUser.profile,
-                      active: showMyNominations,
-                      onToggle: () => setShowMyNominations(!showMyNominations),
+          <AnimatePresence mode="wait">
+            {explorerView === 'lists' ? (
+              <Motion.div
+                key="grid"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.3 }}
+                ref={gridRef}
+                className="list-explorer-grid"
+              >
+                <ListExplorerColumn
+                  id="nominations"
+                  title="Nominations"
+                  subtitle={`${showMyNominations ? nominationList.length : 0} tracks`}
+                  videos={showMyNominations ? nominationList : []}
+                  isFocused={focusedListId === 'nominations'}
+                  onFocus={() => setFocusedListId('nominations')}
+                  onUnfocus={() => setFocusedListId(null)}
+                  onPlayNow={onPlayNow}
+                  colorVar="--accent"
+                  userToggle={
+                    authUser?.profile
+                      ? {
+                          user: authUser.profile,
+                          active: showMyNominations,
+                          onToggle: () =>
+                            setShowMyNominations(!showMyNominations),
+                        }
+                      : null
+                  }
+                  onUpdateComment={(videoId, comment) =>
+                    handleUpdateComment('nominations', videoId, comment)
+                  }
+                  onRename={() => {}}
+                  onRemovePlaylist={() => {}}
+                  onRemove={(videoId) =>
+                    onUpdateNominationList(
+                      nominationList.filter((v) => v.videoId !== videoId),
+                    )
+                  }
+                  selectedTrackId={selectedTrackId}
+                  onSelectTrack={(vid) => {
+                    setSelectedTrackId(vid);
+                    setSelectedColumnId('nominations');
+                  }}
+                  onContextMenu={handleContextMenu}
+                  canAddAll={true}
+                  onAddAll={() => handleAddAllToCurrent(nominationList)}
+                  onExport={onExport}
+                  onSavePlaylist={onSavePlaylist}
+                  globalCommentedVideoIds={globalCommentedVideoIds}
+                />
+
+                <ListExplorerColumn
+                  id="support"
+                  title="Support List"
+                  subtitle={`${supportList.length} tracks`}
+                  videos={supportList}
+                  isFocused={focusedListId === 'support'}
+                  onFocus={() => setFocusedListId('support')}
+                  onUnfocus={() => setFocusedListId(null)}
+                  onPlayNow={onPlayNow}
+                  colorVar="--support-pink"
+                  onUpdateComment={(videoId, comment) =>
+                    handleUpdateComment('support', videoId, comment)
+                  }
+                  onRename={() => {}}
+                  onRemovePlaylist={() => {}}
+                  onRemove={(videoId) =>
+                    onUpdateSupportList(
+                      supportList.filter((v) => v.videoId !== videoId),
+                    )
+                  }
+                  selectedTrackId={selectedTrackId}
+                  onSelectTrack={(vid) => {
+                    setSelectedTrackId(vid);
+                    setSelectedColumnId('support');
+                  }}
+                  onContextMenu={handleContextMenu}
+                  canAddAll={true}
+                  onAddAll={() => handleAddAllToCurrent(supportList)}
+                  onExport={onExport}
+                  onSavePlaylist={onSavePlaylist}
+                  globalCommentedVideoIds={globalCommentedVideoIds}
+                />
+
+                {showCurrentPlaylist && (
+                  <ListExplorerColumn
+                    id="current"
+                    title="Current Playlist"
+                    subtitle={`${playlist.length} tracks`}
+                    videos={playlist}
+                    isFocused={focusedListId === 'current'}
+                    onFocus={() => setFocusedListId('current')}
+                    onUnfocus={() => setFocusedListId(null)}
+                    onPlayNow={onPlayNow}
+                    colorVar="--info"
+                    onUpdateComment={(videoId, comment) =>
+                      handleUpdateComment('current', videoId, comment)
                     }
-                  : null
-              }
-              onUpdateComment={(videoId, comment) =>
-                handleUpdateComment('nominations', videoId, comment)
-              }
-              onRename={() => {}}
-              onRemovePlaylist={() => {}}
-              onRemove={(videoId) =>
-                onUpdateNominationList(
-                  nominationList.filter((v) => v.videoId !== videoId),
-                )
-              }
-              selectedTrackId={selectedTrackId}
-              onSelectTrack={(vid) => {
-                setSelectedTrackId(vid);
-                setSelectedColumnId('nominations');
-              }}
-              onContextMenu={handleContextMenu}
-              canAddAll={true}
-              onAddAll={() => handleAddAllToCurrent(nominationList)}
-              onExport={onExport}
-              onSavePlaylist={onSavePlaylist}
-              globalCommentedVideoIds={globalCommentedVideoIds}
-            />
+                    onRename={() => {}}
+                    onRemovePlaylist={() => {}}
+                    onRemove={onRemoveFromPlaylist}
+                    selectedTrackId={selectedTrackId}
+                    onSelectTrack={(vid) => {
+                      setSelectedTrackId(vid);
+                      setSelectedColumnId('current');
+                    }}
+                    onContextMenu={handleContextMenu}
+                    canClose={true}
+                    onClose={() => setShowCurrentPlaylist(false)}
+                    onExport={onExport}
+                    onSavePlaylist={onSavePlaylist}
+                    globalCommentedVideoIds={globalCommentedVideoIds}
+                  />
+                )}
 
-            <ListExplorerColumn
-              id="support"
-              title="Support List"
-              subtitle={`${supportList.length} tracks`}
-              videos={supportList}
-              isFocused={focusedListId === 'support'}
-              onFocus={() => setFocusedListId('support')}
-              onUnfocus={() => setFocusedListId(null)}
-              onPlayNow={onPlayNow}
-              colorVar="--support-pink"
-              onUpdateComment={(videoId, comment) =>
-                handleUpdateComment('support', videoId, comment)
-              }
-              onRename={() => {}}
-              onRemovePlaylist={() => {}}
-              onRemove={(videoId) =>
-                onUpdateSupportList(
-                  supportList.filter((v) => v.videoId !== videoId),
-                )
-              }
-              selectedTrackId={selectedTrackId}
-              onSelectTrack={(vid) => {
-                setSelectedTrackId(vid);
-                setSelectedColumnId('support');
-              }}
-              onContextMenu={handleContextMenu}
-              canAddAll={true}
-              onAddAll={() => handleAddAllToCurrent(supportList)}
-              onExport={onExport}
-              onSavePlaylist={onSavePlaylist}
-              globalCommentedVideoIds={globalCommentedVideoIds}
-            />
+                {showNewNominations && (
+                  <ListExplorerColumn
+                    id="new-nominations"
+                    title="New Nominations"
+                    subtitle={`${newNominations.length} tracks`}
+                    videos={newNominations}
+                    isFocused={focusedListId === 'new-nominations'}
+                    onFocus={() => setFocusedListId('new-nominations')}
+                    onUnfocus={() => setFocusedListId(null)}
+                    onPlayNow={onPlayNow}
+                    colorVar="--accent"
+                    onUpdateComment={() => {}}
+                    onRename={() => {}}
+                    onRemovePlaylist={() => {}}
+                    onRemove={() => {}}
+                    selectedTrackId={selectedTrackId}
+                    onSelectTrack={(vid) => {
+                      setSelectedTrackId(vid);
+                      setSelectedColumnId('new-nominations');
+                    }}
+                    onContextMenu={handleContextMenu}
+                    canClose={true}
+                    onClose={() => setShowNewNominations(false)}
+                    canAddAll={true}
+                    onAddAll={() => handleAddAllToCurrent(newNominations)}
+                    isReadOnly={true}
+                    onExport={onExport}
+                    onSavePlaylist={onSavePlaylist}
+                    globalCommentedVideoIds={globalCommentedVideoIds}
+                  />
+                )}
 
-            {showCurrentPlaylist && (
-              <ListExplorerColumn
-                id="current"
-                title="Current Playlist"
-                subtitle={`${playlist.length} tracks`}
-                videos={playlist}
-                isFocused={focusedListId === 'current'}
-                onFocus={() => setFocusedListId('current')}
-                onUnfocus={() => setFocusedListId(null)}
-                onPlayNow={onPlayNow}
-                colorVar="--info"
-                onUpdateComment={(videoId, comment) =>
-                  handleUpdateComment('current', videoId, comment)
-                }
-                onRename={() => {}}
-                onRemovePlaylist={() => {}}
-                onRemove={onRemoveFromPlaylist}
-                selectedTrackId={selectedTrackId}
-                onSelectTrack={(vid) => {
-                  setSelectedTrackId(vid);
-                  setSelectedColumnId('current');
-                }}
-                onContextMenu={handleContextMenu}
-                canClose={true}
-                onClose={() => setShowCurrentPlaylist(false)}
-                onExport={onExport}
-                onSavePlaylist={onSavePlaylist}
-                globalCommentedVideoIds={globalCommentedVideoIds}
-              />
+                {peerColumns.map((col) => (
+                  <ListExplorerColumn
+                    key={col.user_id}
+                    id={`peer-${col.user_id}`}
+                    title={`${getDisplayProfileName(col.username)}'s Noms`}
+                    subtitle={`${col.videos.length} tracks`}
+                    videos={col.videos}
+                    isFocused={focusedListId === `peer-${col.user_id}`}
+                    onFocus={() => setFocusedListId(`peer-${col.user_id}`)}
+                    onUnfocus={() => setFocusedListId(null)}
+                    onPlayNow={onPlayNow}
+                    colorVar="--gold"
+                    onUpdateComment={() => {}}
+                    onRename={() => {}}
+                    onRemovePlaylist={() =>
+                      setPeerColumns(
+                        peerColumns.filter((c) => c.user_id !== col.user_id),
+                      )
+                    }
+                    selectedTrackId={selectedTrackId}
+                    onSelectTrack={(vid) => {
+                      setSelectedTrackId(vid);
+                      setSelectedColumnId(`peer-${col.user_id}`);
+                    }}
+                    onContextMenu={handleContextMenu}
+                    onRemove={() => {}}
+                    canClose={true}
+                    onClose={() =>
+                      setPeerColumns(
+                        peerColumns.filter((c) => c.user_id !== col.user_id),
+                      )
+                    }
+                    canAddAll={true}
+                    onAddAll={() => handleAddAllToCurrent(col.videos)}
+                    onPlayCommunityList={onPlayCommunityList}
+                    isReadOnly={true}
+                    onExport={onExport}
+                    onSavePlaylist={onSavePlaylist}
+                    globalCommentedVideoIds={globalCommentedVideoIds}
+                  />
+                ))}
+
+                {activeCustomPlaylist && (
+                  <ListExplorerColumn
+                    id={activeCustomPlaylist.id}
+                    title={activeCustomPlaylist.name}
+                    subtitle={`${activeCustomPlaylist.videos.length} tracks`}
+                    videos={activeCustomPlaylist.videos}
+                    isFocused={focusedListId === activeCustomPlaylist.id}
+                    onFocus={() => setFocusedListId(activeCustomPlaylist.id)}
+                    onUnfocus={() => setFocusedListId(null)}
+                    onPlayNow={onPlayNow}
+                    colorVar="--gold"
+                    onUpdateComment={(videoId, comment) =>
+                      handleUpdateComment(
+                        activeCustomPlaylist.id,
+                        videoId,
+                        comment,
+                      )
+                    }
+                    onRename={handleRenamePlaylist}
+                    onRemovePlaylist={handleRemovePlaylist}
+                    playlists={customPlaylists}
+                    activePlaylistId={activeCustomPlaylistId}
+                    onSelectPlaylist={setActiveCustomPlaylistId}
+                    onAddByUrl={(url) =>
+                      handleAddByUrl(activeCustomPlaylist.id, url)
+                    }
+                    selectedTrackId={selectedTrackId}
+                    onSelectTrack={(vid) => {
+                      setSelectedTrackId(vid);
+                      setSelectedColumnId(activeCustomPlaylist.id);
+                    }}
+                    onContextMenu={handleContextMenu}
+                    canClose={true}
+                    onClose={() => setActiveCustomPlaylistId(null)}
+                    canAddAll={true}
+                    onAddAll={() =>
+                      handleAddAllToCurrent(activeCustomPlaylist.videos)
+                    }
+                    onRemove={(videoId) => {
+                      onUpdateCustomPlaylists(
+                        customPlaylists.map((p) =>
+                          p.id === activeCustomPlaylist.id
+                            ? {
+                                ...p,
+                                videos: p.videos.filter(
+                                  (v) => v.videoId !== videoId,
+                                ),
+                              }
+                            : p,
+                        ),
+                      );
+                    }}
+                    onExport={onExport}
+                    onSavePlaylist={onSavePlaylist}
+                    globalCommentedVideoIds={globalCommentedVideoIds}
+                  />
+                )}
+              </Motion.div>
+            ) : (
+              <Motion.div
+                key="comments"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.3 }}
+                className="comments-view-scroll-shell"
+                style={{ flex: 1, overflow: 'hidden' }}
+              >
+                <CommentsView
+                  data={activityData}
+                  isLoading={isLoadingActivity}
+                  onSelectTrack={() => {}}
+                  onPlayNow={onPlayNow}
+                />
+              </Motion.div>
             )}
-
-            {showNewNominations && (
-              <ListExplorerColumn
-                id="new-nominations"
-                title="New Nominations"
-                subtitle={`${newNominations.length} tracks`}
-                videos={newNominations}
-                isFocused={focusedListId === 'new-nominations'}
-                onFocus={() => setFocusedListId('new-nominations')}
-                onUnfocus={() => setFocusedListId(null)}
-                onPlayNow={onPlayNow}
-                colorVar="--accent"
-                onUpdateComment={() => {}}
-                onRename={() => {}}
-                onRemovePlaylist={() => {}}
-                onRemove={() => {}}
-                selectedTrackId={selectedTrackId}
-                onSelectTrack={(vid) => {
-                  setSelectedTrackId(vid);
-                  setSelectedColumnId('new-nominations');
-                }}
-                onContextMenu={handleContextMenu}
-                canClose={true}
-                onClose={() => setShowNewNominations(false)}
-                canAddAll={true}
-                onAddAll={() => handleAddAllToCurrent(newNominations)}
-                isReadOnly={true}
-                onExport={onExport}
-                onSavePlaylist={onSavePlaylist}
-                globalCommentedVideoIds={globalCommentedVideoIds}
-              />
-            )}
-
-            {peerColumns.map((col) => (
-              <ListExplorerColumn
-                key={col.user_id}
-                id={`peer-${col.user_id}`}
-                title={`${getDisplayProfileName(col.username)}'s Noms`}
-                subtitle={`${col.videos.length} tracks`}
-                videos={col.videos}
-                isFocused={focusedListId === `peer-${col.user_id}`}
-                onFocus={() => setFocusedListId(`peer-${col.user_id}`)}
-                onUnfocus={() => setFocusedListId(null)}
-                onPlayNow={onPlayNow}
-                colorVar="--gold"
-                onUpdateComment={() => {}}
-                onRename={() => {}}
-                onRemovePlaylist={() =>
-                  setPeerColumns(
-                    peerColumns.filter((c) => c.user_id !== col.user_id),
-                  )
-                }
-                selectedTrackId={selectedTrackId}
-                onSelectTrack={(vid) => {
-                  setSelectedTrackId(vid);
-                  setSelectedColumnId(`peer-${col.user_id}`);
-                }}
-                onContextMenu={handleContextMenu}
-                onRemove={() => {}}
-                canClose={true}
-                onClose={() =>
-                  setPeerColumns(
-                    peerColumns.filter((c) => c.user_id !== col.user_id),
-                  )
-                }
-                canAddAll={true}
-                onAddAll={() => handleAddAllToCurrent(col.videos)}
-                onPlayCommunityList={onPlayCommunityList}
-                isReadOnly={true}
-                onExport={onExport}
-                onSavePlaylist={onSavePlaylist}
-                globalCommentedVideoIds={globalCommentedVideoIds}
-              />
-            ))}
-
-            {activeCustomPlaylist && (
-              <ListExplorerColumn
-                id={activeCustomPlaylist.id}
-                title={activeCustomPlaylist.name}
-                subtitle={`${activeCustomPlaylist.videos.length} tracks`}
-                videos={activeCustomPlaylist.videos}
-                isFocused={focusedListId === activeCustomPlaylist.id}
-                onFocus={() => setFocusedListId(activeCustomPlaylist.id)}
-                onUnfocus={() => setFocusedListId(null)}
-                onPlayNow={onPlayNow}
-                colorVar="--gold"
-                onUpdateComment={(videoId, comment) =>
-                  handleUpdateComment(activeCustomPlaylist.id, videoId, comment)
-                }
-                onRename={handleRenamePlaylist}
-                onRemovePlaylist={handleRemovePlaylist}
-                playlists={customPlaylists}
-                activePlaylistId={activeCustomPlaylistId}
-                onSelectPlaylist={setActiveCustomPlaylistId}
-                onAddByUrl={(url) =>
-                  handleAddByUrl(activeCustomPlaylist.id, url)
-                }
-                selectedTrackId={selectedTrackId}
-                onSelectTrack={(vid) => {
-                  setSelectedTrackId(vid);
-                  setSelectedColumnId(activeCustomPlaylist.id);
-                }}
-                onContextMenu={handleContextMenu}
-                canClose={true}
-                onClose={() => setActiveCustomPlaylistId(null)}
-                canAddAll={true}
-                onAddAll={() =>
-                  handleAddAllToCurrent(activeCustomPlaylist.videos)
-                }
-                onRemove={(videoId) => {
-                  onUpdateCustomPlaylists(
-                    customPlaylists.map((p) =>
-                      p.id === activeCustomPlaylist.id
-                        ? {
-                            ...p,
-                            videos: p.videos.filter(
-                              (v) => v.videoId !== videoId,
-                            ),
-                          }
-                        : p,
-                    ),
-                  );
-                }}
-                onExport={onExport}
-                onSavePlaylist={onSavePlaylist}
-                globalCommentedVideoIds={globalCommentedVideoIds}
-              />
-            )}
-          </div>
+          </AnimatePresence>
         </div>
 
         {contextMenu && (

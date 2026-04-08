@@ -293,3 +293,15 @@ export function DatabaseIcon({ className = 'collection-icon' }) {
     </svg>
   );
 }
+
+export function FilterIcon({ className = 'collection-icon' }) {
+  return (
+    <svg className={className} viewBox="0 0 20 20" fill="currentColor">
+      <path
+        fillRule="evenodd"
+        d="M3 5a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6 10a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zM9 15a1 1 0 011-1h0a1 1 0 110 2h0a1 1 0 01-1-1z"
+        clipRule="evenodd"
+      />
+    </svg>
+  );
+}
