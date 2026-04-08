@@ -1085,11 +1085,31 @@ function CommentsView({ data, isLoading, onSelectTrack, onPlayNow }) {
                       {getDisplayProfileName(f.profiles?.username, 'Anonymous')}
                     </span>
                   )}
-                  {f.rating && (
-                    <span className="list-explorer-peer-rating">
-                      {f.rating}/10
-                    </span>
-                  )}
+                  <div className="list-explorer-peer-indicators">
+                    {f.isSupported && (
+                      <span
+                        className={`list-explorer-peer-support level-${f.supportLevel}`}
+                        title={
+                          f.supportLevel === 3
+                            ? `Highest Support (Locked)`
+                            : f.supportLevel === 2
+                              ? `High Support`
+                              : `Normal Support`
+                        }
+                      >
+                        {f.supportLevel === 3 ? (
+                          <LockIcon className="indicator-icon" />
+                        ) : (
+                          <HeartIcon className="indicator-icon" />
+                        )}
+                      </span>
+                    )}
+                    {f.rating && (
+                      <span className="list-explorer-peer-rating">
+                        {f.rating}/10
+                      </span>
+                    )}
+                  </div>
                 </div>
                 {f.note && <p className="list-explorer-peer-note">{f.note}</p>}
               </div>
@@ -2170,50 +2190,52 @@ export default function ListExplorer({
           </div>
         </div>
         <div className="list-explorer-global-actions">
-          <div className="list-explorer-toolbar">
-            <div className="toolbar-group">
-              <span className="toolbar-label">Show:</span>
-              <button
-                className={`toolbar-toggle ${showCurrentPlaylist ? 'active' : ''}`}
-                onClick={() => setShowCurrentPlaylist(!showCurrentPlaylist)}
-              >
-                Current Playlist
-              </button>
-              <button
-                className={`toolbar-toggle ${showNewNominations ? 'active' : ''}`}
-                onClick={() => setShowNewNominations(!showNewNominations)}
-              >
-                New Nominations
-              </button>
+          {explorerView === 'lists' && (
+            <div className="list-explorer-toolbar">
+              <div className="toolbar-group">
+                <span className="toolbar-label">Show:</span>
+                <button
+                  className={`toolbar-toggle ${showCurrentPlaylist ? 'active' : ''}`}
+                  onClick={() => setShowCurrentPlaylist(!showCurrentPlaylist)}
+                >
+                  Current Playlist
+                </button>
+                <button
+                  className={`toolbar-toggle ${showNewNominations ? 'active' : ''}`}
+                  onClick={() => setShowNewNominations(!showNewNominations)}
+                >
+                  New Nominations
+                </button>
+              </div>
+              <div className="toolbar-separator" />
+              <div className="toolbar-group">
+                <span className="toolbar-label">Other Users:</span>
+                <select
+                  className="toolbar-select"
+                  onChange={(e) => {
+                    const user = allPeerLists.find(
+                      (u) => u.user_id === e.target.value,
+                    );
+                    if (user) togglePeerList(user);
+                    e.target.value = '';
+                  }}
+                  value=""
+                >
+                  <option value="" disabled>
+                    Select a user...
+                  </option>
+                  {allPeerLists
+                    .filter((u) => u.user_id !== authUser?.id)
+                    .map((user) => (
+                      <option key={user.user_id} value={user.user_id}>
+                        {getDisplayProfileName(user.username)} (
+                        {user.nominations.length} songs)
+                      </option>
+                    ))}
+                </select>
+              </div>
             </div>
-            <div className="toolbar-separator" />
-            <div className="toolbar-group">
-              <span className="toolbar-label">Other Users:</span>
-              <select
-                className="toolbar-select"
-                onChange={(e) => {
-                  const user = allPeerLists.find(
-                    (u) => u.user_id === e.target.value,
-                  );
-                  if (user) togglePeerList(user);
-                  e.target.value = '';
-                }}
-                value=""
-              >
-                <option value="" disabled>
-                  Select a user...
-                </option>
-                {allPeerLists
-                  .filter((u) => u.user_id !== authUser?.id)
-                  .map((user) => (
-                    <option key={user.user_id} value={user.user_id}>
-                      {getDisplayProfileName(user.username)} (
-                      {user.nominations.length} songs)
-                    </option>
-                  ))}
-              </select>
-            </div>
-          </div>
+          )}
         </div>
       </div>
 

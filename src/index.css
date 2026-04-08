@@ -9766,8 +9766,6 @@ body.is-resizing .resize-handle {
   justify-content: space-between;
   align-items: center;
   flex-shrink: 0;
-  max-width: 1600px;
-  margin: 0 auto;
   width: 100%;
   transition: padding-right 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 }
@@ -9897,10 +9895,11 @@ body.is-resizing .resize-handle {
 /* Comments View Styling (Unified with Columns) */
 .list-explorer-grid.comments-mode {
   padding: 24px;
-  max-width: 1600px;
-  margin: 0 auto;
   height: 100%;
   width: 100%;
+  max-width: 1800px;
+  margin: 0 auto;
+  justify-content: center;
   min-height: 0;
 }
 
@@ -11456,6 +11455,12 @@ body.is-resizing .resize-handle {
   margin-bottom: 4px;
 }
 
+.list-explorer-peer-indicators {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .list-explorer-peer-user {
   font-weight: 600;
   font-size: 13px;
@@ -11470,6 +11475,56 @@ body.is-resizing .resize-handle {
   color: #c4b5fd;
   border-radius: 4px;
   border: 1px solid rgba(196, 181, 253, 0.2);
+}
+
+.list-explorer-peer-support {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 99px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: all var(--transition);
+}
+
+.list-explorer-peer-support.level-1 {
+  color: #fbbf24;
+  background: rgba(251, 191, 36, 0.12);
+  border-color: rgba(251, 191, 36, 0.2);
+}
+
+.list-explorer-peer-support.level-2 {
+  color: #ff2d78;
+  background: rgba(255, 45, 120, 0.12);
+  border-color: rgba(255, 45, 120, 0.2);
+}
+
+.list-explorer-peer-support.level-3 {
+  color: #ffb700;
+  background: rgba(255, 183, 0, 0.12);
+  border-color: rgba(255, 183, 0, 0.2);
+}
+
+.indicator-icon {
+  width: 12px;
+  height: 12px;
+  display: block;
+}
+
+.theme-light .list-explorer-peer-support.level-1 {
+  background: rgba(251, 191, 36, 0.08) !important;
+  color: #92400e !important;
+}
+
+.theme-light .list-explorer-peer-support.level-2 {
+  background: rgba(255, 45, 120, 0.08) !important;
+  color: #9d174d !important;
+}
+
+.theme-light .list-explorer-peer-support.level-3 {
+  background: rgba(255, 183, 0, 0.08) !important;
+  color: #854d0e !important;
 }
 
 .list-explorer-peer-note {

@@ -164,7 +164,7 @@ export async function fetchDetailedUserActivity(
   }
 
   // Fetch some general community highlights (last 10 comments globally)
-  const { data: globalData, error: globalError } = await supabase
+  const { data: globalData } = await supabase
     .from('track_user_feedback')
     .select(
       `
@@ -189,13 +189,45 @@ export async function fetchDetailedUserActivity(
     .order('updated_at', { ascending: false })
     .limit(10);
 
-  if (globalError) {
-    console.error('Error fetching global highlights:', globalError);
+  // Fetch support status for all feedback records (Personal, Peer, Highlights)
+  const allFeedback = [
+    ...(personalData || []),
+    ...(peerData || []),
+    ...(globalData || []),
+  ];
+
+  const userIds = [...new Set(allFeedback.map((f) => f.user_id || userId))];
+  const trackIds = [
+    ...new Set(allFeedback.map((f) => f.tracks?.id || f.track_id)),
+  ].filter(Boolean);
+
+  let supportMap = new Map();
+  if (userIds.length > 0 && trackIds.length > 0) {
+    const { data: supports } = await supabase
+      .from('track_supports')
+      .select('user_id, track_id, level')
+      .in('user_id', userIds)
+      .in('track_id', trackIds);
+
+    if (supports) {
+      supports.forEach((s) => {
+        supportMap.set(`${s.user_id}:${s.track_id}`, s.level);
+      });
+    }
   }
 
+  const attachSupport = (f, uId) => {
+    const level = supportMap.get(`${uId}:${f.tracks?.id || f.track_id}`);
+    return {
+      ...f,
+      isSupported: !!level,
+      supportLevel: level,
+    };
+  };
+
   return {
-    personal: personalData || [],
-    peer: peerData || [],
-    highlights: globalData || [],
+    personal: (personalData || []).map((f) => attachSupport(f, userId)),
+    peer: (peerData || []).map((f) => attachSupport(f, f.user_id)),
+    highlights: (globalData || []).map((f) => attachSupport(f, f.user_id)),
   };
 }
