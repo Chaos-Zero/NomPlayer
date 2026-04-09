@@ -19,7 +19,13 @@ import { ContextMenuPortal } from './ContextMenuPortal';
 import CollectionAdder from './CollectionAdder.jsx';
 import ExportIcon from './ExportIcon.jsx';
 import YouTubeIcon from './YouTubeIcon.jsx';
-import { HeartIcon, LockIcon, SpeechBubbleIcon } from './Icons.jsx';
+import {
+  HeartIcon,
+  LockIcon,
+  SpeechBubbleIcon,
+  XIcon,
+  SortByRatingIcon,
+} from './Icons.jsx';
 
 const PANEL_CLOSE_MS = 240;
 
@@ -193,6 +199,14 @@ export function SupportItem({
             paddingRight: '12px',
           }}
         >
+          {video.rating != null && (
+            <span
+              className="list-explorer-peer-rating"
+              style={{ whiteSpace: 'nowrap' }}
+            >
+              {video.rating}/10
+            </span>
+          )}
           {tone === 'support' && (
             <button
               className={`support-tier-icon-btn level-${video.supportLevel || 1}`}
@@ -349,6 +363,7 @@ export default function FavouritesPanel({
   const [selectedIds, setSelectedIds] = useState([]);
   const [contextMenu, setContextMenu] = useState(null);
   const [toastMessage, setToastMessage] = useState('');
+  const [isSortingByRating, setIsSortingByRating] = useState(false);
   const toastTimeoutRef = useRef(null);
 
   const selectedIdSet = useMemo(() => new Set(selectedIds), [selectedIds]);
@@ -356,6 +371,30 @@ export default function FavouritesPanel({
     () => supportList.filter((video) => selectedIdSet.has(video.videoId)),
     [selectedIdSet, supportList],
   );
+
+  // Map to keep track of original indices (1-based)
+  const originalIndexMap = useMemo(() => {
+    const map = new Map();
+    supportList.forEach((video, index) => {
+      map.set(video.videoId, index + 1);
+    });
+    return map;
+  }, [supportList]);
+
+  const displayList = useMemo(() => {
+    if (!isSortingByRating) return supportList;
+
+    return [...supportList].sort((a, b) => {
+      const ratingA = a.rating ?? -1;
+      const ratingB = b.rating ?? -1;
+      if (ratingB !== ratingA) return ratingB - ratingA;
+      // Stable sort using original index for ties
+      return (
+        (originalIndexMap.get(a.videoId) || 0) -
+        (originalIndexMap.get(b.videoId) || 0)
+      );
+    });
+  }, [isSortingByRating, supportList, originalIndexMap]);
 
   useEffect(
     () => () => {
@@ -577,6 +616,22 @@ export default function FavouritesPanel({
                   <YouTubeIcon />
                 </button>
                 <button
+                  className={`fav-panel-action-btn icon-only${isSortingByRating ? ' active' : ''}`}
+                  type="button"
+                  onClick={() => {
+                    setIsSortingByRating(!isSortingByRating);
+                    if (selectionMode) setSelectionMode(false);
+                  }}
+                  title={
+                    isSortingByRating ? 'Cancel sorting' : 'Order by rating'
+                  }
+                  aria-label={
+                    isSortingByRating ? 'Cancel sorting' : 'Order by rating'
+                  }
+                >
+                  {isSortingByRating ? <XIcon /> : <SortByRatingIcon />}
+                </button>
+                <button
                   className={`fav-panel-action-btn${selectionMode ? ' active' : ''}`}
                   type="button"
                   onClick={handleToggleSelectionMode}
@@ -644,10 +699,10 @@ export default function FavouritesPanel({
               <div className="fav-hint">{emptyHint}</div>
             </div>
           ) : selectionMode ? (
-            supportList.map((video, index) => (
+            displayList.map((video) => (
               <SupportItem
                 key={video.videoId}
-                orderNumber={index + 1}
+                orderNumber={originalIndexMap.get(video.videoId)}
                 video={video}
                 onRemove={onRemove}
                 onDoubleQueue={handleDoubleQueue}
@@ -670,13 +725,13 @@ export default function FavouritesPanel({
               onDragEnd={handleDragEnd}
             >
               <SortableContext
-                items={supportList.map((entry) => entry.videoId)}
+                items={displayList.map((entry) => entry.videoId)}
                 strategy={verticalListSortingStrategy}
               >
-                {supportList.map((video, index) => (
+                {displayList.map((video) => (
                   <SortableSupportItem
                     key={video.videoId}
-                    orderNumber={index + 1}
+                    orderNumber={originalIndexMap.get(video.videoId)}
                     video={video}
                     onRemove={onRemove}
                     onDoubleQueue={handleDoubleQueue}
@@ -717,12 +772,38 @@ export default function FavouritesPanel({
               </div>
             </div>
           )}
-          <CollectionAdder
-            tone={tone}
-            addButtonLabel={addButtonLabel}
-            onAddDirectItems={onAddDirectItems}
-            highlight={highlightAdd}
-          />
+          {isSortingByRating ? (
+            <div
+              className={`collection-adder tone-${tone} sorting-active`}
+              key="sorting"
+            >
+              <div className="collection-adder-shell" style={{ height: 58 }}>
+                <div className="collection-adder-stage">
+                  <div className="collection-adder-face collection-adder-front">
+                    {addButtonLabel}
+                  </div>
+                  <button
+                    className="collection-save-order-back"
+                    type="button"
+                    onClick={() => {
+                      onReorder?.(displayList);
+                      setIsSortingByRating(false);
+                      showToast('Support list reordered by rating');
+                    }}
+                  >
+                    Save Order
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <CollectionAdder
+              tone={tone}
+              addButtonLabel={addButtonLabel}
+              onAddDirectItems={onAddDirectItems}
+              highlight={highlightAdd}
+            />
+          )}
         </div>
 
         {contextMenu && isOpen && (

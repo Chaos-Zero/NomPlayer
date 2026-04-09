@@ -36,6 +36,12 @@ function normalizeVideoEntry(entry) {
       entry.supportLevel <= 3
         ? entry.supportLevel
         : 1,
+    rating:
+      typeof entry.rating === 'number' &&
+      entry.rating >= 1 &&
+      entry.rating <= 10
+        ? entry.rating
+        : null,
     comment: typeof entry.comment === 'string' ? entry.comment : '',
   };
 }

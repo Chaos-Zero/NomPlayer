@@ -497,6 +497,7 @@ export default function TrackDatabase({
   onShowToast,
   hasPlayer,
   listenedStatusById = {},
+  onRefreshFeedback,
 }) {
   const [tracks, setTracks] = useState([]);
   const [userFeedback, setUserFeedback] = useState({});
@@ -801,11 +802,12 @@ export default function TrackDatabase({
           ...prev,
           [trackId]: { ...current, rating },
         }));
+        onRefreshFeedback?.();
       } catch {
         onShowToast?.('Failed to save rating.');
       }
     },
-    [supabase, authUser, userFeedback, onShowToast],
+    [supabase, authUser, userFeedback, onShowToast, onRefreshFeedback],
   );
 
   const handleUpdateNote = useCallback(
@@ -824,11 +826,12 @@ export default function TrackDatabase({
           ...prev,
           [trackId]: { ...current, note },
         }));
+        onRefreshFeedback?.();
       } catch {
         onShowToast?.('Failed to save comment.');
       }
     },
-    [supabase, authUser, userFeedback, onShowToast],
+    [supabase, authUser, userFeedback, onShowToast, onRefreshFeedback],
   );
 
   const handleSort = (column) => {

@@ -1255,6 +1255,7 @@ export default function ListExplorer({
   onPlayCommunityList,
   catalogTrackByVideoId,
   initialView = 'lists',
+  onRefreshFeedback,
 }) {
   const [focusedListId, setFocusedListId] = useState(null);
   const [activeCustomPlaylistId, setActiveCustomPlaylistId] = useState(null);
@@ -2324,6 +2325,7 @@ export default function ListExplorer({
                 }));
 
                 onShowToast?.('Feedback deleted.', 'dashboard');
+                onRefreshFeedback?.();
               } catch (err) {
                 console.error('Delete failed:', err);
                 onShowToast?.('Failed to delete feedback.', 'error');
@@ -2367,6 +2369,7 @@ export default function ListExplorer({
                 });
 
                 onShowToast('Feedback saved!');
+                onRefreshFeedback?.();
 
                 // If we added a note, it won't be in our "others" set anyway,
                 // but if we deleted a note (not possible here yet but good practice),

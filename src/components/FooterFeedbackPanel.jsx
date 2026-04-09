@@ -23,9 +23,10 @@ export default function FooterFeedbackPanel({
   supabase,
   authUser,
   userProfile,
-  onClose,
   onShowToast,
   anchorRect,
+  onUpdate,
+  onClose,
 }) {
   const [supportersMenu, setSupportersMenu] = useState(null);
   // To keep the popover aligned when the window resizes (e.g. modal centering)
@@ -306,6 +307,7 @@ export default function FooterFeedbackPanel({
       setCommunityData((prev) => ({ ...prev, feedback }));
       onShowToast?.('Feedback saved successfully!', 'dashboard');
       setIsEditing(false);
+      onUpdate?.();
     } catch (err) {
       console.error('Save failed:', err);
       onShowToast?.('Failed to save feedback.', 'error');
@@ -344,6 +346,7 @@ export default function FooterFeedbackPanel({
       setLocalComment('');
       setLocalRating('');
       onShowToast?.('Feedback deleted.', 'dashboard');
+      onUpdate?.();
     } catch (err) {
       console.error('Delete failed:', err);
       onShowToast?.('Failed to delete feedback.', 'error');

@@ -295,3 +295,20 @@ export function FilterIcon({ className = 'collection-icon' }) {
     </svg>
   );
 }
+
+export function SortByRatingIcon({ className = 'collection-icon' }) {
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M3 9h10M3 15h10M7 5v14M11 5v14" opacity="0.5" />
+      <path d="M17 11l3 3 3-3M20 18V6" />
+    </svg>
+  );
+}

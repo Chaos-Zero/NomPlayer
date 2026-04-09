@@ -22,6 +22,7 @@ import YouTubeIcon from './YouTubeIcon.jsx';
 import ScrollingText from './ScrollingText.jsx';
 import useMediaQuery from '../hooks/useMediaQuery.js';
 import { getDisplayProfileName } from '../lib/playerState.js';
+import { SortByRatingIcon } from './Icons.jsx';
 
 function FastForwardIcon() {
   return (
@@ -65,6 +66,22 @@ function PlaylistTabIcon() {
       <path d="M4.5 9.75H10.75" />
       <path d="M4.5 14.25H10.75" />
       <path d="M13.25 6.25L16.25 8.5L13.25 10.75V6.25Z" />
+    </svg>
+  );
+}
+
+function HeartIcon() {
+  return (
+    <svg viewBox="0 0 20 20" fill="currentColor">
+      <path d="M9.653 16.915l-.005-.003-.019-.01a20.759 20.759 0 0 1-1.162-.682 22.045 22.045 0 0 1-2.582-1.9C4.045 12.733 2 10.352 2 7.5a4.5 4.5 0 0 1 8-2.828A4.5 4.5 0 0 1 18 7.5c0 2.852-2.044 5.233-3.885 6.82a22.049 22.049 0 0 1-3.744 2.582 20.77 20.77 0 0 1-1.162.682l-.019.01-.005.003L9.653 16.915z" />
+    </svg>
+  );
+}
+
+function StarIcon() {
+  return (
+    <svg viewBox="0 0 20 20" fill="currentColor">
+      <path d="M10 2l2.35 4.76 5.26.76-3.81 3.71.9 5.24L10 14.12l-4.7 2.47.9-5.24-3.81-3.71 5.26-.76L10 2z" />
     </svg>
   );
 }
@@ -242,6 +259,11 @@ function PlaylistItem({
       </div>
 
       <div className="playlist-item-actions">
+        {video.rating != null && (
+          <span className="list-explorer-peer-rating sidebar-rating">
+            {video.rating}
+          </span>
+        )}
         <div className="item-fav-container">
           <button
             className={`item-fav-btn${starStateClass}`}
@@ -382,6 +404,7 @@ export default function PlaylistSidebar({
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState([]);
   const [contextMenu, setContextMenu] = useState(null);
+  const [isSortingByRating, setIsSortingByRating] = useState(false);
   const collapseGestureRef = useRef(null);
   const supportIds = useMemo(
     () => new Set(supportList.map((entry) => entry.videoId)),
@@ -401,11 +424,25 @@ export default function PlaylistSidebar({
       ),
     [playlist, selectedIds],
   );
+  const displayPlaylist = useMemo(() => {
+    if (!isSortingByRating) return playlist;
+    return [...playlist].sort((a, b) => {
+      const ratingA = a.rating ?? -1;
+      const ratingB = b.rating ?? -1;
+      if (ratingB !== ratingA) return ratingB - ratingA;
+      return (a.loadIndex ?? 0) - (b.loadIndex ?? 0);
+    });
+  }, [playlist, isSortingByRating]);
+
   const selectedVideos = useMemo(
     () => playlist.filter((video) => selectedIdSet.has(video.videoId)),
     [playlist, selectedIdSet],
   );
-  const canReorder = !selectionMode && (!isShuffleEnabled || showOriginalOrder);
+
+  const canReorder =
+    !selectionMode &&
+    (!isShuffleEnabled || showOriginalOrder) &&
+    !isSortingByRating;
   useEffect(() => {
     setSelectionMode(false);
     setSelectedIds([]);
@@ -554,13 +591,21 @@ export default function PlaylistSidebar({
 
   function renderHeader() {
     const isCommunityView = activePlaylistView.type === 'community';
+    const isNominationsView = activePlaylistView.type === 'nominations';
+    const isSupportView = activePlaylistView.type === 'support';
+
     const activeUser = isCommunityView
       ? communityNominations.find((u) => u.userId === activePlaylistView.userId)
       : null;
 
-    const displayTitle = isCommunityView
-      ? getDisplayProfileName(activeUser?.username) || 'Community'
-      : 'Playlist';
+    let displayTitle = 'Playlist';
+    if (isCommunityView) {
+      displayTitle = getDisplayProfileName(activeUser?.username) || 'Community';
+    } else if (isNominationsView) {
+      displayTitle = 'My Nominations';
+    } else if (isSupportView) {
+      displayTitle = 'My Support List';
+    }
 
     const currentAvatar = isCommunityView ? activeUser?.avatarUrl : null;
 
@@ -585,7 +630,15 @@ export default function PlaylistSidebar({
                 />
               ) : (
                 <div className="community-view-avatar-fallback">
-                  {isCommunityView ? '👤' : <MusicIcon />}
+                  {isCommunityView ? (
+                    '👤'
+                  ) : isNominationsView ? (
+                    <StarIcon />
+                  ) : isSupportView ? (
+                    <HeartIcon />
+                  ) : (
+                    <MusicIcon />
+                  )}
                 </div>
               )}
             </div>
@@ -604,13 +657,13 @@ export default function PlaylistSidebar({
             <div className="community-view-dropdown" role="listbox">
               <div className="community-view-dropdown-scroll">
                 <button
-                  className={`community-option${!isCommunityView ? ' selected' : ''}`}
+                  className={`community-option${activePlaylistView.type === 'personal' ? ' selected' : ''}`}
                   onClick={() => {
                     onSwitchView({ type: 'personal' });
                     setIsDropdownOpen(false);
                   }}
                   role="option"
-                  aria-selected={!isCommunityView}
+                  aria-selected={activePlaylistView.type === 'personal'}
                 >
                   <div className="community-option-avatar">
                     <div className="community-view-avatar-fallback">
@@ -619,6 +672,48 @@ export default function PlaylistSidebar({
                   </div>
                   <div className="community-option-info">
                     <span className="community-option-name">My Playlist</span>
+                  </div>
+                </button>
+
+                <button
+                  className={`community-option${activePlaylistView.type === 'nominations' ? ' selected' : ''}`}
+                  onClick={() => {
+                    onSwitchView({ type: 'nominations' });
+                    setIsDropdownOpen(false);
+                  }}
+                  role="option"
+                  aria-selected={activePlaylistView.type === 'nominations'}
+                >
+                  <div className="community-option-avatar">
+                    <div className="community-view-avatar-fallback">
+                      <StarIcon />
+                    </div>
+                  </div>
+                  <div className="community-option-info">
+                    <span className="community-option-name">
+                      My Nominations
+                    </span>
+                  </div>
+                </button>
+
+                <button
+                  className={`community-option${activePlaylistView.type === 'support' ? ' selected' : ''}`}
+                  onClick={() => {
+                    onSwitchView({ type: 'support' });
+                    setIsDropdownOpen(false);
+                  }}
+                  role="option"
+                  aria-selected={activePlaylistView.type === 'support'}
+                >
+                  <div className="community-option-avatar">
+                    <div className="community-view-avatar-fallback">
+                      <HeartIcon />
+                    </div>
+                  </div>
+                  <div className="community-option-info">
+                    <span className="community-option-name">
+                      My Support List
+                    </span>
                   </div>
                 </button>
 
@@ -721,6 +816,18 @@ export default function PlaylistSidebar({
               >
                 <YouTubeIcon />
               </button>
+              {(activePlaylistView.type === 'nominations' ||
+                activePlaylistView.type === 'support') && (
+                <button
+                  className={`fav-panel-action-btn icon-only${isSortingByRating ? ' active' : ''}`}
+                  type="button"
+                  onClick={() => setIsSortingByRating(!isSortingByRating)}
+                  title="Order by rating"
+                  aria-label="Order by rating"
+                >
+                  <SortByRatingIcon />
+                </button>
+              )}
               <button
                 className={`fav-panel-action-btn${selectionMode ? ' active' : ''}`}
                 type="button"
@@ -747,6 +854,14 @@ export default function PlaylistSidebar({
   }
 
   function renderAddControl() {
+    const isNominationsView = activePlaylistView.type === 'nominations';
+    const isSupportView = activePlaylistView.type === 'support';
+    const tone = isNominationsView
+      ? 'nomination'
+      : isSupportView
+        ? 'support'
+        : 'playlist';
+
     return (
       <div className="playlist-sidebar-add">
         {authUser && pendingMetadataCount > 0 && (
@@ -771,14 +886,41 @@ export default function PlaylistSidebar({
             </div>
           </div>
         )}
-        <CollectionAdder
-          tone="playlist"
-          addButtonLabel="+"
-          addButtonAriaLabel="Add to playlist"
-          addButtonTitle="Add to playlist"
-          onAddDirectItems={onAddDirectItems}
-          compact
-        />
+        {isSortingByRating && (isNominationsView || isSupportView) ? (
+          <div
+            className={`collection-adder tone-${tone} compact sorting-active`}
+            key="sorting"
+          >
+            <div className="collection-adder-shell" style={{ height: 42 }}>
+              <div className="collection-adder-stage">
+                <div className="collection-adder-face collection-adder-front">
+                  +
+                </div>
+                <button
+                  className="collection-save-order-back"
+                  type="button"
+                  onClick={() => {
+                    onReorder?.(displayPlaylist);
+                    setIsSortingByRating(false);
+                  }}
+                >
+                  Save Order
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <CollectionAdder
+            tone={
+              tone === 'nomination' || tone === 'support' ? tone : 'playlist'
+            }
+            addButtonLabel="+"
+            addButtonAriaLabel="Add to playlist"
+            addButtonTitle="Add to playlist"
+            onAddDirectItems={onAddDirectItems}
+            compact
+          />
+        )}
       </div>
     );
   }
@@ -952,7 +1094,7 @@ export default function PlaylistSidebar({
       {!isCollapsed && (
         <div className="playlist-list" role="list">
           {selectionMode ? (
-            playlist.map((video, index) => (
+            displayPlaylist.map((video, index) => (
               <PlaylistItem
                 key={video.videoId}
                 orderNumber={(video.loadIndex ?? index) + 1}
@@ -983,10 +1125,10 @@ export default function PlaylistSidebar({
               onDragEnd={handleDragEnd}
             >
               <SortableContext
-                items={playlist.map((video) => video.videoId)}
+                items={displayPlaylist.map((video) => video.videoId)}
                 strategy={verticalListSortingStrategy}
               >
-                {playlist.map((video, index) => (
+                {displayPlaylist.map((video, index) => (
                   <SortablePlaylistItem
                     key={video.videoId}
                     orderNumber={(video.loadIndex ?? index) + 1}
@@ -1011,7 +1153,7 @@ export default function PlaylistSidebar({
               </SortableContext>
             </DndContext>
           ) : (
-            playlist.map((video, index) => (
+            displayPlaylist.map((video, index) => (
               <PlaylistItem
                 key={video.videoId}
                 orderNumber={(video.loadIndex ?? index) + 1}

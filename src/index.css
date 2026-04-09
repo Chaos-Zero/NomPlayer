@@ -1411,6 +1411,77 @@ body {
   color: rgba(245, 240, 255, 0.94);
 }
 
+/* Save Order mode for collection-adder to match buckets */
+.collection-adder.sorting-active .collection-adder-front {
+  opacity: 0 !important;
+  pointer-events: none !important;
+  transform: translateX(8px) scale(0.985) !important;
+}
+
+.collection-adder.sorting-active .collection-save-order-back {
+  opacity: 1 !important;
+  pointer-events: auto !important;
+  transform: translateX(0) scale(1) !important;
+}
+
+.collection-save-order-back {
+  position: absolute;
+  inset: 0;
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  background: #9061f9 !important; /* Premium Purple-Blue */
+  color: white !important;
+  border-radius: var(--radius-md) !important;
+  /* Match front-face font precisely */
+  font-size: 13px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.01em !important;
+  cursor: pointer;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  box-shadow: 0 4px 12px rgba(144, 97, 249, 0.35) !important;
+
+  /* Animation sync */
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(12px) scale(0.985);
+  transition:
+    opacity 0.28s ease,
+    transform 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+    background 0.2s ease,
+    box-shadow 0.2s ease !important;
+}
+
+.collection-save-order-back:hover {
+  background: #a78bfa !important;
+  box-shadow: 0 6px 18px rgba(144, 97, 249, 0.45) !important;
+}
+
+.collection-adder.compact.sorting-active {
+  width: 100% !important; /* Expand to show text when sorting */
+  max-width: none !important;
+}
+
+.collection-adder.compact .collection-save-order-back {
+  border-radius: var(--radius-sm) !important;
+  height: 42px !important;
+  font-size: 12px !important;
+}
+
+.sidebar-rating {
+  margin-right: -4px;
+  background: rgba(139, 92, 246, 0.25) !important;
+  border-color: rgba(167, 139, 250, 0.3) !important;
+  color: #ddd6fe !important;
+  flex-shrink: 0;
+}
+
+.playlist-item.active .sidebar-rating {
+  background: rgba(255, 255, 255, 0.15) !important;
+  border-color: rgba(255, 255, 255, 0.25) !important;
+  color: white !important;
+}
+
 .dashboard-message-danger {
   border-color: rgba(239, 68, 68, 0.34);
   background: rgba(127, 29, 29, 0.2);

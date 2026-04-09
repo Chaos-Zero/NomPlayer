@@ -69,6 +69,7 @@ import {
   ingestYouTubeTrackSources,
 } from './lib/trackCatalog.js';
 import { fetchDashboardNominationUpdates } from './lib/dashboard.js';
+import { fetchUserFeedback } from './lib/feedback.js';
 import { getSupabaseClient, isSupabaseConfigured } from './lib/supabase.js';
 import {
   formatTime,
@@ -554,6 +555,7 @@ export default function App() {
   const catalogLookupPendingVideoIdsRef = useRef(new Set());
   const [authSession, setAuthSession] = useState(null);
   const [userProfile, setUserProfile] = useState(null);
+  const [userFeedback, setUserFeedback] = useState({});
   const [isAuthReady, setIsAuthReady] = useState(!isSupabaseConfigured);
   const [isAuthSubmitting, setIsAuthSubmitting] = useState(false);
   const [authDialogMode, setAuthDialogMode] = useState(null);
@@ -775,6 +777,27 @@ export default function App() {
   useEffect(() => {
     authUserIdRef.current = authUser?.id ?? null;
   }, [authUser]);
+
+  const refreshUserFeedback = useCallback(async () => {
+    if (!supabase || !authUserIdRef.current) {
+      setUserFeedback({});
+      return;
+    }
+    try {
+      const feedback = await fetchUserFeedback(supabase, authUserIdRef.current);
+      setUserFeedback(feedback || {});
+    } catch (error) {
+      console.error('Failed to fetch user feedback:', error);
+    }
+  }, [supabase]);
+
+  useEffect(() => {
+    if (authUser?.id) {
+      refreshUserFeedback();
+    } else {
+      setUserFeedback({});
+    }
+  }, [authUser?.id, refreshUserFeedback]);
 
   const cancelQueuedAuthSyncFlush = useCallback(() => {
     if (authSyncFlushTimeoutRef.current) {
@@ -1506,6 +1529,74 @@ export default function App() {
     showOriginalOrder,
   ]);
 
+  const enrichedNominationList = useMemo(() => {
+    return nominationList.map((nom, index) => {
+      const catalogEntry = catalogTrackByVideoId[nom.videoId];
+      const personalRating =
+        (catalogEntry?.id && userFeedback[catalogEntry.id]?.rating) ||
+        (nom.trackId && userFeedback[nom.trackId]?.rating);
+      return {
+        ...nom,
+        loadIndex: index,
+        rating: personalRating || nom.rating || null,
+        title:
+          catalogEntry?.displayTitle ||
+          catalogEntry?.sourceTitle ||
+          nom.title ||
+          nom.videoId,
+        thumbnail:
+          catalogEntry?.sourceThumbnailUrl ||
+          nom.thumbnail ||
+          getYouTubeThumbnailUrl(nom.videoId),
+        channelTitle:
+          catalogEntry?.sourceChannelTitle || nom.channelTitle || '',
+        trackId: catalogEntry?.trackId ?? null,
+        gameTitle: catalogEntry?.gameTitle || nom.gameTitle || '',
+        trackTitle: catalogEntry?.trackTitle || nom.trackTitle || '',
+        displayTitle: catalogEntry?.displayTitle || nom.displayTitle || '',
+        isRetired: Boolean(catalogEntry?.isRetired),
+        retiredByTournamentName:
+          catalogEntry?.retiredByTournamentName ||
+          nom.retiredByTournamentName ||
+          '',
+      };
+    });
+  }, [nominationList, catalogTrackByVideoId, userFeedback]);
+
+  const enrichedSupportList = useMemo(() => {
+    return supportList.map((sup, index) => {
+      const catalogEntry = catalogTrackByVideoId[sup.videoId];
+      const personalRating =
+        (catalogEntry?.id && userFeedback[catalogEntry.id]?.rating) ||
+        (sup.trackId && userFeedback[sup.trackId]?.rating);
+      return {
+        ...sup,
+        loadIndex: index,
+        rating: personalRating || sup.rating || null,
+        title:
+          catalogEntry?.displayTitle ||
+          catalogEntry?.sourceTitle ||
+          sup.title ||
+          sup.videoId,
+        thumbnail:
+          catalogEntry?.sourceThumbnailUrl ||
+          sup.thumbnail ||
+          getYouTubeThumbnailUrl(sup.videoId),
+        channelTitle:
+          catalogEntry?.sourceChannelTitle || sup.channelTitle || '',
+        trackId: catalogEntry?.trackId ?? null,
+        gameTitle: catalogEntry?.gameTitle || sup.gameTitle || '',
+        trackTitle: catalogEntry?.trackTitle || sup.trackTitle || '',
+        displayTitle: catalogEntry?.displayTitle || sup.displayTitle || '',
+        isRetired: Boolean(catalogEntry?.isRetired),
+        retiredByTournamentName:
+          catalogEntry?.retiredByTournamentName ||
+          sup.retiredByTournamentName ||
+          '',
+      };
+    });
+  }, [supportList, catalogTrackByVideoId, userFeedback]);
+
   const sidebarTracks = useMemo(() => {
     if (activePlaylistView.type === 'community') {
       const communityUser = communityNominations.find(
@@ -1514,9 +1605,13 @@ export default function App() {
       if (communityUser) {
         return communityUser.nominations.map((nom, index) => {
           const catalogEntry = catalogTrackByVideoId[nom.videoId];
+          const personalRating =
+            (catalogEntry?.id && userFeedback[catalogEntry.id]?.rating) ||
+            (nom.trackId && userFeedback[nom.trackId]?.rating);
           return {
             ...nom,
             loadIndex: index,
+            rating: personalRating || nom.rating || null,
             title:
               catalogEntry?.displayTitle ||
               catalogEntry?.sourceTitle ||
@@ -1540,13 +1635,20 @@ export default function App() {
           };
         });
       }
+    } else if (activePlaylistView.type === 'nominations') {
+      return enrichedNominationList;
+    } else if (activePlaylistView.type === 'support') {
+      return enrichedSupportList;
     }
     return displayPlaylist;
   }, [
     activePlaylistView,
     communityNominations,
-    displayPlaylist,
     catalogTrackByVideoId,
+    userFeedback,
+    enrichedNominationList,
+    enrichedSupportList,
+    displayPlaylist,
   ]);
 
   const currentDisplayIndex = useMemo(() => {
@@ -2956,7 +3058,7 @@ export default function App() {
 
   const handleSidebarSelect = useCallback(
     (videoId, forcePlay = false) => {
-      if (activePlaylistView.type === 'community') {
+      if (activePlaylistView.type !== 'personal') {
         const track = sidebarTracks.find((t) => t.videoId === videoId);
         if (track) {
           if (!transientVideo) {
@@ -2964,8 +3066,8 @@ export default function App() {
           }
           setTransientVideo({
             ...track,
-            source: 'community-view',
-            communityUserId: activePlaylistView.userId,
+            source: activePlaylistView.type + '-view',
+            communityUserId: activePlaylistView.userId || null,
           });
           setCurrentVideoId(null);
 
@@ -3025,7 +3127,11 @@ export default function App() {
   );
 
   const handlePrev = useCallback(() => {
-    if (transientVideo?.source === 'community-view') {
+    if (
+      transientVideo?.source === 'community-view' ||
+      transientVideo?.source === 'nominations-view' ||
+      transientVideo?.source === 'support-view'
+    ) {
       const currentIndex = sidebarTracks.findIndex(
         (v) => v.videoId === transientVideo.videoId,
       );
@@ -3033,7 +3139,7 @@ export default function App() {
         const prevTrack = sidebarTracks[currentIndex - 1];
         setTransientVideo({
           ...prevTrack,
-          source: 'community-view',
+          source: transientVideo.source,
           communityUserId: transientVideo.communityUserId,
         });
         if (isPlaying) {
@@ -3068,7 +3174,11 @@ export default function App() {
   }, [sidebarTracks, transientVideo, isPlaying, markVideoStarted]);
 
   const handleNext = useCallback(() => {
-    if (transientVideo?.source === 'community-view') {
+    if (
+      transientVideo?.source === 'community-view' ||
+      transientVideo?.source === 'nominations-view' ||
+      transientVideo?.source === 'support-view'
+    ) {
       const currentIndex = sidebarTracks.findIndex(
         (v) => v.videoId === transientVideo.videoId,
       );
@@ -3076,7 +3186,7 @@ export default function App() {
         const nextTrack = sidebarTracks[currentIndex + 1];
         setTransientVideo({
           ...nextTrack,
-          source: 'community-view',
+          source: transientVideo.source,
           communityUserId: transientVideo.communityUserId,
         });
         if (isPlaying) {
@@ -3127,7 +3237,11 @@ export default function App() {
       }
 
       // Check if we can advance within the community view
-      if (transientVideo.source === 'community-view') {
+      if (
+        transientVideo.source === 'community-view' ||
+        transientVideo.source === 'nominations-view' ||
+        transientVideo.source === 'support-view'
+      ) {
         const currentIndex = sidebarTracks.findIndex(
           (v) => v.videoId === transientVideo.videoId,
         );
@@ -3135,7 +3249,7 @@ export default function App() {
           const nextTrack = sidebarTracks[currentIndex + 1];
           setTransientVideo({
             ...nextTrack,
-            source: 'community-view',
+            source: transientVideo.source,
             communityUserId: transientVideo.communityUserId,
           });
           markVideoStarted(nextTrack.videoId);
@@ -3853,18 +3967,25 @@ export default function App() {
     [isPlaying, markVideoStarted, transientVideo],
   );
 
-  const handleReorderPlaylist = useCallback((newOrder) => {
-    if (
-      !Array.isArray(newOrder) ||
-      newOrder.length !== playlistRef.current.length
-    ) {
-      return;
-    }
+  const handleReorderPlaylist = useCallback(
+    (newOrder) => {
+      if (!Array.isArray(newOrder)) return;
 
-    playlistRef.current = newOrder;
-    setPlaylist(newOrder);
-    hasReachedPlaylistEndRef.current = false;
-  }, []);
+      if (activePlaylistView.type === 'personal') {
+        if (newOrder.length !== playlistRef.current.length) return;
+        playlistRef.current = newOrder;
+        setPlaylist(newOrder);
+        hasReachedPlaylistEndRef.current = false;
+      } else if (activePlaylistView.type === 'nominations') {
+        if (newOrder.length !== nominationList.length) return;
+        setNominationList(newOrder);
+      } else if (activePlaylistView.type === 'support') {
+        if (newOrder.length !== supportList.length) return;
+        setSupportList(newOrder);
+      }
+    },
+    [activePlaylistView.type, nominationList.length, supportList.length],
+  );
 
   const handleQueueFromSupportList = useCallback(
     (videos) => {
@@ -4601,6 +4722,7 @@ export default function App() {
                 onShowToast={handleShowDashboardToast}
                 hasPlayer={Boolean(currentVideo)}
                 listenedStatusById={listenedStatusById}
+                onRefreshFeedback={refreshUserFeedback}
               />
             </Suspense>
           )}
@@ -4631,6 +4753,7 @@ export default function App() {
               onPlayCommunityList={handlePlayCommunityList}
               catalogTrackByVideoId={catalogTrackByVideoId}
               initialView={explorerInitialView}
+              onRefreshFeedback={refreshUserFeedback}
             />
           )}
           {persistentPlayer}
@@ -4662,7 +4785,15 @@ export default function App() {
               }}
               onToggleOrderView={handleTogglePlaylistOrderView}
               onSelect={handleSidebarSelect}
-              onReorder={handleReorderPlaylist}
+              onReorder={(newTracks) => {
+                if (activePlaylistView.type === 'nominations') {
+                  handleReorderNominationList(newTracks);
+                } else if (activePlaylistView.type === 'support') {
+                  handleReorderSupportList(newTracks);
+                } else {
+                  handleReorderPlaylist(newTracks);
+                }
+              }}
               supportList={supportList}
               nominationList={nominationList}
               listenedStatusById={listenedStatusById}
@@ -4727,7 +4858,7 @@ export default function App() {
 
       {renderSupportList && (
         <FavouritesPanel
-          supportList={supportList}
+          supportList={enrichedSupportList}
           onReorder={handleReorderSupportList}
           isOpen={showSupportList}
           onClose={handleRequestCloseSupportList}
@@ -4764,7 +4895,7 @@ export default function App() {
 
       {renderNominationsList && (
         <FavouritesPanel
-          supportList={nominationList}
+          supportList={enrichedNominationList}
           onReorder={handleReorderNominationList}
           isOpen={showNominationsList}
           onClose={handleRequestCloseNominationsList}
@@ -4893,6 +5024,7 @@ export default function App() {
             anchorRect={feedbackPosition}
             onClose={handleCloseFeedbackPanel}
             onShowToast={showDefaultAppToast}
+            onUpdate={refreshUserFeedback}
           />
         </ModalPortal>
       )}
