@@ -3773,14 +3773,11 @@ export default function App() {
         }),
       );
 
-      // 3. Update the catalog cache overlay
-      mergeCatalogTrackSummaries(updatesWithYouTubeMeta);
-
       const trackIdByVideoId = {};
 
       if (supabase && authUser) {
         try {
-          // 4. Ingest YouTube metadata first to ensure track_sources entries exist
+          // 3. Ingest YouTube metadata first to ensure track_sources entries exist
           const ingestResult = await ingestYouTubeTrackSources(
             supabase,
             updatesWithYouTubeMeta,
@@ -3793,7 +3790,7 @@ export default function App() {
             });
           }
 
-          // 5. Call internal RPC for VGMC metadata
+          // 4. Call internal RPC for VGMC metadata
           const savePromises = updatesWithYouTubeMeta.map(async (update) => {
             const { data: trackId, error } = await supabase.rpc(
               'import_vgmc_catalog_row',
@@ -3830,34 +3827,30 @@ export default function App() {
         }
       }
 
-      // 6. Update local state lists with comprehensive metadata
-      const applyUpdatesToList = (list) => {
-        let nextList = [...list];
-        updatesWithYouTubeMeta.forEach((update) => {
-          const trackId = trackIdByVideoId[update.videoId] || update.trackId;
-          nextList = nextList.map((item) => {
-            const isMatch = update.oldVideoId
-              ? item.videoId === update.oldVideoId
-              : item.videoId === update.videoId;
+      // 5. Update local state lists with comprehensive metadata (single-pass)
+      const updateLookup = new Map();
+      for (const update of updatesWithYouTubeMeta) {
+        const trackId = trackIdByVideoId[update.videoId] || update.trackId;
+        const matchKey = update.oldVideoId || update.videoId;
+        updateLookup.set(matchKey, { ...update, trackId: trackId || null });
+      }
 
-            if (isMatch) {
-              return {
-                ...item,
-                videoId: update.videoId,
-                trackId: trackId || item.trackId,
-                gameTitle: update.gameTitle,
-                trackTitle: update.trackTitle,
-                displayTitle: `${update.gameTitle} - ${update.trackTitle}`,
-                title: update.title || item.title,
-                thumbnail: update.thumbnail || item.thumbnail,
-                channelTitle: update.channelTitle || item.channelTitle,
-              };
-            }
-            return item;
-          });
+      const applyUpdatesToList = (list) =>
+        list.map((item) => {
+          const update = updateLookup.get(item.videoId);
+          if (!update) return item;
+          return {
+            ...item,
+            videoId: update.videoId,
+            trackId: update.trackId || item.trackId,
+            gameTitle: update.gameTitle,
+            trackTitle: update.trackTitle,
+            displayTitle: `${update.gameTitle} - ${update.trackTitle}`,
+            title: update.title || item.title,
+            thumbnail: update.thumbnail || item.thumbnail,
+            channelTitle: update.channelTitle || item.channelTitle,
+          };
         });
-        return nextList;
-      };
 
       setSupportList(applyUpdatesToList);
       setNominationList(applyUpdatesToList);
