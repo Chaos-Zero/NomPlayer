@@ -826,46 +826,6 @@ function ListExplorerColumn({
               />
             </button>
           )}
-          {userToggle && (
-            <button
-              className={`list-explorer-column-btn column-user-toggle ${!userToggle.active ? 'is-inactive' : ''}`}
-              onClick={userToggle.onToggle}
-              title={
-                userToggle.active
-                  ? 'Hide my nominations'
-                  : 'Show my nominations'
-              }
-            >
-              <img
-                src={deriveProfileAvatarUrl(
-                  userToggle.user,
-                  userToggle.user?.avatar_url,
-                )}
-                alt="My toggle"
-                className="column-user-avatar"
-              />
-            </button>
-          )}
-          {userToggle && (
-            <button
-              className={`list-explorer-column-btn column-user-toggle ${!userToggle.active ? 'is-inactive' : ''}`}
-              onClick={userToggle.onToggle}
-              title={
-                userToggle.active
-                  ? 'Hide my nominations'
-                  : 'Show my nominations'
-              }
-            >
-              <img
-                src={deriveProfileAvatarUrl(
-                  userToggle.user,
-                  userToggle.user?.avatar_url,
-                )}
-                alt="My toggle"
-                className="column-user-avatar"
-              />
-            </button>
-          )}
           {canAddAll && videos && videos.length > 0 && (
             <button
               className="list-explorer-column-btn"

@@ -836,7 +836,7 @@ export default function HomePage({
     const rawCandidates = buildDiscoveryCandidates(visibleNominationUpdates, {
       currentPlaylistIds,
       excludeUserId: authUser?.id ?? null,
-      limit: 200, // Increased for larger pool
+      limit: 44,
     });
 
     const unlistenedCandidates = rawCandidates.filter((item) => {
@@ -907,8 +907,8 @@ export default function HomePage({
     });
     const uniquePool = Array.from(uniqueMap.values());
 
-    // 5. Commit to persistent state (140 items to ensure grid stays full on resize)
-    setPersistentDiscoveryItems(uniquePool.slice(0, 140));
+    // 5. Commit to persistent state
+    setPersistentDiscoveryItems(uniquePool.slice(0, 44));
   }, [
     discoveryCandidates,
     unplacedFallbackTracks,
@@ -993,7 +993,7 @@ export default function HomePage({
       try {
         const { data } = await fetchPagedTracks(supabase, {
           viewMode: 'unplaced',
-          limit: 150, // Increased for larger backfill pool
+          limit: 30,
           sortColumn: 'submissions',
           sortAsc: false,
         });

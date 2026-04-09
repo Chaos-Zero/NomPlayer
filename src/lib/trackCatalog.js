@@ -412,13 +412,8 @@ export async function fetchMaxVgmcNumber(supabase) {
 export async function findTrackInCatalog(supabase, videoId) {
   if (!videoId) return null;
   const catalog = await getFullCatalog(supabase);
-  const found = catalog.find(
-    (t) => t.source_external_id === videoId || t.videoId === videoId,
-  );
-  if (found) {
-    return normalizeTrackCatalogEntry(found);
-  }
-  return null;
+  const found = catalog.find((t) => t.videoId === videoId);
+  return found || null;
 }
 
 let memoryCatalog = null;
@@ -478,14 +473,21 @@ async function getFullCatalog(supabase) {
     }
   }
 
-  // Attach stats formatting seamlessly
+  // Attach stats formatting seamlessly and normalize once
+  const output = [];
   for (const t of merged) {
     const s = statsMap[t.track_id];
-    t.totalComments = s ? s.total_comments : 0;
-    t.averageRating = s ? s.average_rating : 0;
+    const normalized = normalizeTrackCatalogEntry(t);
+    if (normalized) {
+      normalized.totalComments = s ? s.total_comments : 0;
+      normalized.averageRating = s ? s.average_rating : 0;
+      normalized.hasResult = t.has_result;
+      normalized.tournamentCount = t.tournament_count;
+      output.push(normalized);
+    }
   }
 
-  memoryCatalog = merged;
+  memoryCatalog = output;
   return memoryCatalog;
 }
 
@@ -523,9 +525,9 @@ export async function fetchFilteredTracks(
       catalog = catalog.filter((t) => {
         return words.every((word) => {
           return (
-            (t.game_title && cleanStr(t.game_title).includes(word)) ||
-            (t.track_title && cleanStr(t.track_title).includes(word)) ||
-            (t.display_title && cleanStr(t.display_title).includes(word))
+            (t.gameTitle && cleanStr(t.gameTitle).includes(word)) ||
+            (t.trackTitle && cleanStr(t.trackTitle).includes(word)) ||
+            (t.displayTitle && cleanStr(t.displayTitle).includes(word))
           );
         });
       });
@@ -543,7 +545,7 @@ export async function fetchFilteredTracks(
         (t) =>
           t.tournaments &&
           t.tournaments.some(
-            (trn) => trn.sequence_number === Number(vgmcFilter),
+            (trn) => trn.sequenceNumber === Number(vgmcFilter),
           ),
       );
     }
@@ -558,18 +560,18 @@ export async function fetchFilteredTracks(
     const ratedIds = new Set(
       Object.keys(userFeedback).filter((id) => userFeedback[id]?.rating),
     );
-    catalog = catalog.filter((t) => ratedIds.has(t.track_id));
+    catalog = catalog.filter((t) => ratedIds.has(t.trackId));
   } else if (viewMode === 'unrated') {
     const ratedIds = new Set(
       Object.keys(userFeedback).filter((id) => userFeedback[id]?.rating),
     );
-    catalog = catalog.filter((t) => !ratedIds.has(t.track_id));
+    catalog = catalog.filter((t) => !ratedIds.has(t.trackId));
   } else if (viewMode === 'unplaced') {
-    catalog = catalog.filter((t) => !t.has_result);
+    catalog = catalog.filter((t) => !t.hasResult);
   } else if (viewMode === 'placed') {
-    catalog = catalog.filter((t) => t.has_result);
+    catalog = catalog.filter((t) => t.hasResult);
   } else if (viewMode === 'retired') {
-    catalog = catalog.filter((t) => t.is_retired);
+    catalog = catalog.filter((t) => t.isRetired);
   } else if (viewMode === 'history_recovery') {
     const partialVideoIds = new Set(
       Object.keys(listenedStatusById).filter(
@@ -577,27 +579,27 @@ export async function fetchFilteredTracks(
       ),
     );
     if (partialVideoIds.size === 0) return { data: [], totalCount: 0 };
-    catalog = catalog.filter((t) => partialVideoIds.has(t.source_external_id));
+    catalog = catalog.filter((t) => partialVideoIds.has(t.videoId));
   }
 
   // Sorting logic
   catalog.sort((a, b) => {
     let diff = 0;
     if (sortColumn === 'vgmc') {
-      const aSeq = a.tournaments?.[0]?.sequence_number ?? 999;
-      const bSeq = b.tournaments?.[0]?.sequence_number ?? 999;
+      const aSeq = a.tournaments?.[0]?.sequenceNumber ?? 999;
+      const bSeq = b.tournaments?.[0]?.sequenceNumber ?? 999;
       diff = aSeq - bSeq;
       if (diff === 0)
-        diff = (a.game_title || '').localeCompare(b.game_title || '');
+        diff = (a.gameTitle || '').localeCompare(b.gameTitle || '');
     } else if (sortColumn === 'game') {
-      diff = (a.game_title || '').localeCompare(b.game_title || '');
+      diff = (a.gameTitle || '').localeCompare(b.gameTitle || '');
     } else if (sortColumn === 'track') {
-      diff = (a.track_title || '').localeCompare(b.track_title || '');
+      diff = (a.trackTitle || '').localeCompare(b.trackTitle || '');
     } else if (sortColumn === 'submissions') {
-      diff = (a.tournament_count || 0) - (b.tournament_count || 0);
+      diff = (a.tournamentCount || 0) - (b.tournamentCount || 0);
     } else if (sortColumn === 'rating') {
-      const aRating = userFeedback[a.track_id]?.rating;
-      const bRating = userFeedback[b.track_id]?.rating;
+      const aRating = userFeedback[a.trackId]?.rating;
+      const bRating = userFeedback[b.trackId]?.rating;
 
       if (aRating && !bRating) return -1;
       if (!aRating && bRating) return 1;
@@ -605,16 +607,16 @@ export async function fetchFilteredTracks(
       if (aRating && bRating) {
         diff = Number(aRating) - Number(bRating);
         if (diff === 0)
-          diff = (a.game_title || '').localeCompare(b.game_title || '');
+          diff = (a.gameTitle || '').localeCompare(b.gameTitle || '');
       } else {
-        diff = (a.game_title || '').localeCompare(b.game_title || '');
+        diff = (a.gameTitle || '').localeCompare(b.gameTitle || '');
       }
     } else if (sortColumn === 'comments') {
       diff = (a.totalComments || 0) - (b.totalComments || 0);
       if (diff === 0)
-        diff = (a.game_title || '').localeCompare(b.game_title || '');
+        diff = (a.gameTitle || '').localeCompare(b.gameTitle || '');
     } else {
-      diff = (a.game_title || '').localeCompare(b.game_title || '');
+      diff = (a.gameTitle || '').localeCompare(b.gameTitle || '');
     }
     return sortAsc ? diff : -diff;
   });
@@ -625,16 +627,7 @@ export async function fetchFilteredTracks(
   }
 
   return {
-    data: catalog
-      .map((p) => {
-        const normalized = normalizeTrackCatalogEntry(p);
-        if (normalized) {
-          normalized.averageRating = p.averageRating;
-          normalized.totalComments = p.totalComments;
-        }
-        return normalized;
-      })
-      .filter(Boolean),
+    data: catalog,
     totalCount,
   };
 }

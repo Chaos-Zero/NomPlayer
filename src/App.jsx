@@ -1213,16 +1213,24 @@ export default function App() {
       return {};
     }
 
-    catalogTrackByVideoIdRef.current = {
+    const nextValue = {
       ...catalogTrackByVideoIdRef.current,
       ...updates,
     };
 
+    const keys = Object.keys(nextValue);
+    if (keys.length > 500) {
+      // Retain the newest 400 to prevent constant eviction thrashing
+      const keysToRemove = keys.slice(0, keys.length - 400);
+      for (const key of keysToRemove) {
+        delete nextValue[key];
+      }
+    }
+
+    catalogTrackByVideoIdRef.current = nextValue;
+
     startTransition(() => {
-      setCatalogTrackByVideoId((previousValue) => ({
-        ...previousValue,
-        ...updates,
-      }));
+      setCatalogTrackByVideoId(nextValue);
     });
 
     return updates;

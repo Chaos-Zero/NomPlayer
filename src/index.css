@@ -9885,6 +9885,11 @@ body.is-resizing .resize-handle {
   box-shadow: 0 0 15px var(--accent-dim);
 }
 
+.list-explorer-view-selector option {
+  background: var(--bg-surface);
+  color: var(--text-primary);
+}
+
 .list-explorer-view-indicator {
   font-size: 12px;
   color: var(--text-muted);

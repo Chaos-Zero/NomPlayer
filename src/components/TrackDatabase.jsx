@@ -12,6 +12,7 @@ import {
   fetchFilteredTracks,
   fetchMaxVgmcNumber,
   bulkUpdateTracks,
+  clearCatalogCache,
 } from '../lib/trackCatalog.js';
 import {
   fetchCommunityFeedback,
@@ -577,6 +578,14 @@ export default function TrackDatabase({
     init();
   }, [supabase]);
 
+  // Clear tracks on unmount
+  useEffect(() => {
+    return () => {
+      setTracks([]);
+      clearCatalogCache();
+    };
+  }, []);
+
   // Context Menu Lifecycle
 
   // Centering logic for the toolbar action buttons
@@ -765,7 +774,7 @@ export default function TrackDatabase({
     count: tracks.length,
     getScrollElement: () => tableWrapperRef.current,
     estimateSize: () => 53,
-    overscan: 20,
+    overscan: 8,
   });
 
   const virtualItems = rowVirtualizer.getVirtualItems();
