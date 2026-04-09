@@ -222,15 +222,42 @@ export default function CommunityActivity({
 
     setIsSaving(true);
     try {
-      await upsertUserFeedback(supabase, authUser.id, trackId, pendingFeedback);
-
-      // Refresh local data
-      const feedback = await fetchCommunityFeedback(supabase, trackId);
-      setCommunityData((prev) => ({ ...prev, feedback }));
-      setUserFeedback(pendingFeedback);
+      const savedData = await upsertUserFeedback(
+        supabase,
+        authUser.id,
+        trackId,
+        pendingFeedback,
+      );
 
       onShowToast?.('Feedback saved successfully!');
       setIsEditing(false);
+
+      // Update community data with the saved record
+      if (savedData) {
+        const recordWithProfile = {
+          ...savedData,
+          profiles: {
+            username: userProfile?.username,
+            avatar_url: userProfile?.avatar_url,
+          },
+        };
+
+        setCommunityData((prev) => {
+          const filtered = prev.feedback.filter(
+            (f) => f.user_id !== authUser.id,
+          );
+          return {
+            ...prev,
+            feedback: [recordWithProfile, ...filtered],
+          };
+        });
+        setUserFeedback(pendingFeedback);
+      } else {
+        // Fallback: Refresh local data
+        const feedback = await fetchCommunityFeedback(supabase, trackId);
+        setCommunityData((prev) => ({ ...prev, feedback }));
+        setUserFeedback(pendingFeedback);
+      }
     } catch (err) {
       console.error('Failed to save feedback:', err);
       if (err.isValidationError) {

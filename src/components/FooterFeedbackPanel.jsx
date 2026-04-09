@@ -25,6 +25,7 @@ export default function FooterFeedbackPanel({
   userProfile,
   onShowToast,
   anchorRect,
+  initialIsEditing = false,
   onUpdate,
   onClose,
 }) {
@@ -159,12 +160,16 @@ export default function FooterFeedbackPanel({
     setLocalRating(personalFeedback.rating || '');
 
     // Default to collapsed if feedback exists, or open for new (Wait for load per User Request)
-    if (!personalFeedback.rating && !personalFeedback.note) {
+    // Force open if the prop says so
+    if (
+      initialIsEditing ||
+      (!personalFeedback.rating && !personalFeedback.note)
+    ) {
       setIsEditing(true);
     } else {
       setIsEditing(false);
     }
-  }, [personalFeedback, isLoading]);
+  }, [personalFeedback, isLoading, initialIsEditing]);
 
   const hasChanges = useMemo(() => {
     const savedRating = personalFeedback.rating || '';

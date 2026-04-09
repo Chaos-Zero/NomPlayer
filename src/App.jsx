@@ -566,6 +566,7 @@ export default function App() {
   const [authError, setAuthError] = useState('');
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isFeedbackPanelOpen, setIsFeedbackPanelOpen] = useState(false);
+  const [isFeedbackForcedEdit, setIsFeedbackForcedEdit] = useState(false);
   const [feedbackTrack, setFeedbackTrack] = useState(null);
   const [feedbackPosition, setFeedbackPosition] = useState(null);
   const [globalCommentedVideoIds, setGlobalCommentedVideoIds] = useState(
@@ -3508,14 +3509,19 @@ export default function App() {
     ],
   );
 
-  const handleShowComments = useCallback((video, position = null) => {
-    setFeedbackTrack(video);
-    setFeedbackPosition(position);
-    setIsFeedbackPanelOpen(true);
-  }, []);
+  const handleShowComments = useCallback(
+    (video, position = null, forceEdit = false) => {
+      setFeedbackTrack(video);
+      setFeedbackPosition(position);
+      setIsFeedbackForcedEdit(forceEdit);
+      setIsFeedbackPanelOpen(true);
+    },
+    [],
+  );
 
   const handleCloseFeedbackPanel = useCallback(() => {
     setIsFeedbackPanelOpen(false);
+    setIsFeedbackForcedEdit(false);
     setFeedbackTrack(null);
     setFeedbackPosition(null);
   }, []);
@@ -4743,6 +4749,7 @@ export default function App() {
               onToggleSupport={handleToggleSupportFromPlaylist}
               onShowToast={handleShowDashboardToast}
               authUser={authUser}
+              userProfile={userProfile}
               supabase={supabase}
               onUpdateMetadata={handleOpenMetadataUpdate}
               onOpenSupportDropdown={(video, position) =>
@@ -4754,6 +4761,7 @@ export default function App() {
               catalogTrackByVideoId={catalogTrackByVideoId}
               initialView={explorerInitialView}
               onRefreshFeedback={refreshUserFeedback}
+              onShowComments={handleShowComments}
             />
           )}
           {persistentPlayer}
@@ -5022,6 +5030,7 @@ export default function App() {
             authUser={authUser}
             userProfile={userProfile}
             anchorRect={feedbackPosition}
+            initialIsEditing={isFeedbackForcedEdit}
             onClose={handleCloseFeedbackPanel}
             onShowToast={showDefaultAppToast}
             onUpdate={refreshUserFeedback}

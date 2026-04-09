@@ -5063,7 +5063,8 @@ body {
   animation: fadeIn 0.3s ease;
 }
 
-.feedback-save-row-left {
+.feedback-save-row-left,
+.feedback-save-row-right {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -9976,7 +9977,7 @@ body.is-resizing .resize-handle {
   max-width: 1800px;
   position: relative; /* Scope the absolute loader */
   margin: 0 auto;
-  justify-content: center;
+  justify-content: flex-start;
   min-height: 0;
 }
 
@@ -10201,10 +10202,69 @@ body.is-resizing .resize-handle {
   text-overflow: ellipsis;
 }
 
+.activity-card-date-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .activity-card-date {
   font-size: 11px;
   color: var(--text-muted);
   white-space: nowrap;
+}
+
+.activity-card-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  opacity: 0;
+  transform: translateX(10px);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.activity-card-header:hover .activity-card-header-actions {
+  opacity: 1;
+  transform: translateX(0);
+  pointer-events: all;
+  margin-right: 4px;
+}
+
+.btn-edit-activity-header,
+.btn-delete-activity-header {
+  width: 26px !important;
+  height: 26px !important;
+  padding: 0 !important;
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  transition: all 0.2s ease;
+  border-radius: 0 !important;
+}
+
+.btn-edit-activity-header:hover {
+  color: var(--accent);
+  background: rgba(255, 255, 255, 0.05) !important;
+}
+
+.btn-delete-activity-header:hover {
+  color: var(--error);
+  background: rgba(var(--error-rgb), 0.1) !important;
+}
+
+.activity-card-header-actions .btn-edit-activity-header {
+  border-right: 1px solid var(--border);
+}
+
+.activity-action-icon.miniature {
+  width: 12px;
+  height: 12px;
 }
 
 .activity-card-game {
@@ -10224,11 +10284,19 @@ body.is-resizing .resize-handle {
   font-size: 11px;
   color: var(--accent-light);
   background: var(--accent-dim);
-  padding: 2px 6px;
+  padding: 2px 8px;
   border-radius: 99px;
   margin-top: 4px;
   width: fit-content;
+  max-width: 100%;
   border: 1px solid rgba(var(--accent-rgb), 0.2);
+  overflow: hidden;
+}
+
+.card-comment-indicator span {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .card-comment-indicator svg {

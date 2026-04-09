@@ -157,6 +157,8 @@ function TrackInfoPanel({
   communityData,
   isLoadingData,
   isSaving,
+  isEditing,
+  setIsEditing,
   onClose,
   authUser,
   onUpdateComment,
@@ -164,7 +166,6 @@ function TrackInfoPanel({
   onDeleteFeedback,
   userProfile,
 }) {
-  const [isEditing, setIsEditing] = useState(false);
   const [supportersMenu, setSupportersMenu] = useState(null);
   const personalFeedback = useMemo(() => {
     if (!track || !communityData.feedback || !authUser?.id)
@@ -257,13 +258,14 @@ function TrackInfoPanel({
   }
 
   const hasChanges = useMemo(() => {
-    const savedRating = personalFeedback.rating || '';
-    const savedNote = personalFeedback.note || track?.comment || '';
+    const savedRating = personalFeedback.rating || 0;
+    const savedNote = personalFeedback.note || '';
 
     return (
-      String(localRating) !== String(savedRating) || localComment !== savedNote
+      (localRating || 0) !== (savedRating || 0) ||
+      (localComment || '') !== (savedNote || '')
     );
-  }, [localRating, localComment, personalFeedback, track?.comment]);
+  }, [localRating, localComment, personalFeedback]);
 
   // Merged community feedback (no longer filtering our own)
   const communityList = useMemo(() => {
@@ -285,7 +287,7 @@ function TrackInfoPanel({
   }, [track, communityData.tournaments]);
 
   const vgmcStatus =
-    trackTournaments.length > 0
+    trackTournaments.length > 0 && trackTournaments[0].sequence_number != null
       ? `VGMC ${trackTournaments[0].sequence_number}`
       : 'New to VGMC';
 
@@ -410,18 +412,25 @@ function TrackInfoPanel({
                       personalFeedback.note) && (
                       <div className="feedback-save-row">
                         <div className="feedback-save-row-left">
-                          {hasChanges && (
+                          {(personalFeedback.rating ||
+                            personalFeedback.note) && (
                             <button
-                              className="btn btn-primary btn-save-feedback"
-                              onClick={() => {
-                                onSaveFeedback(localRating, localComment);
-                                setIsEditing(false);
-                              }}
+                              className="btn btn-ghost btn-delete-feedback"
+                              onClick={onDeleteFeedback}
                               disabled={isSaving}
+                              style={{
+                                color: 'var(--text-dim)',
+                                fontSize: '11px',
+                                padding: '6px 10px',
+                                marginLeft: '-10px',
+                              }}
                             >
-                              {isSaving ? 'Saving...' : 'Save Feedback'}
+                              Delete Feedback
                             </button>
                           )}
+                        </div>
+
+                        <div className="feedback-save-row-right">
                           <button
                             className="btn btn-ghost"
                             onClick={() => {
@@ -438,24 +447,21 @@ function TrackInfoPanel({
                             }}
                             disabled={isSaving}
                           >
-                            Discard
+                            Cancel
                           </button>
-                        </div>
-
-                        {(personalFeedback.rating || personalFeedback.note) &&
-                          !hasChanges && (
+                          {hasChanges && (
                             <button
-                              className="btn btn-ghost btn-delete-feedback"
-                              onClick={onDeleteFeedback}
-                              disabled={isSaving}
-                              style={{
-                                color: 'var(--text-dim)',
-                                fontSize: '11px',
+                              className="btn btn-primary btn-save-feedback"
+                              onClick={() => {
+                                onSaveFeedback(localRating, localComment);
+                                setIsEditing(false);
                               }}
+                              disabled={isSaving}
                             >
-                              Delete Feedback
+                              {isSaving ? 'Saving...' : 'Save Feedback'}
                             </button>
                           )}
+                        </div>
                       </div>
                     )}
                   </div>
@@ -937,7 +943,14 @@ function ListExplorerColumn({
   );
 }
 
-function CommentsView({ data, isLoading, onSelectTrack, onPlayNow }) {
+function CommentsView({
+  data,
+  isLoading,
+  onSelectTrack,
+  onEditTrack,
+  onDeleteFeedback,
+  onPlayNow,
+}) {
   const [sortMode, setSortMode] = useState('latest');
 
   if (isLoading) {
@@ -1057,11 +1070,58 @@ function CommentsView({ data, isLoading, onSelectTrack, onPlayNow }) {
               <div className="activity-card-title">
                 {track?.canonical_track_title || 'Unknown Track'}
               </div>
-              <div className="activity-card-date">
-                {latestDate.toLocaleDateString(undefined, {
-                  month: 'short',
-                  day: 'numeric',
-                })}
+              <div className="activity-card-date-row">
+                {isPersonal && (
+                  <div className="activity-card-header-actions">
+                    <button
+                      className="btn btn-ghost btn-edit-activity-header"
+                      title="Edit Feedback"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const rect = e.currentTarget.getBoundingClientRect();
+                        onEditTrack?.(
+                          {
+                            ...track,
+                            videoId: videoId,
+                            trackId: track?.id,
+                            trackTitle: track?.canonical_track_title,
+                            gameTitle: track?.canonical_game_title,
+                          },
+                          {
+                            top: rect.top,
+                            left: rect.left,
+                            width: rect.width,
+                            height: rect.height,
+                          },
+                        );
+                      }}
+                    >
+                      <PencilIcon className="activity-action-icon miniature" />
+                    </button>
+                    <button
+                      className="btn btn-ghost btn-delete-activity-header"
+                      title="Delete Feedback"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onDeleteFeedback?.({
+                          ...track,
+                          videoId: videoId,
+                          trackId: track?.id,
+                          trackTitle: track?.canonical_track_title,
+                          gameTitle: track?.canonical_game_title,
+                        });
+                      }}
+                    >
+                      <XIcon className="activity-action-icon miniature" />
+                    </button>
+                  </div>
+                )}
+                <div className="activity-card-date">
+                  {latestDate.toLocaleDateString(undefined, {
+                    month: 'short',
+                    day: 'numeric',
+                  })}
+                </div>
               </div>
             </div>
             <div className="activity-card-game">
@@ -1247,6 +1307,7 @@ export default function ListExplorer({
   onRemoveFromPlaylist,
   onShowToast,
   authUser,
+  userProfile,
   supabase,
   onUpdateMetadata,
   onExport,
@@ -1256,11 +1317,13 @@ export default function ListExplorer({
   catalogTrackByVideoId,
   initialView = 'lists',
   onRefreshFeedback,
+  onShowComments,
 }) {
   const [focusedListId, setFocusedListId] = useState(null);
   const [activeCustomPlaylistId, setActiveCustomPlaylistId] = useState(null);
   const [selectedTrackId, setSelectedTrackId] = useState(null);
   const [selectedColumnId, setSelectedColumnId] = useState(null);
+  const [isEditingInfo, setIsEditingInfo] = useState(false);
   const [globalCommentedVideoIds, setGlobalCommentedVideoIds] = useState(
     new Set(),
   );
@@ -1292,6 +1355,7 @@ export default function ListExplorer({
   useEffect(() => {
     setSelectedTrackId(null);
     setSelectedColumnId(null);
+    setIsEditingInfo(false);
   }, [explorerView]);
 
   const activeCustomPlaylist = useMemo(() => {
@@ -1470,6 +1534,56 @@ export default function ListExplorer({
       return peer?.videos || [];
     }
     return customPlaylists.find((pl) => pl.id === id)?.videos || [];
+  };
+
+  const handleDeleteFeedback = async (trackToDelete) => {
+    if (!supabase || !authUser || !trackToDelete) return;
+    if (
+      !window.confirm(
+        'Delete your feedback for this track? This cannot be undone.',
+      )
+    )
+      return;
+
+    setIsSavingFeedback(true);
+    try {
+      let trackId = trackToDelete.trackId || trackToDelete.id;
+      if (!trackId || !/^[0-9a-f-]{36}$/i.test(trackId)) {
+        // Ingest if somehow track info lost UUID
+        const ingested = await ingestYouTubeTrackSources(supabase, [
+          trackToDelete,
+        ]);
+        if (ingested && ingested.length > 0) {
+          trackId = ingested[0].track_id;
+        }
+      }
+
+      if (!trackId) throw new Error('Could not identify track.');
+
+      await deleteUserFeedback(supabase, authUser.id, trackId);
+      // Refresh community data
+      setCommunityData((prev) => ({
+        ...prev,
+        feedback: prev.feedback.filter((f) => f.user_id !== authUser.id),
+      }));
+
+      // Update local playlist state
+      const updateLocal = (list) =>
+        list.map((v) =>
+          v.videoId === trackToDelete.videoId ? { ...v, comment: null } : v,
+        );
+      onUpdateNominationList(updateLocal(nominationList));
+      onUpdateSupportList(updateLocal(supportList));
+      onUpdatePlaylist(updateLocal(playlist));
+
+      onShowToast?.('Feedback deleted.', 'dashboard');
+      onRefreshFeedback?.();
+    } catch (err) {
+      console.error('Delete failed:', err);
+      onShowToast?.('Failed to delete feedback.', 'error');
+    } finally {
+      setIsSavingFeedback(false);
+    }
   };
 
   const setListById = (id, newList) => {
@@ -2271,111 +2385,103 @@ export default function ListExplorer({
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
       >
-        {explorerView !== 'comments' && (
-          <TrackInfoPanel
-            key={selectedTrack?.videoId || 'none'}
-            track={selectedTrack}
-            communityData={communityData}
-            isLoadingData={isLoadingCommunity}
-            isSaving={isSavingFeedback}
-            onClose={() => {
-              setSelectedTrackId(null);
-              setSelectedColumnId(null);
-            }}
-            authUser={authUser}
-            userProfile={authUser?.profile}
-            onUpdateComment={(videoId, comment) =>
-              handleUpdateComment(
-                selectedTrackId ? findListId(selectedTrackId) : null,
-                videoId,
-                comment,
-              )
-            }
-            onDeleteFeedback={async () => {
-              if (!supabase || !authUser || !selectedTrack) return;
-              if (
-                !window.confirm(
-                  'Delete your feedback for this track? This cannot be undone.',
-                )
-              )
-                return;
-
-              setIsSavingFeedback(true);
-              try {
-                let trackId = selectedTrack.trackId || selectedTrack.id;
-                if (!trackId || !/^[0-9a-f-]{36}$/i.test(trackId)) {
-                  // Ingest if somehow track info lost UUID
-                  const ingested = await ingestYouTubeTrackSources(supabase, [
-                    selectedTrack,
-                  ]);
-                  if (ingested && ingested.length > 0) {
-                    trackId = ingested[0].track_id;
-                  }
+        <TrackInfoPanel
+          key={selectedTrack?.videoId || 'none'}
+          track={selectedTrack}
+          communityData={communityData}
+          isLoadingData={isLoadingCommunity}
+          isSaving={isSavingFeedback}
+          isEditing={isEditingInfo}
+          setIsEditing={setIsEditingInfo}
+          onClose={() => {
+            setSelectedTrackId(null);
+            setSelectedColumnId(null);
+          }}
+          authUser={authUser}
+          userProfile={userProfile}
+          onUpdateComment={(videoId, comment) =>
+            handleUpdateComment(
+              selectedTrackId ? findListId(selectedTrackId) : null,
+              videoId,
+              comment,
+            )
+          }
+          onDeleteFeedback={() => handleDeleteFeedback(selectedTrack)}
+          onSaveFeedback={async (rating, note) => {
+            if (!supabase || !authUser || !selectedTrack) return;
+            setIsSavingFeedback(true);
+            try {
+              let trackId = selectedTrack.trackId || selectedTrack.id;
+              // Ingest if missing UUID
+              if (!trackId || !/^[0-9a-f-]{36}$/i.test(trackId)) {
+                const ingested = await ingestYouTubeTrackSources(supabase, [
+                  selectedTrack,
+                ]);
+                if (ingested && ingested.length > 0) {
+                  trackId = ingested[0].track_id;
+                  // Update local list state
+                  const updateId = (list) =>
+                    list.map((v) =>
+                      v.videoId === selectedTrack.videoId
+                        ? { ...v, trackId }
+                        : v,
+                    );
+                  onUpdateNominationList(updateId(nominationList));
+                  onUpdateSupportList(updateId(supportList));
+                  onUpdatePlaylist(updateId(playlist));
                 }
-
-                if (!trackId) throw new Error('Could not identify track.');
-
-                await deleteUserFeedback(supabase, authUser.id, trackId);
-                // Refresh community data
-                setCommunityData((prev) => ({
-                  ...prev,
-                  feedback: prev.feedback.filter(
-                    (f) => f.user_id !== authUser.id,
-                  ),
-                }));
-
-                onShowToast?.('Feedback deleted.', 'dashboard');
-                onRefreshFeedback?.();
-              } catch (err) {
-                console.error('Delete failed:', err);
-                onShowToast?.('Failed to delete feedback.', 'error');
-              } finally {
-                setIsSavingFeedback(false);
               }
-            }}
-            onSaveFeedback={async (rating, note) => {
-              if (!supabase || !authUser || !selectedTrack) return;
-              setIsSavingFeedback(true);
-              try {
-                let trackId = selectedTrack.trackId || selectedTrack.id;
-                // Ingest if missing UUID
-                if (!trackId || !/^[0-9a-f-]{36}$/i.test(trackId)) {
-                  const ingested = await ingestYouTubeTrackSources(supabase, [
-                    selectedTrack,
-                  ]);
-                  if (ingested && ingested.length > 0) {
-                    trackId = ingested[0].track_id;
-                    // Update local list state
-                    const updateId = (list) =>
-                      list.map((v) =>
-                        v.videoId === selectedTrack.videoId
-                          ? { ...v, trackId }
-                          : v,
-                      );
-                    onUpdateNominationList(updateId(nominationList));
-                    onUpdateSupportList(updateId(supportList));
-                    onUpdatePlaylist(updateId(playlist));
-                  }
-                }
 
-                if (!trackId) {
-                  onShowToast('Could not link track for feedback.');
-                  return;
-                }
+              if (!trackId) {
+                onShowToast('Could not link track for feedback.');
+                return;
+              }
 
-                await upsertUserFeedback(supabase, authUser.id, trackId, {
+              const savedData = await upsertUserFeedback(
+                supabase,
+                authUser.id,
+                trackId,
+                {
                   rating: rating || null,
                   note: note || null,
+                },
+              );
+
+              // Update local playlist state to match new feedback
+              const updateLocalComment = (list) =>
+                list.map((v) =>
+                  v.videoId === selectedTrack.videoId
+                    ? { ...v, comment: note || null }
+                    : v,
+                );
+              onUpdateNominationList(updateLocalComment(nominationList));
+              onUpdateSupportList(updateLocalComment(supportList));
+              onUpdatePlaylist(updateLocalComment(playlist));
+
+              onShowToast('Feedback saved!');
+              onRefreshFeedback?.();
+
+              // Update community data with the saved record (with profile)
+              if (savedData) {
+                const recordWithProfile = {
+                  ...savedData,
+                  profiles: {
+                    username: userProfile?.username,
+                    avatar_url: userProfile?.avatar_url,
+                  },
+                };
+
+                setCommunityData((prev) => {
+                  const filtered = prev.feedback.filter(
+                    (f) => f.user_id !== authUser.id,
+                  );
+                  return {
+                    ...prev,
+                    feedback: [recordWithProfile, ...filtered],
+                  };
                 });
-
-                onShowToast('Feedback saved!');
-                onRefreshFeedback?.();
-
-                // If we added a note, it won't be in our "others" set anyway,
-                // but if we deleted a note (not possible here yet but good practice),
-                // we might want to refresh. Since it's our own note, no UI change needed for the balloon.
-
-                // Refresh community feedback
+              } else {
+                // Fallback: Refresh community feedback
                 const feedbackData = await fetchCommunityFeedback(
                   supabase,
                   trackId,
@@ -2384,15 +2490,15 @@ export default function ListExplorer({
                   ...prev,
                   feedback: feedbackData || [],
                 }));
-              } catch (err) {
-                console.error('Error saving feedback:', err);
-                onShowToast('Failed to save feedback.');
-              } finally {
-                setIsSavingFeedback(false);
               }
-            }}
-          />
-        )}
+            } catch (err) {
+              console.error('Error saving feedback:', err);
+              onShowToast('Failed to save feedback.');
+            } finally {
+              setIsSavingFeedback(false);
+            }
+          }}
+        />
 
         <div className="list-explorer-layout">
           <AnimatePresence mode="wait">
@@ -2658,7 +2764,17 @@ export default function ListExplorer({
                 <CommentsView
                   data={activityData}
                   isLoading={isLoadingActivity}
-                  onSelectTrack={() => {}}
+                  onSelectTrack={(track) => {
+                    setSelectedTrackId(
+                      track.videoId || track.video_id || track.id,
+                    );
+                    setSelectedColumnId('comments');
+                    setIsEditingInfo(false);
+                  }}
+                  onEditTrack={(track, rect) => {
+                    onShowComments?.(track, rect, true);
+                  }}
+                  onDeleteFeedback={handleDeleteFeedback}
                   onPlayNow={onPlayNow}
                 />
               </Motion.div>
