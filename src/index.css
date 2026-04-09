@@ -5720,7 +5720,7 @@ body {
 
 .playlist-search {
   position: relative;
-  width: min(100%, 284px);
+  width: min(100%, 400px);
   max-width: 100%;
   min-width: 0;
 }
@@ -5822,7 +5822,7 @@ button.playlist-search-indicator:hover {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  max-height: 320px;
+  max-height: 500px;
   padding: 8px;
   overflow-y: auto;
   border: 1px solid var(--border-hover);
@@ -12181,12 +12181,6 @@ body.is-resizing .resize-handle {
   border-radius: 50%;
   cursor: pointer;
   box-shadow: 0 0 10px var(--accent-glow);
-  opacity: 0;
-  transition: opacity 0.2s ease;
-}
-
-.footer-progress-slider:hover::-webkit-slider-thumb {
-  opacity: 1;
 }
 
 .detached-footer-right {

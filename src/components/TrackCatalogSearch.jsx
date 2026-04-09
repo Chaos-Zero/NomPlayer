@@ -14,7 +14,7 @@ import {
   setLastSearchResults,
 } from '../utils/searchPersistence.js';
 
-const SEARCH_RESULTS_LIMIT = 10;
+// No artificial result limit to show all matches
 
 function getSearchResultLabel(result) {
   if (result.gameTitle && result.trackTitle) {
@@ -131,7 +131,6 @@ export default function TrackCatalogSearch({
     const timeoutId = window.setTimeout(() => {
       fetchFilteredTracks(supabase, {
         searchTerm: deferredQuery,
-        limit: SEARCH_RESULTS_LIMIT,
       })
         .then(({ data }) => {
           if (requestId !== requestIdRef.current) return;
