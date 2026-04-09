@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import DiscordIcon from './DiscordIcon.jsx';
 import ScrollingText from './ScrollingText.jsx';
@@ -624,7 +624,7 @@ export function NominationUpdateCard({
   );
 }
 
-function DiscoveryGridItem({ candidate, metadata, onPlayNow }) {
+function DiscoveryGridItem({ candidate, metadata, onPlayNow, onContextMenu }) {
   const title =
     metadata?.trackTitle || candidate?.trackTitle
       ? `${metadata?.gameTitle || candidate?.gameTitle || ''} - ${metadata?.trackTitle || candidate?.trackTitle}`.replace(
@@ -641,8 +641,9 @@ function DiscoveryGridItem({ candidate, metadata, onPlayNow }) {
   return (
     <div
       className="discovery-grid-card-wrapper"
-      title="Double-click to play"
+      title="Double-click to play (Right-click for options)"
       onDoubleClick={() => onPlayNow(candidate)}
+      onContextMenu={(e) => onContextMenu(e, candidate)}
     >
       <TiltedCard
         imageSrc={candidate.thumbnail}
@@ -730,6 +731,9 @@ export default function HomePage({
   isFeedbackPanelOpen = false,
   globalCommentedVideoIds = new Set(),
   onShowToast,
+  onUpdateMetadata,
+  catalogMetadata = {},
+  lastMetadataUpdateBatch = null,
   isAuthReady = true,
 }) {
   const isMobileLayout = useMediaQuery('(max-width: 960px)');
@@ -749,6 +753,49 @@ export default function HomePage({
     MOBILE_DASHBOARD_COLLAPSE_DEFAULTS,
   );
   const [maxVgmcNumber, setMaxVgmcNumber] = useState(24);
+  const [discoveryContextMenu, setDiscoveryContextMenu] = useState(null);
+  const lastAppliedBatchRef = useRef(null);
+
+  // Patch discovery items when metadata is saved (handles both title changes and URL/videoId changes)
+  useEffect(() => {
+    if (
+      !lastMetadataUpdateBatch ||
+      lastMetadataUpdateBatch === lastAppliedBatchRef.current
+    )
+      return;
+    lastAppliedBatchRef.current = lastMetadataUpdateBatch;
+
+    const updateMap = new Map();
+    for (const u of lastMetadataUpdateBatch) {
+      updateMap.set(u.oldVideoId || u.videoId, u);
+    }
+
+    setPersistentDiscoveryItems((prev) => {
+      let changed = false;
+      const next = prev.map((item) => {
+        const update = updateMap.get(item.videoId);
+        if (!update) return item;
+        changed = true;
+        return {
+          ...item,
+          videoId: update.videoId,
+          gameTitle: update.gameTitle || item.gameTitle,
+          trackTitle: update.trackTitle || item.trackTitle,
+          displayTitle: update.displayTitle || item.displayTitle,
+          title: update.title || item.title,
+          thumbnail: update.thumbnail || item.thumbnail,
+        };
+      });
+      return changed ? next : prev;
+    });
+
+    // Update featuredDiscoveryId if it was changed
+    setFeaturedDiscoveryId((prev) => {
+      if (!prev) return prev;
+      const update = updateMap.get(prev);
+      return update && update.videoId !== prev ? update.videoId : prev;
+    });
+  }, [lastMetadataUpdateBatch]);
 
   const dockItems = useMemo(
     () => [
@@ -806,9 +853,17 @@ export default function HomePage({
   const [isShowingFallback, setIsShowingFallback] = useState(false);
   const [isMetadataLoading, setIsMetadataLoading] = useState(true);
 
+  const mergedMetadata = useMemo(
+    () => ({
+      ...trackMetadataById,
+      ...catalogMetadata,
+    }),
+    [trackMetadataById, catalogMetadata],
+  );
+
   const resolveTrack = useCallback(
     (video) => {
-      const meta = trackMetadataById[video.videoId];
+      const meta = mergedMetadata[video.videoId];
       if (!meta) return video;
       return {
         ...video,
@@ -819,7 +874,7 @@ export default function HomePage({
           : video.title || meta.trackTitle || 'Unknown Track',
       };
     },
-    [trackMetadataById],
+    [mergedMetadata],
   );
 
   const currentPlaylistIds = useMemo(
@@ -1287,6 +1342,53 @@ export default function HomePage({
     }));
   }, []);
 
+  const handleDiscoveryContextAction = useCallback(
+    (action, candidate, e) => {
+      setDiscoveryContextMenu(null);
+      const resolved = resolveTrack(candidate);
+
+      if (action === 'play') {
+        onPlayNow?.(resolved);
+      } else if (action === 'add') {
+        onAddToPlaylist?.([resolved]);
+        onShowToast?.('Added to playlist');
+      } else if (action === 'support') {
+        const videoId = candidate.videoId;
+        if (!supportStatusById[videoId]?.isSupported) {
+          onToggleSupport?.(resolved);
+          if (onOpenSupportDropdown && e) {
+            onOpenSupportDropdown(resolved, {
+              top: e.clientY,
+              left: e.clientX,
+            });
+          }
+        } else {
+          onToggleSupport?.(resolved);
+        }
+      } else if (action === 'comments') {
+        onShowComments?.(resolved, {
+          top: e.clientY,
+          left: e.clientX,
+          width: 0,
+          height: 0,
+        });
+      } else if (action === 'metadata') {
+        onUpdateMetadata?.(resolved);
+      }
+    },
+    [
+      onPlayNow,
+      onAddToPlaylist,
+      onShowToast,
+      onToggleSupport,
+      onOpenSupportDropdown,
+      onShowComments,
+      onUpdateMetadata,
+      resolveTrack,
+      supportStatusById,
+    ],
+  );
+
   return (
     <div className="home-shell dashboard-home-shell">
       <section className="dashboard-hero" aria-label="Dashboard overview">
@@ -1395,15 +1497,14 @@ export default function HomePage({
                 <span className="dashboard-feature-kicker">New Nomination</span>
                 <h2 className="dashboard-feature-title">
                   <ScrollingText
-                    text={
-                      trackMetadataById[
-                        (fastSpotlightCandidate || featuredDiscoveryCandidate)
-                          .videoId
-                      ]
-                        ? `${trackMetadataById[(fastSpotlightCandidate || featuredDiscoveryCandidate).videoId].gameTitle} - ${trackMetadataById[(fastSpotlightCandidate || featuredDiscoveryCandidate).videoId].trackTitle}`
-                        : (fastSpotlightCandidate || featuredDiscoveryCandidate)
-                            .title
-                    }
+                    text={(() => {
+                      const spotlightVideo =
+                        fastSpotlightCandidate || featuredDiscoveryCandidate;
+                      const meta = mergedMetadata[spotlightVideo.videoId];
+                      return meta
+                        ? `${meta.gameTitle} - ${meta.trackTitle}`
+                        : spotlightVideo.title;
+                    })()}
                     truncateWhenStatic={true}
                   />
                 </h2>
@@ -1609,7 +1710,7 @@ export default function HomePage({
                     <NominationUpdateCard
                       key={update.userId}
                       update={update}
-                      metadataById={trackMetadataById}
+                      metadataById={mergedMetadata}
                       isExpanded={expandedUserId === update.userId}
                       onToggleExpand={setExpandedUserId}
                       onAddWholeList={handleAddWholeList}
@@ -1654,15 +1755,105 @@ export default function HomePage({
                 <DiscoveryGridItem
                   key={candidate.videoId}
                   candidate={candidate}
-                  metadata={trackMetadataById[candidate.videoId] || candidate}
+                  metadata={mergedMetadata[candidate.videoId] || candidate}
                   onAdd={handleAddDiscoveryCandidate}
                   onPlayNow={handlePlayDiscoveryCandidate}
+                  onContextMenu={(e, item) => {
+                    e.preventDefault();
+                    setDiscoveryContextMenu({
+                      x: e.clientX,
+                      y: e.clientY,
+                      candidate: item,
+                    });
+                  }}
                 />
               ))}
             </DiscoveryMarqueeGrid>
           )}
         </DashboardSection>
       </div>
+
+      {discoveryContextMenu && (
+        <ContextMenuPortal
+          x={discoveryContextMenu.x}
+          y={discoveryContextMenu.y}
+          onClose={() => setDiscoveryContextMenu(null)}
+          className="playlist-context-menu"
+        >
+          <button
+            className="playlist-context-menu-item"
+            onClick={(e) =>
+              handleDiscoveryContextAction(
+                'play',
+                discoveryContextMenu.candidate,
+                e,
+              )
+            }
+          >
+            <span>Play Now</span>
+          </button>
+          <button
+            className="playlist-context-menu-item"
+            onClick={(e) =>
+              handleDiscoveryContextAction(
+                'add',
+                discoveryContextMenu.candidate,
+                e,
+              )
+            }
+          >
+            <span>Add to Playlist</span>
+          </button>
+          <button
+            className={`playlist-context-menu-item ${
+              supportStatusById[discoveryContextMenu.candidate.videoId]
+                ?.isSupported
+                ? 'active has-feedback'
+                : ''
+            }`}
+            onClick={(e) =>
+              handleDiscoveryContextAction(
+                'support',
+                discoveryContextMenu.candidate,
+                e,
+              )
+            }
+          >
+            <span>
+              {supportStatusById[discoveryContextMenu.candidate.videoId]
+                ?.isSupported
+                ? 'Remove from Support List'
+                : 'Add to Support List'}
+            </span>
+          </button>
+          <button
+            className="playlist-context-menu-item"
+            onClick={(e) =>
+              handleDiscoveryContextAction(
+                'comments',
+                discoveryContextMenu.candidate,
+                e,
+              )
+            }
+          >
+            <span>View activity and comment</span>
+          </button>
+          {authUser && (
+            <button
+              className="playlist-context-menu-item"
+              onClick={(e) =>
+                handleDiscoveryContextAction(
+                  'metadata',
+                  discoveryContextMenu.candidate,
+                  e,
+                )
+              }
+            >
+              <span>Update metadata</span>
+            </button>
+          )}
+        </ContextMenuPortal>
+      )}
     </div>
   );
 }

@@ -493,6 +493,7 @@ export default function App() {
   const [tracksNeedingMetadata, setTracksNeedingMetadata] = useState([]);
   const [manualMetadataTracks, setManualMetadataTracks] = useState(null);
   const [showMetadataDialog, setShowMetadataDialog] = useState(false);
+  const [lastMetadataUpdateBatch, setLastMetadataUpdateBatch] = useState(null);
   const [isDetachedFooterEntering, setIsDetachedFooterEntering] =
     useState(false);
   const [isDetachedFooterPending, setIsDetachedFooterPending] = useState(false);
@@ -3870,6 +3871,20 @@ export default function App() {
       );
       setManualMetadataTracks(null);
 
+      // Emit update batch so HomePage can patch its discovery items
+      setLastMetadataUpdateBatch(
+        updatesWithYouTubeMeta.map((u) => ({
+          oldVideoId: u.oldVideoId,
+          videoId: u.videoId,
+          gameTitle: u.gameTitle,
+          trackTitle: u.trackTitle,
+          title: u.title,
+          thumbnail: u.thumbnail,
+          channelTitle: u.channelTitle,
+          displayTitle: `${u.gameTitle} - ${u.trackTitle}`,
+        })),
+      );
+
       forceImmediateSyncRef.current = true;
       mergeCatalogTrackSummaries(updatesWithYouTubeMeta);
     },
@@ -4762,6 +4777,9 @@ export default function App() {
               onShowToast={(message) =>
                 showDefaultAppToast(message, 'dashboard')
               }
+              onUpdateMetadata={handleOpenMetadataUpdate}
+              catalogMetadata={catalogTrackByVideoId}
+              lastMetadataUpdateBatch={lastMetadataUpdateBatch}
             />
           )}
 
