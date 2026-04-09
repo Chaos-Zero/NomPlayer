@@ -278,18 +278,8 @@ export function XIcon({ className = 'collection-icon' }) {
 }
 export function DatabaseIcon({ className = 'collection-icon' }) {
   return (
-    <svg
-      className={className}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <ellipse cx="12" cy="5" rx="9" ry="3" />
-      <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3" />
-      <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5" />
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+      <path d="M12 2C6.48 2 2 3.57 2 5.5v13C2 20.43 6.48 22 12 22s10-1.57 10-2.5v-13C22 3.57 17.52 2 12 2zm0 2c4.83 0 8 1.34 8 1.5S16.83 7 12 7 4 5.66 4 5.5 7.17 4 12 4zM4 8.34C5.58 9.36 8.55 10 12 10s6.42-.64 8-1.66V12c0 .16-3.17 1.5-8 1.5S4 12.16 4 12V8.34zm0 6C5.58 15.36 8.55 16 12 16s6.42-.64 8-1.66V18.5c0 .16-3.17 1.5-8 1.5s-8-1.34-8-1.5v-4.16z" />
     </svg>
   );
 }

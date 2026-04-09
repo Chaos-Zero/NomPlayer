@@ -3,7 +3,7 @@ import { ContextMenuPortal } from './ContextMenuPortal';
 import {
   getTrackCatalogTournamentSummary,
   mapTrackCatalogEntryToVideo,
-  searchTrackCatalog,
+  fetchFilteredTracks,
 } from '../lib/trackCatalog.js';
 import {
   lastSearchError,
@@ -129,8 +129,11 @@ export default function TrackCatalogSearch({
     }
 
     const timeoutId = window.setTimeout(() => {
-      searchTrackCatalog(supabase, deferredQuery, SEARCH_RESULTS_LIMIT)
-        .then((data) => {
+      fetchFilteredTracks(supabase, {
+        searchTerm: deferredQuery,
+        limit: SEARCH_RESULTS_LIMIT,
+      })
+        .then(({ data }) => {
           if (requestId !== requestIdRef.current) return;
           setResults(data.map(normalizeSearchResult).filter(Boolean));
           setError('');
@@ -255,7 +258,7 @@ export default function TrackCatalogSearch({
                   {result.label}
                 </span>
                 <span className="playlist-search-result-meta">
-                  {result.tournamentSummary || 'Unplaced'}
+                  {result.tournamentSummary || 'New'}
                 </span>
               </button>
             ))

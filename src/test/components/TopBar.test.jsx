@@ -7,7 +7,7 @@ import {
 } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import TopBar from '../../components/TopBar.jsx';
-import { searchTrackCatalog } from '../../lib/trackCatalog.js';
+import { fetchFilteredTracks } from '../../lib/trackCatalog.js';
 import {
   fetchPlaylistItems,
   parseYouTubeInput,
@@ -24,7 +24,7 @@ vi.mock('../../lib/trackCatalog.js', async () => {
   const actual = await vi.importActual('../../lib/trackCatalog.js');
   return {
     ...actual,
-    searchTrackCatalog: vi.fn(),
+    fetchFilteredTracks: vi.fn(),
   };
 });
 
@@ -171,21 +171,24 @@ describe('TopBar', () => {
   it('plays a catalog search result from the desktop header search', async () => {
     vi.useFakeTimers();
 
-    searchTrackCatalog.mockResolvedValue([
-      {
-        videoId: 'g1234567890',
-        trackId: 'track-1',
-        gameTitle: 'Gamma Game',
-        trackTitle: 'Skyline',
-        displayTitle: 'Gamma Game - Skyline',
-        sourceTitle: 'Skyline',
-        sourceChannelTitle: 'Channel G',
-        sourceThumbnailUrl: 'g.jpg',
-        isRetired: false,
-        retiredByTournamentName: '',
-        tournaments: [{ sequenceNumber: 6 }],
-      },
-    ]);
+    fetchFilteredTracks.mockResolvedValue({
+      data: [
+        {
+          videoId: 'g1234567890',
+          trackId: 'track-1',
+          gameTitle: 'Gamma Game',
+          trackTitle: 'Skyline',
+          displayTitle: 'Gamma Game - Skyline',
+          sourceTitle: 'Skyline',
+          sourceChannelTitle: 'Channel G',
+          sourceThumbnailUrl: 'g.jpg',
+          isRetired: false,
+          retiredByTournamentName: '',
+          tournaments: [{ sequenceNumber: 6 }],
+        },
+      ],
+      totalCount: 1,
+    });
 
     const onCatalogPlayNow = vi.fn();
     renderTopBar({
@@ -230,21 +233,24 @@ describe('TopBar', () => {
   it('adds a catalog search result to the playlist from the header search context menu', async () => {
     vi.useFakeTimers();
 
-    searchTrackCatalog.mockResolvedValue([
-      {
-        videoId: 'g1234567890',
-        trackId: 'track-1',
-        gameTitle: 'Gamma Game',
-        trackTitle: 'Skyline',
-        displayTitle: 'Gamma Game - Skyline',
-        sourceTitle: 'Skyline',
-        sourceChannelTitle: 'Channel G',
-        sourceThumbnailUrl: 'g.jpg',
-        isRetired: true,
-        retiredByTournamentName: 'VGMC 6',
-        tournaments: [{ sequenceNumber: 6 }],
-      },
-    ]);
+    fetchFilteredTracks.mockResolvedValue({
+      data: [
+        {
+          videoId: 'g1234567890',
+          trackId: 'track-1',
+          gameTitle: 'Gamma Game',
+          trackTitle: 'Skyline',
+          displayTitle: 'Gamma Game - Skyline',
+          sourceTitle: 'Skyline',
+          sourceChannelTitle: 'Channel G',
+          sourceThumbnailUrl: 'g.jpg',
+          isRetired: true,
+          retiredByTournamentName: 'VGMC 6',
+          tournaments: [{ sequenceNumber: 6 }],
+        },
+      ],
+      totalCount: 1,
+    });
 
     const onAddCatalogToPlaylist = vi.fn();
     renderTopBar({

@@ -440,16 +440,21 @@ async function getFullCatalog(supabase) {
 
   if (!supabase) return snapshot;
 
-  // 2. Fetch Delta & Stats concurrently
-  const [deltaRes, statsRes] = await Promise.all([
+  // 2. Fetch Delta, Stats & Deletions concurrently
+  const [deltaRes, statsRes, deletionRes] = await Promise.all([
     supabase.from('track_catalog').select('*').gt('updated_at', exportedAt),
     supabase
       .from('track_stats_summary')
       .select('track_id, total_comments, average_rating'),
+    supabase
+      .from('track_deletions')
+      .select('track_id')
+      .gt('deleted_at', exportedAt),
   ]);
 
   const deltaTracks = deltaRes.data || [];
   const statsList = statsRes.data || [];
+  const deletedIds = new Set((deletionRes.data || []).map((r) => r.track_id));
 
   const statsMap = {};
   for (const s of statsList) statsMap[s.track_id] = s;
@@ -459,6 +464,7 @@ async function getFullCatalog(supabase) {
 
   const merged = [];
   for (const t of snapshot) {
+    if (deletedIds.has(t.track_id)) continue;
     if (deltaMap[t.track_id]) {
       merged.push(deltaMap[t.track_id]);
       delete deltaMap[t.track_id];
@@ -467,7 +473,9 @@ async function getFullCatalog(supabase) {
     }
   }
   for (const key in deltaMap) {
-    merged.push(deltaMap[key]);
+    if (!deletedIds.has(key)) {
+      merged.push(deltaMap[key]);
+    }
   }
 
   // Attach stats formatting seamlessly
@@ -711,6 +719,8 @@ export async function bulkUpdateTracks(supabase, updatesMap) {
       }
     }
   }
+
+  clearCatalogCache();
 }
 
 // Smart cleaning: replace brackets with spaces to keep their content, then remove punctuation
@@ -907,6 +917,7 @@ export async function mergeTracks(
     }
   }
 
+  clearCatalogCache();
   console.log('mergeTracks: Multi-track merge complete.');
 }
 

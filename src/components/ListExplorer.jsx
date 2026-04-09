@@ -1294,6 +1294,7 @@ export default function ListExplorer({
   onOpenSupportDropdown,
   onPlayCommunityList,
   catalogTrackByVideoId,
+  initialView = 'lists',
 }) {
   const [focusedListId, setFocusedListId] = useState(null);
   const [activeCustomPlaylistId, setActiveCustomPlaylistId] = useState(null);
@@ -1307,7 +1308,7 @@ export default function ListExplorer({
     supports: {},
   });
   const [showMyNominations, setShowMyNominations] = useState(true);
-  const [explorerView, setExplorerView] = useState('lists');
+  const [explorerView, setExplorerView] = useState(initialView);
   const [activityData, setActivityData] = useState({
     personal: [],
     peer: [],

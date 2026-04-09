@@ -719,6 +719,7 @@ export default function HomePage({
   onShowComments,
   onNavigateToPlayer,
   onNavigateToExplorer,
+  onNavigateToExplorerComments,
   onNavigateToDatabase,
   onOpenPlaylist,
   onOpenNominationsAdding,
@@ -776,6 +777,16 @@ export default function HomePage({
         className: 'dashboard-action-btn-tertiary',
       },
       {
+        icon: (
+          <svg className="dock-icon" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H5.17L4 17.17V4h16v12z" />
+          </svg>
+        ),
+        label: 'Comments',
+        onClick: onNavigateToExplorerComments,
+        className: 'dashboard-action-btn-tertiary',
+      },
+      {
         icon: <DatabaseIcon />,
         label: 'View DB',
         onClick: onNavigateToDatabase,
@@ -787,6 +798,7 @@ export default function HomePage({
       onOpenNominationsAdding,
       onOpenPlaylist,
       onNavigateToExplorer,
+      onNavigateToExplorerComments,
       onNavigateToDatabase,
     ],
   );
@@ -1624,7 +1636,7 @@ export default function HomePage({
           title="Discover"
           eyebrow="Recommended"
           tone="manage"
-          caption="Check out some of this years Nominations from the community."
+          caption="Check out some of this years Nominations from the community, and older tracks that didn't make the bubble."
           className="dashboard-section-discover"
           isMobileLayout={isMobileLayout}
           isCollapsed={isMobileLayout && mobileCollapsedSections.discover}

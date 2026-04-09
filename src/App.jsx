@@ -4191,7 +4191,15 @@ export default function App() {
     handleNavigate('player');
   }, [handleNavigate]);
 
+  const [explorerInitialView, setExplorerInitialView] = useState('lists');
+
   const handleNavigateToExplorer = useCallback(() => {
+    setExplorerInitialView('lists');
+    handleNavigate('listExplorer');
+  }, [handleNavigate]);
+
+  const handleNavigateToExplorerComments = useCallback(() => {
+    setExplorerInitialView('comments');
     handleNavigate('listExplorer');
   }, [handleNavigate]);
 
@@ -4565,6 +4573,7 @@ export default function App() {
               onShowComments={handleShowComments}
               onNavigateToPlayer={handleNavigateToPlayer}
               onNavigateToExplorer={handleNavigateToExplorer}
+              onNavigateToExplorerComments={handleNavigateToExplorerComments}
               onNavigateToDatabase={handleNavigateToDatabase}
               onOpenPlaylist={handleTogglePlaylist}
               onOpenNominationsAdding={handleOpenNominationsWithHighlight}
@@ -4613,6 +4622,7 @@ export default function App() {
               onSavePlaylist={handleCreateYTPlaylist}
               onPlayCommunityList={handlePlayCommunityList}
               catalogTrackByVideoId={catalogTrackByVideoId}
+              initialView={explorerInitialView}
             />
           )}
           {persistentPlayer}
