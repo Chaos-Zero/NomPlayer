@@ -733,7 +733,7 @@ function ListExplorerColumn({
   onExport,
   onSavePlaylist,
   globalCommentedVideoIds = null,
-  onPlayCommunityList = null,
+  onPlayExplorerList = null,
   userToggle = null,
 }) {
   const [addUrl, setAddUrl] = useState('');
@@ -800,12 +800,7 @@ function ListExplorerColumn({
             <button
               className="list-explorer-column-btn"
               onClick={() => {
-                if (id.startsWith('peer-')) {
-                  const userId = id.replace('peer-', '');
-                  onPlayCommunityList?.(userId);
-                } else {
-                  onPlayNow?.(videos[0]);
-                }
+                onPlayExplorerList?.(id);
               }}
               title="Start this list"
             >
@@ -1313,7 +1308,7 @@ export default function ListExplorer({
   onExport,
   onSavePlaylist,
   onOpenSupportDropdown,
-  onPlayCommunityList,
+  onPlayExplorerList,
   catalogTrackByVideoId,
   initialView = 'lists',
   onRefreshFeedback,
@@ -2550,6 +2545,7 @@ export default function ListExplorer({
                   onContextMenu={handleContextMenu}
                   canAddAll={true}
                   onAddAll={() => handleAddAllToCurrent(nominationList)}
+                  onPlayExplorerList={onPlayExplorerList}
                   onExport={onExport}
                   onSavePlaylist={onSavePlaylist}
                   globalCommentedVideoIds={globalCommentedVideoIds}
@@ -2583,6 +2579,7 @@ export default function ListExplorer({
                   onContextMenu={handleContextMenu}
                   canAddAll={true}
                   onAddAll={() => handleAddAllToCurrent(supportList)}
+                  onPlayExplorerList={onPlayExplorerList}
                   onExport={onExport}
                   onSavePlaylist={onSavePlaylist}
                   globalCommentedVideoIds={globalCommentedVideoIds}
@@ -2615,6 +2612,7 @@ export default function ListExplorer({
                     onClose={() => setShowCurrentPlaylist(false)}
                     onExport={onExport}
                     onSavePlaylist={onSavePlaylist}
+                    onPlayExplorerList={onPlayExplorerList}
                     globalCommentedVideoIds={globalCommentedVideoIds}
                   />
                 )}
@@ -2647,6 +2645,7 @@ export default function ListExplorer({
                     isReadOnly={true}
                     onExport={onExport}
                     onSavePlaylist={onSavePlaylist}
+                    onPlayExplorerList={onPlayExplorerList}
                     globalCommentedVideoIds={globalCommentedVideoIds}
                   />
                 )}
@@ -2685,7 +2684,7 @@ export default function ListExplorer({
                     }
                     canAddAll={true}
                     onAddAll={() => handleAddAllToCurrent(col.videos)}
-                    onPlayCommunityList={onPlayCommunityList}
+                    onPlayExplorerList={onPlayExplorerList}
                     isReadOnly={true}
                     onExport={onExport}
                     onSavePlaylist={onSavePlaylist}

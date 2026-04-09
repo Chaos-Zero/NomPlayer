@@ -25,6 +25,7 @@ import {
   SpeechBubbleIcon,
   XIcon,
   SortByRatingIcon,
+  PlayIcon,
 } from './Icons.jsx';
 
 const PANEL_CLOSE_MS = 240;
@@ -352,6 +353,7 @@ export default function FavouritesPanel({
   onOpenSupportDropdown = () => {},
   authUser = null,
   highlightAdd = false,
+  onPlayList,
 }) {
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -585,6 +587,15 @@ export default function FavouritesPanel({
           <div className="fav-panel-actions">
             {supportList.length > 0 && (
               <>
+                <button
+                  className="fav-panel-action-btn icon-only"
+                  type="button"
+                  onClick={onPlayList}
+                  title="Start list in sidebar"
+                  aria-label="Start list in sidebar"
+                >
+                  <PlayIcon />
+                </button>
                 <button
                   className="fav-panel-action-btn icon-only"
                   type="button"

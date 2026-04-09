@@ -602,9 +602,9 @@ export default function PlaylistSidebar({
     if (isCommunityView) {
       displayTitle = getDisplayProfileName(activeUser?.username) || 'Community';
     } else if (isNominationsView) {
-      displayTitle = 'My Nominations';
+      displayTitle = 'Nominations';
     } else if (isSupportView) {
-      displayTitle = 'My Support List';
+      displayTitle = 'Supports';
     }
 
     const currentAvatar = isCommunityView ? activeUser?.avatarUrl : null;
@@ -856,6 +856,7 @@ export default function PlaylistSidebar({
   function renderAddControl() {
     const isNominationsView = activePlaylistView.type === 'nominations';
     const isSupportView = activePlaylistView.type === 'support';
+    const isCommunityView = activePlaylistView.type === 'community';
     const tone = isNominationsView
       ? 'nomination'
       : isSupportView
@@ -909,7 +910,7 @@ export default function PlaylistSidebar({
               </div>
             </div>
           </div>
-        ) : (
+        ) : !isCommunityView ? (
           <CollectionAdder
             tone={
               tone === 'nomination' || tone === 'support' ? tone : 'playlist'
@@ -920,7 +921,7 @@ export default function PlaylistSidebar({
             onAddDirectItems={onAddDirectItems}
             compact
           />
-        )}
+        ) : null}
       </div>
     );
   }

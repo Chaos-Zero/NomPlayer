@@ -3102,9 +3102,6 @@ export default function App() {
       // Switch to community view and start playback
       setActivePlaylistView({ type: 'community', userId });
 
-      // Note: handleSidebarSelect expects activePlaylistView to be updated.
-      // Since it's a callback with dependencies, we need a slight delay or handle it manually.
-      // Easiest is to set transient state manually here for immediate playback.
       const track = communityUser.nominations[0];
       const trackWithProperId = {
         ...track,
@@ -3125,6 +3122,56 @@ export default function App() {
       setIsPlaying(true);
     },
     [communityNominations, currentVideoIdRef, markVideoStarted, transientVideo],
+  );
+
+  const handlePlayExplorerList = useCallback(
+    (id) => {
+      if (id.startsWith('peer-')) {
+        handlePlayCommunityList(id.replace('peer-', ''));
+      } else if (id === 'nominations') {
+        if (nominationList.length === 0) return;
+        setActivePlaylistView({ type: 'nominations' });
+        const videoId = nominationList[0].videoId;
+        if (!transientVideo) {
+          transientResumeVideoIdRef.current = currentVideoIdRef.current;
+        }
+        setTransientVideo({
+          ...nominationList[0],
+          source: 'nominations-view',
+        });
+        setCurrentVideoId(null);
+        markVideoStarted(videoId);
+        setIsPlaying(true);
+      } else if (id === 'support') {
+        if (supportList.length === 0) return;
+        setActivePlaylistView({ type: 'support' });
+        const videoId = supportList[0].videoId;
+        if (!transientVideo) {
+          transientResumeVideoIdRef.current = currentVideoIdRef.current;
+        }
+        setTransientVideo({
+          ...supportList[0],
+          source: 'support-view',
+        });
+        setCurrentVideoId(null);
+        markVideoStarted(videoId);
+        setIsPlaying(true);
+      } else if (id === 'current' || id === 'personal') {
+        if (playlist.length === 0) return;
+        setActivePlaylistView({ type: 'personal' });
+        goToVideo(playlist[0].videoId, true);
+      }
+    },
+    [
+      handlePlayCommunityList,
+      nominationList,
+      supportList,
+      playlist,
+      goToVideo,
+      currentVideoIdRef,
+      markVideoStarted,
+      transientVideo,
+    ],
   );
 
   const handlePrev = useCallback(() => {
@@ -4757,7 +4804,7 @@ export default function App() {
               }
               onExport={handleOpenExportModal}
               onSavePlaylist={handleCreateYTPlaylist}
-              onPlayCommunityList={handlePlayCommunityList}
+              onPlayExplorerList={handlePlayExplorerList}
               catalogTrackByVideoId={catalogTrackByVideoId}
               initialView={explorerInitialView}
               onRefreshFeedback={refreshUserFeedback}
@@ -4898,6 +4945,7 @@ export default function App() {
           authUser={authUser}
           onExport={handleOpenExportModal}
           onSavePlaylist={handleCreateYTPlaylist}
+          onPlayList={() => handlePlayExplorerList('support')}
         />
       )}
 
@@ -4932,6 +4980,7 @@ export default function App() {
           authUser={authUser}
           onExport={handleOpenExportModal}
           onSavePlaylist={handleCreateYTPlaylist}
+          onPlayList={() => handlePlayExplorerList('nominations')}
           highlightAdd={isAddNominationHighlighted}
         />
       )}
