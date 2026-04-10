@@ -584,7 +584,7 @@ describe('App', () => {
     });
 
     expect(screen.getByRole('status')).toHaveTextContent(
-      'Added to Support list',
+      'Added to Possible Support',
     );
   });
 
