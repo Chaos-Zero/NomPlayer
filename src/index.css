@@ -11500,20 +11500,35 @@ body.is-resizing .resize-handle {
 }
 
 /* Database Feedback Icons */
-.btn-feedback-save {
+.feedback-row-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.btn-feedback-save,
+.btn-feedback-discard,
+.btn-feedback-clear {
   width: 24px;
   height: 24px;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 0;
-  border: none;
   background: transparent;
-  color: #c89cff;
+  border: none;
   cursor: pointer;
+  color: var(--text-dim, rgba(255, 255, 255, 0.5));
   border-radius: 6px;
   transition: all 0.2s ease;
-  opacity: 0.8;
+}
+
+.btn-feedback-save {
+  color: var(--brand-primary, #7c3aed);
+}
+
+.btn-feedback-discard,
+.btn-feedback-clear {
+  color: rgba(255, 255, 255, 0.4);
 }
 
 .btn-feedback-save:hover {

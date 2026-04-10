@@ -3872,20 +3872,25 @@ export default function App() {
 
       if (supabase && authUser) {
         try {
-          // 3. Ingest YouTube metadata first to ensure track_sources entries exist
-          const ingestResult = await ingestYouTubeTrackSources(
-            supabase,
-            updatesWithYouTubeMeta,
+          // 3. Ingest YouTube metadata ONLY for completely new tracks to avoid duplication
+          const newTrackUpdates = updatesWithYouTubeMeta.filter(
+            (u) => !u.trackId,
           );
-          if (Array.isArray(ingestResult)) {
-            ingestResult.forEach((row) => {
-              if (row.youtube_video_id) {
-                trackIdByVideoId[row.youtube_video_id] = row.track_id;
-              }
-            });
+          if (newTrackUpdates.length > 0) {
+            const ingestResult = await ingestYouTubeTrackSources(
+              supabase,
+              newTrackUpdates,
+            );
+            if (Array.isArray(ingestResult)) {
+              ingestResult.forEach((row) => {
+                if (row.youtube_video_id) {
+                  trackIdByVideoId[row.youtube_video_id] = row.track_id;
+                }
+              });
+            }
           }
 
-          // 4. Call internal RPC for VGMC metadata
+          // 4. Call internal RPC for VGMC metadata (now handle YouTube title/thumb too)
           const savePromises = updatesWithYouTubeMeta.map(async (update) => {
             const { data: trackId, error } = await supabase.rpc(
               'import_vgmc_catalog_row',
@@ -3900,6 +3905,9 @@ export default function App() {
                 retiree_placement: null,
                 highest_round_input: null,
                 track_id_input: update.trackId,
+                cached_title_input: update.title || null,
+                cached_channel_title_input: update.channelTitle || null,
+                cached_thumbnail_url_input: update.thumbnail || null,
               },
             );
 

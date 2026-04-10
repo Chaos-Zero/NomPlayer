@@ -11,7 +11,6 @@ import { ContextMenuPortal } from './ContextMenuPortal';
 import {
   fetchFilteredTracks,
   fetchMaxVgmcNumber,
-  bulkUpdateTracks,
   clearCatalogCache,
 } from '../lib/trackCatalog.js';
 import {
@@ -74,7 +73,7 @@ function SaveIcon() {
   );
 }
 
-function EditIcon() {
+function DiscardIcon() {
   return (
     <svg
       className="transport-icon"
@@ -82,7 +81,7 @@ function EditIcon() {
       aria-hidden="true"
       fill="currentColor"
     >
-      <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" />
+      <path d="M14 1.41L12.59 0 7 5.59 1.41 0 0 1.41 5.59 7 0 12.59 1.41 14 7 8.41 12.59 14 14 12.59 8.41 7z" />
     </svg>
   );
 }
@@ -100,19 +99,6 @@ function MergeIcon() {
   );
 }
 
-function DiscardIcon() {
-  return (
-    <svg
-      className="transport-icon"
-      viewBox="0 0 24 24"
-      aria-hidden="true"
-      fill="currentColor"
-    >
-      <path d="M14 1.41L12.59 0 7 5.59 1.41 0 0 1.41 5.59 7 0 12.59 1.41 14 7 8.41 12.59 14 14 12.59 8.41 7z" />
-    </svg>
-  );
-}
-
 function MetadataIcon() {
   return (
     <svg
@@ -122,19 +108,6 @@ function MetadataIcon() {
       fill="currentColor"
     >
       <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" />
-    </svg>
-  );
-}
-
-function CancelIcon() {
-  return (
-    <svg
-      className="transport-icon"
-      viewBox="0 0 24 24"
-      aria-hidden="true"
-      fill="currentColor"
-    >
-      <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />
     </svg>
   );
 }
@@ -214,23 +187,17 @@ const TrackRow = memo(
     index,
     isSelected,
     feedback,
-    isEditMode,
-    pendingChanges,
     columnWidths,
     expandedCellCol,
     onRowClick,
     onToggleCell,
     onUpdateRating,
     onUpdateNote,
-    onFieldChange,
-    onSaveRow,
-    onDiscardRow,
     onSetExpandedCell,
     onOpenContextMenu,
     onPlayNow,
     measureElement,
   }) => {
-    const isDirty = !!pendingChanges;
     const vgmcElements = track.tournaments.map((t, i) => {
       const hasResult = t.placement || t.highestRound;
       let displayValue = t.sequenceNumber;
@@ -276,15 +243,31 @@ const TrackRow = memo(
       (localNote !== null && localNote !== (feedback.note || '')) ||
       (localRating !== null && localRating !== (feedback.rating || ''));
 
+    const handleDiscardFeedback = (e) => {
+      if (e) e.stopPropagation();
+      setLocalRating(null);
+      setLocalNote(null);
+    };
+
+    const handleClearFeedback = (e) => {
+      if (e) e.stopPropagation();
+      if (window.confirm('Clear your rating and note for this track?')) {
+        onUpdateRating(track.trackId, '');
+        onUpdateNote(track.trackId, '');
+        setLocalRating(null);
+        setLocalNote(null);
+      }
+    };
+
     const handleSaveFeedback = (e) => {
       if (e) e.stopPropagation();
       const finalRating = localRating !== null ? localRating : feedback.rating;
       const finalNote = localNote !== null ? localNote : feedback.note;
 
-      if (finalRating !== feedback.rating) {
+      if (finalRating !== feedback.rating && onUpdateRating) {
         onUpdateRating(track.trackId, String(finalRating));
       }
-      if (finalNote !== feedback.note) {
+      if (finalNote !== feedback.note && onUpdateNote) {
         onUpdateNote(track.trackId, finalNote);
       }
       setLocalRating(null);
@@ -341,18 +324,7 @@ const TrackRow = memo(
             maxWidth: columnWidths.game,
           }}
         >
-          {isEditMode ? (
-            <input
-              className="edit-input"
-              value={pendingChanges?.gameTitle ?? track.gameTitle}
-              onChange={(e) =>
-                onFieldChange(track.trackId, 'gameTitle', e.target.value)
-              }
-              onClick={(e) => e.stopPropagation()}
-            />
-          ) : (
-            track.gameTitle
-          )}
+          {track.gameTitle}
         </td>
         <td
           className={`col-track ${expandedCellCol === 'track' ? 'expanded-cell' : ''}`}
@@ -363,18 +335,7 @@ const TrackRow = memo(
             maxWidth: columnWidths.track,
           }}
         >
-          {isEditMode ? (
-            <input
-              className="edit-input"
-              value={pendingChanges?.trackTitle ?? track.trackTitle}
-              onChange={(e) =>
-                onFieldChange(track.trackId, 'trackTitle', e.target.value)
-              }
-              onClick={(e) => e.stopPropagation()}
-            />
-          ) : (
-            track.trackTitle
-          )}
+          {track.trackTitle}
         </td>
         <td
           className="col-rating"
@@ -417,24 +378,14 @@ const TrackRow = memo(
             maxWidth: columnWidths.link,
           }}
         >
-          {isEditMode ? (
-            <input
-              className="edit-input"
-              value={pendingChanges?.sourceUrl ?? track.sourceUrl}
-              onChange={(e) =>
-                onFieldChange(track.trackId, 'sourceUrl', e.target.value)
-              }
-            />
-          ) : (
-            <a
-              href={track.sourceUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="youtube-link"
-            >
-              {track.sourceUrl}
-            </a>
-          )}
+          <a
+            href={track.sourceUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="youtube-link"
+          >
+            {track.sourceUrl}
+          </a>
         </td>
         <td
           className="col-comment"
@@ -458,45 +409,36 @@ const TrackRow = memo(
               }
               style={{ flex: 1 }}
             />
-            {isFeedbackDirty && (
-              <button
-                className="btn-feedback-save"
-                onClick={handleSaveFeedback}
-                title="Save feedback (rating and note)"
-              >
-                <SaveIcon />
-              </button>
-            )}
-          </div>
-        </td>
-        {isEditMode && (
-          <td className="col-actions">
-            {isDirty && (
-              <div className="row-actions">
+            {isFeedbackDirty ? (
+              <div className="feedback-row-actions">
                 <button
-                  className="btn-row-action save"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onSaveRow(track.trackId);
-                  }}
-                  title="Save this row"
+                  className="btn-feedback-save"
+                  onClick={handleSaveFeedback}
+                  title="Save feedback (rating and note)"
                 >
                   <SaveIcon />
                 </button>
                 <button
-                  className="btn-row-action discard"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onDiscardRow(track.trackId);
-                  }}
-                  title="Discard changes"
+                  className="btn-feedback-discard"
+                  onClick={handleDiscardFeedback}
+                  title="Discard pending changes"
                 >
                   <DiscardIcon />
                 </button>
               </div>
+            ) : (
+              (feedback.rating || feedback.note) && (
+                <button
+                  className="btn-feedback-clear"
+                  onClick={handleClearFeedback}
+                  title="Clear saved rating and note"
+                >
+                  <DiscardIcon />
+                </button>
+              )
             )}
-          </td>
-        )}
+          </div>
+        </td>
       </tr>
     );
   },
@@ -511,7 +453,6 @@ export default function TrackDatabase({
   onRefreshFeedback,
   listenedStatusById = {},
   hasPlayer = false,
-  onTrackSaved,
   onUpdateMetadata,
 }) {
   const [tracks, setTracks] = useState([]);
@@ -549,9 +490,6 @@ export default function TrackDatabase({
   const [selectedTrack, setSelectedTrack] = useState(null);
   const [maxVgmc, setMaxVgmc] = useState(24);
   const [expandedCell, setExpandedCell] = useState(null);
-  const [isEditMode, setIsEditMode] = useState(false);
-  const [pendingChanges, setPendingChanges] = useState({});
-  const [isSaving, setIsSaving] = useState(false);
   const [showDuplicateModal, setShowDuplicateModal] = useState(false);
   const [controlsOffset, setControlsOffset] = useState(0);
 
@@ -561,18 +499,6 @@ export default function TrackDatabase({
   const leftZoneRef = useRef(null);
   const centerZoneRef = useRef(null);
   const rightZoneRef = useRef(null);
-
-  // ESC key listener to exit Edit Mode
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      if (e.key === 'Escape' && isEditMode) {
-        setIsEditMode(false);
-        setPendingChanges({});
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isEditMode]);
 
   const loadingIdRef = useRef(0);
 
@@ -704,21 +630,6 @@ export default function TrackDatabase({
     const y = e.clientY;
 
     setContextMenu({ x, y, track });
-  }
-
-  function handleCheckDuplicates(track) {
-    if (tableWrapperRef.current) {
-      scrollPositionRef.current = tableWrapperRef.current.scrollTop;
-    }
-    setSelectedTrack(track);
-    setShowDuplicateModal(true);
-    setContextMenu(null);
-  }
-
-  function handleContextEdit(track) {
-    setSelectedTrack(track);
-    setIsEditMode(true);
-    setContextMenu(null);
   }
 
   // Initial load and feedback fetch
@@ -924,70 +835,6 @@ export default function TrackDatabase({
     );
   }, [columnWidths]);
 
-  const handleFieldChange = useCallback((trackId, field, value) => {
-    setPendingChanges((prev) => ({
-      ...prev,
-      [trackId]: {
-        ...prev[trackId],
-        [field]: value,
-      },
-    }));
-  }, []);
-
-  const handleSaveRow = async (trackId) => {
-    const rowChanges = pendingChanges[trackId];
-    if (!supabase || !rowChanges) return;
-
-    setIsSaving(true);
-    try {
-      const results = await bulkUpdateTracks(supabase, {
-        [trackId]: rowChanges,
-      });
-      const result = results?.[trackId];
-
-      if (
-        result &&
-        result.trackRowsAffected === 0 &&
-        result.sourceRowsAffected === 0
-      ) {
-        onShowToast?.(
-          'DB Warning: Row found but NOT updated. Check for URL conflicts.',
-        );
-      } else {
-        onShowToast?.('Track updated successfully!');
-      }
-      setPendingChanges((prev) => {
-        const next = { ...prev };
-        delete next[trackId];
-        return next;
-      });
-      // Update local state without full refresh if possible, but refresh is safer for view consistency
-      setRefreshKey((k) => k + 1);
-
-      // Notify parent app of update for immediate sync
-      onTrackSaved?.(trackId, rowChanges);
-    } catch (err) {
-      console.error('Error saving track:', err);
-      if (err.isValidationError) {
-        onShowToast?.(err.message);
-      } else if (err.code === '23505') {
-        onShowToast?.('Error: This URL is already used by another track.');
-      } else {
-        onShowToast?.(`Failed to save: ${err.message || 'Unknown error'}`);
-      }
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  const handleDiscardRow = (trackId) => {
-    setPendingChanges((prev) => {
-      const next = { ...prev };
-      delete next[trackId];
-      return next;
-    });
-  };
-
   return (
     <div
       className={`database-container ${showSidebar ? 'sidebar-open' : ''} ${hasPlayer ? 'has-footer-player' : ''}`}
@@ -1042,37 +889,32 @@ export default function TrackDatabase({
         </div>
 
         <div className="toolbar-center" ref={centerZoneRef}>
-          {isEditMode ? (
-            <button
-              className="btn btn-playback review-duplicates"
-              disabled={!selectedTrack}
-              onClick={() => setShowDuplicateModal(true)}
-              title="Review Duplicates"
-            >
-              <MergeIcon />{' '}
-              <span className="responsive-label">Review Duplicates</span>
-            </button>
-          ) : (
-            <>
-              <button
-                className="btn btn-playback play-now"
-                disabled={!selectedTrack}
-                onClick={() => onPlayNow?.(selectedTrack)}
-                title="Play Now"
-              >
-                <PlayIcon /> <span className="responsive-label">Play Now</span>
-              </button>
-              <button
-                className="btn btn-playback add-queue"
-                disabled={!selectedTrack}
-                onClick={() => onAddToPlaylist?.([selectedTrack])}
-                title="Add to Playlist"
-              >
-                <PlaylistPlusIcon />{' '}
-                <span className="responsive-label">Add to Playlist</span>
-              </button>
-            </>
-          )}
+          <button
+            className="btn btn-playback play-now"
+            disabled={!selectedTrack}
+            onClick={() => onPlayNow?.(selectedTrack)}
+            title="Play Now"
+          >
+            <PlayIcon /> <span className="responsive-label">Play Now</span>
+          </button>
+          <button
+            className="btn btn-playback add-queue"
+            disabled={!selectedTrack}
+            onClick={() => onAddToPlaylist?.([selectedTrack])}
+            title="Add to Playlist"
+          >
+            <PlaylistPlusIcon />{' '}
+            <span className="responsive-label">Add to Playlist</span>
+          </button>
+          <button
+            className="btn btn-playback btn-merge"
+            disabled={!selectedTrack}
+            onClick={() => setShowDuplicateModal(true)}
+            title="Review Duplicates"
+          >
+            <MergeIcon />{' '}
+            <span className="responsive-label">Review Duplicates</span>
+          </button>
         </div>
 
         <div className="toolbar-right" ref={rightZoneRef}>
@@ -1097,23 +939,6 @@ export default function TrackDatabase({
               {searchTerm ? '✕' : '⌕'}
             </button>
           </div>
-          {/* Temporarily enabled for guests for verification */}
-          <button
-            className={`btn btn-playback ${isEditMode ? 'btn-cancel' : 'btn-edit'}`}
-            onClick={
-              isEditMode
-                ? () => {
-                    setIsEditMode(false);
-                    setPendingChanges({});
-                  }
-                : () => setIsEditMode(true)
-            }
-            disabled={isSaving}
-            title={isEditMode ? 'Cancel Editing (ESC)' : 'Edit Mode'}
-            style={{ marginLeft: '8px' }}
-          >
-            {isEditMode ? <CancelIcon /> : <EditIcon />}
-          </button>
           <button
             className={`sidebar-toggle ${showSidebar ? 'active' : ''}`}
             onClick={() => setShowSidebar(!showSidebar)}
@@ -1174,20 +999,19 @@ export default function TrackDatabase({
                   />
                 </th>
                 <th
-                  className="col-vgmc"
                   onClick={() => handleSort('vgmc')}
+                  className="col-vgmc"
                   style={{
                     width: columnWidths.vgmc,
                     minWidth: columnWidths.vgmc,
                     maxWidth: columnWidths.vgmc,
                   }}
                 >
-                  <div className="header-label">
-                    VGMC # {sortColumn === 'vgmc' && (sortAsc ? '↑' : '↓')}
-                  </div>
+                  VGMC {sortColumn === 'vgmc' && (sortAsc ? '↑' : '↓')}
                   <div
-                    className="resize-handle"
+                    className="resizer"
                     onMouseDown={(e) => handleResizeStart(e, 'vgmc')}
+                    onClick={(e) => e.stopPropagation()}
                   />
                 </th>
                 <th
@@ -1272,29 +1096,18 @@ export default function TrackDatabase({
                 </th>
                 <th
                   className="col-comment"
-                  onClick={() => handleSort('comments')}
                   style={{
                     width: columnWidths.comment,
                     minWidth: columnWidths.comment,
                     maxWidth: columnWidths.comment,
                   }}
                 >
-                  <div className="header-label">
-                    Comment {sortColumn === 'comments' && (sortAsc ? '↑' : '↓')}
-                  </div>
+                  <div className="header-label">Comment</div>
                   <div
                     className="resize-handle"
                     onMouseDown={(e) => handleResizeStart(e, 'comment')}
                   />
                 </th>
-                {isEditMode && (
-                  <th
-                    className="col-actions"
-                    style={{ width: '80px', minWidth: '80px' }}
-                  >
-                    Actions
-                  </th>
-                )}
               </tr>
             </thead>
             <tbody>
@@ -1302,7 +1115,7 @@ export default function TrackDatabase({
                 <tr>
                   <td
                     style={{ height: `${paddingTop}px`, padding: 0 }}
-                    colSpan={isEditMode ? 9 : 8}
+                    colSpan={8}
                   />
                 </tr>
               )}
@@ -1316,8 +1129,6 @@ export default function TrackDatabase({
                     index={virtualRow.index}
                     isSelected={selectedTrack?.trackId === track.trackId}
                     feedback={userFeedback[track.trackId] || {}}
-                    isEditMode={isEditMode}
-                    pendingChanges={pendingChanges[track.trackId]}
                     columnWidths={columnWidths}
                     expandedCellCol={
                       expandedCell?.id === track.trackId
@@ -1328,9 +1139,6 @@ export default function TrackDatabase({
                     onToggleCell={toggleCell}
                     onUpdateRating={handleUpdateRating}
                     onUpdateNote={handleUpdateNote}
-                    onFieldChange={handleFieldChange}
-                    onSaveRow={handleSaveRow}
-                    onDiscardRow={handleDiscardRow}
                     onSetExpandedCell={setExpandedCell}
                     onOpenContextMenu={handleOpenContextMenu}
                     onPlayNow={onPlayNow}
@@ -1342,7 +1150,7 @@ export default function TrackDatabase({
                 <tr>
                   <td
                     style={{ height: `${paddingBottom}px`, padding: 0 }}
-                    colSpan={isEditMode ? 9 : 8}
+                    colSpan={8}
                   />
                 </tr>
               )}
@@ -1419,18 +1227,6 @@ export default function TrackDatabase({
                 }}
               >
                 <MetadataIcon /> Update Metadata
-              </button>
-              <button
-                className="database-context-menu-item"
-                onClick={() => handleContextEdit(contextMenu.track)}
-              >
-                <EditIcon /> Edit Track
-              </button>
-              <button
-                className="database-context-menu-item"
-                onClick={() => handleCheckDuplicates(contextMenu.track)}
-              >
-                <MergeIcon /> Check for Duplicates
               </button>
             </>
           )}
