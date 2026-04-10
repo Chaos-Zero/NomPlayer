@@ -880,32 +880,27 @@ export default function FavouritesPanel({
                 margin: '4px 0',
               }}
             />
-            <button
-              className="support-context-menu-item"
-              type="button"
-              role="menuitem"
-              onClick={(event) => {
-                const rect = event.currentTarget.getBoundingClientRect();
-                onOpenSupportDropdown(
-                  contextMenu.videos[0],
-                  {
-                    top: rect.top,
-                    left: rect.left + rect.width / 2,
-                  },
-                  contextMenu.videos,
-                );
-                setContextMenu(null);
-              }}
-            >
-              Update Support
-            </button>
-            <div
-              style={{
-                height: '1px',
-                background: 'var(--border)',
-                margin: '4px 0',
-              }}
-            />
+            {tone !== 'nomination' && (
+              <button
+                className="support-context-menu-item"
+                type="button"
+                role="menuitem"
+                onClick={(event) => {
+                  const rect = event.currentTarget.getBoundingClientRect();
+                  onOpenSupportDropdown(
+                    contextMenu.videos[0],
+                    {
+                      top: rect.top,
+                      left: rect.left + rect.width / 2,
+                    },
+                    contextMenu.videos,
+                  );
+                  setContextMenu(null);
+                }}
+              >
+                Update Support
+              </button>
+            )}
             <button
               className="support-context-menu-item"
               type="button"
