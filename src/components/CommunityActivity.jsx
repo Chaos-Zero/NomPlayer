@@ -337,7 +337,7 @@ export default function CommunityActivity({
                   className="support-badge highest"
                   type="button"
                   onClick={(e) => handleShowSupporters(e, 3)}
-                  title={`${supportSummary[3].count} Highest Supports (Click to see names)`}
+                  title={`${supportSummary[3].count} Definite Supports (Click to see names)`}
                 >
                   <LockIcon />
                   <span>{supportSummary[3].count}</span>
@@ -348,7 +348,7 @@ export default function CommunityActivity({
                   className="support-badge high"
                   type="button"
                   onClick={(e) => handleShowSupporters(e, 2)}
-                  title={`${supportSummary[2].count} High Supports (Click to see names)`}
+                  title={`${supportSummary[2].count} Likely Supports (Click to see names)`}
                 >
                   <HeartIcon />
                   <span>{supportSummary[2].count}</span>
@@ -359,7 +359,7 @@ export default function CommunityActivity({
                   className="support-badge normal"
                   type="button"
                   onClick={(e) => handleShowSupporters(e, 1)}
-                  title={`${supportSummary[1].count} Normal Supports (Click to see names)`}
+                  title={`${supportSummary[1].count} Possible Supports (Click to see names)`}
                 >
                   <HeartIcon />
                   <span>{supportSummary[1].count}</span>
@@ -379,10 +379,10 @@ export default function CommunityActivity({
         >
           <div className="supporters-popover-header">
             {supportersMenu.level === 3
-              ? 'Highest'
+              ? 'Definite'
               : supportersMenu.level === 2
-                ? 'High'
-                : 'Normal'}{' '}
+                ? 'Likely'
+                : 'Possible'}{' '}
             Supports
           </div>
           <div

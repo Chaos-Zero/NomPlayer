@@ -1215,7 +1215,7 @@ export default function PlaylistSidebar({
                 }}
               >
                 <span style={{ color: 'var(--gold)', marginRight: 8 }}>♥</span>{' '}
-                Set Standard Support
+                Set Possible Support
               </button>
               <button
                 className="playlist-context-menu-item"
@@ -1229,7 +1229,7 @@ export default function PlaylistSidebar({
                 <span style={{ color: 'var(--support-pink)', marginRight: 8 }}>
                   ♥
                 </span>{' '}
-                Set High Support
+                Set Likely Support
               </button>
               <button
                 className="playlist-context-menu-item"

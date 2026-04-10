@@ -677,7 +677,7 @@ function DiscoveryGridItem({ candidate, metadata, onPlayNow, onContextMenu }) {
                 {supportCount1 > 0 && (
                   <div
                     className="discovery-support-stat normal"
-                    title={`${supportCount1} Normal Supports`}
+                    title={`${supportCount1} Possible Supports`}
                   >
                     <HeartIcon />
                     <span>{supportCount1}</span>
@@ -686,7 +686,7 @@ function DiscoveryGridItem({ candidate, metadata, onPlayNow, onContextMenu }) {
                 {supportCount2 > 0 && (
                   <div
                     className="discovery-support-stat strong"
-                    title={`${supportCount2} Strong Supports`}
+                    title={`${supportCount2} Likely Supports`}
                   >
                     <HeartIcon />
                     <span>{supportCount2}</span>
@@ -695,7 +695,7 @@ function DiscoveryGridItem({ candidate, metadata, onPlayNow, onContextMenu }) {
                 {supportCount3 > 0 && (
                   <div
                     className="discovery-support-stat highest"
-                    title={`${supportCount3} Highest Supports`}
+                    title={`${supportCount3} Definite Supports`}
                   >
                     <LockIcon />
                     <span>{supportCount3}</span>

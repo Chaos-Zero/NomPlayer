@@ -478,7 +478,7 @@ function TrackInfoPanel({
                           className="support-badge highest"
                           type="button"
                           onClick={(e) => handleShowSupporters(e, 3)}
-                          title={`${supportSummary[3].count} Highest Supports (Click to see names)`}
+                          title={`${supportSummary[3].count} Definite Supports (Click to see names)`}
                         >
                           <LockIcon />
                           <span>{supportSummary[3].count}</span>
@@ -489,7 +489,7 @@ function TrackInfoPanel({
                           className="support-badge high"
                           type="button"
                           onClick={(e) => handleShowSupporters(e, 2)}
-                          title={`${supportSummary[2].count} High Supports (Click to see names)`}
+                          title={`${supportSummary[2].count} Likely Supports (Click to see names)`}
                         >
                           <HeartIcon />
                           <span>{supportSummary[2].count}</span>
@@ -500,7 +500,7 @@ function TrackInfoPanel({
                           className="support-badge normal"
                           type="button"
                           onClick={(e) => handleShowSupporters(e, 1)}
-                          title={`${supportSummary[1].count} Normal Supports (Click to see names)`}
+                          title={`${supportSummary[1].count} Possible Supports (Click to see names)`}
                         >
                           <HeartIcon />
                           <span>{supportSummary[1].count}</span>
@@ -607,10 +607,10 @@ function TrackInfoPanel({
         >
           <div className="supporters-popover-header">
             {supportersMenu.level === 3
-              ? 'Highest'
+              ? 'Definite'
               : supportersMenu.level === 2
-                ? 'High'
-                : 'Normal'}{' '}
+                ? 'Likely'
+                : 'Possible'}{' '}
             Supports
           </div>
           <div
@@ -1156,10 +1156,10 @@ function CommentsView({
                         className={`list-explorer-peer-support level-${f.supportLevel}`}
                         title={
                           f.supportLevel === 3
-                            ? `Highest Support (Locked)`
+                            ? `Definite Support`
                             : f.supportLevel === 2
-                              ? `High Support`
-                              : `Normal Support`
+                              ? `Likely Support`
+                              : `Possible Support`
                         }
                       >
                         {f.supportLevel === 3 ? (

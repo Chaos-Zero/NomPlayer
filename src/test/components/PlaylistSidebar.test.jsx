@@ -123,10 +123,10 @@ describe('PlaylistSidebar', () => {
       screen.queryByRole('menuitem', { name: 'Support' }),
     ).not.toBeInTheDocument();
     expect(
-      screen.getByRole('menuitem', { name: /Set Standard Support/ }),
+      screen.getByRole('menuitem', { name: /Set Possible Support/ }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole('menuitem', { name: /Set High Support/ }),
+      screen.getByRole('menuitem', { name: /Set Likely Support/ }),
     ).toBeInTheDocument();
     expect(
       screen.getByRole('menuitem', { name: /Set Definite Support/ }),
@@ -148,7 +148,7 @@ describe('PlaylistSidebar', () => {
       screen.queryByRole('menuitem', { name: 'Support' }),
     ).not.toBeInTheDocument();
     expect(
-      screen.queryByRole('menuitem', { name: /Set Standard Support/ }),
+      screen.queryByRole('menuitem', { name: /Set Possible Support/ }),
     ).not.toBeInTheDocument();
   });
 

@@ -3593,10 +3593,10 @@ export default function App() {
         if (!isRemoving) {
           showSupportToast(
             level === 2
-              ? 'Added to High Support'
+              ? 'Added to Likely Support'
               : level === 3
                 ? 'Added to Definite Support'
-                : 'Added to Support list',
+                : 'Added to Possible Support',
           );
         }
       } else {

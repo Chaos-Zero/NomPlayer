@@ -204,7 +204,7 @@ export function SupportItem({
             {video.supportCount1 > 0 && (
               <div
                 className="fav-support-stat normal"
-                title={`${video.supportCount1} Normal Supports`}
+                title={`${video.supportCount1} Possible Supports`}
               >
                 <HeartIcon />
                 <span>{video.supportCount1}</span>
@@ -213,7 +213,7 @@ export function SupportItem({
             {video.supportCount2 > 0 && (
               <div
                 className="fav-support-stat strong"
-                title={`${video.supportCount2} Strong Supports`}
+                title={`${video.supportCount2} Likely Supports`}
               >
                 <HeartIcon />
                 <span>{video.supportCount2}</span>
@@ -222,7 +222,7 @@ export function SupportItem({
             {video.supportCount3 > 0 && (
               <div
                 className="fav-support-stat highest"
-                title={`${video.supportCount3} Highest Supports`}
+                title={`${video.supportCount3} Definite Supports`}
               >
                 <LockIcon />
                 <span>{video.supportCount3}</span>

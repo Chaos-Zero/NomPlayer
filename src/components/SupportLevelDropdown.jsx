@@ -65,8 +65,8 @@ export default function SupportLevelDropdown({
   }, [onClose]);
 
   const levels = [
-    { id: 1, label: 'Standard Support', icon: '♥', className: '' },
-    { id: 2, label: 'High Support', icon: '♥', className: 'level-2' },
+    { id: 1, label: 'Possible Support', icon: '♥', className: '' },
+    { id: 2, label: 'Likely Support', icon: '♥', className: 'level-2' },
     { id: 3, label: 'Definite Support', icon: '🔒', className: 'level-3' },
   ];
 
