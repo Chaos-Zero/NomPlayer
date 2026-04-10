@@ -1229,6 +1229,9 @@ export default function App() {
         sourceTitle: summary.sourceTitle ?? '',
         sourceChannelTitle: summary.sourceChannelTitle ?? '',
         sourceThumbnailUrl: summary.sourceThumbnailUrl ?? '',
+        supportCount1: summary.supportCount1 ?? 0,
+        supportCount2: summary.supportCount2 ?? 0,
+        supportCount3: summary.supportCount3 ?? 0,
         isRetired: Boolean(summary.isRetired),
         retiredByTournamentName: summary.retiredByTournamentName ?? '',
       };
@@ -1313,6 +1316,9 @@ export default function App() {
               sourceThumbnailUrl:
                 entry.sourceThumbnailUrl ||
                 getYouTubeThumbnailUrl(entry.videoId),
+              supportCount1: entry.supportCount1 || 0,
+              supportCount2: entry.supportCount2 || 0,
+              supportCount3: entry.supportCount3 || 0,
               isRetired: entry.isRetired,
               retiredByTournamentName: entry.retiredByTournamentName,
             },
@@ -1330,6 +1336,9 @@ export default function App() {
             sourceTitle: '',
             sourceChannelTitle: '',
             sourceThumbnailUrl: getYouTubeThumbnailUrl(videoId),
+            supportCount1: 0,
+            supportCount2: 0,
+            supportCount3: 0,
             isRetired: false,
             retiredByTournamentName: '',
           }));
@@ -1541,6 +1550,9 @@ export default function App() {
         ...nom,
         loadIndex: index,
         rating: personalRating || nom.rating || null,
+        supportCount1: catalogEntry?.supportCount1 || 0,
+        supportCount2: catalogEntry?.supportCount2 || 0,
+        supportCount3: catalogEntry?.supportCount3 || 0,
         title:
           catalogEntry?.displayTitle ||
           catalogEntry?.sourceTitle ||
@@ -1575,6 +1587,9 @@ export default function App() {
         ...sup,
         loadIndex: index,
         rating: personalRating || sup.rating || null,
+        supportCount1: catalogEntry?.supportCount1 || 0,
+        supportCount2: catalogEntry?.supportCount2 || 0,
+        supportCount3: catalogEntry?.supportCount3 || 0,
         title:
           catalogEntry?.displayTitle ||
           catalogEntry?.sourceTitle ||
@@ -1629,6 +1644,9 @@ export default function App() {
             gameTitle: catalogEntry?.gameTitle ?? nom.gameTitle ?? '',
             trackTitle: catalogEntry?.trackTitle ?? nom.trackTitle ?? '',
             displayTitle: catalogEntry?.displayTitle ?? nom.displayTitle ?? '',
+            supportCount1: catalogEntry?.supportCount1 || 0,
+            supportCount2: catalogEntry?.supportCount2 || 0,
+            supportCount3: catalogEntry?.supportCount3 || 0,
             isRetired: Boolean(catalogEntry?.isRetired),
             retiredByTournamentName:
               catalogEntry?.retiredByTournamentName ||

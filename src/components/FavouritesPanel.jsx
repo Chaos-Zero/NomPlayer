@@ -200,14 +200,45 @@ export function SupportItem({
             paddingRight: '12px',
           }}
         >
+          <div className="fav-item-support-stats" style={{ flexShrink: 0 }}>
+            {video.supportCount1 > 0 && (
+              <div
+                className="fav-support-stat normal"
+                title={`${video.supportCount1} Normal Supports`}
+              >
+                <HeartIcon />
+                <span>{video.supportCount1}</span>
+              </div>
+            )}
+            {video.supportCount2 > 0 && (
+              <div
+                className="fav-support-stat strong"
+                title={`${video.supportCount2} Strong Supports`}
+              >
+                <HeartIcon />
+                <span>{video.supportCount2}</span>
+              </div>
+            )}
+            {video.supportCount3 > 0 && (
+              <div
+                className="fav-support-stat highest"
+                title={`${video.supportCount3} Highest Supports`}
+              >
+                <LockIcon />
+                <span>{video.supportCount3}</span>
+              </div>
+            )}
+          </div>
+
           {video.rating != null && (
             <span
               className="list-explorer-peer-rating"
-              style={{ whiteSpace: 'nowrap' }}
+              style={{ whiteSpace: 'nowrap', flexShrink: 0 }}
             >
               {video.rating}/10
             </span>
           )}
+
           {tone === 'support' && (
             <button
               className={`support-tier-icon-btn level-${video.supportLevel || 1}`}
