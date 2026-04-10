@@ -113,6 +113,19 @@ function DiscardIcon() {
   );
 }
 
+function MetadataIcon() {
+  return (
+    <svg
+      className="transport-icon"
+      viewBox="0 0 24 24"
+      aria-hidden="true"
+      fill="currentColor"
+    >
+      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" />
+    </svg>
+  );
+}
+
 function CancelIcon() {
   return (
     <svg
@@ -495,9 +508,11 @@ export default function TrackDatabase({
   onAddToPlaylist,
   onPlayNow,
   onShowToast,
-  hasPlayer,
-  listenedStatusById = {},
   onRefreshFeedback,
+  listenedStatusById = {},
+  hasPlayer = false,
+  onTrackSaved,
+  onUpdateMetadata,
 }) {
   const [tracks, setTracks] = useState([]);
   const [userFeedback, setUserFeedback] = useState({});
@@ -925,8 +940,22 @@ export default function TrackDatabase({
 
     setIsSaving(true);
     try {
-      await bulkUpdateTracks(supabase, { [trackId]: rowChanges });
-      onShowToast?.('Track updated successfully!');
+      const results = await bulkUpdateTracks(supabase, {
+        [trackId]: rowChanges,
+      });
+      const result = results?.[trackId];
+
+      if (
+        result &&
+        result.trackRowsAffected === 0 &&
+        result.sourceRowsAffected === 0
+      ) {
+        onShowToast?.(
+          'DB Warning: Row found but NOT updated. Check for URL conflicts.',
+        );
+      } else {
+        onShowToast?.('Track updated successfully!');
+      }
       setPendingChanges((prev) => {
         const next = { ...prev };
         delete next[trackId];
@@ -934,12 +963,17 @@ export default function TrackDatabase({
       });
       // Update local state without full refresh if possible, but refresh is safer for view consistency
       setRefreshKey((k) => k + 1);
+
+      // Notify parent app of update for immediate sync
+      onTrackSaved?.(trackId, rowChanges);
     } catch (err) {
       console.error('Error saving track:', err);
       if (err.isValidationError) {
         onShowToast?.(err.message);
+      } else if (err.code === '23505') {
+        onShowToast?.('Error: This URL is already used by another track.');
       } else {
-        onShowToast?.('Failed to save change.');
+        onShowToast?.(`Failed to save: ${err.message || 'Unknown error'}`);
       }
     } finally {
       setIsSaving(false);
@@ -1377,6 +1411,15 @@ export default function TrackDatabase({
                   margin: '4px 8px',
                 }}
               />
+              <button
+                className="database-context-menu-item"
+                onClick={() => {
+                  onUpdateMetadata?.(contextMenu.track);
+                  setContextMenu(null);
+                }}
+              >
+                <MetadataIcon /> Update Metadata
+              </button>
               <button
                 className="database-context-menu-item"
                 onClick={() => handleContextEdit(contextMenu.track)}

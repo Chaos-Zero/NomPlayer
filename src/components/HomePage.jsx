@@ -795,6 +795,28 @@ export default function HomePage({
       const update = updateMap.get(prev);
       return update && update.videoId !== prev ? update.videoId : prev;
     });
+
+    // Patch nominationUpdates list
+    setNominationUpdates((prev) => {
+      let changed = false;
+      const next = prev.map((update) => {
+        const item = update.video || {};
+        const match = updateMap.get(item.videoId);
+        if (!match) return update;
+        changed = true;
+        return {
+          ...update,
+          video: {
+            ...item,
+            videoId: match.videoId,
+            gameTitle: match.gameTitle || item.gameTitle,
+            trackTitle: match.trackTitle || item.trackTitle,
+            thumbnail: match.thumbnail || item.thumbnail,
+          },
+        };
+      });
+      return changed ? next : prev;
+    });
   }, [lastMetadataUpdateBatch]);
 
   const dockItems = useMemo(

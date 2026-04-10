@@ -18,9 +18,10 @@ export default function MetadataEntryDialog({
           return {
             oldVideoId: track.videoId,
             videoId: track.videoId,
+            trackId: track.trackId,
             title: track.title,
             currentUrl,
-            videoUrl: currentUrl, // Initialize with currentUrl so it's not a placeholder
+            videoUrl: currentUrl,
             gameTitle: track.gameTitle || '',
             trackTitle: track.trackTitle || '',
           };

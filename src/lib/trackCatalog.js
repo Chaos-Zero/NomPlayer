@@ -417,82 +417,164 @@ export async function findTrackInCatalog(supabase, videoId) {
 }
 
 let memoryCatalog = null;
+let activeCatalogPromise = null;
 
 async function getFullCatalog(supabase) {
   if (memoryCatalog) return memoryCatalog;
+  if (activeCatalogPromise) return activeCatalogPromise;
 
-  // 1. Load static snapshot
-  let snapshot = [];
-  let exportedAt = new Date(0).toISOString();
-  try {
-    const mod = await import('../data/catalogSnapshot.json');
-    const catalogData = mod.default || mod;
-    snapshot = catalogData.tracks || [];
-    exportedAt = catalogData.exportedAt || exportedAt;
-  } catch (e) {
-    console.warn('Failed to load static catalog snapshot', e);
-  }
+  activeCatalogPromise = (async () => {
+    try {
+      // 1. Load static snapshot
+      let snapshot = [];
+      let exportedAt = new Date(0).toISOString();
+      try {
+        const mod = await import('../data/catalogSnapshot.json');
+        const catalogData = mod.default || mod;
+        snapshot = catalogData.tracks || [];
+        exportedAt = catalogData.exportedAt || exportedAt;
+      } catch (e) {
+        console.warn('Failed to load static catalog snapshot', e);
+      }
 
-  if (!supabase) return snapshot;
+      if (!supabase) return snapshot;
 
-  // 2. Fetch Delta, Stats & Deletions concurrently
-  const [deltaRes, statsRes, deletionRes] = await Promise.all([
-    supabase.from('track_catalog').select('*').gt('updated_at', exportedAt),
-    supabase
-      .from('track_stats_summary')
-      .select('track_id, total_comments, average_rating'),
-    supabase
-      .from('track_deletions')
-      .select('track_id')
-      .gt('deleted_at', exportedAt),
-  ]);
+      // 2. Fetch Delta, Stats & Deletions concurrently
+      const [deltaRes, statsRes, deletionRes] = await Promise.all([
+        supabase.from('track_catalog').select('*').gt('updated_at', exportedAt),
+        supabase
+          .from('track_stats_summary')
+          .select('track_id, total_comments, average_rating'),
+        supabase
+          .from('track_deletions')
+          .select('track_id')
+          .gt('deleted_at', exportedAt),
+      ]);
 
-  const deltaTracks = deltaRes.data || [];
-  const statsList = statsRes.data || [];
-  const deletedIds = new Set((deletionRes.data || []).map((r) => r.track_id));
+      if (deltaRes.error) {
+        console.warn(
+          'Catalog Sync Warning: Failed to fetch delta from DB.',
+          deltaRes.error,
+        );
+      }
 
-  const statsMap = {};
-  for (const s of statsList) statsMap[s.track_id] = s;
+      const deltaTracks = deltaRes.data || [];
+      const statsList = statsRes.data || [];
+      const deletedIds = new Set(
+        (deletionRes.data || []).map((r) => r.track_id),
+      );
 
-  const deltaMap = {};
-  for (const t of deltaTracks) deltaMap[t.track_id] = t;
+      const statsMap = {};
+      for (const s of statsList) statsMap[s.track_id] = s;
 
-  const merged = [];
-  for (const t of snapshot) {
-    if (deletedIds.has(t.track_id)) continue;
-    if (deltaMap[t.track_id]) {
-      merged.push(deltaMap[t.track_id]);
-      delete deltaMap[t.track_id];
-    } else {
-      merged.push(t);
+      const deltaMap = {};
+      for (const t of deltaTracks) deltaMap[t.track_id] = t;
+
+      let patchCount = 0;
+      const merged = [];
+      for (const t of snapshot) {
+        const tid = t.track_id || t.trackId;
+        if (deletedIds.has(tid)) continue;
+        if (deltaMap[tid]) {
+          merged.push(deltaMap[tid]);
+          delete deltaMap[tid];
+          patchCount++;
+        } else {
+          merged.push(t);
+        }
+      }
+      for (const key in deltaMap) {
+        if (!deletedIds.has(key)) {
+          merged.push(deltaMap[key]);
+        }
+      }
+
+      if (patchCount > 0) {
+        console.log(
+          `%c[Catalog] Initialized with ${patchCount} updates from database.`,
+          'color: #3b82f6; font-weight: bold;',
+        );
+      }
+
+      // Attach stats formatting seamlessly and normalize once
+      const output = [];
+      for (const t of merged) {
+        const s = statsMap[t.track_id];
+        const normalized = normalizeTrackCatalogEntry(t);
+        if (normalized) {
+          normalized.totalComments = s ? s.total_comments : 0;
+          normalized.averageRating = s ? s.average_rating : 0;
+          normalized.hasResult = t.has_result;
+          normalized.tournamentCount = t.tournament_count;
+          output.push(normalized);
+        }
+      }
+
+      memoryCatalog = output;
+      return memoryCatalog;
+    } catch (error) {
+      console.error('Catalog Sync: Fatal error loading catalog.', error);
+      throw error;
+    } finally {
+      activeCatalogPromise = null;
     }
-  }
-  for (const key in deltaMap) {
-    if (!deletedIds.has(key)) {
-      merged.push(deltaMap[key]);
-    }
-  }
+  })();
 
-  // Attach stats formatting seamlessly and normalize once
-  const output = [];
-  for (const t of merged) {
-    const s = statsMap[t.track_id];
-    const normalized = normalizeTrackCatalogEntry(t);
-    if (normalized) {
-      normalized.totalComments = s ? s.total_comments : 0;
-      normalized.averageRating = s ? s.average_rating : 0;
-      normalized.hasResult = t.has_result;
-      normalized.tournamentCount = t.tournament_count;
-      output.push(normalized);
-    }
-  }
-
-  memoryCatalog = output;
-  return memoryCatalog;
+  return activeCatalogPromise;
 }
 
 export function clearCatalogCache() {
   memoryCatalog = null;
+}
+
+export function patchCatalogCache(updates = [], deletedTrackIds = []) {
+  if (!memoryCatalog) return;
+
+  const updateMap = new Map();
+  for (const u of updates) {
+    const key = u.trackId || u.oldVideoId || u.videoId;
+    updateMap.set(key, u);
+  }
+
+  const deletedSet = new Set(deletedTrackIds);
+
+  memoryCatalog = memoryCatalog
+    .filter((entry) => !deletedSet.has(entry.trackId))
+    .map((entry) => {
+      const update =
+        updateMap.get(entry.trackId) || updateMap.get(entry.videoId);
+      if (!update) return entry;
+
+      let videoId = update.videoId || entry.videoId;
+      if (!update.videoId && update.sourceUrl) {
+        const parsed = parseYouTubeInput(update.sourceUrl);
+        if (parsed?.type === 'video' && parsed.videoId) {
+          videoId = parsed.videoId;
+        }
+      }
+
+      return {
+        ...entry,
+        trackId: update.trackId || entry.trackId,
+        videoId: videoId,
+        gameTitle:
+          update.gameTitle !== undefined ? update.gameTitle : entry.gameTitle,
+        trackTitle:
+          update.trackTitle !== undefined
+            ? update.trackTitle
+            : entry.trackTitle,
+        displayTitle:
+          update.displayTitle !== undefined
+            ? update.displayTitle
+            : `${update.gameTitle || entry.gameTitle} - ${update.trackTitle || entry.trackTitle}`,
+        sourceThumbnailUrl: update.thumbnail || entry.sourceThumbnailUrl,
+        sourceChannelTitle: update.channelTitle || entry.sourceChannelTitle,
+        sourceUrl:
+          update.sourceUrl || `https://www.youtube.com/watch?v=${videoId}`,
+        submittedUrl:
+          update.sourceUrl || `https://www.youtube.com/watch?v=${videoId}`,
+      };
+    });
 }
 
 export async function fetchFilteredTracks(
@@ -636,8 +718,10 @@ export const fetchPagedTracks = fetchFilteredTracks;
 
 export async function bulkUpdateTracks(supabase, updatesMap) {
   if (!supabase || !updatesMap || Object.keys(updatesMap).length === 0) {
-    return;
+    return {};
   }
+
+  const results = {};
 
   const trackIds = Object.keys(updatesMap);
 
@@ -674,14 +758,23 @@ export async function bulkUpdateTracks(supabase, updatesMap) {
       }
     }
 
-    // 1. Update tracks table
-    if (Object.keys(trackPayload).length > 0) {
-      const { error: trackError } = await supabase
+    let trackRowsAffected = 0;
+    let sourceRowsAffected = 0;
+
+    // 1. Update tracks table - ALWAYS update updated_at if anything changed
+    if (
+      Object.keys(trackPayload).length > 0 ||
+      Object.keys(sourcePayload).length > 0
+    ) {
+      const { error: trackError, count: tCount } = await supabase
         .from('tracks')
-        .update({
-          ...trackPayload,
-          updated_at: new Date().toISOString(),
-        })
+        .update(
+          {
+            ...trackPayload,
+            updated_at: new Date().toISOString(),
+          },
+          { count: 'exact' },
+        )
         .eq('id', trackId);
 
       if (trackError) {
@@ -691,29 +784,55 @@ export async function bulkUpdateTracks(supabase, updatesMap) {
         );
         throw trackError;
       }
+      trackRowsAffected = tCount || 0;
+      console.log(
+        `bulkUpdateTracks: Successfully updated tracks.id=${trackId} (${trackRowsAffected} rows affected)`,
+      );
     }
 
     // 2. Update track_sources table (only primary source)
     if (Object.keys(sourcePayload).length > 0) {
-      const { error: sourceError } = await supabase
+      console.log(
+        `bulkUpdateTracks: Updating track_sources for ${trackId}`,
+        sourcePayload,
+      );
+      const { error: sourceError, count: sCount } = await supabase
         .from('track_sources')
-        .update({
-          ...sourcePayload,
-          updated_at: new Date().toISOString(),
-        })
+        .update(
+          {
+            ...sourcePayload,
+            updated_at: new Date().toISOString(),
+          },
+          { count: 'exact' },
+        )
         .eq('track_id', trackId)
         .eq('is_primary', true);
 
       if (sourceError) {
-        console.warn(
+        console.error(
           `bulkUpdateTracks: Error updating track_sources for ${trackId}:`,
           sourceError,
         );
+        throw sourceError;
       }
+      sourceRowsAffected = sCount || 0;
+      console.log(
+        `bulkUpdateTracks: Successfully updated sources for ${trackId} (${sourceRowsAffected} rows affected)`,
+      );
     }
+
+    results[trackId] = { trackRowsAffected, sourceRowsAffected };
   }
 
-  clearCatalogCache();
+  // Update memory cache
+  patchCatalogCache(
+    Object.keys(updatesMap).map((trackId) => ({
+      trackId,
+      ...updatesMap[trackId],
+    })),
+  );
+
+  return results;
 }
 
 // Smart cleaning: replace brackets with spaces to keep their content, then remove punctuation
@@ -817,6 +936,7 @@ export async function mergeTracks(
       .update({
         external_id: youtubeData.videoId,
         source_url: `https://www.youtube.com/watch?v=${youtubeData.videoId}`,
+        submitted_url: finalValues.sourceUrl || targetTrack.sourceUrl,
         updated_at: new Date().toISOString(),
       })
       .eq('track_id', targetTrack.trackId)
@@ -910,7 +1030,18 @@ export async function mergeTracks(
     }
   }
 
-  clearCatalogCache();
+  patchCatalogCache(
+    [
+      {
+        trackId: targetTrack.trackId,
+        videoId: youtubeData?.videoId || targetTrack.videoId,
+        gameTitle: finalValues.gameTitle || targetTrack.gameTitle,
+        trackTitle: finalValues.trackTitle || targetTrack.trackTitle,
+        sourceUrl: finalValues.sourceUrl || targetTrack.sourceUrl,
+      },
+    ],
+    sourceIds,
+  );
   console.log('mergeTracks: Multi-track merge complete.');
 }
 

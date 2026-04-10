@@ -67,6 +67,7 @@ import {
 import {
   fetchTrackCatalogByVideoIds,
   ingestYouTubeTrackSources,
+  patchCatalogCache,
 } from './lib/trackCatalog.js';
 import { fetchDashboardNominationUpdates } from './lib/dashboard.js';
 import { fetchUserFeedback } from './lib/feedback.js';
@@ -2140,11 +2141,48 @@ export default function App() {
   );
 
   const handleShowDashboardToast = useCallback(
-    (message) => {
-      showDefaultAppToast(message, 'dashboard');
+    (message, type = 'success') => {
+      showDefaultAppToast(message, type);
     },
     [showDefaultAppToast],
   );
+
+  const applyUpdatesToList = useCallback((updatesMap) => {
+    const transform = (item) => {
+      const update =
+        updatesMap[item.videoId] || (item.trackId && updatesMap[item.trackId]);
+      if (!update) return item;
+      const newVideoId = update.videoId || item.videoId;
+      return {
+        ...item,
+        videoId: newVideoId,
+        trackId: update.trackId || item.trackId,
+        gameTitle:
+          update.gameTitle !== undefined ? update.gameTitle : item.gameTitle,
+        trackTitle:
+          update.trackTitle !== undefined ? update.trackTitle : item.trackTitle,
+        displayTitle:
+          update.gameTitle && update.trackTitle
+            ? `${update.gameTitle} - ${update.trackTitle}`
+            : item.displayTitle,
+        thumbnail: update.thumbnail || item.thumbnail,
+        channelTitle: update.channelTitle || item.channelTitle,
+        sourceUrl:
+          update.submittedUrl ||
+          item.sourceUrl ||
+          `https://www.youtube.com/watch?v=${newVideoId}`,
+        submittedUrl:
+          update.submittedUrl ||
+          item.submittedUrl ||
+          `https://www.youtube.com/watch?v=${newVideoId}`,
+      };
+    };
+
+    setSupportList((prev) => prev.map(transform));
+    setNominationList((prev) => prev.map(transform));
+    setPlaylist((prev) => prev.map(transform));
+    patchCatalogCache(Object.values(updatesMap));
+  }, []);
 
   const showRetiredSongToast = useCallback(() => {
     showDefaultAppToast(
@@ -3861,8 +3899,16 @@ export default function App() {
                 retiree_contest_number: null,
                 retiree_placement: null,
                 highest_round_input: null,
+                track_id_input: update.trackId,
               },
             );
+
+            if (error) {
+              console.error('RPC Error details:', error);
+              handleShowDashboardToast(
+                `DB Error: ${error.message || 'Failed to save track'}`,
+              );
+            }
 
             if (trackId && !error) {
               trackIdByVideoId[update.videoId] = trackId;
@@ -3885,50 +3931,25 @@ export default function App() {
       }
 
       // 5. Update local state lists with comprehensive metadata (single-pass)
-      const updateLookup = new Map();
+      const updatesMap = {};
       for (const update of updatesWithYouTubeMeta) {
         const trackId = trackIdByVideoId[update.videoId] || update.trackId;
         const matchKey = update.oldVideoId || update.videoId;
-        updateLookup.set(matchKey, { ...update, trackId: trackId || null });
+        updatesMap[matchKey] = { ...update, trackId: trackId || null };
       }
 
-      const applyUpdatesToList = (list) =>
-        list.map((item) => {
-          const update = updateLookup.get(item.videoId);
-          if (!update) return item;
-          return {
-            ...item,
-            videoId: update.videoId,
-            trackId: update.trackId || item.trackId,
-            gameTitle: update.gameTitle,
-            trackTitle: update.trackTitle,
-            displayTitle: `${update.gameTitle} - ${update.trackTitle}`,
-            title: update.title || item.title,
-            thumbnail: update.thumbnail || item.thumbnail,
-            channelTitle: update.channelTitle || item.channelTitle,
-          };
-        });
+      applyUpdatesToList(updatesMap);
 
-      setSupportList(applyUpdatesToList);
-      setNominationList(applyUpdatesToList);
-      setPlaylist(applyUpdatesToList);
-
-      setTracksNeedingMetadata((prev) =>
-        prev.filter(
-          (track) =>
-            !metadataUpdates.some((u) => u.oldVideoId === track.videoId),
-        ),
-      );
       setManualMetadataTracks(null);
 
       // Emit update batch so HomePage can patch its discovery items
       setLastMetadataUpdateBatch(
         updatesWithYouTubeMeta.map((u) => ({
+          trackId: u.trackId,
           oldVideoId: u.oldVideoId,
           videoId: u.videoId,
           gameTitle: u.gameTitle,
           trackTitle: u.trackTitle,
-          title: u.title,
           thumbnail: u.thumbnail,
           channelTitle: u.channelTitle,
           displayTitle: `${u.gameTitle} - ${u.trackTitle}`,
@@ -3936,15 +3957,15 @@ export default function App() {
       );
 
       forceImmediateSyncRef.current = true;
-      mergeCatalogTrackSummaries(updatesWithYouTubeMeta);
     },
     [
-      mergeCatalogTrackSummaries,
-      supabase,
-      setSupportList,
-      setNominationList,
-      setPlaylist,
       authUser,
+      catalogTrackByVideoId,
+      handleOpenMetadataUpdate,
+      handleShowDashboardToast,
+      isSupabaseConfigured,
+      supabase,
+      applyUpdatesToList,
     ],
   );
 
@@ -4849,6 +4870,10 @@ export default function App() {
                 hasPlayer={Boolean(currentVideo)}
                 listenedStatusById={listenedStatusById}
                 onRefreshFeedback={refreshUserFeedback}
+                onTrackSaved={(trackId, updates) => {
+                  applyUpdatesToList(trackId, updates);
+                }}
+                onUpdateMetadata={handleOpenMetadataUpdate}
               />
             </Suspense>
           )}
