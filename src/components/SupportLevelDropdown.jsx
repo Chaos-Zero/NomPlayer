@@ -3,6 +3,7 @@ import { useEffect, useRef, useState, useLayoutEffect } from 'react';
 export default function SupportLevelDropdown({
   onSelect,
   onClose,
+  showRemove = true,
   currentLevel = 1,
   position = { top: 0, left: 0 },
   direction = 'down',
@@ -78,7 +79,7 @@ export default function SupportLevelDropdown({
         position: 'fixed',
         top: position.top,
         left: position.left,
-        zIndex: 1000,
+        zIndex: 3000,
         transform:
           direction === 'up'
             ? `translate(calc(-50% + ${offset.x}px), calc(-100% - 8px + ${offset.y}px))`
@@ -123,30 +124,39 @@ export default function SupportLevelDropdown({
           {level.label}
         </button>
       ))}
-      <div
-        style={{ height: '1px', background: 'var(--border)', margin: '4px 0' }}
-      />
-      <button
-        className="user-menu-item danger"
-        type="button"
-        role="menuitem"
-        onClick={() => {
-          onSelect(0);
-          onClose();
-        }}
-      >
-        <span
-          style={{
-            width: '20px',
-            display: 'inline-flex',
-            marginRight: '8px',
-            justifyContent: 'center',
-          }}
-        >
-          ✕
-        </span>
-        Remove Support
-      </button>
+
+      {showRemove && (
+        <>
+          <div
+            style={{
+              height: '1px',
+              background: 'var(--border)',
+              margin: '4px 0',
+            }}
+          />
+          <button
+            className="user-menu-item danger"
+            type="button"
+            role="menuitem"
+            onClick={() => {
+              onSelect(0);
+              onClose();
+            }}
+          >
+            <span
+              style={{
+                width: '20px',
+                display: 'inline-flex',
+                marginRight: '8px',
+                justifyContent: 'center',
+              }}
+            >
+              ✕
+            </span>
+            Remove Support
+          </button>
+        </>
+      )}
     </div>
   );
 }

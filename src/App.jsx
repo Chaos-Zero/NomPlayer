@@ -3528,6 +3528,45 @@ export default function App() {
         return nextList;
       });
 
+      // Optimistically update community counts in the catalog map
+      setCatalogTrackByVideoId((prev) => {
+        const next = { ...prev };
+        allowedVideos.forEach((v) => {
+          const entry = next[v.videoId];
+          if (!entry) return;
+
+          // Find current user's previous level for this track
+          const prevItem = supportList.find(
+            (item) => item.videoId === v.videoId,
+          );
+          const oldLevel = prevItem?.supportLevel || 0;
+          const newLevel = level === 0 ? 0 : level !== null ? level : 1;
+
+          if (oldLevel === newLevel) return;
+
+          const updatedEntry = { ...entry };
+
+          // Decrement old level count
+          if (oldLevel === 1 && updatedEntry.supportCount1 > 0)
+            updatedEntry.supportCount1--;
+          else if (oldLevel === 2 && updatedEntry.supportCount2 > 0)
+            updatedEntry.supportCount2--;
+          else if (oldLevel === 3 && updatedEntry.supportCount3 > 0)
+            updatedEntry.supportCount3--;
+
+          // Increment new level count
+          if (newLevel === 1)
+            updatedEntry.supportCount1 = (updatedEntry.supportCount1 || 0) + 1;
+          else if (newLevel === 2)
+            updatedEntry.supportCount2 = (updatedEntry.supportCount2 || 0) + 1;
+          else if (newLevel === 3)
+            updatedEntry.supportCount3 = (updatedEntry.supportCount3 || 0) + 1;
+
+          next[v.videoId] = updatedEntry;
+        });
+        return next;
+      });
+
       if (authUser) {
         allowedVideos.forEach((v) => {
           const exists = supportList.some(
@@ -4776,7 +4815,12 @@ export default function App() {
               onPlayNow={handlePlayNowFromSupportList}
               onToggleSupport={handleToggleSupportFromPlaylist}
               onOpenSupportDropdown={(video, position) =>
-                setSupportLevelDropdown({ video, position, direction: 'down' })
+                setSupportLevelDropdown({
+                  video,
+                  position,
+                  direction: 'down',
+                  showRemove: false,
+                })
               }
               onShowComments={handleShowComments}
               onNavigateToPlayer={handleNavigateToPlayer}
@@ -4829,7 +4873,12 @@ export default function App() {
               supabase={supabase}
               onUpdateMetadata={handleOpenMetadataUpdate}
               onOpenSupportDropdown={(video, position) =>
-                setSupportLevelDropdown({ video, position, direction: 'down' })
+                setSupportLevelDropdown({
+                  video,
+                  position,
+                  direction: 'down',
+                  showRemove: false,
+                })
               }
               onExport={handleOpenExportModal}
               onSavePlaylist={handleCreateYTPlaylist}
@@ -4883,7 +4932,12 @@ export default function App() {
               listenedStatusById={listenedStatusById}
               onToggleSupport={handleToggleSupportFromPlaylist}
               onOpenSupportDropdown={(video, position) =>
-                setSupportLevelDropdown({ video, position, direction: 'down' })
+                setSupportLevelDropdown({
+                  video,
+                  position,
+                  direction: 'down',
+                  showRemove: false,
+                })
               }
               onRemoveFromPlaylist={handleRemoveFromPlaylist}
               onAddDirectItems={handleQueueFromSupportList}
@@ -4969,7 +5023,12 @@ export default function App() {
           onDismissMetadataBanner={() => setTracksNeedingMetadata([])}
           onUpdateMetadata={handleOpenMetadataUpdate}
           onOpenSupportDropdown={(video, position) =>
-            setSupportLevelDropdown({ video, position, direction: 'down' })
+            setSupportLevelDropdown({
+              video,
+              position,
+              direction: 'down',
+              showRemove: false,
+            })
           }
           authUser={authUser}
           onExport={handleOpenExportModal}
@@ -5082,6 +5141,7 @@ export default function App() {
           videos={supportLevelDropdown.videos}
           position={supportLevelDropdown.position}
           direction={supportLevelDropdown.direction}
+          showRemove={supportLevelDropdown.showRemove !== false}
           currentLevel={supportLevelDropdown.video?.supportLevel || 1}
           onClose={() => setSupportLevelDropdown(null)}
           onSelect={(level) => {
