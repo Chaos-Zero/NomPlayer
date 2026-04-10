@@ -3958,15 +3958,7 @@ export default function App() {
 
       forceImmediateSyncRef.current = true;
     },
-    [
-      authUser,
-      catalogTrackByVideoId,
-      handleOpenMetadataUpdate,
-      handleShowDashboardToast,
-      isSupabaseConfigured,
-      supabase,
-      applyUpdatesToList,
-    ],
+    [authUser, handleShowDashboardToast, supabase, applyUpdatesToList],
   );
 
   const handleOpenMetadataUpdate = useCallback((videosOrVideo) => {
