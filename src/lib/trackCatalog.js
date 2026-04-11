@@ -911,7 +911,10 @@ export async function findPotentialDuplicates(supabase, track) {
   if (!catalog || catalog.length === 0) return [];
 
   // Use a specialized Fuse instance for duplicates with tighter constraints
-  const duplicateFuse = new Fuse(catalog, {
+  const ActualFuse = typeof Fuse === 'function' ? Fuse : Fuse.default;
+  if (typeof ActualFuse !== 'function') return [];
+
+  const duplicateFuse = new ActualFuse(catalog, {
     keys: [
       { name: 'gameTitle', weight: 0.5 },
       { name: 'trackTitle', weight: 0.5 },
