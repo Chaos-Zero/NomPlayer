@@ -1,3 +1,4 @@
+import Fuse from 'fuse.js';
 import { getYouTubeThumbnailUrl, parseYouTubeInput } from '../utils/youtube.js';
 import { checkContent } from '../utils/profanityFilter.js';
 
@@ -418,8 +419,61 @@ export async function findTrackInCatalog(supabase, videoId) {
 
 let memoryCatalog = null;
 let activeCatalogPromise = null;
+let fuseInstance = null;
 
-async function getFullCatalog(supabase) {
+function refreshFuseIndex() {
+  if (!memoryCatalog) {
+    fuseInstance = null;
+    return;
+  }
+
+  // Pre-process catalog to add searchable fields with no spaces/punctuation
+  const searchableCatalog = memoryCatalog.map((item) => {
+    const cleanGame = (item.gameTitle || '')
+      .replace(/[^a-z0-9]/gi, '')
+      .toLowerCase();
+    const cleanTrack = (item.trackTitle || '')
+      .replace(/[^a-z0-9]/gi, '')
+      .toLowerCase();
+    return {
+      ...item,
+      cleanGame,
+      cleanTrack,
+      searchTitle: `${cleanGame}${cleanTrack}`,
+    };
+  });
+
+  const options = {
+    keys: [
+      { name: 'gameTitle', weight: 1.0 },
+      { name: 'trackTitle', weight: 0.8 },
+      { name: 'cleanGame', weight: 0.8 },
+      { name: 'searchTitle', weight: 0.5 },
+      { name: 'displayTitle', weight: 0.3 },
+    ],
+    threshold: 0.3, // Slightly tighter threshold based on user feedback to reduce noise
+    distance: 100,
+    ignoreLocation: true,
+    minMatchCharLength: 2,
+    useExtendedSearch: true,
+  };
+
+  try {
+    const ActualFuse = typeof Fuse === 'function' ? Fuse : Fuse.default;
+
+    if (typeof ActualFuse === 'function') {
+      fuseInstance = new ActualFuse(searchableCatalog, options);
+    } else {
+      console.warn('TrackCatalog: Fuse constructor not found');
+      fuseInstance = null;
+    }
+  } catch (e) {
+    console.error('TrackCatalog: refreshFuseIndex error', e);
+    fuseInstance = null;
+  }
+}
+
+export async function getFullCatalog(supabase) {
   if (memoryCatalog) return memoryCatalog;
   if (activeCatalogPromise) return activeCatalogPromise;
 
@@ -437,41 +491,46 @@ async function getFullCatalog(supabase) {
         console.warn('Failed to load static catalog snapshot', e);
       }
 
-      if (!supabase) return snapshot;
-
-      // 2. Fetch Delta, Stats & Deletions concurrently
-      const [deltaRes, statsRes, deletionRes] = await Promise.all([
-        supabase.from('track_catalog').select('*').gt('updated_at', exportedAt),
-        supabase
-          .from('track_stats_summary')
-          .select('track_id, total_comments, average_rating'),
-        supabase
-          .from('track_deletions')
-          .select('track_id')
-          .gt('deleted_at', exportedAt),
-      ]);
-
-      if (deltaRes.error) {
-        console.warn(
-          'Catalog Sync Warning: Failed to fetch delta from DB.',
-          deltaRes.error,
-        );
-      }
-
-      const deltaTracks = deltaRes.data || [];
-      const statsList = statsRes.data || [];
-      const deletedIds = new Set(
-        (deletionRes.data || []).map((r) => r.track_id),
-      );
-
+      // Attach stats formatting seamlessly and normalize once
+      const output = [];
       const statsMap = {};
-      for (const s of statsList) statsMap[s.track_id] = s;
-
+      const deletedIds = new Set();
       const deltaMap = {};
-      for (const t of deltaTracks) deltaMap[t.track_id] = t;
+
+      if (supabase) {
+        // 2. Fetch Delta, Stats & Deletions concurrently
+        const [deltaRes, statsRes, deletionRes] = await Promise.all([
+          supabase
+            .from('track_catalog')
+            .select('*')
+            .gt('updated_at', exportedAt),
+          supabase
+            .from('track_stats_summary')
+            .select('track_id, total_comments, average_rating'),
+          supabase
+            .from('track_deletions')
+            .select('track_id')
+            .gt('deleted_at', exportedAt),
+        ]);
+
+        if (deltaRes.error) {
+          console.warn(
+            'Catalog Sync Warning: Failed to fetch delta from DB.',
+            deltaRes.error,
+          );
+        }
+
+        const deltaTracks = deltaRes.data || [];
+        const statsList = statsRes.data || [];
+        for (const s of statsList) statsMap[s.track_id] = s;
+        for (const d of deletionRes.data || []) deletedIds.add(d.track_id);
+        for (const t of deltaTracks) deltaMap[t.track_id] = t;
+      }
 
       let patchCount = 0;
       const merged = [];
+
+      // Merge snapshot with deltas
       for (const t of snapshot) {
         const tid = t.track_id || t.trackId;
         if (deletedIds.has(tid)) continue;
@@ -483,6 +542,8 @@ async function getFullCatalog(supabase) {
           merged.push(t);
         }
       }
+
+      // Add new tracks from delta
       for (const key in deltaMap) {
         if (!deletedIds.has(key)) {
           merged.push(deltaMap[key]);
@@ -496,21 +557,21 @@ async function getFullCatalog(supabase) {
         );
       }
 
-      // Attach stats formatting seamlessly and normalize once
-      const output = [];
+      // Normalization and indexing
       for (const t of merged) {
         const s = statsMap[t.track_id];
         const normalized = normalizeTrackCatalogEntry(t);
         if (normalized) {
           normalized.totalComments = s ? s.total_comments : 0;
           normalized.averageRating = s ? s.average_rating : 0;
-          normalized.hasResult = t.has_result;
-          normalized.tournamentCount = t.tournament_count;
+          normalized.hasResult = Boolean(t.has_result);
+          normalized.tournamentCount = t.tournament_count || 0;
           output.push(normalized);
         }
       }
 
       memoryCatalog = output;
+      refreshFuseIndex();
       return memoryCatalog;
     } catch (error) {
       console.error('Catalog Sync: Fatal error loading catalog.', error);
@@ -525,6 +586,7 @@ async function getFullCatalog(supabase) {
 
 export function clearCatalogCache() {
   memoryCatalog = null;
+  fuseInstance = null;
 }
 
 export function patchCatalogCache(updates = [], deletedTrackIds = []) {
@@ -573,8 +635,20 @@ export function patchCatalogCache(updates = [], deletedTrackIds = []) {
           update.sourceUrl || `https://www.youtube.com/watch?v=${videoId}`,
         submittedUrl:
           update.sourceUrl || `https://www.youtube.com/watch?v=${videoId}`,
+        tournaments:
+          update.tournaments !== undefined
+            ? update.tournaments
+            : entry.tournaments,
+        tournamentCount:
+          update.tournamentCount !== undefined
+            ? update.tournamentCount
+            : entry.tournamentCount,
+        hasResult:
+          update.hasResult !== undefined ? update.hasResult : entry.hasResult,
       };
     });
+
+  refreshFuseIndex();
 }
 
 export async function fetchFilteredTracks(
@@ -595,24 +669,18 @@ export async function fetchFilteredTracks(
   let catalog = await getFullCatalog(supabase);
 
   // Search filter
-  if (searchTerm) {
-    const rawWords = searchTerm
-      .trim()
-      .split(/\s+/)
-      .filter((w) => w.length >= 2);
-    // Note: cleanStr should be defined in this file
-    const words = rawWords.map((w) => cleanStr(w)).filter((w) => w.length > 0);
+  if (searchTerm && searchTerm.trim().length >= 2) {
+    // If we're searching, we must provide real matches or an empty list.
+    // We no longer fall back to showing everything if search fails.
+    catalog = [];
 
-    if (words.length > 0) {
-      catalog = catalog.filter((t) => {
-        return words.every((word) => {
-          return (
-            (t.gameTitle && cleanStr(t.gameTitle).includes(word)) ||
-            (t.trackTitle && cleanStr(t.trackTitle).includes(word)) ||
-            (t.displayTitle && cleanStr(t.displayTitle).includes(word))
-          );
-        });
-      });
+    if (!fuseInstance) {
+      refreshFuseIndex();
+    }
+
+    if (fuseInstance) {
+      const results = fuseInstance.search(searchTerm);
+      catalog = results.map((r) => r.item);
     }
   }
 
@@ -835,67 +903,82 @@ export async function bulkUpdateTracks(supabase, updatesMap) {
   return results;
 }
 
-// Smart cleaning: replace brackets with spaces to keep their content, then remove punctuation
-const cleanStr = (str) =>
-  (str || '')
-    .toLowerCase()
-    .replace(/[()[\]{}]/g, ' ') // replace brackets with spaces
-    .replace(/[^a-z0-9\s]/g, '') // remove other punctuation
-    .trim();
-
 export async function findPotentialDuplicates(supabase, track) {
   if (!supabase || !track) return [];
 
-  const baseTrackTitle = cleanStr(track.trackTitle);
-  const baseGameTitle = cleanStr(track.gameTitle);
+  // Make sure we have a local catalog to search
+  const catalog = await getFullCatalog(supabase);
+  if (!catalog || catalog.length === 0) return [];
 
-  // Split into words, filter out common short words
-  const trackWords = baseTrackTitle.split(/\s+/).filter((w) => w.length >= 2);
-  const gameWords = baseGameTitle.split(/\s+/).filter((w) => w.length >= 2);
+  // Use a specialized Fuse instance for duplicates with tighter constraints
+  const duplicateFuse = new Fuse(catalog, {
+    keys: [
+      { name: 'gameTitle', weight: 0.5 },
+      { name: 'trackTitle', weight: 0.5 },
+    ],
+    threshold: 0.3, // Stricter than general search
+    includeScore: true,
+    useExtendedSearch: true,
+  });
 
-  // Build a set of conditions
-  const orConditions = [];
+  const results = duplicateFuse.search({
+    $and: [{ gameTitle: track.gameTitle }, { trackTitle: track.trackTitle }],
+  });
 
-  // 1. Exact Match Pass (Escape quotes for Supabase filter string)
-  const esc = (s) => (s || '').replace(/"/g, '"');
-  orConditions.push(
-    `and(game_title.eq."${esc(track.gameTitle)}",track_title.eq."${esc(track.trackTitle)}")`,
-  );
+  const candidates = results
+    .filter((res) => {
+      const { item } = res;
+      if (item.trackId === track.trackId) return false;
 
-  // 2. Word-Pairing logic for significant words
-  if (trackWords.length > 0 && gameWords.length > 0) {
-    const topGameWords = gameWords.slice(0, 3);
-    const topTrackWords = trackWords.slice(0, 3);
+      // CONSENSUS LOGIC:
+      // Both the game and the track should have some level of similarity
+      // Or one is an exact match while the other is very close.
+      const gameSim = String(item.gameTitle || '').toLowerCase();
+      const targetGame = String(track.gameTitle || '').toLowerCase();
+      const trackSim = String(item.trackTitle || '').toLowerCase();
+      const targetTrack = String(track.trackTitle || '').toLowerCase();
 
-    topGameWords.forEach((gWord) => {
-      topTrackWords.forEach((tWord) => {
-        orConditions.push(
-          `and(game_title.ilike.%${gWord}%,track_title.ilike.%${tWord}%)`,
+      const gameExact = gameSim === targetGame;
+      const trackExact = trackSim === targetTrack;
+
+      // If both exact, it's definitely a duplicate
+      if (gameExact && trackExact) return true;
+
+      // If one is exact, the other must be at least partially present
+      if (
+        gameExact &&
+        (trackSim.includes(targetTrack) || targetTrack.includes(trackSim))
+      )
+        return true;
+      if (
+        trackExact &&
+        (gameSim.includes(targetGame) || targetGame.includes(gameSim))
+      )
+        return true;
+
+      // Fuzzy consensus: Ensure neither field is completely off
+      // We check if at least one significant word from the target is in the item
+      const hasGameWord = targetGame
+        .split(/\s+/)
+        .some(
+          (w) =>
+            (w.length >= 3 && gameSim.includes(w)) ||
+            (w.length < 3 && w === gameSim),
         );
-      });
-    });
-  }
+      const hasTrackWord = targetTrack
+        .split(/\s+/)
+        .some(
+          (w) =>
+            (w.length >= 3 && trackSim.includes(w)) ||
+            (w.length < 3 && w === trackSim),
+        );
 
-  // 3. Long track title fallback
-  if (baseTrackTitle.length > 12) {
-    orConditions.push(`track_title.ilike.%${baseTrackTitle}%`);
-  }
+      return hasGameWord && hasTrackWord;
+    })
+    .map((res) => res.item)
+    .slice(0, 15);
 
-  if (orConditions.length === 0) return [];
-
-  const { data, error } = await supabase
-    .from('track_catalog')
-    .select('*')
-    .or(orConditions.join(','))
-    .neq('track_id', track.trackId)
-    .limit(40);
-
-  if (error) {
-    console.error('Error finding duplicates:', error);
-    return [];
-  }
-
-  return (data || []).map(normalizeTrackCatalogEntry).filter(Boolean);
+  return candidates;
 }
 
 export async function mergeTracks(
@@ -1046,6 +1129,25 @@ export async function mergeTracks(
     }
   }
 
+  // Aggregate data for local cache update
+  const affectedEntries = memoryCatalog.filter(
+    (e) => e.trackId === targetTrack.trackId || sourceIds.includes(e.trackId),
+  );
+
+  const mergedTournamentsMap = new Map();
+  let mergedHasResult = false;
+
+  affectedEntries.forEach((entry) => {
+    if (entry.hasResult) mergedHasResult = true;
+    (entry.tournaments || []).forEach((t) => {
+      mergedTournamentsMap.set(t.sequenceNumber, t);
+    });
+  });
+
+  const mergedTournaments = Array.from(mergedTournamentsMap.values()).sort(
+    (a, b) => a.sequenceNumber - b.sequenceNumber,
+  );
+
   patchCatalogCache(
     [
       {
@@ -1054,6 +1156,9 @@ export async function mergeTracks(
         gameTitle: finalValues.gameTitle || targetTrack.gameTitle,
         trackTitle: finalValues.trackTitle || targetTrack.trackTitle,
         sourceUrl: finalValues.sourceUrl || targetTrack.sourceUrl,
+        tournaments: mergedTournaments,
+        tournamentCount: mergedTournaments.length,
+        hasResult: mergedHasResult,
       },
     ],
     sourceIds,
