@@ -303,14 +303,23 @@ export default function FooterFeedbackPanel({
 
       if (!trackId) throw new Error('Could not identify track.');
 
-      await upsertUserFeedback(supabase, authUser.id, trackId, {
-        rating: localRating || null,
-        note: localComment,
-      });
+      const finalRating = localRating || null;
+      const finalNote = localComment?.trim() || '';
+
+      if (finalRating === null && finalNote === '') {
+        // If everything is cleared, treat save as a delete
+        await deleteUserFeedback(supabase, authUser.id, trackId);
+        onShowToast?.('Feedback cleared.', 'dashboard');
+      } else {
+        await upsertUserFeedback(supabase, authUser.id, trackId, {
+          rating: finalRating,
+          note: finalNote,
+        });
+        onShowToast?.('Feedback saved successfully!', 'dashboard');
+      }
 
       const feedback = await fetchCommunityFeedback(supabase, trackId);
       setCommunityData((prev) => ({ ...prev, feedback }));
-      onShowToast?.('Feedback saved successfully!', 'dashboard');
       setIsEditing(false);
       onUpdate?.();
     } catch (err) {

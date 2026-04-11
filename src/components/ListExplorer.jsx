@@ -1313,6 +1313,7 @@ export default function ListExplorer({
   initialView = 'lists',
   onRefreshFeedback,
   onShowComments,
+  refreshKey,
 }) {
   const [focusedListId, setFocusedListId] = useState(null);
   const [activeCustomPlaylistId, setActiveCustomPlaylistId] = useState(null);
@@ -1333,6 +1334,7 @@ export default function ListExplorer({
     peer: [],
     highlights: [],
   });
+  const [activityRefreshKey, setActivityRefreshKey] = useState(0);
   const [isLoadingActivity, setIsLoadingActivity] = useState(false);
   const [isLoadingCommunity, setIsLoadingCommunity] = useState(false);
   const [remoteTrackData, setRemoteTrackData] = useState(null);
@@ -1556,13 +1558,16 @@ export default function ListExplorer({
       if (!trackId) throw new Error('Could not identify track.');
 
       await deleteUserFeedback(supabase, authUser.id, trackId);
-      // Refresh community data
-      setCommunityData((prev) => ({
+
+      // Update local card data immediately
+      setActivityData((prev) => ({
         ...prev,
-        feedback: prev.feedback.filter((f) => f.user_id !== authUser.id),
+        personal: prev.personal.filter(
+          (f) => (f.tracks?.id || f.track_id) !== trackId,
+        ),
       }));
 
-      // Update local playlist state
+      // Update local playlist state (for the list columns)
       const updateLocal = (list) =>
         list.map((v) =>
           v.videoId === trackToDelete.videoId ? { ...v, comment: null } : v,
@@ -1573,6 +1578,9 @@ export default function ListExplorer({
 
       onShowToast?.('Feedback deleted.', 'dashboard');
       onRefreshFeedback?.();
+
+      // Trigger a full activity refresh to catch everything else
+      setActivityRefreshKey((prev) => prev + 1);
     } catch (err) {
       console.error('Delete failed:', err);
       onShowToast?.('Failed to delete feedback.', 'error');
@@ -2296,10 +2304,21 @@ export default function ListExplorer({
       }
     };
 
-    if (explorerView === 'comments') {
+    if (
+      explorerView === 'comments' ||
+      activityRefreshKey > 0 ||
+      refreshKey > 0
+    ) {
       fetchActivity();
     }
-  }, [explorerView, supabase, authUser?.id, nominationList]);
+  }, [
+    explorerView,
+    activityRefreshKey,
+    refreshKey,
+    supabase,
+    authUser?.id,
+    nominationList,
+  ]);
 
   return (
     <div

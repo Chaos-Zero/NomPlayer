@@ -222,42 +222,34 @@ export default function CommunityActivity({
 
     setIsSaving(true);
     try {
-      const savedData = await upsertUserFeedback(
-        supabase,
-        authUser.id,
-        trackId,
-        pendingFeedback,
-      );
+      const finalRating =
+        pendingFeedback.rating > 0 ? pendingFeedback.rating : null;
+      const finalNote = pendingFeedback.note?.trim() || '';
 
-      onShowToast?.('Feedback saved successfully!');
+      if (finalRating === null && finalNote === '') {
+        // Delete if both empty
+        await deleteUserFeedback(supabase, authUser.id, trackId);
+        onShowToast?.('Feedback cleared.');
+      } else {
+        await upsertUserFeedback(supabase, authUser.id, trackId, {
+          rating: finalRating,
+          note: finalNote,
+        });
+        onShowToast?.('Feedback saved successfully!');
+      }
+
       setIsEditing(false);
 
-      // Update community data with the saved record
-      if (savedData) {
-        const recordWithProfile = {
-          ...savedData,
-          profiles: {
-            username: userProfile?.username,
-            avatar_url: userProfile?.avatar_url,
-          },
-        };
+      // Refresh community data
+      const feedback = await fetchCommunityFeedback(supabase, trackId);
+      setCommunityData((prev) => ({ ...prev, feedback }));
 
-        setCommunityData((prev) => {
-          const filtered = prev.feedback.filter(
-            (f) => f.user_id !== authUser.id,
-          );
-          return {
-            ...prev,
-            feedback: [recordWithProfile, ...filtered],
-          };
-        });
-        setUserFeedback(pendingFeedback);
-      } else {
-        // Fallback: Refresh local data
-        const feedback = await fetchCommunityFeedback(supabase, trackId);
-        setCommunityData((prev) => ({ ...prev, feedback }));
-        setUserFeedback(pendingFeedback);
-      }
+      const updatedFeedback = {
+        rating: finalRating || 0,
+        note: finalNote,
+      };
+      setUserFeedback(updatedFeedback);
+      setPendingFeedback(updatedFeedback);
     } catch (err) {
       console.error('Failed to save feedback:', err);
       if (err.isValidationError) {

@@ -911,6 +911,22 @@ export async function mergeTracks(
     finalValues,
   });
 
+  // 0. Migrate user data (Feedback, Supports, History) from sources to target
+  if (sourceIds.length > 0) {
+    const { error: migrationError } = await supabase.rpc(
+      'migrate_track_user_data',
+      {
+        target_track_id: targetTrack.trackId,
+        source_track_ids: sourceIds,
+      },
+    );
+    if (migrationError) {
+      console.error('mergeTracks: User data migration failed', migrationError);
+      // We continue since the source tracks were not yet deleted,
+      // but the data might be inconsistent.
+    }
+  }
+
   // 1. Update main tracks table
   const { error: trackUpdateError } = await supabase
     .from('tracks')

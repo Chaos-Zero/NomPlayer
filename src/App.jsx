@@ -558,6 +558,7 @@ export default function App() {
   const [authSession, setAuthSession] = useState(null);
   const [userProfile, setUserProfile] = useState(null);
   const [userFeedback, setUserFeedback] = useState({});
+  const [feedbackRefreshKey, setFeedbackRefreshKey] = useState(0);
   const [isAuthReady, setIsAuthReady] = useState(!isSupabaseConfigured);
   const [isAuthSubmitting, setIsAuthSubmitting] = useState(false);
   const [authDialogMode, setAuthDialogMode] = useState(null);
@@ -789,6 +790,7 @@ export default function App() {
     try {
       const feedback = await fetchUserFeedback(supabase, authUserIdRef.current);
       setUserFeedback(feedback || {});
+      setFeedbackRefreshKey((prev) => prev + 1);
     } catch (error) {
       console.error('Failed to fetch user feedback:', error);
     }
@@ -4911,6 +4913,7 @@ export default function App() {
               catalogTrackByVideoId={catalogTrackByVideoId}
               initialView={explorerInitialView}
               onRefreshFeedback={refreshUserFeedback}
+              refreshKey={feedbackRefreshKey}
               onShowComments={handleShowComments}
             />
           )}

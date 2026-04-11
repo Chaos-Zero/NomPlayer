@@ -17,6 +17,7 @@ import {
   fetchCommunityFeedback,
   fetchUserFeedback,
   upsertUserFeedback,
+  deleteUserFeedback,
 } from '../lib/feedback.js';
 import DuplicateReviewModal from './DuplicateReviewModal.jsx';
 import { DotLottiePlayer } from '@dotlottie/react-player';
@@ -193,10 +194,16 @@ const TrackRow = memo(
     onToggleCell,
     onUpdateRating,
     onUpdateNote,
+    onUpdateFeedback,
     onSetExpandedCell,
     onOpenContextMenu,
     onPlayNow,
     measureElement,
+    supabase,
+    authUser,
+    setUserFeedback,
+    onRefreshFeedback,
+    onShowToast,
   }) => {
     const vgmcElements = track.tournaments.map((t, i) => {
       const hasResult = t.placement || t.highestRound;
@@ -249,26 +256,54 @@ const TrackRow = memo(
       setLocalNote(null);
     };
 
-    const handleClearFeedback = (e) => {
-      if (e) e.stopPropagation();
-      if (window.confirm('Clear your rating and note for this track?')) {
-        onUpdateRating(track.trackId, '');
-        onUpdateNote(track.trackId, '');
-        setLocalRating(null);
-        setLocalNote(null);
-      }
-    };
+    const handleClearFeedback = useCallback(
+      async (e) => {
+        if (e) e.stopPropagation();
+        if (!authUser) return;
+        if (window.confirm('Clear your rating and note for this track?')) {
+          try {
+            await deleteUserFeedback(supabase, authUser.id, track.trackId);
+            setUserFeedback((prev) => {
+              const next = { ...prev };
+              delete next[track.trackId];
+              return next;
+            });
+            onRefreshFeedback?.();
+            setLocalRating(null);
+            setLocalNote(null);
+          } catch (err) {
+            console.error('Failed to clear feedback:', err);
+            onShowToast?.('Failed to clear feedback.');
+          }
+        }
+      },
+      [
+        supabase,
+        authUser,
+        track.trackId,
+        onShowToast,
+        onRefreshFeedback,
+        setUserFeedback,
+      ],
+    );
 
     const handleSaveFeedback = (e) => {
       if (e) e.stopPropagation();
       const finalRating = localRating !== null ? localRating : feedback.rating;
       const finalNote = localNote !== null ? localNote : feedback.note;
 
-      if (finalRating !== feedback.rating && onUpdateRating) {
-        onUpdateRating(track.trackId, String(finalRating));
-      }
-      if (finalNote !== feedback.note && onUpdateNote) {
-        onUpdateNote(track.trackId, finalNote);
+      if (onUpdateFeedback) {
+        onUpdateFeedback(track.trackId, {
+          rating: finalRating,
+          note: finalNote,
+        });
+      } else {
+        if (finalRating !== feedback.rating && onUpdateRating) {
+          onUpdateRating(track.trackId, String(finalRating));
+        }
+        if (finalNote !== feedback.note && onUpdateNote) {
+          onUpdateNote(track.trackId, finalNote);
+        }
       }
       setLocalRating(null);
       setLocalNote(null);
@@ -712,52 +747,63 @@ export default function TrackDatabase({
         virtualItems[virtualItems.length - 1].end
       : 0;
 
-  const handleUpdateRating = useCallback(
-    async (trackId, rating) => {
+  const handleUpdateFeedback = useCallback(
+    async (trackId, updates) => {
       if (!authUser) {
-        onShowToast?.('Please log in to rate tracks.');
+        onShowToast?.('Please log in to save feedback.');
         return;
       }
       try {
-        const current = userFeedback[trackId] || { note: '' };
-        await upsertUserFeedback(supabase, authUser.id, trackId, {
-          rating,
-          note: current.note,
-        });
-        setUserFeedback((prev) => ({
-          ...prev,
-          [trackId]: { ...current, rating },
-        }));
+        const current = userFeedback[trackId] || { rating: null, note: '' };
+        const newRating =
+          updates.rating !== undefined
+            ? updates.rating === ''
+              ? null
+              : updates.rating
+            : current.rating;
+        const newNote =
+          updates.note !== undefined
+            ? updates.note?.trim() || ''
+            : current.note;
+
+        if (newRating === null && newNote === '') {
+          await deleteUserFeedback(supabase, authUser.id, trackId);
+          setUserFeedback((prev) => {
+            const next = { ...prev };
+            delete next[trackId];
+            return next;
+          });
+        } else {
+          await upsertUserFeedback(supabase, authUser.id, trackId, {
+            rating: newRating,
+            note: newNote,
+          });
+          setUserFeedback((prev) => ({
+            ...prev,
+            [trackId]: { rating: newRating, note: newNote },
+          }));
+        }
         onRefreshFeedback?.();
-      } catch {
-        onShowToast?.('Failed to save rating.');
+      } catch (err) {
+        console.error('Failed to save feedback:', err);
+        onShowToast?.('Failed to save feedback.');
       }
     },
     [supabase, authUser, userFeedback, onShowToast, onRefreshFeedback],
   );
 
+  const handleUpdateRating = useCallback(
+    async (trackId, rating) => {
+      handleUpdateFeedback(trackId, { rating });
+    },
+    [handleUpdateFeedback],
+  );
+
   const handleUpdateNote = useCallback(
     async (trackId, note) => {
-      if (!authUser) {
-        onShowToast?.('Please log in to leave comments.');
-        return;
-      }
-      try {
-        const current = userFeedback[trackId] || { rating: null };
-        await upsertUserFeedback(supabase, authUser.id, trackId, {
-          rating: current.rating,
-          note,
-        });
-        setUserFeedback((prev) => ({
-          ...prev,
-          [trackId]: { ...current, note },
-        }));
-        onRefreshFeedback?.();
-      } catch {
-        onShowToast?.('Failed to save comment.');
-      }
+      handleUpdateFeedback(trackId, { note });
     },
-    [supabase, authUser, userFeedback, onShowToast, onRefreshFeedback],
+    [handleUpdateFeedback],
   );
 
   const handleSort = (column) => {
@@ -1139,10 +1185,16 @@ export default function TrackDatabase({
                     onToggleCell={toggleCell}
                     onUpdateRating={handleUpdateRating}
                     onUpdateNote={handleUpdateNote}
+                    onUpdateFeedback={handleUpdateFeedback}
                     onSetExpandedCell={setExpandedCell}
                     onOpenContextMenu={handleOpenContextMenu}
                     onPlayNow={onPlayNow}
                     measureElement={virtualRow.measureElement}
+                    supabase={supabase}
+                    authUser={authUser}
+                    setUserFeedback={setUserFeedback}
+                    onRefreshFeedback={onRefreshFeedback}
+                    onShowToast={onShowToast}
                   />
                 );
               })}
