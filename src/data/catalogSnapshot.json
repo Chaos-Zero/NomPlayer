@@ -1,6 +1,6 @@
 {
-  "exportedAt": "2026-04-09T12:35:48.285Z",
-  "totalCount": 10436,
+  "exportedAt": "2026-04-11T01:16:59.252Z",
+  "totalCount": 10431,
   "tracks": [
     {
       "track_id": "001d9edc-c444-4e75-92e1-d3a2ccba46d7",
@@ -2752,7 +2752,7 @@
       "source_title": "Light of Nibel (feat. Aeralie Brighton)",
       "source_channel_title": "Gareth Coker - Topic",
       "source_thumbnail_url": "https://i.ytimg.com/vi/t6vWDz5NzOY/mqdefault.jpg",
-      "last_fetched_at": "2026-03-31T21:05:39.756984+00:00",
+      "last_fetched_at": "2026-04-09T17:24:29.36964+00:00",
       "updated_at": "2026-03-18T03:04:35.441991+00:00",
       "tournaments": [
         {
@@ -9600,7 +9600,7 @@
       "source_title": "Lygus Boss Theme · NAME == Entelechy - Honkai: Star Rail 3.5 OST",
       "source_channel_title": "Pom-Pom’s Workstation",
       "source_thumbnail_url": "https://i.ytimg.com/vi/8EyFgUqtFK8/mqdefault.jpg",
-      "last_fetched_at": "2026-03-31T21:05:39.756984+00:00",
+      "last_fetched_at": "2026-04-09T17:24:29.36964+00:00",
       "updated_at": "2026-03-31T19:26:32.547311+00:00",
       "tournaments": [],
       "tournament_count": 0,
@@ -12197,43 +12197,6 @@
           "is_retired": false,
           "highest_round": null,
           "sequence_number": 4,
-          "appearance_label": null
-        }
-      ],
-      "tournament_count": 1,
-      "support_count_1": 0,
-      "support_count_2": 0,
-      "support_count_3": 0,
-      "has_result": false
-    },
-    {
-      "track_id": "07875fc8-8b32-427d-a176-4b42653cf4c9",
-      "game_title": "The Legend of Zelda: Twilight Princess",
-      "track_title": "Zant Battle",
-      "display_title": "The Legend of Zelda: Twilight Princess - Zant Battle",
-      "metadata_status": "confirmed",
-      "is_retired": false,
-      "retired_by_tournament_slug": null,
-      "retired_by_tournament_name": null,
-      "primary_source_id": "82d67f10-ffe0-4414-8fd9-6588b2032229",
-      "provider": "youtube",
-      "source_external_id": "s0WyOmtgVQM",
-      "source_url": "https://www.youtube.com/watch?v=s0WyOmtgVQM",
-      "submitted_url": "https://www.youtube.com/watch?v=s0WyOmtgVQM",
-      "source_title": null,
-      "source_channel_title": null,
-      "source_thumbnail_url": null,
-      "last_fetched_at": null,
-      "updated_at": "2026-03-18T03:07:52.100295+00:00",
-      "tournaments": [
-        {
-          "name": "VGMC 16",
-          "slug": "vgmc-16",
-          "notes": null,
-          "placement": null,
-          "is_retired": false,
-          "highest_round": null,
-          "sequence_number": 16,
           "appearance_label": null
         }
       ],
@@ -25016,14 +24979,14 @@
       "retired_by_tournament_name": null,
       "primary_source_id": "1ee337a8-9cc7-4866-b211-88883ef825dc",
       "provider": "youtube",
-      "source_external_id": "zRjZsj1TOAk",
-      "source_url": "https://www.youtube.com/watch?v=zRjZsj1TOAk",
-      "submitted_url": "http://www.youtube.com/watch?v=zRjZsj1TOAk",
+      "source_external_id": "8eXgVdLUcgI",
+      "source_url": "https://youtu.be/8eXgVdLUcgI?si=wsQvVD2YNQJfULsW",
+      "submitted_url": "https://youtu.be/8eXgVdLUcgI?si=wsQvVD2YNQJfULsW",
       "source_title": null,
       "source_channel_title": null,
       "source_thumbnail_url": null,
       "last_fetched_at": null,
-      "updated_at": "2026-03-18T03:00:00.928071+00:00",
+      "updated_at": "2026-04-10T23:10:41.166961+00:00",
       "tournaments": [
         {
           "name": "VGMC 3",
@@ -31820,9 +31783,9 @@
     },
     {
       "track_id": "149ef789-6df9-4dc2-b529-ede2f1a7f5e2",
-      "game_title": "Scott Pilgrim vs The World",
+      "game_title": "Scott Pilgrim vs. The World",
       "track_title": "Another Winter",
-      "display_title": "Scott Pilgrim vs The World - Another Winter",
+      "display_title": "Scott Pilgrim vs. The World - Another Winter",
       "metadata_status": "confirmed",
       "is_retired": false,
       "retired_by_tournament_slug": null,
@@ -31836,7 +31799,7 @@
       "source_channel_title": null,
       "source_thumbnail_url": null,
       "last_fetched_at": null,
-      "updated_at": "2026-03-18T03:00:00.928071+00:00",
+      "updated_at": "2026-04-10T23:44:25.382743+00:00",
       "tournaments": [
         {
           "name": "VGMC 5",
@@ -31889,6 +31852,16 @@
           "appearance_label": null
         },
         {
+          "name": "VGMC 10",
+          "slug": "vgmc-10",
+          "notes": null,
+          "placement": null,
+          "is_retired": false,
+          "highest_round": null,
+          "sequence_number": 10,
+          "appearance_label": null
+        },
+        {
           "name": "VGMC 11",
           "slug": "vgmc-11",
           "notes": null,
@@ -31899,6 +31872,16 @@
           "appearance_label": null
         },
         {
+          "name": "VGMC 12",
+          "slug": "vgmc-12",
+          "notes": null,
+          "placement": null,
+          "is_retired": false,
+          "highest_round": null,
+          "sequence_number": 12,
+          "appearance_label": null
+        },
+        {
           "name": "VGMC 14",
           "slug": "vgmc-14",
           "notes": null,
@@ -31906,6 +31889,16 @@
           "is_retired": false,
           "highest_round": "3",
           "sequence_number": 14,
+          "appearance_label": null
+        },
+        {
+          "name": "VGMC 15",
+          "slug": "vgmc-15",
+          "notes": null,
+          "placement": null,
+          "is_retired": false,
+          "highest_round": null,
+          "sequence_number": 15,
           "appearance_label": null
         },
         {
@@ -31929,6 +31922,16 @@
           "appearance_label": null
         },
         {
+          "name": "VGMC 18",
+          "slug": "vgmc-18",
+          "notes": null,
+          "placement": null,
+          "is_retired": false,
+          "highest_round": null,
+          "sequence_number": 18,
+          "appearance_label": null
+        },
+        {
           "name": "VGMC 19",
           "slug": "vgmc-19",
           "notes": null,
@@ -31939,7 +31942,7 @@
           "appearance_label": null
         }
       ],
-      "tournament_count": 10,
+      "tournament_count": 14,
       "support_count_1": 0,
       "support_count_2": 0,
       "support_count_3": 0,
@@ -42118,7 +42121,7 @@
       "source_title": "Satisfactory - Nostalgium",
       "source_channel_title": "Bartek888_888",
       "source_thumbnail_url": "https://i.ytimg.com/vi/PPS7fiGA1iI/mqdefault.jpg",
-      "last_fetched_at": "2026-04-09T12:09:48.068816+00:00",
+      "last_fetched_at": "2026-04-11T00:57:42.231185+00:00",
       "updated_at": "2026-03-18T23:16:28.069242+00:00",
       "tournaments": [],
       "tournament_count": 0,
@@ -45077,7 +45080,7 @@
       "source_title": "Astro Bot - Marine Serene",
       "source_channel_title": null,
       "source_thumbnail_url": "https://i.ytimg.com/vi/TZ9x6FP8BNw/mqdefault.jpg",
-      "last_fetched_at": "2026-04-09T12:09:48.068816+00:00",
+      "last_fetched_at": "2026-04-11T00:57:42.231185+00:00",
       "updated_at": "2026-03-18T03:04:35.441991+00:00",
       "tournaments": [
         {
@@ -47487,7 +47490,7 @@
       "source_title": "Metroid Prime Music - Menu Select Theme",
       "source_channel_title": "Metroid Music Channel",
       "source_thumbnail_url": "https://i.ytimg.com/vi/k0_-BkhG9Sw/mqdefault.jpg",
-      "last_fetched_at": "2026-03-31T21:05:39.756984+00:00",
+      "last_fetched_at": "2026-04-09T17:24:29.36964+00:00",
       "updated_at": "2026-03-18T02:59:14.195701+00:00",
       "tournaments": [
         {
@@ -50607,7 +50610,7 @@
       "source_title": "Prelude to Pursuit - Search for the Truth ~ Ace Attorney Investigations Collection OST",
       "source_channel_title": "Shankey",
       "source_thumbnail_url": "https://i.ytimg.com/vi/nSP6E1pb9fw/mqdefault.jpg",
-      "last_fetched_at": "2026-03-31T21:05:39.756984+00:00",
+      "last_fetched_at": "2026-04-09T17:24:29.36964+00:00",
       "updated_at": "2026-03-31T19:26:32.816605+00:00",
       "tournaments": [],
       "tournament_count": 0,
@@ -58701,10 +58704,10 @@
       "source_external_id": "KuTeD9l8vXI",
       "source_url": "https://www.youtube.com/watch?v=KuTeD9l8vXI",
       "submitted_url": "https://www.youtube.com/watch?v=KuTeD9l8vXI",
-      "source_title": "Old Spice Dikembe Mutombo's 4 1/2 Weeks to Save the World - We Saved the World",
+      "source_title": "OLD SPICE DIKEMBE MUTOMBO 4 1/2 WEEKS TO SAVE THE WORLD  WE SAVED THE WORLD",
       "source_channel_title": "RYAN TURNBULL",
       "source_thumbnail_url": "https://i.ytimg.com/vi/KuTeD9l8vXI/mqdefault.jpg",
-      "last_fetched_at": "2026-04-08T13:28:02.084094+00:00",
+      "last_fetched_at": "2026-04-09T17:24:29.36964+00:00",
       "updated_at": "2026-03-31T19:26:32.809595+00:00",
       "tournaments": [],
       "tournament_count": 0,
@@ -62080,7 +62083,7 @@
       "source_title": "Rondo Across Countless Kalpas",
       "source_channel_title": "HOYO-MiX - Topic",
       "source_thumbnail_url": "https://i.ytimg.com/vi/B5UeNLlnUOA/mqdefault.jpg",
-      "last_fetched_at": "2026-03-31T21:05:39.756984+00:00",
+      "last_fetched_at": "2026-04-09T17:24:29.36964+00:00",
       "updated_at": "2026-03-31T19:26:32.525073+00:00",
       "tournaments": [],
       "tournament_count": 0,
@@ -71558,10 +71561,10 @@
       "source_external_id": "HwmxrIwetyU",
       "source_url": "https://www.youtube.com/watch?v=HwmxrIwetyU",
       "submitted_url": "https://www.youtube.com/watch?v=HwmxrIwetyU",
-      "source_title": "World of Goo - Red Carpet Extend-o-Matic",
+      "source_title": "Red Carpet Extend-o-matic - World of Goo",
       "source_channel_title": "Rickkity-T",
       "source_thumbnail_url": "https://i.ytimg.com/vi/HwmxrIwetyU/mqdefault.jpg",
-      "last_fetched_at": "2026-04-03T11:28:04.447265+00:00",
+      "last_fetched_at": "2026-04-09T17:24:29.36964+00:00",
       "updated_at": "2026-03-18T03:00:00.928071+00:00",
       "tournaments": [
         {
@@ -104949,12 +104952,12 @@
       "provider": "youtube",
       "source_external_id": "HNy_retSME0",
       "source_url": "https://www.youtube.com/watch?v=HNy_retSME0",
-      "submitted_url": "https://youtu.be/HNy_retSME0",
+      "submitted_url": "https://www.youtube.com/watch?v=HNy_retSME0",
       "source_title": null,
       "source_channel_title": null,
       "source_thumbnail_url": null,
       "last_fetched_at": null,
-      "updated_at": "2026-03-18T02:59:14.195701+00:00",
+      "updated_at": "2026-04-11T01:08:44.440199+00:00",
       "tournaments": [
         {
           "name": "VGMC 2",
@@ -109161,7 +109164,7 @@
       "source_title": "Weight of the World／Prelude Version",
       "source_channel_title": "Masayoshi Soken - Topic",
       "source_thumbnail_url": "https://i.ytimg.com/vi/gPSOaSwdEaE/mqdefault.jpg",
-      "last_fetched_at": "2026-03-31T21:05:39.756984+00:00",
+      "last_fetched_at": "2026-04-09T17:24:29.36964+00:00",
       "updated_at": "2026-03-18T03:04:35.441991+00:00",
       "tournaments": [
         {
@@ -135474,8 +135477,8 @@
     {
       "track_id": "53abcc86-3093-48da-b0e0-d8c40ceb84b4",
       "game_title": "Karous",
-      "track_title": "you can't fk me",
-      "display_title": "Karous - you can't fk me",
+      "track_title": "you can't fxxk me",
+      "display_title": "Karous - you can't fxxk me",
       "metadata_status": "confirmed",
       "is_retired": false,
       "retired_by_tournament_slug": null,
@@ -135489,7 +135492,7 @@
       "source_channel_title": null,
       "source_thumbnail_url": null,
       "last_fetched_at": null,
-      "updated_at": "2026-03-18T03:07:52.100295+00:00",
+      "updated_at": "2026-04-10T23:53:22.147012+00:00",
       "tournaments": [
         {
           "name": "VGMC 16",
@@ -135500,13 +135503,23 @@
           "highest_round": null,
           "sequence_number": 16,
           "appearance_label": null
+        },
+        {
+          "name": "VGMC 19",
+          "slug": "vgmc-19",
+          "notes": null,
+          "placement": null,
+          "is_retired": false,
+          "highest_round": "2",
+          "sequence_number": 19,
+          "appearance_label": null
         }
       ],
-      "tournament_count": 1,
+      "tournament_count": 2,
       "support_count_1": 0,
       "support_count_2": 0,
       "support_count_3": 0,
-      "has_result": false
+      "has_result": true
     },
     {
       "track_id": "53ae283c-05de-4d99-b176-f18c624ddf61",
@@ -146008,7 +146021,7 @@
       "source_title": "Garden of Life",
       "source_channel_title": "Release - Topic",
       "source_thumbnail_url": "https://i.ytimg.com/vi/RJTM3Si10U4/mqdefault.jpg",
-      "last_fetched_at": "2026-03-31T21:05:39.756984+00:00",
+      "last_fetched_at": "2026-04-09T17:24:29.36964+00:00",
       "updated_at": "2026-03-31T19:26:32.577158+00:00",
       "tournaments": [],
       "tournament_count": 0,
@@ -162543,14 +162556,14 @@
       "retired_by_tournament_name": null,
       "primary_source_id": "0b7ca62a-ed1e-49ef-902a-d67254112762",
       "provider": "youtube",
-      "source_external_id": "ms2pPepDh1o",
-      "source_url": "https://www.youtube.com/watch?v=ms2pPepDh1o",
-      "submitted_url": "http://www.youtube.com/watch?v=ms2pPepDh1o",
+      "source_external_id": "9XV7TeThdVA",
+      "source_url": "https://youtu.be/9XV7TeThdVA?si=B22ByxSXLPAm_fpD",
+      "submitted_url": "https://youtu.be/9XV7TeThdVA?si=B22ByxSXLPAm_fpD",
       "source_title": null,
       "source_channel_title": null,
       "source_thumbnail_url": null,
       "last_fetched_at": null,
-      "updated_at": "2026-03-18T03:00:00.928071+00:00",
+      "updated_at": "2026-04-10T23:02:15.472035+00:00",
       "tournaments": [
         {
           "name": "VGMC 5",
@@ -162573,6 +162586,16 @@
           "appearance_label": null
         },
         {
+          "name": "VGMC 7",
+          "slug": "vgmc-7",
+          "notes": null,
+          "placement": null,
+          "is_retired": false,
+          "highest_round": null,
+          "sequence_number": 7,
+          "appearance_label": null
+        },
+        {
           "name": "VGMC 9",
           "slug": "vgmc-9",
           "notes": null,
@@ -162581,9 +162604,29 @@
           "highest_round": "3",
           "sequence_number": 9,
           "appearance_label": null
+        },
+        {
+          "name": "VGMC 10",
+          "slug": "vgmc-10",
+          "notes": null,
+          "placement": null,
+          "is_retired": false,
+          "highest_round": null,
+          "sequence_number": 10,
+          "appearance_label": null
+        },
+        {
+          "name": "VGMC 11",
+          "slug": "vgmc-11",
+          "notes": null,
+          "placement": null,
+          "is_retired": false,
+          "highest_round": null,
+          "sequence_number": 11,
+          "appearance_label": null
         }
       ],
-      "tournament_count": 3,
+      "tournament_count": 6,
       "support_count_1": 0,
       "support_count_2": 0,
       "support_count_3": 0,
@@ -165022,12 +165065,12 @@
       "provider": "youtube",
       "source_external_id": "6Os2FauUZBs",
       "source_url": "https://www.youtube.com/watch?v=6Os2FauUZBs",
-      "submitted_url": "https://youtu.be/6Os2FauUZBs",
+      "submitted_url": "https://www.youtube.com/watch?v=6Os2FauUZBs",
       "source_title": null,
       "source_channel_title": null,
       "source_thumbnail_url": null,
       "last_fetched_at": null,
-      "updated_at": "2026-03-18T03:02:26.519621+00:00",
+      "updated_at": "2026-04-11T01:03:18.107511+00:00",
       "tournaments": [
         {
           "name": "VGMC 14",
@@ -165038,9 +165081,19 @@
           "highest_round": null,
           "sequence_number": 14,
           "appearance_label": null
+        },
+        {
+          "name": "VGMC 16",
+          "slug": "vgmc-16",
+          "notes": null,
+          "placement": null,
+          "is_retired": false,
+          "highest_round": null,
+          "sequence_number": 16,
+          "appearance_label": null
         }
       ],
-      "tournament_count": 1,
+      "tournament_count": 2,
       "support_count_1": 0,
       "support_count_2": 0,
       "support_count_3": 0,
@@ -175111,8 +175164,8 @@
       "source_title": "I'll Face Myself -Battle-",
       "source_channel_title": null,
       "source_thumbnail_url": "https://i.ytimg.com/vi/qnp6nM1q0jc/mqdefault.jpg",
-      "last_fetched_at": "2026-04-09T12:22:05.523845+00:00",
-      "updated_at": "2026-04-09T12:22:05.816099+00:00",
+      "last_fetched_at": "2026-04-09T15:10:15.048004+00:00",
+      "updated_at": "2026-04-09T15:10:15.163061+00:00",
       "tournaments": [
         {
           "name": "VGMC 3",
@@ -185509,7 +185562,7 @@
       "source_title": "Tatsunoko vs. Capcom: Ultimate All-Stars - Orbital Ring Systems Cargo Bay",
       "source_channel_title": "PikawilMusic",
       "source_thumbnail_url": "https://i.ytimg.com/vi/bp1ZkMq26A8/mqdefault.jpg",
-      "last_fetched_at": "2026-04-09T12:09:48.068816+00:00",
+      "last_fetched_at": "2026-04-11T00:57:42.231185+00:00",
       "updated_at": "2026-03-18T23:16:28.098775+00:00",
       "tournaments": [],
       "tournament_count": 0,
@@ -193900,7 +193953,7 @@
       "source_title": "Need for Speed The Run OST - Timed Race 2 Extended",
       "source_channel_title": "SiulSC",
       "source_thumbnail_url": "https://i.ytimg.com/vi/7SNhg2DtqR0/mqdefault.jpg",
-      "last_fetched_at": "2026-03-31T21:05:39.756984+00:00",
+      "last_fetched_at": "2026-04-09T17:24:29.36964+00:00",
       "updated_at": "2026-03-31T19:26:32.786282+00:00",
       "tournaments": [],
       "tournament_count": 0,
@@ -200440,11 +200493,11 @@
       "source_external_id": "EVcc16o0SaY",
       "source_url": "https://www.youtube.com/watch?v=EVcc16o0SaY",
       "submitted_url": "https://www.youtube.com/watch?v=EVcc16o0SaY",
-      "source_title": null,
+      "source_title": "Atelier Ayesha: BGM 12- MARIA",
       "source_channel_title": null,
-      "source_thumbnail_url": null,
-      "last_fetched_at": null,
-      "updated_at": "2026-03-18T03:07:52.100295+00:00",
+      "source_thumbnail_url": "https://i.ytimg.com/vi/EVcc16o0SaY/mqdefault.jpg",
+      "last_fetched_at": "2026-04-09T15:10:39.89065+00:00",
+      "updated_at": "2026-04-09T15:10:40.008899+00:00",
       "tournaments": [
         {
           "name": "VGMC 8",
@@ -212295,7 +212348,7 @@
       "source_title": "Donkey Kong Country: Tropical Freeze Sountrack - Seashore War",
       "source_channel_title": "piplupwater",
       "source_thumbnail_url": "https://i.ytimg.com/vi/Boqy0Q-4c_M/mqdefault.jpg",
-      "last_fetched_at": "2026-03-31T21:05:39.756984+00:00",
+      "last_fetched_at": "2026-04-09T17:24:29.36964+00:00",
       "updated_at": "2026-03-18T03:07:52.100295+00:00",
       "tournaments": [
         {
@@ -231197,43 +231250,6 @@
       "has_result": true
     },
     {
-      "track_id": "8d1c00b1-be36-4e51-8285-6f76ac19499b",
-      "game_title": "Karous",
-      "track_title": "you can't fxxk me",
-      "display_title": "Karous - you can't fxxk me",
-      "metadata_status": "confirmed",
-      "is_retired": false,
-      "retired_by_tournament_slug": null,
-      "retired_by_tournament_name": null,
-      "primary_source_id": "589da8fb-9143-4eff-89d2-98f0f58dcfee",
-      "provider": "youtube",
-      "source_external_id": "74Ge2CrjFCA",
-      "source_url": "https://www.youtube.com/watch?v=74Ge2CrjFCA",
-      "submitted_url": "https://youtu.be/74Ge2CrjFCA",
-      "source_title": null,
-      "source_channel_title": null,
-      "source_thumbnail_url": null,
-      "last_fetched_at": null,
-      "updated_at": "2026-03-18T03:04:35.441991+00:00",
-      "tournaments": [
-        {
-          "name": "VGMC 19",
-          "slug": "vgmc-19",
-          "notes": null,
-          "placement": null,
-          "is_retired": false,
-          "highest_round": "2",
-          "sequence_number": 19,
-          "appearance_label": null
-        }
-      ],
-      "tournament_count": 1,
-      "support_count_1": 0,
-      "support_count_2": 0,
-      "support_count_3": 0,
-      "has_result": true
-    },
-    {
       "track_id": "8d202230-8aa8-4efc-b9fa-e912c8664187",
       "game_title": "Chrono Trigger",
       "track_title": "Last Battle",
@@ -244542,6 +244558,32 @@
       "has_result": false
     },
     {
+      "track_id": "953d3b5b-83c8-400d-8622-c5eb7b3da853",
+      "game_title": "Halo 3",
+      "track_title": "One Final Effort",
+      "display_title": "Halo 3 - One Final Effort",
+      "metadata_status": "confirmed",
+      "is_retired": false,
+      "retired_by_tournament_slug": null,
+      "retired_by_tournament_name": null,
+      "primary_source_id": "8b5aa06d-99ff-4c93-8d7d-bb7ffcb31530",
+      "provider": "youtube",
+      "source_external_id": "P2NVJSJVGVQ",
+      "source_url": "https://www.youtube.com/watch?v=P2NVJSJVGVQ",
+      "submitted_url": "https://www.youtube.com/watch?v=P2NVJSJVGVQ",
+      "source_title": "One Final Effort",
+      "source_channel_title": null,
+      "source_thumbnail_url": "https://i.ytimg.com/vi/P2NVJSJVGVQ/mqdefault.jpg",
+      "last_fetched_at": "2026-04-09T15:11:03.78823+00:00",
+      "updated_at": "2026-04-09T15:11:03.884783+00:00",
+      "tournaments": [],
+      "tournament_count": 0,
+      "support_count_1": 0,
+      "support_count_2": 0,
+      "support_count_3": 0,
+      "has_result": false
+    },
+    {
       "track_id": "95419001-5a4e-4f9d-b59b-40de4fc4f483",
       "game_title": "Iconoclasts",
       "track_title": "Jet Black",
@@ -245249,83 +245291,6 @@
       "support_count_2": 0,
       "support_count_3": 0,
       "has_result": true
-    },
-    {
-      "track_id": "959baa12-5c31-4281-bdc7-44d648dc9a27",
-      "game_title": "Scott Pilgrim vs. The World",
-      "track_title": "Another Winter",
-      "display_title": "Scott Pilgrim vs. The World - Another Winter",
-      "metadata_status": "confirmed",
-      "is_retired": false,
-      "retired_by_tournament_slug": null,
-      "retired_by_tournament_name": null,
-      "primary_source_id": "d3333a76-3b7c-43a8-867d-b17c8e136392",
-      "provider": "youtube",
-      "source_external_id": "BtyWhHwCXIU",
-      "source_url": "https://www.youtube.com/watch?v=BtyWhHwCXIU",
-      "submitted_url": "https://www.youtube.com/watch?v=BtyWhHwCXIU",
-      "source_title": "Another Winter",
-      "source_channel_title": null,
-      "source_thumbnail_url": "https://i.ytimg.com/vi/BtyWhHwCXIU/mqdefault.jpg",
-      "last_fetched_at": "2026-04-09T12:29:52.528963+00:00",
-      "updated_at": "2026-04-09T12:29:52.839868+00:00",
-      "tournaments": [
-        {
-          "name": "VGMC 14",
-          "slug": "vgmc-14",
-          "notes": null,
-          "placement": null,
-          "is_retired": false,
-          "highest_round": null,
-          "sequence_number": 14,
-          "appearance_label": null
-        },
-        {
-          "name": "VGMC 16",
-          "slug": "vgmc-16",
-          "notes": null,
-          "placement": null,
-          "is_retired": false,
-          "highest_round": null,
-          "sequence_number": 16,
-          "appearance_label": null
-        },
-        {
-          "name": "VGMC 17",
-          "slug": "vgmc-17",
-          "notes": null,
-          "placement": null,
-          "is_retired": false,
-          "highest_round": null,
-          "sequence_number": 17,
-          "appearance_label": null
-        },
-        {
-          "name": "VGMC 18",
-          "slug": "vgmc-18",
-          "notes": null,
-          "placement": null,
-          "is_retired": false,
-          "highest_round": null,
-          "sequence_number": 18,
-          "appearance_label": null
-        },
-        {
-          "name": "VGMC 19",
-          "slug": "vgmc-19",
-          "notes": null,
-          "placement": null,
-          "is_retired": false,
-          "highest_round": null,
-          "sequence_number": 19,
-          "appearance_label": null
-        }
-      ],
-      "tournament_count": 5,
-      "support_count_1": 0,
-      "support_count_2": 0,
-      "support_count_3": 0,
-      "has_result": false
     },
     {
       "track_id": "959ffa3d-fa7e-4706-86a6-9c4c79c8f124",
@@ -246611,7 +246576,7 @@
       "source_title": "Ace Combat: Assault Horizon OST - Shall Defend",
       "source_channel_title": "Ham",
       "source_thumbnail_url": "https://i.ytimg.com/vi/PseSGiek5-M/mqdefault.jpg",
-      "last_fetched_at": "2026-03-31T21:05:39.756984+00:00",
+      "last_fetched_at": "2026-04-09T17:24:29.36964+00:00",
       "updated_at": "2026-03-31T19:26:32.886838+00:00",
       "tournaments": [],
       "tournament_count": 0,
@@ -250494,7 +250459,7 @@
       "source_title": "The Legend of Zelda: The Minish Cap - Minish Village",
       "source_channel_title": null,
       "source_thumbnail_url": "https://i.ytimg.com/vi/BbQgK8DIK3M/mqdefault.jpg",
-      "last_fetched_at": "2026-04-09T12:09:48.068816+00:00",
+      "last_fetched_at": "2026-04-11T00:57:42.231185+00:00",
       "updated_at": "2026-04-03T08:13:10.815416+00:00",
       "tournaments": [],
       "tournament_count": 0,
@@ -267697,7 +267662,7 @@
       "source_title": "Hyper Light Breaker - Apocalyptic Blues Paean",
       "source_channel_title": null,
       "source_thumbnail_url": "https://i.ytimg.com/vi/qfSRCzeiQ0I/mqdefault.jpg",
-      "last_fetched_at": "2026-04-09T12:09:48.068816+00:00",
+      "last_fetched_at": "2026-04-11T00:57:42.231185+00:00",
       "updated_at": "2026-04-03T00:51:06.115179+00:00",
       "tournaments": [],
       "tournament_count": 0,
@@ -288504,43 +288469,6 @@
       "has_result": true
     },
     {
-      "track_id": "b06a8079-cfbb-4b18-8e68-13ad161eca19",
-      "game_title": "Jet Set Radio Future",
-      "track_title": "The Concept of Love",
-      "display_title": "Jet Set Radio Future - The Concept of Love",
-      "metadata_status": "confirmed",
-      "is_retired": false,
-      "retired_by_tournament_slug": null,
-      "retired_by_tournament_name": null,
-      "primary_source_id": "d737dad6-c736-49e4-889a-ad0201e5fc8b",
-      "provider": "youtube",
-      "source_external_id": "oU6PfsVXGH0",
-      "source_url": "https://www.youtube.com/watch?v=oU6PfsVXGH0",
-      "submitted_url": "http://www.youtube.com/watch?v=oU6PfsVXGH0",
-      "source_title": null,
-      "source_channel_title": null,
-      "source_thumbnail_url": null,
-      "last_fetched_at": null,
-      "updated_at": "2026-03-18T03:00:00.928071+00:00",
-      "tournaments": [
-        {
-          "name": "VGMC 6",
-          "slug": "vgmc-6",
-          "notes": null,
-          "placement": null,
-          "is_retired": false,
-          "highest_round": null,
-          "sequence_number": 6,
-          "appearance_label": null
-        }
-      ],
-      "tournament_count": 1,
-      "support_count_1": 0,
-      "support_count_2": 0,
-      "support_count_3": 0,
-      "has_result": false
-    },
-    {
       "track_id": "b06f005d-6f60-4da9-b9a0-041f9591f720",
       "game_title": "Beatmania IIDX 7th Style",
       "track_title": "9 o'clocks",
@@ -289579,7 +289507,7 @@
       "source_title": "Shining Wind OST - Heart-shaped chant",
       "source_channel_title": "sleeping0dragon",
       "source_thumbnail_url": "https://i.ytimg.com/vi/1FOn-tQmO6o/mqdefault.jpg",
-      "last_fetched_at": "2026-03-31T21:05:39.756984+00:00",
+      "last_fetched_at": "2026-04-09T17:24:29.36964+00:00",
       "updated_at": "2026-03-18T03:04:35.441991+00:00",
       "tournaments": [
         {
@@ -299309,93 +299237,6 @@
         }
       ],
       "tournament_count": 1,
-      "support_count_1": 0,
-      "support_count_2": 0,
-      "support_count_3": 0,
-      "has_result": false
-    },
-    {
-      "track_id": "b6d165ee-c197-4f3c-8379-47664bfea5b7",
-      "game_title": "Scott Pilgrim vs. The World",
-      "track_title": "Another Winter",
-      "display_title": "Scott Pilgrim vs. The World - Another Winter",
-      "metadata_status": "confirmed",
-      "is_retired": false,
-      "retired_by_tournament_slug": null,
-      "retired_by_tournament_name": null,
-      "primary_source_id": "3ee72999-fad7-4e52-8650-9f32322c29e9",
-      "provider": "youtube",
-      "source_external_id": "Wqv5wxKDSIo",
-      "source_url": "https://www.youtube.com/watch?v=Wqv5wxKDSIo",
-      "submitted_url": "http://www.youtube.com/watch?v=Wqv5wxKDSIo",
-      "source_title": null,
-      "source_channel_title": null,
-      "source_thumbnail_url": null,
-      "last_fetched_at": null,
-      "updated_at": "2026-03-18T03:00:46.426321+00:00",
-      "tournaments": [
-        {
-          "name": "VGMC 7",
-          "slug": "vgmc-7",
-          "notes": null,
-          "placement": null,
-          "is_retired": false,
-          "highest_round": null,
-          "sequence_number": 7,
-          "appearance_label": null
-        },
-        {
-          "name": "VGMC 8",
-          "slug": "vgmc-8",
-          "notes": null,
-          "placement": null,
-          "is_retired": false,
-          "highest_round": null,
-          "sequence_number": 8,
-          "appearance_label": null
-        },
-        {
-          "name": "VGMC 9",
-          "slug": "vgmc-9",
-          "notes": null,
-          "placement": null,
-          "is_retired": false,
-          "highest_round": null,
-          "sequence_number": 9,
-          "appearance_label": null
-        },
-        {
-          "name": "VGMC 10",
-          "slug": "vgmc-10",
-          "notes": null,
-          "placement": null,
-          "is_retired": false,
-          "highest_round": null,
-          "sequence_number": 10,
-          "appearance_label": null
-        },
-        {
-          "name": "VGMC 11",
-          "slug": "vgmc-11",
-          "notes": null,
-          "placement": null,
-          "is_retired": false,
-          "highest_round": null,
-          "sequence_number": 11,
-          "appearance_label": null
-        },
-        {
-          "name": "VGMC 12",
-          "slug": "vgmc-12",
-          "notes": null,
-          "placement": null,
-          "is_retired": false,
-          "highest_round": null,
-          "sequence_number": 12,
-          "appearance_label": null
-        }
-      ],
-      "tournament_count": 6,
       "support_count_1": 0,
       "support_count_2": 0,
       "support_count_3": 0,
@@ -310179,7 +310020,7 @@
       "source_title": "Need for Speed World Soundtrack: Mick Gordon - Static",
       "source_channel_title": "Trilogy94",
       "source_thumbnail_url": "https://i.ytimg.com/vi/i77Xd1QAti4/mqdefault.jpg",
-      "last_fetched_at": "2026-03-31T21:05:39.756984+00:00",
+      "last_fetched_at": "2026-04-09T17:24:29.36964+00:00",
       "updated_at": "2026-03-31T19:26:32.872527+00:00",
       "tournaments": [],
       "tournament_count": 0,
@@ -317273,83 +317114,6 @@
       "has_result": false
     },
     {
-      "track_id": "c255c323-74b7-46f8-a7f1-187cc425229f",
-      "game_title": "NieR",
-      "track_title": "Hills of Radiant Wind",
-      "display_title": "NieR - Hills of Radiant Wind",
-      "metadata_status": "confirmed",
-      "is_retired": false,
-      "retired_by_tournament_slug": null,
-      "retired_by_tournament_name": null,
-      "primary_source_id": "e2209c67-3c0a-4d1c-ba66-f5572424bff9",
-      "provider": "youtube",
-      "source_external_id": "LNZmzLzvJo8",
-      "source_url": "https://www.youtube.com/watch?v=LNZmzLzvJo8",
-      "submitted_url": "http://www.youtube.com/watch?v=LNZmzLzvJo8",
-      "source_title": null,
-      "source_channel_title": null,
-      "source_thumbnail_url": null,
-      "last_fetched_at": null,
-      "updated_at": "2026-03-18T03:00:46.426321+00:00",
-      "tournaments": [
-        {
-          "name": "VGMC 5",
-          "slug": "vgmc-5",
-          "notes": null,
-          "placement": null,
-          "is_retired": false,
-          "highest_round": null,
-          "sequence_number": 5,
-          "appearance_label": null
-        },
-        {
-          "name": "VGMC 7",
-          "slug": "vgmc-7",
-          "notes": null,
-          "placement": null,
-          "is_retired": false,
-          "highest_round": null,
-          "sequence_number": 7,
-          "appearance_label": null
-        },
-        {
-          "name": "VGMC 9",
-          "slug": "vgmc-9",
-          "notes": null,
-          "placement": null,
-          "is_retired": false,
-          "highest_round": null,
-          "sequence_number": 9,
-          "appearance_label": null
-        },
-        {
-          "name": "VGMC 10",
-          "slug": "vgmc-10",
-          "notes": null,
-          "placement": null,
-          "is_retired": false,
-          "highest_round": null,
-          "sequence_number": 10,
-          "appearance_label": null
-        },
-        {
-          "name": "VGMC 11",
-          "slug": "vgmc-11",
-          "notes": null,
-          "placement": null,
-          "is_retired": false,
-          "highest_round": null,
-          "sequence_number": 11,
-          "appearance_label": null
-        }
-      ],
-      "tournament_count": 5,
-      "support_count_1": 0,
-      "support_count_2": 0,
-      "support_count_3": 0,
-      "has_result": false
-    },
-    {
       "track_id": "c25d76f7-08e8-4824-ac06-863ca97199d4",
       "game_title": "Donkey Kong Country 2: Diddy's Kong Quest",
       "track_title": "Jib Jig",
@@ -318142,7 +317906,7 @@
       "source_title": "The House in Fata Morgana OST - Girlhood in Shambles (in-game version)",
       "source_channel_title": "Simone Martini",
       "source_thumbnail_url": "https://i.ytimg.com/vi/-CCswRgA8cc/mqdefault.jpg",
-      "last_fetched_at": "2026-03-31T21:05:39.756984+00:00",
+      "last_fetched_at": "2026-04-09T17:24:29.36964+00:00",
       "updated_at": "2026-03-31T19:26:32.83349+00:00",
       "tournaments": [],
       "tournament_count": 0,
@@ -333768,7 +333532,7 @@
       "source_title": "Mario Kart World - Sprawling Savanna",
       "source_channel_title": "WiiPlayz",
       "source_thumbnail_url": "https://i.ytimg.com/vi/qRwq4bgqwfo/mqdefault.jpg",
-      "last_fetched_at": "2026-04-09T12:09:48.068816+00:00",
+      "last_fetched_at": "2026-04-11T00:57:42.231185+00:00",
       "updated_at": "2026-03-19T00:06:07.92681+00:00",
       "tournaments": [],
       "tournament_count": 0,
@@ -334198,43 +333962,6 @@
           "is_retired": false,
           "highest_round": null,
           "sequence_number": 14,
-          "appearance_label": null
-        }
-      ],
-      "tournament_count": 1,
-      "support_count_1": 0,
-      "support_count_2": 0,
-      "support_count_3": 0,
-      "has_result": false
-    },
-    {
-      "track_id": "cca576d1-21c9-4197-8aaa-2eef7faa2fc5",
-      "game_title": "Scott Pilgrim vs. The World",
-      "track_title": "Another Winter",
-      "display_title": "Scott Pilgrim vs. The World - Another Winter",
-      "metadata_status": "confirmed",
-      "is_retired": false,
-      "retired_by_tournament_slug": null,
-      "retired_by_tournament_name": null,
-      "primary_source_id": "d035c1a8-ed13-4a71-b62d-ff683c8c698f",
-      "provider": "youtube",
-      "source_external_id": "Jz41ys4_z_c",
-      "source_url": "https://www.youtube.com/watch?v=Jz41ys4_z_c",
-      "submitted_url": "https://www.youtube.com/watch?v=Jz41ys4_z_c",
-      "source_title": null,
-      "source_channel_title": null,
-      "source_thumbnail_url": null,
-      "last_fetched_at": null,
-      "updated_at": "2026-03-18T03:02:53.803228+00:00",
-      "tournaments": [
-        {
-          "name": "VGMC 15",
-          "slug": "vgmc-15",
-          "notes": null,
-          "placement": null,
-          "is_retired": false,
-          "highest_round": null,
-          "sequence_number": 15,
           "appearance_label": null
         }
       ],
@@ -337230,6 +336957,32 @@
       "has_result": false
     },
     {
+      "track_id": "cef54a52-af27-42b6-86e7-5814be9c356d",
+      "game_title": "Fire Emblem: Three Houses",
+      "track_title": "The Apex of the World",
+      "display_title": "Fire Emblem: Three Houses - The Apex of the World",
+      "metadata_status": "confirmed",
+      "is_retired": false,
+      "retired_by_tournament_slug": null,
+      "retired_by_tournament_name": null,
+      "primary_source_id": "ceda4994-e9a2-4533-9ff7-94d236035547",
+      "provider": "youtube",
+      "source_external_id": "sd5siY4oz3k",
+      "source_url": "https://www.youtube.com/watch?v=sd5siY4oz3k",
+      "submitted_url": "https://www.youtube.com/watch?v=sd5siY4oz3k",
+      "source_title": "Fire Emblem Three Houses - Apex of the World - With Lyrics",
+      "source_channel_title": null,
+      "source_thumbnail_url": "https://i.ytimg.com/vi/sd5siY4oz3k/mqdefault.jpg",
+      "last_fetched_at": "2026-04-10T21:08:11.547159+00:00",
+      "updated_at": "2026-04-10T21:08:11.778433+00:00",
+      "tournaments": [],
+      "tournament_count": 0,
+      "support_count_1": 0,
+      "support_count_2": 0,
+      "support_count_3": 0,
+      "has_result": false
+    },
+    {
       "track_id": "cef6afcf-c9c9-49cd-9434-86e5cf4889dd",
       "game_title": "Breath of Fire",
       "track_title": "Trade City",
@@ -339821,7 +339574,7 @@
       "source_title": "New Danganronpa V3 O.S.T. White - 47. Climax Re-enactment V3",
       "source_channel_title": "A1st",
       "source_thumbnail_url": "https://i.ytimg.com/vi/GYtsAyA_mUk/mqdefault.jpg",
-      "last_fetched_at": "2026-03-31T21:05:39.756984+00:00",
+      "last_fetched_at": "2026-04-09T17:24:29.36964+00:00",
       "updated_at": "2026-03-31T19:26:32.483512+00:00",
       "tournaments": [],
       "tournament_count": 0,
@@ -360532,7 +360285,7 @@
       "source_title": "Ape Escape 3 - Mount Amazing 2",
       "source_channel_title": "Soichi Terada - Topic",
       "source_thumbnail_url": "https://i.ytimg.com/vi/XYi-zuFRGUE/mqdefault.jpg",
-      "last_fetched_at": "2026-04-09T12:09:48.068816+00:00",
+      "last_fetched_at": "2026-04-11T00:57:42.231185+00:00",
       "updated_at": "2026-03-18T23:16:28.131241+00:00",
       "tournaments": [],
       "tournament_count": 0,
@@ -366016,7 +365769,7 @@
       "source_title": "Wild Arms XF OST - Intruding Upon Happiness, Plundering the Future",
       "source_channel_title": "sleeping0dragon",
       "source_thumbnail_url": "https://i.ytimg.com/vi/z8iuwPgdVQg/mqdefault.jpg",
-      "last_fetched_at": "2026-03-31T21:05:39.756984+00:00",
+      "last_fetched_at": "2026-04-09T17:24:29.36964+00:00",
       "updated_at": "2026-03-31T19:26:32.810632+00:00",
       "tournaments": [],
       "tournament_count": 0,
@@ -402403,7 +402156,7 @@
       "source_title": "Disaster: Day of Crisis - Main Theme",
       "source_channel_title": "FireoftheNight",
       "source_thumbnail_url": "https://i.ytimg.com/vi/-qdhp1YhIsY/mqdefault.jpg",
-      "last_fetched_at": "2026-03-31T21:05:39.756984+00:00",
+      "last_fetched_at": "2026-04-09T17:24:29.36964+00:00",
       "updated_at": "2026-03-31T19:26:32.555432+00:00",
       "tournaments": [],
       "tournament_count": 0,
@@ -403357,7 +403110,7 @@
       "updated_at": "2026-03-31T19:29:28.063043+00:00",
       "tournaments": [],
       "tournament_count": 0,
-      "support_count_1": 0,
+      "support_count_1": 1,
       "support_count_2": 0,
       "support_count_3": 0,
       "has_result": false
@@ -410882,7 +410635,7 @@
       "source_title": "Fall Guys - Fall 'N' Roll",
       "source_channel_title": "Jukio Kallio - Topic",
       "source_thumbnail_url": "https://i.ytimg.com/vi/LL70vTa0E2g/mqdefault.jpg",
-      "last_fetched_at": "2026-04-09T12:09:48.068816+00:00",
+      "last_fetched_at": "2026-04-11T00:57:42.231185+00:00",
       "updated_at": "2026-03-18T23:24:58.101349+00:00",
       "tournaments": [],
       "tournament_count": 0,
@@ -413764,7 +413517,7 @@
       "source_title": "Tekken 8 - Volcanic Bomb (Climax)",
       "source_channel_title": "TEKKEN Project - Topic",
       "source_thumbnail_url": "https://i.ytimg.com/vi/zKXHxdShsr0/mqdefault.jpg",
-      "last_fetched_at": "2026-04-09T12:09:48.068816+00:00",
+      "last_fetched_at": "2026-04-11T00:57:42.231185+00:00",
       "updated_at": "2026-03-18T23:16:27.80898+00:00",
       "tournaments": [],
       "tournament_count": 0,
@@ -416832,7 +416585,7 @@
       "source_title": "Lysandre Battle Music - Pokémon Legends: Z-A [OST]",
       "source_channel_title": "RezyMania",
       "source_thumbnail_url": "https://i.ytimg.com/vi/zcrTFTlxC2s/mqdefault.jpg",
-      "last_fetched_at": "2026-03-31T21:05:39.756984+00:00",
+      "last_fetched_at": "2026-04-09T17:24:29.36964+00:00",
       "updated_at": "2026-03-31T19:26:32.877735+00:00",
       "tournaments": [],
       "tournament_count": 0,
