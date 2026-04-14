@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
-import { SpeechBubbleIcon } from './Icons.jsx';
+import { FeedbackIcon } from './Icons.jsx';
 
-export default function FeedbackDialog({ 
-  compact = false, 
+export default function FeedbackDialog({
+  compact = false,
   disabled = false,
   user = null,
-  profile = null
+  profile = null,
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const [feedbackType, setFeedbackType] = useState('General Feedback');
@@ -38,9 +38,11 @@ export default function FeedbackDialog({
   }, [isOpen]);
 
   const placeholders = {
-    'General Feedback': 'Let us know what you think of the site; the good and the bad',
-    'Feature Request': 'Is there something you want to see on the site? A flow not quite working right? Send us a message',
-    'Bug': 'Found a bug? Send it on here, please!',
+    'General Feedback':
+      'Let us know what you think of the site; the good and the bad',
+    'Feature Request':
+      'Is there something you want to see on the site? A flow not quite working right? Send us a message',
+    Bug: 'Found a bug? Send it on here, please!',
   };
 
   const handleSubmit = async (e) => {
@@ -53,19 +55,26 @@ export default function FeedbackDialog({
 
     try {
       const endpoint = import.meta.env.VITE_FEEDBACK_API_URL;
-      
+
       // Build Payload
       const payload = {
         type: feedbackType,
         text: trimmedText,
-        username: (profile?.username || user?.user_metadata?.username || 'Anonymous').replace(/^dc:/, ''),
+        username: (
+          profile?.username ||
+          user?.user_metadata?.username ||
+          'Anonymous'
+        ).replace(/^dc:/, ''),
         url: window.location.href,
         timestamp: new Date().toISOString(),
       };
 
       if (!endpoint) {
-        console.warn('VITE_FEEDBACK_API_URL not configured. Simulating success.', payload);
-        await new Promise(resolve => setTimeout(resolve, 800));
+        console.warn(
+          'VITE_FEEDBACK_API_URL not configured. Simulating success.',
+          payload,
+        );
+        await new Promise((resolve) => setTimeout(resolve, 800));
         setStatus('success');
         setFeedbackText('');
         return;
@@ -77,7 +86,7 @@ export default function FeedbackDialog({
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...(authSecret ? { 'Authorization': `Bearer ${authSecret}` } : {}),
+          ...(authSecret ? { Authorization: `Bearer ${authSecret}` } : {}),
         },
         body: JSON.stringify(payload),
       });
@@ -122,7 +131,7 @@ export default function FeedbackDialog({
         disabled={disabled}
         title="Feedback"
       >
-        <SpeechBubbleIcon />
+        <FeedbackIcon />
       </button>
 
       {isOpen && (
@@ -130,8 +139,8 @@ export default function FeedbackDialog({
           {status === 'success' ? (
             <div className="feedback-success-message">
               <p>Thank you for your feedback!</p>
-              <button 
-                className="btn btn-primary" 
+              <button
+                className="btn btn-primary"
                 onClick={() => setIsOpen(false)}
               >
                 Close
@@ -140,7 +149,7 @@ export default function FeedbackDialog({
           ) : (
             <form className="feedback-form" onSubmit={handleSubmit}>
               <div className="feedback-form-group">
-                <label htmlFor="feedback-type">Type</label>
+                <label htmlFor="feedback-type">Leave Feedback</label>
                 <select
                   id="feedback-type"
                   value={feedbackType}
@@ -168,7 +177,14 @@ export default function FeedbackDialog({
               </div>
 
               {error && (
-                <div className="feedback-error-message" style={{ color: 'var(--danger)', fontSize: '12px', marginTop: '-8px' }}>
+                <div
+                  className="feedback-error-message"
+                  style={{
+                    color: 'var(--danger)',
+                    fontSize: '12px',
+                    marginTop: '-8px',
+                  }}
+                >
                   {error}
                 </div>
               )}
