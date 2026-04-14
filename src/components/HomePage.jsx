@@ -1111,7 +1111,7 @@ export default function HomePage({
           return b.supportCount2 - a.supportCount2;
         return b.supportCount1 - a.supportCount1;
       })
-      .slice(0, 5);
+      .slice(0, 20);
   }, [mergedMetadata]);
 
   const yourNominations = useMemo(() => {
@@ -1149,7 +1149,7 @@ export default function HomePage({
           return b.supportCount2 - a.supportCount2;
         return b.supportCount1 - a.supportCount1;
       })
-      .slice(0, 5);
+      .slice(0, 20);
   }, [authUser, nominationUpdates, mergedMetadata]);
 
   const yourSupports = useMemo(() => {
@@ -1186,7 +1186,7 @@ export default function HomePage({
           return b.supportCount2 - a.supportCount2;
         return b.supportCount1 - a.supportCount1;
       })
-      .slice(0, 5);
+      .slice(0, 20);
   }, [authUser, supportStatusById, mergedMetadata]);
 
   const discoveryCandidates = useMemo(() => {

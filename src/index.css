@@ -953,6 +953,7 @@ body {
   position: relative;
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: flex-start;
   width: 100%;
   max-width: 100%;
   box-sizing: border-box;
@@ -2274,8 +2275,8 @@ body {
 }
 
 .dashboard-feature-card-hero {
-  height: 100%;
-  min-height: 100%;
+  height: 440px;
+  max-height: 440px;
   width: 100%;
   max-width: 100%;
   min-width: 0;
@@ -12700,6 +12701,7 @@ body.is-resizing .resize-handle {
   padding: 0 0.75rem;
   height: 64px;
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+  z-index: 10;
   transition:
     background var(--transition),
     border-color var(--transition);
@@ -12871,8 +12873,8 @@ body.is-resizing .resize-handle {
 .hero-leaderboard-card {
   display: flex;
   flex-direction: column;
-  height: 100%;
-  max-height: 480px;
+  height: 440px;
+  max-height: 440px;
   background: rgba(18, 18, 28, 0.7);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 20px;
