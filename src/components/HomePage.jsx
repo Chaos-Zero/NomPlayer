@@ -805,7 +805,7 @@ function HeroLeaderboard({
                   });
                 }
               }}
-              onContextMenu={(e) => onContextMenu(e, track)}
+              onContextMenu={(e) => onContextMenu(e, track, currentView)}
               title="Double-click to play (Right-click for options)"
             >
               <span className="hero-leaderboard-rank">{idx + 1}</span>
@@ -1757,12 +1757,13 @@ export default function HomePage({
             onShowComments={onShowComments}
             isFeedbackPanelOpen={isFeedbackPanelOpen}
             onPlayTrack={handlePlayDiscoveryCandidate}
-            onContextMenu={(e, item) => {
+            onContextMenu={(e, item, source) => {
               e.preventDefault();
               setDiscoveryContextMenu({
                 x: e.clientX,
                 y: e.clientY,
                 candidate: item,
+                source: source,
               });
             }}
           />
@@ -2100,6 +2101,7 @@ export default function HomePage({
                       x: e.clientX,
                       y: e.clientY,
                       candidate: item,
+                      source: 'discover',
                     });
                   }}
                 />
@@ -2140,28 +2142,35 @@ export default function HomePage({
           >
             <span>Add to Playlist</span>
           </button>
-          <button
-            className={`playlist-context-menu-item ${
-              supportStatusById[discoveryContextMenu.candidate.videoId]
-                ?.isSupported
-                ? 'active has-feedback'
-                : ''
-            }`}
-            onClick={(e) =>
-              handleDiscoveryContextAction(
-                'support',
-                discoveryContextMenu.candidate,
-                e,
-              )
-            }
-          >
-            <span>
-              {supportStatusById[discoveryContextMenu.candidate.videoId]
-                ?.isSupported
-                ? 'Remove from Support List'
-                : 'Add to Support List'}
-            </span>
-          </button>
+          {!(
+            supportStatusById[discoveryContextMenu.candidate.videoId]
+              ?.isSupported &&
+            (discoveryContextMenu.source === 'nominations' ||
+              discoveryContextMenu.source === 'global')
+          ) && (
+            <button
+              className={`playlist-context-menu-item ${
+                supportStatusById[discoveryContextMenu.candidate.videoId]
+                  ?.isSupported
+                  ? 'active has-feedback'
+                  : ''
+              }`}
+              onClick={(e) =>
+                handleDiscoveryContextAction(
+                  'support',
+                  discoveryContextMenu.candidate,
+                  e,
+                )
+              }
+            >
+              <span>
+                {supportStatusById[discoveryContextMenu.candidate.videoId]
+                  ?.isSupported
+                  ? 'Remove from Support List'
+                  : 'Add to Support List'}
+              </span>
+            </button>
+          )}
           <button
             className="playlist-context-menu-item"
             onClick={(e) =>
