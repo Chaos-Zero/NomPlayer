@@ -3383,6 +3383,100 @@ body {
   color: #fca5a5;
 }
 
+/* ─── Feedback Dialog ─── */
+.feedback-popover {
+  width: 320px !important;
+  padding: 16px !important;
+  right: -10px !important; /* Slight offset for better alignment */
+}
+
+@media (max-width: 960px) {
+  .feedback-popover {
+    right: 0 !important;
+    width: calc(100vw - 32px) !important;
+    max-width: 320px !important;
+  }
+}
+
+.feedback-form {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 16px !important;
+}
+
+.feedback-form-group {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 6px !important;
+}
+
+.feedback-form-group label {
+  font: inherit !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  color: var(--text-muted) !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.05em !important;
+}
+
+.feedback-select {
+  font: inherit !important;
+  background: var(--bg-deep) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: var(--radius-sm) !important;
+  color: var(--text-primary) !important;
+  padding: 8px 12px !important;
+  font-size: 13px !important;
+  outline: none !important;
+  cursor: pointer !important;
+  transition: border-color var(--transition) !important;
+}
+
+.feedback-select:focus {
+  border-color: var(--accent) !important;
+}
+
+.feedback-textarea {
+  font: inherit !important;
+  background: var(--bg-deep) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: var(--radius-sm) !important;
+  color: var(--text-primary) !important;
+  padding: 12px !important;
+  font-size: 13px !important;
+  min-height: 100px !important;
+  resize: vertical !important;
+  outline: none !important;
+  transition: border-color var(--transition) !important;
+}
+
+.feedback-textarea:focus {
+  border-color: var(--accent) !important;
+}
+
+.feedback-actions {
+  display: flex !important;
+  justify-content: flex-end !important;
+  gap: 8px !important;
+  margin-top: 4px !important;
+}
+
+.feedback-success-message {
+  padding: 24px 12px !important;
+  text-align: center !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  gap: 16px !important;
+}
+
+.feedback-success-message p {
+  font: inherit !important;
+  color: var(--text-primary) !important;
+  font-size: 14px !important;
+  font-weight: 600 !important;
+}
+
 .collection-icon {
   width: 18px;
   height: 18px;

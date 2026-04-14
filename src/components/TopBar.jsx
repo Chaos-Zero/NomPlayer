@@ -20,6 +20,7 @@ import {
   lastSearchError,
 } from '../utils/searchPersistence.js';
 import UserMenu from './UserMenu.jsx';
+import FeedbackDialog from './FeedbackDialog.jsx';
 import {
   PreviousIcon,
   NextIcon,
@@ -662,6 +663,15 @@ export default function TopBar({
         {theme === 'dark' ? <SunIcon /> : <MoonIcon />}
       </button>
 
+      {authUser && (
+        <FeedbackDialog
+          compact
+          user={authUser}
+          profile={userProfile}
+          disabled={effectiveInputOpen}
+        />
+      )}
+
       <UserMenu
         compact
         user={authUser}
@@ -1011,6 +1021,13 @@ export default function TopBar({
         >
           {theme === 'dark' ? <SunIcon /> : <MoonIcon />}
         </button>
+
+        {authUser && (
+          <FeedbackDialog 
+            user={authUser} 
+            profile={userProfile} 
+          />
+        )}
 
         <UserMenu
           user={authUser}
