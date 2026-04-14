@@ -1,4 +1,6 @@
-import { useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
+import { CookieIcon, XIcon } from './Icons.jsx';
 
 function HomeIcon() {
   return (
@@ -79,11 +81,66 @@ const NAV_ITEMS = [
 export default function SiteNavigation({
   activePage,
   onNavigate,
+  authUser = null,
   isMobile = false,
   isMenuOpen = false,
   onCloseMenu,
 }) {
   const menuRef = useRef(null);
+  const MotionDiv = motion.div;
+  const [showCookieBubble, setShowCookieBubble] = useState(false);
+
+  useEffect(() => {
+    if (!authUser && !localStorage.getItem('nomplayer_cookies_accepted')) {
+      const timer = setTimeout(() => setShowCookieBubble(true), 1500);
+      return () => clearTimeout(timer);
+    }
+    return undefined;
+  }, [authUser]);
+
+  const handleCloseCookieBubble = useCallback((e) => {
+    e?.stopPropagation();
+    setShowCookieBubble(false);
+    localStorage.setItem('nomplayer_cookies_accepted', 'true');
+  }, []);
+
+  const toggleCookieBubble = useCallback((e) => {
+    e?.stopPropagation();
+    setShowCookieBubble((prev) => !prev);
+  }, []);
+
+  const cookieBubble = (
+    <AnimatePresence>
+      {showCookieBubble && (
+        <MotionDiv
+          key="cookie-bubble"
+          className="cookie-bubble-container"
+          initial={{ opacity: 0, scale: 0.8, x: isMobile ? 0 : -10 }}
+          animate={{ opacity: 1, scale: 1, x: 0 }}
+          exit={{ opacity: 0, scale: 0.8, x: isMobile ? 0 : -10 }}
+          transition={{ type: 'spring', damping: 20, stiffness: 300 }}
+        >
+          <div className="cookie-bubble">
+            <button
+              className="cookie-bubble-close"
+              onClick={handleCloseCookieBubble}
+              title="Close"
+              type="button"
+            >
+              <XIcon size={14} />
+            </button>
+            <span className="cookie-bubble-title">Privacy Notice</span>
+            <div className="cookie-bubble-content">
+              NomPlayer uses <strong>localStorage</strong> to save your
+              playlists and history locally. We do not use tracking cookies, but
+              Third-party services like <strong>YouTube</strong> may set cookies
+              to enable video playback and analytics.
+            </div>
+          </div>
+        </MotionDiv>
+      )}
+    </AnimatePresence>
+  );
 
   useEffect(() => {
     if (!isMobile || !isMenuOpen) return undefined;
@@ -136,6 +193,28 @@ export default function SiteNavigation({
               <span>{item.label}</span>
             </button>
           ))}
+          {!authUser && (
+            <div className="mobile-site-nav-footer">
+              <div
+                style={{
+                  position: 'relative',
+                  width: '100%',
+                  display: 'flex',
+                  justifyContent: 'center',
+                }}
+              >
+                {cookieBubble}
+                <button
+                  className="mobile-site-nav-item"
+                  type="button"
+                  onClick={toggleCookieBubble}
+                >
+                  <CookieIcon />
+                  <span>Privacy</span>
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </>
     );
@@ -167,6 +246,24 @@ export default function SiteNavigation({
           </button>
         ))}
       </div>
+      {!authUser && (
+        <div className="site-nav-footer">
+          <div style={{ position: 'relative' }}>
+            {cookieBubble}
+            <button
+              className="site-nav-btn"
+              type="button"
+              aria-label="Privacy Notice"
+              title="Privacy Notice"
+              onClick={toggleCookieBubble}
+            >
+              <span className="site-nav-btn-icon" aria-hidden="true">
+                <CookieIcon />
+              </span>
+            </button>
+          </div>
+        </div>
+      )}
     </nav>
   );
 }

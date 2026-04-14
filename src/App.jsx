@@ -58,10 +58,7 @@ import {
   recordYouTubeTrackListen,
   saveUserPlayerState,
   saveTrackSupport,
-  saveTrackNomination,
   fetchUserHydratedState,
-  saveActiveQueue,
-  syncCustomPlaylists,
   upsertUserProfile,
   recordTrackHistory,
   getTrackHistory,
@@ -1909,7 +1906,7 @@ export default function App() {
         const normalizedState = normalizePersistedPlayerState(remoteState);
         const hydratedDbState = await fetchUserHydratedState(supabase, user.id);
         const persistedQueue = loadPersistedAuthSyncQueue(user.id);
-        
+
         const baseHydratedState = normalizePersistedPlayerState({
           ...normalizedState,
           ...(persistedQueue.playerState || {}),
@@ -1929,14 +1926,15 @@ export default function App() {
         });
 
         applyPersistedPlayerState(hydratedState);
-        
+
         // Don't flag these true sources of truth as "dirty" unpersisted state
-        const stateToPersist = createAccountPersistedPlayerState(normalizedState);
+        const stateToPersist =
+          createAccountPersistedPlayerState(normalizedState);
         stateToPersist.playlist = hydratedState.playlist;
         stateToPersist.customPlaylists = hydratedState.customPlaylists;
         stateToPersist.supportList = hydratedState.supportList;
         stateToPersist.nominationList = hydratedState.nominationList;
-        
+
         lastSyncedPlayerStateRef.current = JSON.stringify(stateToPersist);
         syncCatalogForNominationVideos(hydratedState.nominationList, {
           userId: user.id,
@@ -4733,7 +4731,11 @@ export default function App() {
   return (
     <div className={`app-frame${isMobileLayout ? ' mobile' : ''}`}>
       {!isMobileLayout && (
-        <SiteNavigation activePage={activePage} onNavigate={handleNavigate} />
+        <SiteNavigation
+          activePage={activePage}
+          onNavigate={handleNavigate}
+          authUser={authUser}
+        />
       )}
 
       {isMobileLayout && (
@@ -4741,6 +4743,7 @@ export default function App() {
           isMobile
           activePage={activePage}
           onNavigate={handleNavigate}
+          authUser={authUser}
           isMenuOpen={isMobileNavOpen}
           onToggleMenu={() =>
             setIsMobileNavOpen((previousValue) => !previousValue)
