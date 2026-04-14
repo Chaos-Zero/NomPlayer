@@ -1712,32 +1712,34 @@ export default function HomePage({
             missed, and discover older tracks from the VGMC archives.
           </p>
 
-          <div className="dashboard-hero-actions">
-            <Dock items={dockItems} />
-          </div>
+          <div className="dashboard-hero-footer">
+            <div className="dashboard-hero-actions">
+              <Dock items={dockItems} />
+            </div>
 
-          <div className="dashboard-stat-strip dynamic-stat-strip">
-            <div className={`dashboard-stat-card-consolidated`}>
-              <div className="dashboard-stat-label-box">
-                {!isDashboardLoading ? (
-                  <TextType
-                    text={dashboardStats.map((s) => `${s.value} ${s.label}`)}
-                    className="dashboard-stat-label-rotation"
-                    typingSpeed={60}
-                    deletingSpeed={30}
-                    pauseDuration={5000}
-                    showCursor={true}
-                    cursorCharacter="_"
-                    loop={true}
-                  />
-                ) : (
-                  <TextType
-                    text={['']}
-                    className="dashboard-stat-label-rotation"
-                    showCursor={true}
-                    cursorCharacter="_"
-                  />
-                )}
+            <div className="dashboard-stat-strip dynamic-stat-strip">
+              <div className={`dashboard-stat-card-consolidated`}>
+                <div className="dashboard-stat-label-box">
+                  {!isDashboardLoading ? (
+                    <TextType
+                      text={dashboardStats.map((s) => `${s.value} ${s.label}`)}
+                      className="dashboard-stat-label-rotation"
+                      typingSpeed={60}
+                      deletingSpeed={30}
+                      pauseDuration={5000}
+                      showCursor={true}
+                      cursorCharacter="_"
+                      loop={true}
+                    />
+                  ) : (
+                    <TextType
+                      text={['']}
+                      className="dashboard-stat-label-rotation"
+                      showCursor={true}
+                      cursorCharacter="_"
+                    />
+                  )}
+                </div>
               </div>
             </div>
           </div>

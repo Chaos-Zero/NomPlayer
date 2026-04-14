@@ -115,8 +115,8 @@ export default function Dock({
   spring = { mass: 0.1, stiffness: 150, damping: 12 },
   magnification = 72,
   distance = 140,
-  panelHeight = 64,
-  baseItemSize = 44,
+  panelHeight = 59,
+  baseItemSize = 39,
 }) {
   const mouseX = useMotionValue(Infinity);
   const isDockHovered = useMotionValue(0);
