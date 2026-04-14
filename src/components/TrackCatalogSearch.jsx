@@ -98,8 +98,8 @@ export default function TrackCatalogSearch({
 
     function handlePointerDown(event) {
       if (wrapperRef.current?.contains(event.target)) return;
+      if (event.target.closest('.playlist-context-menu')) return;
       setIsFocused(false);
-      setContextMenu(null);
     }
 
     function handleKeyDown(event) {
@@ -265,7 +265,7 @@ export default function TrackCatalogSearch({
         </div>
       )}
 
-      {contextMenu && isFocused && (
+      {contextMenu && (
         <ContextMenuPortal
           x={contextMenu.left}
           y={contextMenu.top}
