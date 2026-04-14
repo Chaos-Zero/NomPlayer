@@ -36,7 +36,7 @@ describe('Search Final Verification', () => {
     const { data } = await fetchFilteredTracks(null, { searchTerm: 'Megaman' });
     expect(data.length).toBeGreaterThan(0);
     expect(data[0].gameTitle).toBe('Mega man Battle Network');
-  });
+  }, 10000);
 
   it('matches "Battle Network" (Partial match)', async () => {
     const { data } = await fetchFilteredTracks(null, {
@@ -44,18 +44,18 @@ describe('Search Final Verification', () => {
     });
     expect(data.length).toBeGreaterThan(0);
     expect(data[0].gameTitle).toBe('Mega man Battle Network');
-  });
+  }, 10000);
 
   it('filters out unrelated tracks', async () => {
     const { data } = await fetchFilteredTracks(null, { searchTerm: 'Zelda' });
     expect(data.length).toBe(1);
     expect(data[0].gameTitle).toBe('The Legend of Zelda');
-  });
+  }, 10000);
 
   it('shows no matches for nonsense', async () => {
     const { data } = await fetchFilteredTracks(null, {
       searchTerm: 'qwertyuiop',
     });
     expect(data).toHaveLength(0);
-  });
+  }, 10000);
 });

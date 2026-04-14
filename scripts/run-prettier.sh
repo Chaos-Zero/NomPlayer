@@ -14,7 +14,10 @@ EOF
   exit 1
 fi
 
-mapfile -d '' files < <(git diff --cached --name-only --diff-filter=ACMR -z -- '*.js' '*.jsx' '*.css' '*.html' '*.json' '*.md' '*.yml' '*.yaml')
+files=()
+while IFS= read -r -d '' file; do
+  [[ -n "$file" ]] && files+=("$file")
+done < <(git diff --cached --name-only --diff-filter=ACMR -z -- '*.js' '*.jsx' '*.css' '*.html' '*.json' '*.md' '*.yml' '*.yaml')
 
 if [[ ${#files[@]} -eq 0 ]]; then
   exit 0
