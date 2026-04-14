@@ -973,22 +973,59 @@ export default function HomePage({
     setNominationUpdates((prev) => {
       let changed = false;
       const next = prev.map((update) => {
-        const item = update.video || {};
-        const match = updateMap.get(item.videoId);
-        if (!match) return update;
-        changed = true;
-        return {
-          ...update,
-          video: {
+        if (!update.nominations) return update;
+        let nominationsChanged = false;
+        const nextNominations = update.nominations.map((item) => {
+          const match = updateMap.get(item.videoId);
+          if (!match) return item;
+          nominationsChanged = true;
+          return {
             ...item,
             videoId: match.videoId,
             gameTitle: match.gameTitle || item.gameTitle,
             trackTitle: match.trackTitle || item.trackTitle,
             thumbnail: match.thumbnail || item.thumbnail,
-          },
-        };
+            title: match.title || item.title,
+          };
+        });
+
+        if (nominationsChanged) {
+          changed = true;
+          return { ...update, nominations: nextNominations };
+        }
+        return update;
       });
       return changed ? next : prev;
+    });
+
+    // Patch fastSpotlightCandidate
+    setFastSpotlightCandidate((prev) => {
+      if (!prev) return prev;
+      const update = updateMap.get(prev.videoId);
+      if (!update) return prev;
+      return {
+        ...prev,
+        videoId: update.videoId,
+        gameTitle: update.gameTitle || prev.gameTitle,
+        trackTitle: update.trackTitle || prev.trackTitle,
+        title: update.title || prev.title,
+        thumbnail: update.thumbnail || prev.thumbnail,
+      };
+    });
+
+    // Patch prospectiveFallbackTrack
+    setProspectiveFallbackTrack((prev) => {
+      if (!prev) return prev;
+      const update = updateMap.get(prev.videoId);
+      if (!update) return prev;
+      return {
+        ...prev,
+        videoId: update.videoId,
+        gameTitle: update.gameTitle || prev.gameTitle,
+        trackTitle: update.trackTitle || prev.trackTitle,
+        title: update.title || prev.title,
+        thumbnail: update.thumbnail || prev.thumbnail,
+      };
     });
   }, [lastMetadataUpdateBatch]);
 
@@ -1820,6 +1857,17 @@ export default function HomePage({
                   }
                   alt=""
                   loading="lazy"
+                  title="Right-click for options"
+                  onContextMenu={(e) => {
+                    e.preventDefault();
+                    setDiscoveryContextMenu({
+                      x: e.clientX,
+                      y: e.clientY,
+                      candidate:
+                        fastSpotlightCandidate || featuredDiscoveryCandidate,
+                      source: 'spotlight',
+                    });
+                  }}
                 />
 
                 <div className="dashboard-feature-copy">
@@ -1926,6 +1974,16 @@ export default function HomePage({
                   src={prospectiveFallbackTrack.thumbnail}
                   alt=""
                   loading="lazy"
+                  title="Right-click for options"
+                  onContextMenu={(e) => {
+                    e.preventDefault();
+                    setDiscoveryContextMenu({
+                      x: e.clientX,
+                      y: e.clientY,
+                      candidate: prospectiveFallbackTrack,
+                      source: 'spotlight',
+                    });
+                  }}
                 />
 
                 <div className="dashboard-feature-copy">
