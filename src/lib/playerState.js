@@ -557,6 +557,9 @@ export async function saveUserPlayerState(supabase, userId, state) {
   if (snapshot.nominationList) {
     syncNominations(supabase, userId, snapshot.nominationList).catch((err) => console.error('Failed to sync nominations', err));
   }
+  if (snapshot.supportList) {
+    syncSupports(supabase, userId, snapshot.supportList).catch((err) => console.error('Failed to sync supports', err));
+  }
 
   return snapshot;
 }
@@ -800,17 +803,20 @@ export async function saveTrackNomination(supabase, userId, video, isNominated) 
 }
 
 export async function syncNominations(supabase, userId, nominationList) {
+  const currentTrackIds = nominationList
+    .filter((v) => v.trackId != null)
+    .map((v) => v.trackId);
+  const currentSet = new Set(currentTrackIds);
+
   const { data: existingNoms } = await supabase
     .from('track_nominations')
     .select('track_id')
     .eq('user_id', userId);
 
-  const existingSet = new Set((existingNoms || []).map((n) => n.track_id));
-  const currentSet = new Set(
-    nominationList.filter((v) => v.trackId != null).map((v) => v.trackId)
-  );
+  const trackIdsToDelete = (existingNoms || [])
+    .filter((n) => !currentSet.has(n.track_id))
+    .map((n) => n.track_id);
 
-  const trackIdsToDelete = [...existingSet].filter((id) => !currentSet.has(id));
   if (trackIdsToDelete.length > 0) {
     await supabase
       .from('track_nominations')
@@ -819,16 +825,53 @@ export async function syncNominations(supabase, userId, nominationList) {
       .in('track_id', trackIdsToDelete);
   }
 
-  const tracksToInsert = [...currentSet]
-    .filter((id) => !existingSet.has(id))
-    .map((id) => ({
-      track_id: id,
-      user_id: userId,
-      created_at: new Date().toISOString(),
-    }));
+  const tracksToUpsert = currentTrackIds.map((id, index) => ({
+    user_id: userId,
+    track_id: id,
+    order_index: index,
+  }));
 
-  if (tracksToInsert.length > 0) {
-    await supabase.from('track_nominations').insert(tracksToInsert);
+  if (tracksToUpsert.length > 0) {
+    await supabase
+      .from('track_nominations')
+      .upsert(tracksToUpsert, { onConflict: 'track_id,user_id' });
+  }
+}
+
+export async function syncSupports(supabase, userId, supportList) {
+  const validSupports = supportList.filter(
+    (v) => v.trackId != null && v.supportLevel,
+  );
+  const currentSet = new Set(validSupports.map((v) => v.trackId));
+
+  const { data: existingSups } = await supabase
+    .from('track_supports')
+    .select('track_id')
+    .eq('user_id', userId);
+
+  const trackIdsToDelete = (existingSups || [])
+    .filter((s) => !currentSet.has(s.track_id))
+    .map((s) => s.track_id);
+
+  if (trackIdsToDelete.length > 0) {
+    await supabase
+      .from('track_supports')
+      .delete()
+      .eq('user_id', userId)
+      .in('track_id', trackIdsToDelete);
+  }
+
+  const tracksToUpsert = validSupports.map((v, index) => ({
+    user_id: userId,
+    track_id: v.trackId,
+    level: v.supportLevel,
+    order_index: index,
+  }));
+
+  if (tracksToUpsert.length > 0) {
+    await supabase
+      .from('track_supports')
+      .upsert(tracksToUpsert, { onConflict: 'track_id,user_id' });
   }
 }
 
