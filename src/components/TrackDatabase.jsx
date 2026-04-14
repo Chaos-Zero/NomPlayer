@@ -1158,9 +1158,9 @@ export default function TrackDatabase({
             </thead>
             <tbody>
               {paddingTop > 0 && (
-                <tr>
+                <tr className="virtual-padding-top">
                   <td
-                    style={{ height: `${paddingTop}px`, padding: 0 }}
+                    style={{ height: `${paddingTop}px`, padding: 0, border: 0, transition: 'none' }}
                     colSpan={8}
                   />
                 </tr>
@@ -1199,9 +1199,9 @@ export default function TrackDatabase({
                 );
               })}
               {paddingBottom > 0 && (
-                <tr>
+                <tr className="virtual-padding-bottom">
                   <td
-                    style={{ height: `${paddingBottom}px`, padding: 0 }}
+                    style={{ height: `${paddingBottom}px`, padding: 0, border: 0, transition: 'none' }}
                     colSpan={8}
                   />
                 </tr>
