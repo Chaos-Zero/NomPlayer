@@ -193,28 +193,26 @@ export default function SiteNavigation({
               <span>{item.label}</span>
             </button>
           ))}
-          {!authUser && (
-            <div className="mobile-site-nav-footer">
-              <div
-                style={{
-                  position: 'relative',
-                  width: '100%',
-                  display: 'flex',
-                  justifyContent: 'center',
-                }}
+          <div className="mobile-site-nav-footer">
+            <div
+              style={{
+                position: 'relative',
+                width: '100%',
+                display: 'flex',
+                justifyContent: 'center',
+              }}
+            >
+              {cookieBubble}
+              <button
+                className="mobile-site-nav-item"
+                type="button"
+                onClick={toggleCookieBubble}
               >
-                {cookieBubble}
-                <button
-                  className="mobile-site-nav-item"
-                  type="button"
-                  onClick={toggleCookieBubble}
-                >
-                  <CookieIcon />
-                  <span>Privacy</span>
-                </button>
-              </div>
+                <CookieIcon />
+                <span>Privacy</span>
+              </button>
             </div>
-          )}
+          </div>
         </div>
       </>
     );
@@ -246,24 +244,22 @@ export default function SiteNavigation({
           </button>
         ))}
       </div>
-      {!authUser && (
-        <div className="site-nav-footer">
-          <div style={{ position: 'relative' }}>
-            {cookieBubble}
-            <button
-              className="site-nav-btn"
-              type="button"
-              aria-label="Privacy Notice"
-              title="Privacy Notice"
-              onClick={toggleCookieBubble}
-            >
-              <span className="site-nav-btn-icon" aria-hidden="true">
-                <CookieIcon />
-              </span>
-            </button>
-          </div>
+      <div className="site-nav-footer">
+        <div style={{ position: 'relative' }}>
+          {cookieBubble}
+          <button
+            className="site-nav-btn"
+            type="button"
+            aria-label="Privacy Notice"
+            title="Privacy Notice"
+            onClick={toggleCookieBubble}
+          >
+            <span className="site-nav-btn-icon" aria-hidden="true">
+              <CookieIcon />
+            </span>
+          </button>
         </div>
-      )}
+      </div>
     </nav>
   );
 }

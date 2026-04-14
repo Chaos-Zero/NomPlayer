@@ -699,6 +699,7 @@ body {
   border-right: 1px solid var(--border);
   background: var(--bg-nav, rgba(10, 10, 15, 0.92));
   height: 100%;
+  position: relative;
 }
 
 .site-nav-logo-wrapper {
@@ -725,11 +726,13 @@ body {
 }
 
 .site-nav-footer {
-  margin-top: auto;
-  padding-bottom: 8px;
+  position: absolute;
+  bottom: 18px;
+  left: 0;
   width: 100%;
   display: flex;
   justify-content: center;
+  padding-bottom: 0;
 }
 
 .site-nav-btn {

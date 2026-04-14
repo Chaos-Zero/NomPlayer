@@ -334,12 +334,13 @@ export function CookieIcon({ className = 'collection-icon' }) {
       strokeLinecap="round"
       strokeLinejoin="round"
     >
-      <path d="M12 2a10 10 0 1 0 10 10 4 4 0 0 1-5-5 4 4 0 0 1-5-5" />
-      <path d="M8.5 8.5v.01" strokeWidth="3" />
-      <path d="M16 15.5v.01" strokeWidth="3" />
-      <path d="M12 12v.01" strokeWidth="3" />
-      <path d="M11 17v.01" strokeWidth="3" />
-      <path d="M7 14v.01" strokeWidth="3" />
+      <path d="M12 21a9 9 0 1 1 0-18c1 .1 1.9.4 2.7.9A4.5 4.5 0 0 0 19.5 8c.5.8.8 1.7.9 2.7A9 9 0 0 1 12 21Z" />
+      <path d="M12 13v.01" strokeWidth="3" />
+      <path d="M12 17v.01" strokeWidth="3" />
+      <path d="M8 14v.01" strokeWidth="3" />
+      <path d="M16 14v.01" strokeWidth="3" />
+      <path d="M10 10v.01" strokeWidth="3" />
+      <path d="M14 10v.01" strokeWidth="3" />
     </svg>
   );
 }
