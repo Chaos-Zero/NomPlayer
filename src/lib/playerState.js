@@ -547,6 +547,17 @@ export async function saveUserPlayerState(supabase, userId, state) {
     throw error;
   }
 
+  // Sync relational database states as a side-effect
+  if (snapshot.playlist) {
+    saveActiveQueue(supabase, userId, snapshot.playlist).catch((err) => console.error('Failed to sync active queue', err));
+  }
+  if (snapshot.customPlaylists) {
+    syncCustomPlaylists(supabase, userId, snapshot.customPlaylists).catch((err) => console.error('Failed to sync custom playlists', err));
+  }
+  if (snapshot.nominationList) {
+    syncNominations(supabase, userId, snapshot.nominationList).catch((err) => console.error('Failed to sync nominations', err));
+  }
+
   return snapshot;
 }
 
@@ -751,4 +762,184 @@ export function getTrackHistory() {
 
 export function clearTrackHistory() {
   localStorage.removeItem(HISTORY_STORAGE_KEY);
+}
+
+export async function fetchUserHydratedState(supabase, userId) {
+  const { data, error } = await supabase.rpc('get_user_hydrated_state', {
+    req_user_id: userId,
+  });
+
+  if (error) {
+    throw error;
+  }
+
+  return data;
+}
+
+export async function saveTrackNomination(supabase, userId, video, isNominated) {
+  if (!video.trackId) return;
+
+  if (!isNominated) {
+    const { error } = await supabase
+      .from('track_nominations')
+      .delete()
+      .eq('track_id', video.trackId)
+      .eq('user_id', userId);
+    if (error) throw error;
+  } else {
+    const { error } = await supabase.from('track_nominations').upsert(
+      {
+        track_id: video.trackId,
+        user_id: userId,
+        created_at: new Date().toISOString(),
+      },
+      { onConflict: 'track_id,user_id' },
+    );
+    if (error) throw error;
+  }
+}
+
+export async function syncNominations(supabase, userId, nominationList) {
+  const { data: existingNoms } = await supabase
+    .from('track_nominations')
+    .select('track_id')
+    .eq('user_id', userId);
+
+  const existingSet = new Set((existingNoms || []).map((n) => n.track_id));
+  const currentSet = new Set(
+    nominationList.filter((v) => v.trackId != null).map((v) => v.trackId)
+  );
+
+  const trackIdsToDelete = [...existingSet].filter((id) => !currentSet.has(id));
+  if (trackIdsToDelete.length > 0) {
+    await supabase
+      .from('track_nominations')
+      .delete()
+      .eq('user_id', userId)
+      .in('track_id', trackIdsToDelete);
+  }
+
+  const tracksToInsert = [...currentSet]
+    .filter((id) => !existingSet.has(id))
+    .map((id) => ({
+      track_id: id,
+      user_id: userId,
+      created_at: new Date().toISOString(),
+    }));
+
+  if (tracksToInsert.length > 0) {
+    await supabase.from('track_nominations').insert(tracksToInsert);
+  }
+}
+
+export async function saveActiveQueue(supabase, userId, playlistVideos) {
+  let { data: queue, error: queueError } = await supabase
+    .from('user_playlists')
+    .select('id')
+    .eq('user_id', userId)
+    .eq('is_active_queue', true)
+    .maybeSingle();
+
+  if (queueError) throw queueError;
+
+  let playlistId;
+  if (!queue) {
+    const { data: newQueue, error: insertError } = await supabase
+      .from('user_playlists')
+      .insert({ user_id: userId, name: 'Now Playing', is_active_queue: true })
+      .select('id')
+      .single();
+    if (insertError) throw insertError;
+    playlistId = newQueue.id;
+  } else {
+    playlistId = queue.id;
+  }
+
+  await supabase
+    .from('user_playlist_tracks')
+    .delete()
+    .eq('playlist_id', playlistId);
+
+  const tracksToInsert = playlistVideos
+    .filter((v) => v.trackId != null)
+    .map((v, i) => ({
+      playlist_id: playlistId,
+      track_id: v.trackId,
+      order_index: i,
+    }));
+
+  if (tracksToInsert.length > 0) {
+    const { error: tracksError } = await supabase
+      .from('user_playlist_tracks')
+      .insert(tracksToInsert);
+    if (tracksError) throw tracksError;
+  }
+}
+
+export async function syncCustomPlaylists(supabase, userId, customPlaylists) {
+  // First, fetch existing custom playlists to see what to delete
+  const { data: existingPls, error: fetchError } = await supabase
+    .from('user_playlists')
+    .select('id')
+    .eq('user_id', userId)
+    .eq('is_active_queue', false);
+
+  if (fetchError) throw fetchError;
+
+  const currentIds = new Set(customPlaylists.map((pl) => pl.id));
+  const idsToDelete = (existingPls || [])
+    .filter((pl) => !currentIds.has(pl.id))
+    .map((pl) => pl.id);
+
+  if (idsToDelete.length > 0) {
+    await supabase.from('user_playlists').delete().in('id', idsToDelete);
+  }
+
+  // Upsert current ones
+  for (const pl of customPlaylists) {
+    // If pl.id is 'pl-...', we shouldn't use it as a uuid.
+    // However, App.jsx uses 'pl-xxxx'. Our migrations ignore 'pl-'. Let's check pl.id format
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(pl.id);
+    let playlistId = isUuid ? pl.id : undefined;
+
+    const playlistData = {
+      user_id: userId,
+      name: pl.name || 'Untitled Playlist',
+      is_active_queue: false,
+    };
+    if (playlistId) {
+      playlistData.id = playlistId;
+    }
+
+    const { data: upsertedPl, error: plError } = await supabase
+      .from('user_playlists')
+      .upsert(playlistData, { onConflict: 'id' })
+      .select('id')
+      .single();
+
+    if (plError) continue;
+    playlistId = upsertedPl.id;
+    // ensure local object gets the actual UUID if it didn't have one
+    if (!isUuid) {
+      pl.id = playlistId; 
+    }
+
+    await supabase
+      .from('user_playlist_tracks')
+      .delete()
+      .eq('playlist_id', playlistId);
+
+    const tracksToInsert = (pl.videos || [])
+      .filter((v) => v.trackId != null)
+      .map((v, i) => ({
+        playlist_id: playlistId,
+        track_id: v.trackId,
+        order_index: i,
+      }));
+
+    if (tracksToInsert.length > 0) {
+      await supabase.from('user_playlist_tracks').insert(tracksToInsert);
+    }
+  }
+  return customPlaylists;
 }

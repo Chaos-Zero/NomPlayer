@@ -58,6 +58,10 @@ import {
   recordYouTubeTrackListen,
   saveUserPlayerState,
   saveTrackSupport,
+  saveTrackNomination,
+  fetchUserHydratedState,
+  saveActiveQueue,
+  syncCustomPlaylists,
   upsertUserProfile,
   recordTrackHistory,
   getTrackHistory,
@@ -1903,13 +1907,19 @@ export default function App() {
         setUserProfile(profile);
         const remoteState = await fetchUserPlayerState(supabase, user.id);
         const normalizedState = normalizePersistedPlayerState(remoteState);
+        const hydratedDbState = await fetchUserHydratedState(supabase, user.id);
         const persistedQueue = loadPersistedAuthSyncQueue(user.id);
-        const baseHydratedState = persistedQueue.playerState
-          ? normalizePersistedPlayerState({
-              ...persistedQueue.playerState,
-              listenedStatusById: normalizedState.listenedStatusById,
-            })
-          : normalizedState;
+        
+        const baseHydratedState = normalizePersistedPlayerState({
+          ...normalizedState,
+          ...(persistedQueue.playerState || {}),
+          playlist: hydratedDbState.playlist || [],
+          customPlaylists: hydratedDbState.customPlaylists || [],
+          supportList: hydratedDbState.supportList || [],
+          nominationList: hydratedDbState.nominationList || [],
+          listenedStatusById: normalizedState.listenedStatusById,
+        });
+
         const hydratedState = normalizePersistedPlayerState({
           ...baseHydratedState,
           listenedStatusById: mergeListenedStatuses(
@@ -1919,9 +1929,15 @@ export default function App() {
         });
 
         applyPersistedPlayerState(hydratedState);
-        lastSyncedPlayerStateRef.current = JSON.stringify(
-          createAccountPersistedPlayerState(normalizedState),
-        );
+        
+        // Don't flag these true sources of truth as "dirty" unpersisted state
+        const stateToPersist = createAccountPersistedPlayerState(normalizedState);
+        stateToPersist.playlist = hydratedState.playlist;
+        stateToPersist.customPlaylists = hydratedState.customPlaylists;
+        stateToPersist.supportList = hydratedState.supportList;
+        stateToPersist.nominationList = hydratedState.nominationList;
+        
+        lastSyncedPlayerStateRef.current = JSON.stringify(stateToPersist);
         syncCatalogForNominationVideos(hydratedState.nominationList, {
           userId: user.id,
         });
