@@ -710,6 +710,179 @@ function DiscoveryGridItem({ candidate, metadata, onPlayNow, onContextMenu }) {
   );
 }
 
+function HeroLeaderboard({
+  yourNominations,
+  yourSupports,
+  globalLeaderboard,
+  authUser,
+  isLoading,
+  globalCommentedVideoIds,
+  resolveTrack,
+  onShowComments,
+  isFeedbackPanelOpen,
+  onPlayTrack,
+  onContextMenu,
+}) {
+  const [currentView, setCurrentView] = useState(
+    authUser ? 'nominations' : 'global',
+  );
+  const [prevAuthUser, setPrevAuthUser] = useState(authUser);
+
+  if (authUser !== prevAuthUser) {
+    setPrevAuthUser(authUser);
+    setCurrentView(authUser ? 'nominations' : 'global');
+  }
+
+  let data = [];
+  let title = '';
+  if (currentView === 'global') {
+    data = globalLeaderboard;
+    title = 'Top Global Supports';
+  } else if (currentView === 'nominations') {
+    data = yourNominations;
+    title = 'Your Nominations';
+  } else if (currentView === 'supports') {
+    data = yourSupports;
+    title = 'Your Supports';
+  }
+
+  return (
+    <article className="dashboard-feature-card dashboard-feature-card-hero hero-leaderboard-card animate-fade-in">
+      <div className="hero-leaderboard-header">
+        <h3 className="hero-leaderboard-title">{title}</h3>
+        <div className="hero-leaderboard-tabs">
+          {authUser && (
+            <>
+              <button
+                className={`hero-leaderboard-tab ${currentView === 'nominations' ? 'active' : ''}`}
+                onClick={() => setCurrentView('nominations')}
+                title="Your Nominations"
+              >
+                Noms
+              </button>
+              <button
+                className={`hero-leaderboard-tab ${currentView === 'supports' ? 'active' : ''}`}
+                onClick={() => setCurrentView('supports')}
+                title="Your Supports"
+              >
+                Supports
+              </button>
+            </>
+          )}
+          <button
+            className={`hero-leaderboard-tab ${currentView === 'global' ? 'active' : ''}`}
+            onClick={() => setCurrentView('global')}
+            title="Global Leaderboard"
+          >
+            Global
+          </button>
+        </div>
+      </div>
+
+      <div className="hero-leaderboard-list">
+        {isLoading ? (
+          <div className="hero-leaderboard-empty">
+            <div className="hero-loader-spinner" style={{ margin: 'auto' }} />
+          </div>
+        ) : data.length === 0 ? (
+          <div className="hero-leaderboard-empty">
+            <p>No tracks available for this view.</p>
+          </div>
+        ) : (
+          data.map((track, idx) => (
+            <div
+              key={track.videoId}
+              className="hero-leaderboard-row"
+              onDoubleClick={() => onPlayTrack(track)}
+              onClick={(e) => {
+                if (isFeedbackPanelOpen) {
+                  const rect = e.currentTarget.getBoundingClientRect();
+                  onShowComments?.(resolveTrack(track), {
+                    top: rect.top,
+                    left: rect.left,
+                    width: rect.width,
+                    height: rect.height,
+                  });
+                }
+              }}
+              onContextMenu={(e) => onContextMenu(e, track)}
+              title="Double-click to play (Right-click for options)"
+            >
+              <span className="hero-leaderboard-rank">{idx + 1}</span>
+              <img
+                src={track.thumbnail}
+                alt=""
+                className="hero-leaderboard-thumb"
+                loading="lazy"
+              />
+              <div className="hero-leaderboard-info">
+                <div className="hero-leaderboard-info-top">
+                  <span className="hero-leaderboard-track-title">
+                    {track.title}
+                  </span>
+                  {globalCommentedVideoIds?.has(track.videoId) && (
+                    <button
+                      className="hero-leaderboard-comment-btn"
+                      title="View Comments"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const rect = e.currentTarget.getBoundingClientRect();
+                        onShowComments?.(resolveTrack(track), {
+                          top: rect.top,
+                          left: rect.left,
+                          width: rect.width,
+                          height: rect.height,
+                        });
+                      }}
+                    >
+                      <SpeechBubbleIcon size={14} />
+                    </button>
+                  )}
+                </div>
+                <div className="hero-leaderboard-stats">
+                  {track.totalSupport > 0 && (
+                    <span className="hero-leaderboard-total-stat">
+                      Total: {track.totalSupport}
+                    </span>
+                  )}
+                  {track.totalSupport > 0 && (
+                    <div className="hero-leaderboard-stat-icons">
+                      {track.supportCount3 > 0 && (
+                        <span
+                          className="stat-badge highest"
+                          title="Definite Supports"
+                        >
+                          <LockIcon size={10} /> {track.supportCount3}
+                        </span>
+                      )}
+                      {track.supportCount2 > 0 && (
+                        <span
+                          className="stat-badge strong"
+                          title="Likely Supports"
+                        >
+                          <HeartIcon size={10} /> {track.supportCount2}
+                        </span>
+                      )}
+                      {track.supportCount1 > 0 && (
+                        <span
+                          className="stat-badge normal"
+                          title="Possible Supports"
+                        >
+                          <HeartIcon size={10} /> {track.supportCount1}
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+    </article>
+  );
+}
+
 export default function HomePage({
   supabase,
   authUser = null,
@@ -908,6 +1081,113 @@ export default function HomePage({
     () => nominationUpdates.filter((update) => update.userId !== authUser?.id),
     [authUser?.id, nominationUpdates],
   );
+
+  const globalLeaderboard = useMemo(() => {
+    return Object.values(mergedMetadata)
+      .map((meta) => {
+        const s1 = meta.supportCount1 || 0;
+        const s2 = meta.supportCount2 || 0;
+        const s3 = meta.supportCount3 || 0;
+        return {
+          videoId: meta.videoId,
+          title: meta.trackTitle
+            ? `${meta.gameTitle} - ${meta.trackTitle}`
+            : meta.displayTitle || 'Unknown Track',
+          thumbnail:
+            meta.sourceThumbnailUrl || getYouTubeThumbnailUrl(meta.videoId),
+          supportCount1: s1,
+          supportCount2: s2,
+          supportCount3: s3,
+          totalSupport: s1 + s2 + s3,
+        };
+      })
+      .filter((t) => t.totalSupport > 0)
+      .sort((a, b) => {
+        if (b.totalSupport !== a.totalSupport)
+          return b.totalSupport - a.totalSupport;
+        if (b.supportCount3 !== a.supportCount3)
+          return b.supportCount3 - a.supportCount3;
+        if (b.supportCount2 !== a.supportCount2)
+          return b.supportCount2 - a.supportCount2;
+        return b.supportCount1 - a.supportCount1;
+      })
+      .slice(0, 20);
+  }, [mergedMetadata]);
+
+  const yourNominations = useMemo(() => {
+    if (!authUser) return [];
+    const myUpdate = nominationUpdates.find((u) => u.userId === authUser.id);
+    if (!myUpdate) return [];
+
+    return myUpdate.nominations
+      .map((video) => {
+        const meta = mergedMetadata[video.videoId] || {};
+        const s1 = meta.supportCount1 || 0;
+        const s2 = meta.supportCount2 || 0;
+        const s3 = meta.supportCount3 || 0;
+        return {
+          ...video,
+          title: meta.trackTitle
+            ? `${meta.gameTitle} - ${meta.trackTitle}`
+            : video.title || meta.displayTitle || 'Unknown Track',
+          thumbnail:
+            meta.sourceThumbnailUrl ||
+            video.thumbnail ||
+            getYouTubeThumbnailUrl(video.videoId),
+          supportCount1: s1,
+          supportCount2: s2,
+          supportCount3: s3,
+          totalSupport: s1 + s2 + s3,
+        };
+      })
+      .sort((a, b) => {
+        if (b.totalSupport !== a.totalSupport)
+          return b.totalSupport - a.totalSupport;
+        if (b.supportCount3 !== a.supportCount3)
+          return b.supportCount3 - a.supportCount3;
+        if (b.supportCount2 !== a.supportCount2)
+          return b.supportCount2 - a.supportCount2;
+        return b.supportCount1 - a.supportCount1;
+      })
+      .slice(0, 20);
+  }, [authUser, nominationUpdates, mergedMetadata]);
+
+  const yourSupports = useMemo(() => {
+    if (!authUser) return [];
+    const supportedIds = Object.keys(supportStatusById).filter(
+      (id) => supportStatusById[id]?.isSupported,
+    );
+    return supportedIds
+      .map((id) => {
+        const meta = mergedMetadata[id];
+        if (!meta) return null;
+        const s1 = meta.supportCount1 || 0;
+        const s2 = meta.supportCount2 || 0;
+        const s3 = meta.supportCount3 || 0;
+        return {
+          videoId: id,
+          title: meta.trackTitle
+            ? `${meta.gameTitle} - ${meta.trackTitle}`
+            : meta.displayTitle || 'Unknown Track',
+          thumbnail: meta.sourceThumbnailUrl || getYouTubeThumbnailUrl(id),
+          supportCount1: s1,
+          supportCount2: s2,
+          supportCount3: s3,
+          totalSupport: s1 + s2 + s3,
+        };
+      })
+      .filter(Boolean)
+      .sort((a, b) => {
+        if (b.totalSupport !== a.totalSupport)
+          return b.totalSupport - a.totalSupport;
+        if (b.supportCount3 !== a.supportCount3)
+          return b.supportCount3 - a.supportCount3;
+        if (b.supportCount2 !== a.supportCount2)
+          return b.supportCount2 - a.supportCount2;
+        return b.supportCount1 - a.supportCount1;
+      })
+      .slice(0, 20);
+  }, [authUser, supportStatusById, mergedMetadata]);
 
   const discoveryCandidates = useMemo(() => {
     const rawCandidates = buildDiscoveryCandidates(visibleNominationUpdates, {
@@ -1463,94 +1743,61 @@ export default function HomePage({
           </div>
         </div>
 
-        <div className="dashboard-hero-spotlight">
-          {!isAuthReady ||
-          ((isDashboardLoading || isExtraLoading) &&
-            !fastSpotlightCandidate) ? (
-            <div className="dashboard-feature-card dashboard-feature-card-hero dashboard-hero-loader-placeholder">
-              <div className="hero-loader-image-skeleton">
-                <div
-                  className="hero-loader-spinner"
-                  aria-label="Loading hero showcase"
-                />
-              </div>
-              <div className="hero-loader-copy-skeleton">
-                <div className="skeleton-line kicker" />
-                <div className="skeleton-line title" />
-                <div className="skeleton-line meta" />
-                <div className="skeleton-actions-skeleton">
-                  <div className="skeleton-button" />
-                  <div className="skeleton-button" />
-                  <div className="skeleton-button" />
-                </div>
-              </div>
-            </div>
-          ) : fastSpotlightCandidate || featuredDiscoveryCandidate ? (
-            <article className="dashboard-feature-card dashboard-feature-card-hero animate-fade-in">
-              {isMobileLayout && (
-                <div className="dashboard-feature-mobile-header">
-                  <span className="dashboard-feature-meta-vgmc">
-                    VGMC {maxVgmcNumber + 1}
-                  </span>
-                  <button
-                    className="dashboard-action-btn dashboard-action-btn-muted dashboard-action-btn-inline"
-                    type="button"
-                    onClick={() =>
-                      handlePlayDiscoveryCandidate(
-                        fastSpotlightCandidate || featuredDiscoveryCandidate,
-                      )
-                    }
-                  >
-                    Listen Now
-                  </button>
-                </div>
-              )}
-              <img
-                className="dashboard-feature-thumb"
-                src={
-                  (fastSpotlightCandidate || featuredDiscoveryCandidate)
-                    .thumbnail
-                }
-                alt=""
-                loading="lazy"
-              />
+        <div className="dashboard-hero-leaderboard-container">
+          <HeroLeaderboard
+            yourNominations={yourNominations}
+            yourSupports={yourSupports}
+            globalLeaderboard={globalLeaderboard}
+            authUser={authUser}
+            isLoading={isDashboardLoading || isMetadataLoading}
+            globalCommentedVideoIds={globalCommentedVideoIds}
+            resolveTrack={resolveTrack}
+            onShowComments={onShowComments}
+            isFeedbackPanelOpen={isFeedbackPanelOpen}
+            onPlayTrack={handlePlayDiscoveryCandidate}
+            onContextMenu={(e, item) => {
+              e.preventDefault();
+              setDiscoveryContextMenu({
+                x: e.clientX,
+                y: e.clientY,
+                candidate: item,
+              });
+            }}
+          />
+        </div>
 
-              <div className="dashboard-feature-copy">
-                <span className="dashboard-feature-kicker">New Nomination</span>
-                <h2 className="dashboard-feature-title">
-                  <ScrollingText
-                    text={(() => {
-                      const spotlightVideo =
-                        fastSpotlightCandidate || featuredDiscoveryCandidate;
-                      const meta = mergedMetadata[spotlightVideo.videoId];
-                      return meta
-                        ? `${meta.gameTitle} - ${meta.trackTitle}`
-                        : spotlightVideo.title;
-                    })()}
-                    truncateWhenStatic={true}
+        {!isMobileLayout && (
+          <div className="dashboard-hero-spotlight">
+            {!isAuthReady ||
+            ((isDashboardLoading || isExtraLoading) &&
+              !fastSpotlightCandidate) ? (
+              <div className="dashboard-feature-card dashboard-feature-card-hero dashboard-hero-loader-placeholder">
+                <div className="hero-loader-image-skeleton">
+                  <div
+                    className="hero-loader-spinner"
+                    aria-label="Loading hero showcase"
                   />
-                </h2>
-                <div className="dashboard-feature-meta">
-                  {!isMobileLayout && (
-                    <p className="dashboard-feature-meta-vgmc">
-                      VGMC {maxVgmcNumber + 1}
-                    </p>
-                  )}
-                  <p className="dashboard-feature-meta-nominators">
-                    Nominated by{' '}
-                    {(
-                      fastSpotlightCandidate || featuredDiscoveryCandidate
-                    ).nominators
-                      .map((nominator) =>
-                        getDisplayProfileName(nominator.username),
-                      )
-                      .join(', ')}
-                  </p>
                 </div>
-                <div className="dashboard-feature-actions">
-                  {!isMobileLayout && (
+                <div className="hero-loader-copy-skeleton">
+                  <div className="skeleton-line kicker" />
+                  <div className="skeleton-line title" />
+                  <div className="skeleton-line meta" />
+                  <div className="skeleton-actions-skeleton">
+                    <div className="skeleton-button" />
+                    <div className="skeleton-button" />
+                    <div className="skeleton-button" />
+                  </div>
+                </div>
+              </div>
+            ) : fastSpotlightCandidate || featuredDiscoveryCandidate ? (
+              <article className="dashboard-feature-card dashboard-feature-card-hero animate-fade-in">
+                {isMobileLayout && (
+                  <div className="dashboard-feature-mobile-header">
+                    <span className="dashboard-feature-meta-vgmc">
+                      VGMC {maxVgmcNumber + 1}
+                    </span>
                     <button
-                      className="dashboard-action-btn dashboard-action-btn-muted"
+                      className="dashboard-action-btn dashboard-action-btn-muted dashboard-action-btn-inline"
                       type="button"
                       onClick={() =>
                         handlePlayDiscoveryCandidate(
@@ -1560,80 +1807,93 @@ export default function HomePage({
                     >
                       Listen Now
                     </button>
-                  )}
-                  <button
-                    className="dashboard-action-btn"
-                    type="button"
-                    onClick={() =>
-                      handleAddDiscoveryCandidate(
-                        fastSpotlightCandidate || featuredDiscoveryCandidate,
-                      )
-                    }
-                  >
-                    Add to Playlist
-                  </button>
-                  <button
-                    className="dashboard-action-btn dashboard-action-btn-muted"
-                    type="button"
-                    onClick={handleFindNewSong}
-                  >
-                    New Song
-                  </button>
-                </div>
-              </div>
-            </article>
-          ) : prospectiveFallbackTrack ? (
-            <article className="dashboard-feature-card dashboard-feature-card-hero animate-fade-in">
-              {isMobileLayout && (
-                <div className="dashboard-feature-mobile-header">
-                  <span className="dashboard-feature-meta-vgmc">
-                    {(() => {
-                      const sequenceNumbers = [
-                        ...new Set(
-                          (prospectiveFallbackTrack.tournaments || [])
-                            .map((t) => t.sequenceNumber || t.sequence_number)
-                            .filter((n) => Number.isInteger(n)),
-                        ),
-                      ].sort((a, b) => a - b);
-                      return sequenceNumbers.length > 0
-                        ? `VGMC ${sequenceNumbers.join(', ')}`
-                        : 'VGMC Unplaced';
-                    })()}
-                  </span>
-                  <button
-                    className="dashboard-action-btn dashboard-action-btn-muted dashboard-action-btn-inline"
-                    type="button"
-                    onClick={() =>
-                      handlePlayDiscoveryCandidate(prospectiveFallbackTrack)
-                    }
-                  >
-                    Listen Now
-                  </button>
-                </div>
-              )}
-              <img
-                className="dashboard-feature-thumb"
-                src={prospectiveFallbackTrack.thumbnail}
-                alt=""
-                loading="lazy"
-              />
+                  </div>
+                )}
+                <img
+                  className="dashboard-feature-thumb"
+                  src={
+                    (fastSpotlightCandidate || featuredDiscoveryCandidate)
+                      .thumbnail
+                  }
+                  alt=""
+                  loading="lazy"
+                />
 
-              <div className="dashboard-feature-copy">
-                <span className="dashboard-feature-kicker">VGMC Unplaced</span>
-                <h2 className="dashboard-feature-title">
-                  <ScrollingText
-                    text={
-                      prospectiveFallbackTrack.gameTitle &&
-                      prospectiveFallbackTrack.trackTitle
-                        ? `${prospectiveFallbackTrack.gameTitle} - ${prospectiveFallbackTrack.trackTitle}`
-                        : prospectiveFallbackTrack.title
-                    }
-                    truncateWhenStatic={true}
-                  />
-                </h2>
-                <div className="dashboard-feature-meta">
-                  {!isMobileLayout && (
-                    <p className="dashboard-feature-meta-vgmc">
+                <div className="dashboard-feature-copy">
+                  <span className="dashboard-feature-kicker">
+                    New Nomination
+                  </span>
+                  <h2 className="dashboard-feature-title">
+                    <ScrollingText
+                      text={(() => {
+                        const spotlightVideo =
+                          fastSpotlightCandidate || featuredDiscoveryCandidate;
+                        const meta = mergedMetadata[spotlightVideo.videoId];
+                        return meta
+                          ? `${meta.gameTitle} - ${meta.trackTitle}`
+                          : spotlightVideo.title;
+                      })()}
+                      truncateWhenStatic={true}
+                    />
+                  </h2>
+                  <div className="dashboard-feature-meta">
+                    {!isMobileLayout && (
+                      <p className="dashboard-feature-meta-vgmc">
+                        VGMC {maxVgmcNumber + 1}
+                      </p>
+                    )}
+                    <p className="dashboard-feature-meta-nominators">
+                      Nominated by{' '}
+                      {(
+                        fastSpotlightCandidate || featuredDiscoveryCandidate
+                      ).nominators
+                        .map((nominator) =>
+                          getDisplayProfileName(nominator.username),
+                        )
+                        .join(', ')}
+                    </p>
+                  </div>
+                  <div className="dashboard-feature-actions">
+                    {!isMobileLayout && (
+                      <button
+                        className="dashboard-action-btn dashboard-action-btn-muted"
+                        type="button"
+                        onClick={() =>
+                          handlePlayDiscoveryCandidate(
+                            fastSpotlightCandidate ||
+                              featuredDiscoveryCandidate,
+                          )
+                        }
+                      >
+                        Listen Now
+                      </button>
+                    )}
+                    <button
+                      className="dashboard-action-btn"
+                      type="button"
+                      onClick={() =>
+                        handleAddDiscoveryCandidate(
+                          fastSpotlightCandidate || featuredDiscoveryCandidate,
+                        )
+                      }
+                    >
+                      Add to Playlist
+                    </button>
+                    <button
+                      className="dashboard-action-btn dashboard-action-btn-muted"
+                      type="button"
+                      onClick={handleFindNewSong}
+                    >
+                      New Song
+                    </button>
+                  </div>
+                </div>
+              </article>
+            ) : prospectiveFallbackTrack ? (
+              <article className="dashboard-feature-card dashboard-feature-card-hero animate-fade-in">
+                {isMobileLayout && (
+                  <div className="dashboard-feature-mobile-header">
+                    <span className="dashboard-feature-meta-vgmc">
                       {(() => {
                         const sequenceNumbers = [
                           ...new Set(
@@ -1646,13 +1906,9 @@ export default function HomePage({
                           ? `VGMC ${sequenceNumbers.join(', ')}`
                           : 'VGMC Unplaced';
                       })()}
-                    </p>
-                  )}
-                </div>
-                <div className="dashboard-feature-actions">
-                  {!isMobileLayout && (
+                    </span>
                     <button
-                      className="dashboard-action-btn dashboard-action-btn-muted"
+                      className="dashboard-action-btn dashboard-action-btn-muted dashboard-action-btn-inline"
                       type="button"
                       onClick={() =>
                         handlePlayDiscoveryCandidate(prospectiveFallbackTrack)
@@ -1660,32 +1916,88 @@ export default function HomePage({
                     >
                       Listen Now
                     </button>
-                  )}
-                  <button
-                    className="dashboard-action-btn"
-                    type="button"
-                    onClick={() =>
-                      handleAddDiscoveryCandidate(prospectiveFallbackTrack)
-                    }
-                  >
-                    Add to Playlist
-                  </button>
-                  <button
-                    className="dashboard-action-btn dashboard-action-btn-muted"
-                    type="button"
-                    onClick={handleFindNewSong}
-                  >
-                    New Song
-                  </button>
+                  </div>
+                )}
+                <img
+                  className="dashboard-feature-thumb"
+                  src={prospectiveFallbackTrack.thumbnail}
+                  alt=""
+                  loading="lazy"
+                />
+
+                <div className="dashboard-feature-copy">
+                  <span className="dashboard-feature-kicker">
+                    VGMC Unplaced
+                  </span>
+                  <h2 className="dashboard-feature-title">
+                    <ScrollingText
+                      text={
+                        prospectiveFallbackTrack.gameTitle &&
+                        prospectiveFallbackTrack.trackTitle
+                          ? `${prospectiveFallbackTrack.gameTitle} - ${prospectiveFallbackTrack.trackTitle}`
+                          : prospectiveFallbackTrack.title
+                      }
+                      truncateWhenStatic={true}
+                    />
+                  </h2>
+                  <div className="dashboard-feature-meta">
+                    {!isMobileLayout && (
+                      <p className="dashboard-feature-meta-vgmc">
+                        {(() => {
+                          const sequenceNumbers = [
+                            ...new Set(
+                              (prospectiveFallbackTrack.tournaments || [])
+                                .map(
+                                  (t) => t.sequenceNumber || t.sequence_number,
+                                )
+                                .filter((n) => Number.isInteger(n)),
+                            ),
+                          ].sort((a, b) => a - b);
+                          return sequenceNumbers.length > 0
+                            ? `VGMC ${sequenceNumbers.join(', ')}`
+                            : 'VGMC Unplaced';
+                        })()}
+                      </p>
+                    )}
+                  </div>
+                  <div className="dashboard-feature-actions">
+                    {!isMobileLayout && (
+                      <button
+                        className="dashboard-action-btn dashboard-action-btn-muted"
+                        type="button"
+                        onClick={() =>
+                          handlePlayDiscoveryCandidate(prospectiveFallbackTrack)
+                        }
+                      >
+                        Listen Now
+                      </button>
+                    )}
+                    <button
+                      className="dashboard-action-btn"
+                      type="button"
+                      onClick={() =>
+                        handleAddDiscoveryCandidate(prospectiveFallbackTrack)
+                      }
+                    >
+                      Add to Playlist
+                    </button>
+                    <button
+                      className="dashboard-action-btn dashboard-action-btn-muted"
+                      type="button"
+                      onClick={handleFindNewSong}
+                    >
+                      New Song
+                    </button>
+                  </div>
                 </div>
-              </div>
-            </article>
-          ) : (
-            <DashboardMessage>
-              No featured discovery pick is available yet.
-            </DashboardMessage>
-          )}
-        </div>
+              </article>
+            ) : (
+              <DashboardMessage>
+                No featured discovery pick is available yet.
+              </DashboardMessage>
+            )}
+          </div>
+        )}
       </section>
 
       <div className="home-sections">
