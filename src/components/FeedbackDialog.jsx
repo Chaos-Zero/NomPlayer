@@ -58,8 +58,7 @@ export default function FeedbackDialog({
       const payload = {
         type: feedbackType,
         text: trimmedText,
-        username: profile?.username || user?.user_metadata?.username || 'Anonymous',
-        email: user?.email || 'N/A',
+        username: (profile?.username || user?.user_metadata?.username || 'Anonymous').replace(/^dc:/, ''),
         url: window.location.href,
         timestamp: new Date().toISOString(),
       };

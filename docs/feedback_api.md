@@ -24,7 +24,6 @@ The secret is configured via `VITE_FEEDBACK_API_SECRET` in the site's environmen
 | `type` | `string` | One of: `"General Feedback"`, `"Feature Request"`, `"Bug"` |
 | `text` | `string` | The feedback message content |
 | `username` | `string` | The username of the submitter (if logged in) |
-| `email` | `string` | The email of the submitter (if available) |
 | `url` | `string` | The page URL where the feedback was submitted |
 | `timestamp` | `string` | ISO 8601 timestamp |
 
@@ -38,7 +37,6 @@ curl -X POST https://your-bot-api.com/feedback \
     "type": "Bug",
     "text": "The play button is misaligned on Safari mobile.",
     "username": "Calzone",
-    "email": "user@example.com",
     "url": "https://nomplayer.com/player",
     "timestamp": "2024-04-14T07:55:00.000Z"
   }'
