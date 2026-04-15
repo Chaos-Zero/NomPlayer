@@ -1557,6 +1557,11 @@ export default function HomePage({
     ],
   );
 
+  const dashboardStatTexts = useMemo(
+    () => dashboardStats.map((s) => `${s.value} ${s.label}`),
+    [dashboardStats],
+  );
+
   const sectionSummaries = useMemo(
     () => ({
       overview:
@@ -1709,7 +1714,7 @@ export default function HomePage({
                 <div className="dashboard-stat-label-box">
                   {!isDashboardLoading ? (
                     <TextType
-                      text={dashboardStats.map((s) => `${s.value} ${s.label}`)}
+                      text={dashboardStatTexts}
                       className="dashboard-stat-label-rotation"
                       typingSpeed={60}
                       deletingSpeed={30}

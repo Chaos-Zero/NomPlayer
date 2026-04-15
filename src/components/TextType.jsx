@@ -89,16 +89,24 @@ const TextType = ({
     }
   }, [showCursor, cursorBlinkDuration]);
 
+  const [prevTextContent, setPrevTextContent] = useState(textArray.join('|'));
+
+  // Reset if content changed significantly - done during render as per React 18+ best practices
+  if (textArray.join('|') !== prevTextContent) {
+    setPrevTextContent(textArray.join('|'));
+    setDisplayedText('');
+    setCurrentCharIndex(0);
+    setIsDeleting(false);
+    setCurrentTextIndex(0);
+  }
+
   useEffect(() => {
     if (!isVisible) return;
 
     let timeout;
-    if (textArray.length === 0) {
-      return;
-    }
+    if (textArray.length === 0) return;
 
-    const currentText = textArray[currentTextIndex];
-    if (!currentText) return; // Guard
+    const currentText = textArray[currentTextIndex] || '';
 
     const processedText = reverseMode
       ? currentText.split('').reverse().join('')
@@ -107,18 +115,21 @@ const TextType = ({
     const executeTypingAnimation = () => {
       if (isDeleting) {
         if (displayedText === '') {
-          setIsDeleting(false);
+          // Finished deleting
           if (currentTextIndex === textArray.length - 1 && !loop) {
             return;
           }
 
           if (onSentenceComplete) {
-            onSentenceComplete(textArray[currentTextIndex], currentTextIndex);
+            onSentenceComplete(currentText, currentTextIndex);
           }
 
-          setCurrentTextIndex((prev) => (prev + 1) % textArray.length);
-          setCurrentCharIndex(0);
-          timeout = setTimeout(() => {}, pauseDuration);
+          // Important: pause before starting the next sentence
+          timeout = setTimeout(() => {
+            setCurrentTextIndex((prev) => (prev + 1) % textArray.length);
+            setCurrentCharIndex(0);
+            setIsDeleting(false);
+          }, pauseDuration);
         } else {
           timeout = setTimeout(() => {
             setDisplayedText((prev) => prev.slice(0, -1));
@@ -128,15 +139,18 @@ const TextType = ({
         if (currentCharIndex < processedText.length) {
           timeout = setTimeout(
             () => {
-              setDisplayedText(
-                (prev) => prev + processedText[currentCharIndex],
-              );
+              setDisplayedText((prev) => {
+                // Precaution: if we already finished, don't append
+                if (currentCharIndex >= processedText.length) return prev;
+                return prev + processedText[currentCharIndex];
+              });
               setCurrentCharIndex((prev) => prev + 1);
             },
             variableSpeed ? getRandomSpeed() : typingSpeed,
           );
         } else if (textArray.length >= 1) {
           if (!loop && currentTextIndex === textArray.length - 1) return;
+          // Pause after typing is complete
           timeout = setTimeout(() => {
             setIsDeleting(true);
           }, pauseDuration);
@@ -147,7 +161,6 @@ const TextType = ({
     if (currentCharIndex === 0 && !isDeleting && displayedText === '') {
       timeout = setTimeout(executeTypingAnimation, initialDelay);
     } else {
-      // Use bit of delay to avoid synchronous state updates in effect body
       timeout = setTimeout(executeTypingAnimation, 0);
     }
 
