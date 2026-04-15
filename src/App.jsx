@@ -483,7 +483,6 @@ export default function App() {
   const [nominationList, setNominationList] = useState(
     initialPlayerState.nominationList,
   );
-  const nominationListRef = useRef(initialPlayerState.nominationList);
   const [showNominationsList, setShowNominationsList] = useState(false);
   const [renderNominationsList, setRenderNominationsList] = useState(false);
   const [customPlaylists, setCustomPlaylists] = useState(
@@ -667,10 +666,6 @@ export default function App() {
   }, [catalogTrackByVideoId]);
 
   useEffect(() => {
-    nominationListRef.current = nominationList;
-  }, [nominationList]);
-
-  useEffect(() => {
     shuffleOrderIdsRef.current = shuffleOrderIds;
   }, [shuffleOrderIds]);
 
@@ -778,6 +773,12 @@ export default function App() {
     },
     [supabase],
   );
+
+  useEffect(() => {
+    if (nominationList.length > 0 && authUser?.id) {
+      syncCatalogForNominationVideos(nominationList);
+    }
+  }, [nominationList, authUser?.id, syncCatalogForNominationVideos]);
 
   useEffect(() => {
     authUserIdRef.current = authUser?.id ?? null;
@@ -1269,16 +1270,15 @@ export default function App() {
   }, []);
 
   const ensureCatalogEntriesForVideoIds = useCallback(
-    async (videoIds) => {
+    async (videoIdsOrVideos) => {
+      const videos = Array.isArray(videoIdsOrVideos) ? videoIdsOrVideos : [];
       const normalizedVideoIds = Array.from(
         new Set(
-          Array.isArray(videoIds)
-            ? videoIds.filter(
-                (videoId) =>
-                  typeof videoId === 'string' &&
-                  /^[A-Za-z0-9_-]{11}$/.test(videoId),
-              )
-            : [],
+          videos
+            .map((v) => (typeof v === 'string' ? v : v?.videoId))
+            .filter(
+              (id) => typeof id === 'string' && /^[A-Za-z0-9_-]{11}$/.test(id),
+            ),
         ),
       );
 
@@ -1302,6 +1302,19 @@ export default function App() {
       });
 
       try {
+        // Optimization: For missing IDs, if we have the full video objects, ingest them first.
+        // This ensures trackId existence for new nominations immediately.
+        const videosToIngest = videos.filter(
+          (v) =>
+            typeof v === 'object' &&
+            v?.videoId &&
+            missingVideoIds.includes(v.videoId),
+        );
+
+        if (videosToIngest.length > 0) {
+          await ingestYouTubeTrackSources(supabase, videosToIngest);
+        }
+
         const fetchedEntries = await fetchTrackCatalogByVideoIds(
           supabase,
           missingVideoIds,
@@ -1347,11 +1360,18 @@ export default function App() {
             retiredByTournamentName: '',
           }));
 
+        const freshCatalog = {
+          ...knownEntries,
+          ...Object.fromEntries(fetchedById),
+          ...Object.fromEntries(fallbackEntries.map((e) => [e.videoId, e])),
+        };
+
         mergeCatalogTrackSummaries([
           ...fetchedById.values(),
           ...fallbackEntries,
         ]);
-        return catalogTrackByVideoIdRef.current;
+
+        return freshCatalog;
       } finally {
         missingVideoIds.forEach((videoId) => {
           catalogLookupPendingVideoIdsRef.current.delete(videoId);
@@ -1473,7 +1493,7 @@ export default function App() {
     });
     nominationList.forEach((video) => {
       status[video.videoId] = {
-        isSupported: true,
+        isSupported: false,
         isNominated: true,
         supportLevel: video.supportLevel || 1,
       };
@@ -1936,10 +1956,6 @@ export default function App() {
         stateToPersist.nominationList = hydratedState.nominationList;
 
         lastSyncedPlayerStateRef.current = JSON.stringify(stateToPersist);
-        syncCatalogForNominationVideos(hydratedState.nominationList, {
-          userId: user.id,
-        });
-
         const pendingGuestImportState = pendingGuestImportStateRef.current;
         pendingGuestImportStateRef.current = null;
 
@@ -1960,12 +1976,7 @@ export default function App() {
         setIsAuthReady(true);
       }
     },
-    [
-      applyPersistedPlayerState,
-      ensureUserProfile,
-      supabase,
-      syncCatalogForNominationVideos,
-    ],
+    [applyPersistedPlayerState, ensureUserProfile, supabase],
   );
 
   useEffect(() => {
@@ -2242,12 +2253,12 @@ export default function App() {
   }, []);
 
   const applyCatalogMetadataToVideo = useCallback(
-    (video) => {
-      if (!video?.videoId) {
-        return video;
-      }
+    (video, freshCatalog = null) => {
+      const videoId = video?.videoId || '';
+      const catalogEntry =
+        (freshCatalog && freshCatalog[videoId]) ||
+        catalogTrackByVideoId[videoId];
 
-      const catalogEntry = getCatalogTrackForVideo(video);
       if (!catalogEntry) {
         return video;
       }
@@ -2279,7 +2290,7 @@ export default function App() {
           '',
       };
     },
-    [getCatalogTrackForVideo],
+    [catalogTrackByVideoId],
   );
 
   const partitionRetiredVideos = useCallback(
@@ -2291,15 +2302,14 @@ export default function App() {
         return { allowedVideos: [], retiredVideos: [] };
       }
 
-      await ensureCatalogEntriesForVideoIds(
-        normalizedVideos.map((video) => video.videoId),
-      );
+      const freshCatalog =
+        await ensureCatalogEntriesForVideoIds(normalizedVideos);
 
       const allowedVideos = [];
       const retiredVideos = [];
 
       for (const video of normalizedVideos) {
-        const enrichedVideo = applyCatalogMetadataToVideo(video);
+        const enrichedVideo = applyCatalogMetadataToVideo(video, freshCatalog);
         if (isVideoRetired(enrichedVideo)) {
           retiredVideos.push(enrichedVideo);
           continue;
@@ -2762,9 +2772,6 @@ export default function App() {
     );
 
     applyPersistedPlayerState(mergedState);
-    if (guestImportSelections.nominationList) {
-      syncCatalogForNominationVideos(mergedState.nominationList);
-    }
     clearLocalGuestPlayerState();
     pendingGuestImportStateRef.current = null;
     setGuestImportState(null);
@@ -2774,7 +2781,6 @@ export default function App() {
     createPlayerStateSnapshot,
     guestImportSelections,
     guestImportState,
-    syncCatalogForNominationVideos,
   ]);
 
   const persistTrackListenEvent = useCallback(
@@ -3777,60 +3783,67 @@ export default function App() {
       const { allowedVideos, retiredVideos } =
         await partitionRetiredVideos(videos);
 
-      const nominationResult = appendUniqueVideos(
-        nominationListRef.current,
-        allowedVideos,
-      );
-
-      if (!nominationResult.addedCount) {
-        return {
-          addedCount: 0,
-          blockedNominationCount: 0,
-          blockedRetiredCount: retiredVideos.length,
-        };
-      }
-
-      const currentCatalog = catalogTrackByVideoIdRef.current;
-      const newTracksMissingMetadata = nominationResult.addedVideos.filter(
-        (video) => {
-          const catalogItem = currentCatalog[video.videoId];
-          return (
-            (!catalogItem ||
-              (!catalogItem.gameTitle && !catalogItem.trackTitle)) &&
-            !video.gameTitle &&
-            !video.trackTitle
-          );
-        },
-      );
-
-      if (newTracksMissingMetadata.length > 0) {
-        setTracksNeedingMetadata((prev) => {
-          const existingIds = new Set(prev.map((v) => v.videoId));
-          const uniqueNew = newTracksMissingMetadata.filter(
-            (v) => !existingIds.has(v.videoId),
-          );
-          return [...prev, ...uniqueNew];
-        });
-      }
-
-      setSupportList((previousList) => {
-        const nextNominationIds = new Set(
-          nominationResult.nextList.map((v) => v.videoId),
-        );
-        return previousList.filter(
-          (entry) => !nextNominationIds.has(entry.videoId),
-        );
-      });
-      setNominationList(nominationResult.nextList);
-      syncCatalogForNominationVideos(nominationResult.addedVideos);
-
-      return {
-        addedCount: nominationResult.addedCount,
+      let resultSummary = {
+        addedCount: 0,
         blockedNominationCount: 0,
         blockedRetiredCount: retiredVideos.length,
       };
+
+      const currentCatalog = catalogTrackByVideoIdRef.current;
+
+      setNominationList((previousList) => {
+        const nominationResult = appendUniqueVideos(
+          previousList,
+          allowedVideos,
+        );
+
+        if (!nominationResult.addedCount) {
+          resultSummary.blockedNominationCount =
+            nominationResult.blockedVideoIds.length;
+          return previousList;
+        }
+
+        const newTracksMissingMetadata = nominationResult.addedVideos.filter(
+          (video) => {
+            const catalogItem = currentCatalog[video.videoId];
+            return (
+              (!catalogItem ||
+                (!catalogItem.gameTitle && !catalogItem.trackTitle)) &&
+              !video.gameTitle &&
+              !video.trackTitle
+            );
+          },
+        );
+
+        if (newTracksMissingMetadata.length > 0) {
+          setTracksNeedingMetadata((prev) => {
+            const existingIds = new Set(prev.map((v) => v.videoId));
+            const uniqueNew = newTracksMissingMetadata.filter(
+              (v) => !existingIds.has(v.videoId),
+            );
+            return [...prev, ...uniqueNew];
+          });
+        }
+
+        resultSummary = {
+          addedCount: nominationResult.addedCount,
+          blockedNominationCount: nominationResult.blockedVideoIds.length,
+          blockedRetiredCount: retiredVideos.length,
+        };
+
+        return nominationResult.nextList;
+      });
+
+      // After updating nominations, we need to ensure they are removed from the support list
+      setSupportList((previousList) => {
+        return previousList.filter((entry) => {
+          return !allowedVideos.some((v) => v.videoId === entry.videoId);
+        });
+      });
+
+      return resultSummary;
     },
-    [partitionRetiredVideos, syncCatalogForNominationVideos],
+    [partitionRetiredVideos],
   );
 
   const handleSaveTrackMetadata = useCallback(
