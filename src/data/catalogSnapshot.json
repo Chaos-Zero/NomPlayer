@@ -1,6 +1,6 @@
 {
-  "exportedAt": "2026-04-14T09:36:47.139Z",
-  "totalCount": 10428,
+  "exportedAt": "2026-04-15T09:30:02.413Z",
+  "totalCount": 10427,
   "tracks": [
     {
       "track_id": "001d9edc-c444-4e75-92e1-d3a2ccba46d7",
@@ -9604,7 +9604,7 @@
       "updated_at": "2026-03-31T19:26:32.547311+00:00",
       "tournaments": [],
       "tournament_count": 0,
-      "support_count_1": 1,
+      "support_count_1": 0,
       "support_count_2": 0,
       "support_count_3": 0,
       "has_result": false
@@ -19009,10 +19009,10 @@
       "source_external_id": "ei8H5iATrgg",
       "source_url": "https://www.youtube.com/watch?v=ei8H5iATrgg",
       "submitted_url": "https://www.youtube.com/watch?v=ei8H5iATrgg",
-      "source_title": "Chipzel - 7 No Time To Dice",
+      "source_title": "Dicey Dungeons: Reunion - No Time To Dice",
       "source_channel_title": "chipzel",
       "source_thumbnail_url": "https://i.ytimg.com/vi/ei8H5iATrgg/mqdefault.jpg",
-      "last_fetched_at": "2026-03-29T01:59:44.717862+00:00",
+      "last_fetched_at": "2026-04-15T08:48:07.650051+00:00",
       "updated_at": "2026-03-18T23:16:28.085199+00:00",
       "tournaments": [],
       "tournament_count": 0,
@@ -30709,10 +30709,10 @@
       "source_external_id": "EGXPAoyP_cg",
       "source_url": "https://www.youtube.com/watch?v=EGXPAoyP_cg",
       "submitted_url": "https://www.youtube.com/watch?v=EGXPAoyP_cg",
-      "source_title": "Chris Christodoulou - The Rain Formerly Known as Purple  | Risk of Rain 2 (2020)",
+      "source_title": "Risk of Rain 2 - The Rain Formerly Known as Purple",
       "source_channel_title": null,
       "source_thumbnail_url": "https://i.ytimg.com/vi/EGXPAoyP_cg/mqdefault.jpg",
-      "last_fetched_at": "2026-04-13T16:25:30.572256+00:00",
+      "last_fetched_at": "2026-04-15T08:23:49.772206+00:00",
       "updated_at": "2026-03-18T03:07:52.100295+00:00",
       "tournaments": [
         {
@@ -42121,12 +42121,12 @@
       "source_title": "Satisfactory - Nostalgium",
       "source_channel_title": "Bartek888_888",
       "source_thumbnail_url": "https://i.ytimg.com/vi/PPS7fiGA1iI/mqdefault.jpg",
-      "last_fetched_at": "2026-04-11T10:43:08.822581+00:00",
+      "last_fetched_at": "2026-04-15T08:48:07.650051+00:00",
       "updated_at": "2026-03-18T23:16:28.069242+00:00",
       "tournaments": [],
       "tournament_count": 0,
       "support_count_1": 1,
-      "support_count_2": 1,
+      "support_count_2": 0,
       "support_count_3": 0,
       "has_result": false
     },
@@ -45080,7 +45080,7 @@
       "source_title": "Astro Bot - Marine Serene",
       "source_channel_title": null,
       "source_thumbnail_url": "https://i.ytimg.com/vi/TZ9x6FP8BNw/mqdefault.jpg",
-      "last_fetched_at": "2026-04-11T10:43:08.822581+00:00",
+      "last_fetched_at": "2026-04-14T23:48:37.739116+00:00",
       "updated_at": "2026-03-18T03:04:35.441991+00:00",
       "tournaments": [
         {
@@ -50614,7 +50614,7 @@
       "updated_at": "2026-03-31T19:26:32.816605+00:00",
       "tournaments": [],
       "tournament_count": 0,
-      "support_count_1": 1,
+      "support_count_1": 0,
       "support_count_2": 0,
       "support_count_3": 0,
       "has_result": false
@@ -71561,10 +71561,10 @@
       "source_external_id": "HwmxrIwetyU",
       "source_url": "https://www.youtube.com/watch?v=HwmxrIwetyU",
       "submitted_url": "https://www.youtube.com/watch?v=HwmxrIwetyU",
-      "source_title": "Red Carpet Extend-o-matic - World of Goo",
+      "source_title": "World of Goo - Red Carpet Extend-o-Matic",
       "source_channel_title": "Rickkity-T",
       "source_thumbnail_url": "https://i.ytimg.com/vi/HwmxrIwetyU/mqdefault.jpg",
-      "last_fetched_at": "2026-04-11T19:26:32.422903+00:00",
+      "last_fetched_at": "2026-04-15T08:35:24.608209+00:00",
       "updated_at": "2026-03-18T03:00:00.928071+00:00",
       "tournaments": [
         {
@@ -87737,7 +87737,7 @@
       "updated_at": "2026-03-30T03:32:07.379143+00:00",
       "tournaments": [],
       "tournament_count": 0,
-      "support_count_1": 1,
+      "support_count_1": 0,
       "support_count_2": 0,
       "support_count_3": 0,
       "has_result": false
@@ -89178,43 +89178,6 @@
           "is_retired": false,
           "highest_round": null,
           "sequence_number": 9,
-          "appearance_label": null
-        }
-      ],
-      "tournament_count": 1,
-      "support_count_1": 0,
-      "support_count_2": 0,
-      "support_count_3": 0,
-      "has_result": false
-    },
-    {
-      "track_id": "37741c6e-c140-40a5-b720-490a00a04ee3",
-      "game_title": "Tekken Tag Tournament 2",
-      "track_title": "School (After School Mix)",
-      "display_title": "Tekken Tag Tournament 2 - School (After School Mix)",
-      "metadata_status": "confirmed",
-      "is_retired": false,
-      "retired_by_tournament_slug": null,
-      "retired_by_tournament_name": null,
-      "primary_source_id": "f4d2510c-9e26-4f9c-a9a3-443879917c8b",
-      "provider": "youtube",
-      "source_external_id": "hnsGhwqpcUs",
-      "source_url": "https://www.youtube.com/watch?v=hnsGhwqpcUs",
-      "submitted_url": "https://www.youtube.com/watch?v=hnsGhwqpcUs",
-      "source_title": null,
-      "source_channel_title": null,
-      "source_thumbnail_url": null,
-      "last_fetched_at": null,
-      "updated_at": "2026-03-18T03:04:35.441991+00:00",
-      "tournaments": [
-        {
-          "name": "VGMC 18",
-          "slug": "vgmc-18",
-          "notes": null,
-          "placement": null,
-          "is_retired": false,
-          "highest_round": null,
-          "sequence_number": 18,
           "appearance_label": null
         }
       ],
@@ -185515,7 +185478,7 @@
       "source_title": "Tatsunoko vs. Capcom: Ultimate All-Stars - Orbital Ring Systems Cargo Bay",
       "source_channel_title": "PikawilMusic",
       "source_thumbnail_url": "https://i.ytimg.com/vi/bp1ZkMq26A8/mqdefault.jpg",
-      "last_fetched_at": "2026-04-11T10:43:08.822581+00:00",
+      "last_fetched_at": "2026-04-15T08:48:07.650051+00:00",
       "updated_at": "2026-03-18T23:16:28.098775+00:00",
       "tournaments": [],
       "tournament_count": 0,
@@ -212336,7 +212299,7 @@
         }
       ],
       "tournament_count": 3,
-      "support_count_1": 1,
+      "support_count_1": 0,
       "support_count_2": 0,
       "support_count_3": 0,
       "has_result": true
@@ -228501,7 +228464,7 @@
         }
       ],
       "tournament_count": 1,
-      "support_count_1": 1,
+      "support_count_1": 0,
       "support_count_2": 0,
       "support_count_3": 0,
       "has_result": true
@@ -243049,10 +243012,10 @@
       "source_external_id": "MiUjLJJligs",
       "source_url": "https://www.youtube.com/watch?v=MiUjLJJligs",
       "submitted_url": "https://www.youtube.com/watch?v=MiUjLJJligs",
-      "source_title": "Jetpack Joyride OST 🎼🎹 - Main Theme",
+      "source_title": "Jetpack Joyride - Main Theme",
       "source_channel_title": "Halfbrick Studios",
       "source_thumbnail_url": "https://i.ytimg.com/vi/MiUjLJJligs/mqdefault.jpg",
-      "last_fetched_at": "2026-03-29T01:59:44.717862+00:00",
+      "last_fetched_at": "2026-04-15T08:48:07.650051+00:00",
       "updated_at": "2026-03-18T23:16:28.080083+00:00",
       "tournaments": [],
       "tournament_count": 0,
@@ -247484,7 +247447,7 @@
       "tournaments": [],
       "tournament_count": 0,
       "support_count_1": 0,
-      "support_count_2": 1,
+      "support_count_2": 0,
       "support_count_3": 0,
       "has_result": false
     },
@@ -250412,7 +250375,7 @@
       "source_title": "The Legend of Zelda: The Minish Cap - Minish Village",
       "source_channel_title": null,
       "source_thumbnail_url": "https://i.ytimg.com/vi/BbQgK8DIK3M/mqdefault.jpg",
-      "last_fetched_at": "2026-04-11T10:43:08.822581+00:00",
+      "last_fetched_at": "2026-04-15T08:48:07.650051+00:00",
       "updated_at": "2026-04-03T08:13:10.815416+00:00",
       "tournaments": [],
       "tournament_count": 0,
@@ -261993,9 +261956,20 @@
       "source_channel_title": null,
       "source_thumbnail_url": "https://i.ytimg.com/vi/1knbBEEPpig/mqdefault.jpg",
       "last_fetched_at": "2026-03-26T23:37:51.265996+00:00",
-      "updated_at": "2026-03-26T23:39:08.653897+00:00",
-      "tournaments": [],
-      "tournament_count": 0,
+      "updated_at": "2026-04-14T19:32:20.172455+00:00",
+      "tournaments": [
+        {
+          "name": "VGMC 18",
+          "slug": "vgmc-18",
+          "notes": null,
+          "placement": null,
+          "is_retired": false,
+          "highest_round": null,
+          "sequence_number": 18,
+          "appearance_label": null
+        }
+      ],
+      "tournament_count": 1,
       "support_count_1": 0,
       "support_count_2": 0,
       "support_count_3": 0,
@@ -267615,7 +267589,7 @@
       "source_title": "Hyper Light Breaker - Apocalyptic Blues Paean",
       "source_channel_title": null,
       "source_thumbnail_url": "https://i.ytimg.com/vi/qfSRCzeiQ0I/mqdefault.jpg",
-      "last_fetched_at": "2026-04-11T10:43:08.822581+00:00",
+      "last_fetched_at": "2026-04-15T08:48:07.650051+00:00",
       "updated_at": "2026-04-03T00:51:06.115179+00:00",
       "tournaments": [],
       "tournament_count": 0,
@@ -287979,7 +287953,7 @@
       "updated_at": "2026-03-29T21:35:49.036245+00:00",
       "tournaments": [],
       "tournament_count": 0,
-      "support_count_1": 1,
+      "support_count_1": 0,
       "support_count_2": 0,
       "support_count_3": 0,
       "has_result": false
@@ -290043,7 +290017,7 @@
         }
       ],
       "tournament_count": 2,
-      "support_count_1": 1,
+      "support_count_1": 0,
       "support_count_2": 0,
       "support_count_3": 0,
       "has_result": true
@@ -301252,7 +301226,7 @@
       "source_title": "War of Brains - FEEL the POWER in YOUR SOUL",
       "source_channel_title": null,
       "source_thumbnail_url": "https://i.ytimg.com/vi/p8efRFhEcuQ/mqdefault.jpg",
-      "last_fetched_at": "2026-04-03T11:28:04.447265+00:00",
+      "last_fetched_at": "2026-04-15T08:41:19.042211+00:00",
       "updated_at": "2026-03-18T03:02:26.519621+00:00",
       "tournaments": [
         {
@@ -301267,7 +301241,7 @@
         }
       ],
       "tournament_count": 1,
-      "support_count_1": 1,
+      "support_count_1": 0,
       "support_count_2": 0,
       "support_count_3": 0,
       "has_result": true
@@ -306984,7 +306958,7 @@
       ],
       "tournament_count": 1,
       "support_count_1": 0,
-      "support_count_2": 1,
+      "support_count_2": 0,
       "support_count_3": 0,
       "has_result": false
     },
@@ -333485,7 +333459,7 @@
       "source_title": "Mario Kart World - Sprawling Savanna",
       "source_channel_title": "WiiPlayz",
       "source_thumbnail_url": "https://i.ytimg.com/vi/qRwq4bgqwfo/mqdefault.jpg",
-      "last_fetched_at": "2026-04-11T10:43:08.822581+00:00",
+      "last_fetched_at": "2026-04-14T23:48:37.739116+00:00",
       "updated_at": "2026-03-19T00:06:07.92681+00:00",
       "tournaments": [],
       "tournament_count": 0,
@@ -349608,10 +349582,10 @@
       "source_external_id": "0eVirfGyPCA",
       "source_url": "https://www.youtube.com/watch?v=0eVirfGyPCA",
       "submitted_url": "https://www.youtube.com/watch?v=0eVirfGyPCA",
-      "source_title": "Los Manglares",
+      "source_title": "Guacamelee! 2 - Los Manglares",
       "source_channel_title": null,
       "source_thumbnail_url": "https://i.ytimg.com/vi/0eVirfGyPCA/mqdefault.jpg",
-      "last_fetched_at": "2026-04-03T11:28:04.447265+00:00",
+      "last_fetched_at": "2026-04-15T08:41:43.516987+00:00",
       "updated_at": "2026-03-29T13:09:09.098737+00:00",
       "tournaments": [],
       "tournament_count": 0,
@@ -360212,7 +360186,7 @@
       "source_title": "Ape Escape 3 - Mount Amazing 2",
       "source_channel_title": "Soichi Terada - Topic",
       "source_thumbnail_url": "https://i.ytimg.com/vi/XYi-zuFRGUE/mqdefault.jpg",
-      "last_fetched_at": "2026-04-11T10:43:08.822581+00:00",
+      "last_fetched_at": "2026-04-15T08:48:07.650051+00:00",
       "updated_at": "2026-03-18T23:16:28.131241+00:00",
       "tournaments": [],
       "tournament_count": 0,
@@ -372119,7 +372093,7 @@
         }
       ],
       "tournament_count": 1,
-      "support_count_1": 1,
+      "support_count_1": 0,
       "support_count_2": 0,
       "support_count_3": 0,
       "has_result": true
@@ -390224,10 +390198,10 @@
       "source_external_id": "Gz0fAz9n_Os",
       "source_url": "https://www.youtube.com/watch?v=Gz0fAz9n_Os",
       "submitted_url": "https://www.youtube.com/watch?v=Gz0fAz9n_Os",
-      "source_title": "Plok! SNES Music - Beach",
+      "source_title": "Plok - Beach",
       "source_channel_title": null,
       "source_thumbnail_url": "https://i.ytimg.com/vi/Gz0fAz9n_Os/mqdefault.jpg",
-      "last_fetched_at": "2026-04-13T16:25:30.572256+00:00",
+      "last_fetched_at": "2026-04-15T08:23:31.562354+00:00",
       "updated_at": "2026-03-29T21:46:57.472389+00:00",
       "tournaments": [
         {
@@ -410525,7 +410499,7 @@
       "source_title": "Fall Guys - Fall 'N' Roll",
       "source_channel_title": "Jukio Kallio - Topic",
       "source_thumbnail_url": "https://i.ytimg.com/vi/LL70vTa0E2g/mqdefault.jpg",
-      "last_fetched_at": "2026-04-11T10:43:08.822581+00:00",
+      "last_fetched_at": "2026-04-15T08:48:07.650051+00:00",
       "updated_at": "2026-03-18T23:24:58.101349+00:00",
       "tournaments": [],
       "tournament_count": 0,
@@ -413407,7 +413381,7 @@
       "source_title": "Tekken 8 - Volcanic Bomb (Climax)",
       "source_channel_title": "TEKKEN Project - Topic",
       "source_thumbnail_url": "https://i.ytimg.com/vi/zKXHxdShsr0/mqdefault.jpg",
-      "last_fetched_at": "2026-04-11T10:43:08.822581+00:00",
+      "last_fetched_at": "2026-04-15T08:48:07.650051+00:00",
       "updated_at": "2026-03-18T23:16:27.80898+00:00",
       "tournaments": [],
       "tournament_count": 0,
@@ -416582,14 +416556,14 @@
       "source_external_id": "DOnr8T7mb4g",
       "source_url": "https://www.youtube.com/watch?v=DOnr8T7mb4g",
       "submitted_url": "https://www.youtube.com/watch?v=DOnr8T7mb4g",
-      "source_title": "やんやん",
+      "source_title": "Once Upon A KATAMARI - YangYang",
       "source_channel_title": null,
       "source_thumbnail_url": "https://i.ytimg.com/vi/DOnr8T7mb4g/mqdefault.jpg",
-      "last_fetched_at": "2026-04-13T16:25:30.572256+00:00",
+      "last_fetched_at": "2026-04-15T07:56:30.099662+00:00",
       "updated_at": "2026-03-29T21:34:05.486731+00:00",
       "tournaments": [],
       "tournament_count": 0,
-      "support_count_1": 1,
+      "support_count_1": 0,
       "support_count_2": 0,
       "support_count_3": 1,
       "has_result": false
