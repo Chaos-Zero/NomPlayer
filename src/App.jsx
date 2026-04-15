@@ -552,6 +552,10 @@ export default function App() {
   const pendingPreferredUsernameRef = useRef('');
   const pendingGamefaqsUsernameRef = useRef('');
   const lastSyncedPlayerStateRef = useRef('');
+  const lastSyncedNominationListRef = useRef(null);
+  const lastSyncedSupportListRef = useRef(null);
+  const lastSyncedPlaylistRef = useRef(null);
+  const lastSyncedCustomPlaylistsRef = useRef(null);
   const hydrateAuthenticatedUserRef = useRef(null);
   const loadedListenStatusVideoIdsRef = useRef(new Set());
   const inFlightListenStatusVideoIdsRef = useRef(new Set());
@@ -921,10 +925,23 @@ export default function App() {
               supabase,
               userId,
               queuedPlayerState,
+              {
+                nominationList: lastSyncedNominationListRef.current,
+                supportList: lastSyncedSupportListRef.current,
+                playlist: lastSyncedPlaylistRef.current,
+                customPlaylists: lastSyncedCustomPlaylistsRef.current,
+              },
             );
 
             if (authUserIdRef.current === userId) {
               lastSyncedPlayerStateRef.current = JSON.stringify(savedSnapshot);
+              lastSyncedNominationListRef.current =
+                savedSnapshot.nominationList ?? null;
+              lastSyncedSupportListRef.current =
+                savedSnapshot.supportList ?? null;
+              lastSyncedPlaylistRef.current = savedSnapshot.playlist ?? null;
+              lastSyncedCustomPlaylistsRef.current =
+                savedSnapshot.customPlaylists ?? null;
             }
           } catch (error) {
             unsavedPlayerState = queuedPlayerState;
@@ -1966,6 +1983,12 @@ export default function App() {
         stateToPersist.nominationList = hydratedState.nominationList;
 
         lastSyncedPlayerStateRef.current = JSON.stringify(stateToPersist);
+        lastSyncedNominationListRef.current =
+          hydratedState.nominationList ?? null;
+        lastSyncedSupportListRef.current = hydratedState.supportList ?? null;
+        lastSyncedPlaylistRef.current = hydratedState.playlist ?? null;
+        lastSyncedCustomPlaylistsRef.current =
+          hydratedState.customPlaylists ?? null;
         const pendingGuestImportState = pendingGuestImportStateRef.current;
         pendingGuestImportStateRef.current = null;
 
@@ -2046,6 +2069,10 @@ export default function App() {
         pendingPreferredUsernameRef.current = '';
         pendingGamefaqsUsernameRef.current = '';
         lastSyncedPlayerStateRef.current = '';
+        lastSyncedNominationListRef.current = null;
+        lastSyncedSupportListRef.current = null;
+        lastSyncedPlaylistRef.current = null;
+        lastSyncedCustomPlaylistsRef.current = null;
         setUserProfile(null);
         setIsSettingsOpen(false);
         setGuestImportState(null);
@@ -3842,6 +3869,29 @@ export default function App() {
     [partitionRetiredVideos],
   );
 
+  const handleToggleNominationFromPlaylist = useCallback(
+    async (videoOrVideos) => {
+      if (!videoOrVideos) return;
+      const videos = Array.isArray(videoOrVideos)
+        ? videoOrVideos
+        : [videoOrVideos];
+      if (videos.length === 0) return;
+
+      const result = await handleAddManyToNominationList(videos);
+
+      if (result.addedCount > 0) {
+        showSupportToast(
+          result.addedCount === 1
+            ? 'Nominated!'
+            : `Added ${result.addedCount} nominations!`,
+        );
+      } else if (result.blockedRetiredCount > 0 && result.addedCount === 0) {
+        showRetiredSongToast();
+      }
+    },
+    [handleAddManyToNominationList, showSupportToast, showRetiredSongToast],
+  );
+
   const handleSaveTrackMetadata = useCallback(
     async (metadataUpdates) => {
       // 1. Process updates and identify YouTube ID changes
@@ -4581,6 +4631,7 @@ export default function App() {
         }
         isNominated={isCurrentVideoNominated}
         onToggleSupport={handleToggleSupportFromPlaylist}
+        onToggleNomination={handleToggleNominationFromPlaylist}
         supportLevel={currentSupportLevel}
         isCurrentVideoInPlaylist={isCurrentVideoInPlaylist}
         onAddToPlaylist={handleQueueFromSupportList}
@@ -4708,20 +4759,20 @@ export default function App() {
               className={`btn btn-icon detached-footer-support-btn${currentSupportClassName}`}
               type="button"
               onClick={(event) => {
-                if (!isCurrentVideoSupported) {
-                  handleToggleSupportFromPlaylist(currentVideo);
-                  const rect = event.currentTarget.getBoundingClientRect();
-                  setSupportLevelDropdown({
-                    video: currentVideo,
-                    position: {
-                      top: rect.top,
-                      left: rect.left + rect.width / 2,
-                    },
-                    direction: 'up',
-                  });
-                } else {
-                  handleToggleSupportFromPlaylist(currentVideo);
-                }
+                if (!currentVideo) return;
+                const rect = event.currentTarget.getBoundingClientRect();
+                setSupportLevelDropdown({
+                  video: {
+                    ...currentVideo,
+                    supportLevel: currentSupportLevel || 1,
+                  },
+                  position: {
+                    top: rect.top,
+                    left: rect.left + rect.width / 2,
+                  },
+                  direction: 'up',
+                  showRemove: isCurrentVideoSupported,
+                });
               }}
               title={currentSupportTooltip}
               aria-label={currentSupportLabel}
@@ -4821,6 +4872,7 @@ export default function App() {
           isCurrentVideoNominated={isCurrentVideoNominated}
           currentSupportLevel={currentSupportLevel}
           onToggleCurrentVideoSupport={handleToggleSupportFromPlaylist}
+          onToggleNomination={handleToggleNominationFromPlaylist}
           isCurrentVideoInPlaylist={isCurrentVideoInPlaylist}
           onAddToPlaylist={handleQueueFromSupportList}
           onLoad={handleLoad}
@@ -4865,6 +4917,7 @@ export default function App() {
               onAddToPlaylist={handleQueueFromSupportList}
               onPlayNow={handlePlayNowFromSupportList}
               onToggleSupport={handleToggleSupportFromPlaylist}
+              onToggleNomination={handleToggleNominationFromPlaylist}
               onOpenSupportDropdown={(video, position) =>
                 setSupportLevelDropdown({
                   video,
@@ -4922,6 +4975,7 @@ export default function App() {
               onAddToPlaylist={(videos) => handleQueueFromSupportList(videos)}
               onRemoveFromPlaylist={handleRemoveFromPlaylist}
               onToggleSupport={handleToggleSupportFromPlaylist}
+              onToggleNomination={handleToggleNominationFromPlaylist}
               onShowToast={handleShowDashboardToast}
               authUser={authUser}
               userProfile={userProfile}
@@ -4987,6 +5041,7 @@ export default function App() {
               nominationList={nominationList}
               listenedStatusById={listenedStatusById}
               onToggleSupport={handleToggleSupportFromPlaylist}
+              onToggleNomination={handleToggleNominationFromPlaylist}
               onOpenSupportDropdown={(video, position) =>
                 setSupportLevelDropdown({
                   video,
@@ -5061,6 +5116,7 @@ export default function App() {
           onAddToPlaylist={handleQueueFromSupportList}
           onRemove={handleRemoveFromSupportList}
           onToggleSupport={handleToggleSupportFromPlaylist}
+          onToggleNomination={handleToggleNominationFromPlaylist}
           title="Support list"
           titleIcon="🤝"
           tone="support"
@@ -5104,6 +5160,7 @@ export default function App() {
           onAddToPlaylist={handleQueueFromSupportList}
           onRemove={handleRemoveFromNominationList}
           onToggleSupport={handleToggleSupportFromPlaylist}
+          onToggleNomination={handleToggleNominationFromPlaylist}
           title="Nominations"
           titleIcon="★"
           tone="nomination"

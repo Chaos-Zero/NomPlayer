@@ -809,6 +809,7 @@ export default function HomePage({
   onOpenPlaylist,
   onOpenNominationsAdding,
   onToggleSupport,
+  onToggleNomination,
 
   onOpenSupportDropdown,
   supportStatusById = {},
@@ -1628,6 +1629,8 @@ export default function HomePage({
           width: 0,
           height: 0,
         });
+      } else if (action === 'nominate') {
+        onToggleNomination?.(resolved);
       } else if (action === 'metadata') {
         onUpdateMetadata?.(resolved);
       }
@@ -1637,6 +1640,7 @@ export default function HomePage({
       onAddToPlaylist,
       onShowToast,
       onToggleSupport,
+      onToggleNomination,
       onOpenSupportDropdown,
       onShowComments,
       onUpdateMetadata,
@@ -1670,12 +1674,15 @@ export default function HomePage({
           width: 0,
           height: 0,
         });
+      } else if (action === 'nominate') {
+        onToggleNomination?.(resolved);
       }
     },
     [
       onPlayNow,
       onAddToPlaylist,
       onToggleSupport,
+      onToggleNomination,
       onOpenSupportDropdown,
       onShowComments,
       resolveTrack,
@@ -2190,6 +2197,21 @@ export default function HomePage({
               </span>
             </button>
           )}
+          {!supportStatusById[discoveryContextMenu.candidate.videoId]
+            ?.isNominated && (
+            <button
+              className="playlist-context-menu-item"
+              onClick={(e) =>
+                handleDiscoveryContextAction(
+                  'nominate',
+                  discoveryContextMenu.candidate,
+                  e,
+                )
+              }
+            >
+              <span>Add to Nominations</span>
+            </button>
+          )}
           <button
             className="playlist-context-menu-item"
             onClick={(e) =>
@@ -2200,7 +2222,7 @@ export default function HomePage({
               )
             }
           >
-            <span>View activity and comment</span>
+            <span>View activity and comments</span>
           </button>
           {authUser && (
             <button
@@ -2272,6 +2294,21 @@ export default function HomePage({
                 : 'Add to support list'}
             </span>
           </button>
+          {!supportStatusById[nominationContextMenu.video.videoId]
+            ?.isNominated && (
+            <button
+              className="playlist-context-menu-item"
+              onClick={(e) =>
+                handleNominationContextAction(
+                  'nominate',
+                  e,
+                  nominationContextMenu.video,
+                )
+              }
+            >
+              <span>Add to Nominations</span>
+            </button>
+          )}
           <button
             className="playlist-context-menu-item"
             onClick={(e) =>

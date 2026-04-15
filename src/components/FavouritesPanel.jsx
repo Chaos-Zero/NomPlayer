@@ -22,6 +22,7 @@ import YouTubeIcon from './YouTubeIcon.jsx';
 import {
   HeartIcon,
   LockIcon,
+  StarIcon,
   SpeechBubbleIcon,
   XIcon,
   SortByRatingIcon,
@@ -297,6 +298,7 @@ export function SortableSupportItem({
   onDoubleQueue,
   onOpenContextMenu,
   onOpenSupportDropdown,
+  onToggleNomination,
   itemAriaPrefix,
   removeButtonTitle,
   removeButtonAriaLabel,
@@ -344,6 +346,7 @@ export function SortableSupportItem({
         itemAriaPrefix={itemAriaPrefix}
         removeButtonTitle={removeButtonTitle}
         removeButtonAriaLabel={removeButtonAriaLabel}
+        onToggleNomination={onToggleNomination}
         onOpenSupportDropdown={onOpenSupportDropdown}
         tone={tone}
         hasComments={hasComments}
@@ -360,6 +363,7 @@ export default function FavouritesPanel({
   onAddToPlaylist,
   onRemove,
   onToggleSupport,
+  onToggleNomination,
   onExport,
   onSavePlaylist,
   isOpen = true,
@@ -749,6 +753,7 @@ export default function FavouritesPanel({
                 onRemove={onRemove}
                 onDoubleQueue={handleDoubleQueue}
                 onOpenContextMenu={handleOpenContextMenu}
+                onToggleNomination={onToggleNomination}
                 selectionMode={true}
                 isSelected={selectedIdSet.has(video.videoId)}
                 onToggleSelected={handleToggleSelected}
@@ -778,6 +783,7 @@ export default function FavouritesPanel({
                     onRemove={onRemove}
                     onDoubleQueue={handleDoubleQueue}
                     onOpenContextMenu={handleOpenContextMenu}
+                    onToggleNomination={onToggleNomination}
                     onToggleSupport={onToggleSupport}
                     onOpenSupportDropdown={onOpenSupportDropdown}
                     itemAriaPrefix={itemAriaPrefix}
@@ -901,6 +907,7 @@ export default function FavouritesPanel({
                 Update Support
               </button>
             )}
+
             <button
               className="support-context-menu-item"
               type="button"
@@ -918,6 +925,20 @@ export default function FavouritesPanel({
             >
               {contextRemoveLabel}
             </button>
+
+            {tone !== 'nomination' && onToggleNomination && (
+              <button
+                className="support-context-menu-item"
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  onToggleNomination(contextMenu.videos);
+                  setContextMenu(null);
+                }}
+              >
+                Add to Nominations
+              </button>
+            )}
             <div
               style={{
                 height: '1px',

@@ -374,6 +374,7 @@ export default function PlaylistSidebar({
   nominationList = [],
   listenedStatusById = {},
   onToggleSupport,
+  onToggleNomination,
   onRemoveFromPlaylist,
   onAddDirectItems = () => 0,
   retiredVideoIds = new Set(),
@@ -1226,9 +1227,7 @@ export default function PlaylistSidebar({
                   setContextMenu(null);
                 }}
               >
-                <span style={{ color: 'var(--support-pink)', marginRight: 8 }}>
-                  ♥
-                </span>{' '}
+                <span style={{ color: 'var(--gold)', marginRight: 8 }}>♥♥</span>{' '}
                 Set Likely Support
               </button>
               <button
@@ -1240,8 +1239,8 @@ export default function PlaylistSidebar({
                   setContextMenu(null);
                 }}
               >
-                <span style={{ color: 'var(--support-gold)', marginRight: 8 }}>
-                  🔒
+                <span style={{ color: 'var(--gold)', marginRight: 8 }}>
+                  ♥♥♥
                 </span>{' '}
                 Set Definite Support
               </button>
@@ -1264,6 +1263,20 @@ export default function PlaylistSidebar({
                 Remove Support
               </button>
             </>
+          )}
+
+          {!nominationIds.has(contextMenu.video.videoId) && (
+            <button
+              className="playlist-context-menu-item"
+              type="button"
+              role="menuitem"
+              onClick={() => {
+                onToggleNomination(contextMenu.video);
+                setContextMenu(null);
+              }}
+            >
+              Add to Nominations
+            </button>
           )}
           {activePlaylistView.type === 'community' && (
             <button

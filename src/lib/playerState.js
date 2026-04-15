@@ -531,7 +531,18 @@ export async function fetchUserPlayerState(
   return normalizePersistedPlayerState(data?.state ?? {}, normalizeOptions);
 }
 
-export async function saveUserPlayerState(supabase, userId, state) {
+function listChanged(current, previous) {
+  if (previous === null) return true; // no cache yet, always sync
+  if (current === previous) return false; // same reference, unchanged
+  return JSON.stringify(current) !== JSON.stringify(previous);
+}
+
+export async function saveUserPlayerState(
+  supabase,
+  userId,
+  state,
+  previousLists = {},
+) {
   const snapshot = createPersistedPlayerState(state);
   const { error } = await supabase.from('user_player_states').upsert(
     {
@@ -547,18 +558,47 @@ export async function saveUserPlayerState(supabase, userId, state) {
     throw error;
   }
 
-  // Sync relational database states as a side-effect
-  if (snapshot.playlist) {
-    saveActiveQueue(supabase, userId, snapshot.playlist).catch((err) => console.error('Failed to sync active queue', err));
+  // Sync relational tables only for lists that have changed
+  if (
+    snapshot.playlist &&
+    listChanged(snapshot.playlist, previousLists.playlist ?? null)
+  ) {
+    saveActiveQueue(
+      supabase,
+      userId,
+      snapshot.playlist,
+      previousLists.playlist ?? null,
+    ).catch((err) => console.error('Failed to sync active queue', err));
   }
-  if (snapshot.customPlaylists) {
-    syncCustomPlaylists(supabase, userId, snapshot.customPlaylists).catch((err) => console.error('Failed to sync custom playlists', err));
+  if (
+    snapshot.customPlaylists &&
+    listChanged(snapshot.customPlaylists, previousLists.customPlaylists ?? null)
+  ) {
+    syncCustomPlaylists(supabase, userId, snapshot.customPlaylists).catch(
+      (err) => console.error('Failed to sync custom playlists', err),
+    );
   }
-  if (snapshot.nominationList) {
-    syncNominations(supabase, userId, snapshot.nominationList).catch((err) => console.error('Failed to sync nominations', err));
+  if (
+    snapshot.nominationList &&
+    listChanged(snapshot.nominationList, previousLists.nominationList ?? null)
+  ) {
+    syncNominations(
+      supabase,
+      userId,
+      snapshot.nominationList,
+      previousLists.nominationList ?? null,
+    ).catch((err) => console.error('Failed to sync nominations', err));
   }
-  if (snapshot.supportList) {
-    syncSupports(supabase, userId, snapshot.supportList).catch((err) => console.error('Failed to sync supports', err));
+  if (
+    snapshot.supportList &&
+    listChanged(snapshot.supportList, previousLists.supportList ?? null)
+  ) {
+    syncSupports(
+      supabase,
+      userId,
+      snapshot.supportList,
+      previousLists.supportList ?? null,
+    ).catch((err) => console.error('Failed to sync supports', err));
   }
 
   return snapshot;
@@ -779,7 +819,12 @@ export async function fetchUserHydratedState(supabase, userId) {
   return data;
 }
 
-export async function saveTrackNomination(supabase, userId, video, isNominated) {
+export async function saveTrackNomination(
+  supabase,
+  userId,
+  video,
+  isNominated,
+) {
   if (!video.trackId) return;
 
   if (!isNominated) {
@@ -802,20 +847,33 @@ export async function saveTrackNomination(supabase, userId, video, isNominated) 
   }
 }
 
-export async function syncNominations(supabase, userId, nominationList) {
-  const currentTrackIds = nominationList
-    .filter((v) => v.trackId != null)
-    .map((v) => v.trackId);
+export async function syncNominations(
+  supabase,
+  userId,
+  nominationList,
+  previousList = null,
+) {
+  const currentEntries = nominationList.filter((v) => v.trackId != null);
+  const currentTrackIds = currentEntries.map((v) => v.trackId);
   const currentSet = new Set(currentTrackIds);
 
-  const { data: existingNoms } = await supabase
-    .from('track_nominations')
-    .select('track_id')
-    .eq('user_id', userId);
-
-  const trackIdsToDelete = (existingNoms || [])
-    .filter((n) => !currentSet.has(n.track_id))
-    .map((n) => n.track_id);
+  let trackIdsToDelete;
+  if (previousList !== null) {
+    // Use cached previous state — no SELECT needed
+    const prevSet = new Set(
+      previousList.filter((v) => v.trackId != null).map((v) => v.trackId),
+    );
+    trackIdsToDelete = [...prevSet].filter((id) => !currentSet.has(id));
+  } else {
+    // First sync after login — fall back to fetching from DB
+    const { data: existingNoms } = await supabase
+      .from('track_nominations')
+      .select('track_id')
+      .eq('user_id', userId);
+    trackIdsToDelete = (existingNoms || [])
+      .filter((n) => !currentSet.has(n.track_id))
+      .map((n) => n.track_id);
+  }
 
   if (trackIdsToDelete.length > 0) {
     await supabase
@@ -825,11 +883,28 @@ export async function syncNominations(supabase, userId, nominationList) {
       .in('track_id', trackIdsToDelete);
   }
 
-  const tracksToUpsert = currentTrackIds.map((id, index) => ({
-    user_id: userId,
-    track_id: id,
-    order_index: index,
-  }));
+  // Only upsert rows that are new or have changed order_index
+  const prevIndexMap =
+    previousList !== null
+      ? new Map(
+          previousList
+            .filter((v) => v.trackId != null)
+            .map((v, i) => [v.trackId, i]),
+        )
+      : null;
+
+  const tracksToUpsert = currentTrackIds
+    .map((id, index) => ({ id, index }))
+    .filter(({ id, index }) => {
+      if (prevIndexMap === null) return true; // first sync, upsert everything
+      if (!prevIndexMap.has(id)) return true; // new entry
+      return prevIndexMap.get(id) !== index; // order changed
+    })
+    .map(({ id, index }) => ({
+      user_id: userId,
+      track_id: id,
+      order_index: index,
+    }));
 
   if (tracksToUpsert.length > 0) {
     await supabase
@@ -838,20 +913,35 @@ export async function syncNominations(supabase, userId, nominationList) {
   }
 }
 
-export async function syncSupports(supabase, userId, supportList) {
+export async function syncSupports(
+  supabase,
+  userId,
+  supportList,
+  previousList = null,
+) {
   const validSupports = supportList.filter(
     (v) => v.trackId != null && v.supportLevel,
   );
   const currentSet = new Set(validSupports.map((v) => v.trackId));
 
-  const { data: existingSups } = await supabase
-    .from('track_supports')
-    .select('track_id')
-    .eq('user_id', userId);
-
-  const trackIdsToDelete = (existingSups || [])
-    .filter((s) => !currentSet.has(s.track_id))
-    .map((s) => s.track_id);
+  let trackIdsToDelete;
+  if (previousList !== null) {
+    // Use cached previous state — no SELECT needed
+    const prevValid = previousList.filter(
+      (v) => v.trackId != null && v.supportLevel,
+    );
+    const prevSet = new Set(prevValid.map((v) => v.trackId));
+    trackIdsToDelete = [...prevSet].filter((id) => !currentSet.has(id));
+  } else {
+    // First sync after login — fall back to fetching from DB
+    const { data: existingSups } = await supabase
+      .from('track_supports')
+      .select('track_id')
+      .eq('user_id', userId);
+    trackIdsToDelete = (existingSups || [])
+      .filter((s) => !currentSet.has(s.track_id))
+      .map((s) => s.track_id);
+  }
 
   if (trackIdsToDelete.length > 0) {
     await supabase
@@ -861,12 +951,30 @@ export async function syncSupports(supabase, userId, supportList) {
       .in('track_id', trackIdsToDelete);
   }
 
-  const tracksToUpsert = validSupports.map((v, index) => ({
-    user_id: userId,
-    track_id: v.trackId,
-    level: v.supportLevel,
-    order_index: index,
-  }));
+  // Only upsert rows that are new, changed support level, or changed order_index
+  const prevStateMap =
+    previousList !== null
+      ? new Map(
+          previousList
+            .filter((v) => v.trackId != null && v.supportLevel)
+            .map((v, i) => [v.trackId, { index: i, level: v.supportLevel }]),
+        )
+      : null;
+
+  const tracksToUpsert = validSupports
+    .map((v, index) => ({ v, index }))
+    .filter(({ v, index }) => {
+      if (prevStateMap === null) return true; // first sync, upsert everything
+      const prev = prevStateMap.get(v.trackId);
+      if (!prev) return true; // new entry
+      return prev.index !== index || prev.level !== v.supportLevel; // order or level changed
+    })
+    .map(({ v, index }) => ({
+      user_id: userId,
+      track_id: v.trackId,
+      level: v.supportLevel,
+      order_index: index,
+    }));
 
   if (tracksToUpsert.length > 0) {
     await supabase
@@ -875,7 +983,12 @@ export async function syncSupports(supabase, userId, supportList) {
   }
 }
 
-export async function saveActiveQueue(supabase, userId, playlistVideos) {
+export async function saveActiveQueue(
+  supabase,
+  userId,
+  playlistVideos,
+  previousPlaylist = null,
+) {
   let { data: queue, error: queueError } = await supabase
     .from('user_playlists')
     .select('id')
@@ -898,24 +1011,61 @@ export async function saveActiveQueue(supabase, userId, playlistVideos) {
     playlistId = queue.id;
   }
 
-  await supabase
-    .from('user_playlist_tracks')
-    .delete()
-    .eq('playlist_id', playlistId);
+  const currentEntries = playlistVideos.filter((v) => v.trackId != null);
+  const currentSet = new Set(currentEntries.map((v) => v.trackId));
 
-  const tracksToInsert = playlistVideos
-    .filter((v) => v.trackId != null)
-    .map((v, i) => ({
+  if (previousPlaylist !== null) {
+    // Diff-based: only delete removed tracks, upsert changed/new tracks
+    const prevEntries = previousPlaylist.filter((v) => v.trackId != null);
+    const prevSet = new Set(prevEntries.map((v) => v.trackId));
+
+    const trackIdsToDelete = [...prevSet].filter((id) => !currentSet.has(id));
+    if (trackIdsToDelete.length > 0) {
+      await supabase
+        .from('user_playlist_tracks')
+        .delete()
+        .eq('playlist_id', playlistId)
+        .in('track_id', trackIdsToDelete);
+    }
+
+    const prevIndexMap = new Map(prevEntries.map((v, i) => [v.trackId, i]));
+    const tracksToUpsert = currentEntries
+      .map((v, i) => ({ v, i }))
+      .filter(({ v, i }) => {
+        if (!prevIndexMap.has(v.trackId)) return true; // new
+        return prevIndexMap.get(v.trackId) !== i; // reordered
+      })
+      .map(({ v, i }) => ({
+        playlist_id: playlistId,
+        track_id: v.trackId,
+        order_index: i,
+      }));
+
+    if (tracksToUpsert.length > 0) {
+      const { error: tracksError } = await supabase
+        .from('user_playlist_tracks')
+        .upsert(tracksToUpsert, { onConflict: 'playlist_id,track_id' });
+      if (tracksError) throw tracksError;
+    }
+  } else {
+    // First sync or no cache — full replace
+    await supabase
+      .from('user_playlist_tracks')
+      .delete()
+      .eq('playlist_id', playlistId);
+
+    const tracksToInsert = currentEntries.map((v, i) => ({
       playlist_id: playlistId,
       track_id: v.trackId,
       order_index: i,
     }));
 
-  if (tracksToInsert.length > 0) {
-    const { error: tracksError } = await supabase
-      .from('user_playlist_tracks')
-      .insert(tracksToInsert);
-    if (tracksError) throw tracksError;
+    if (tracksToInsert.length > 0) {
+      const { error: tracksError } = await supabase
+        .from('user_playlist_tracks')
+        .insert(tracksToInsert);
+      if (tracksError) throw tracksError;
+    }
   }
 }
 
@@ -942,7 +1092,10 @@ export async function syncCustomPlaylists(supabase, userId, customPlaylists) {
   for (const pl of customPlaylists) {
     // If pl.id is 'pl-...', we shouldn't use it as a uuid.
     // However, App.jsx uses 'pl-xxxx'. Our migrations ignore 'pl-'. Let's check pl.id format
-    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(pl.id);
+    const isUuid =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+        pl.id,
+      );
     let playlistId = isUuid ? pl.id : undefined;
 
     const playlistData = {
@@ -964,7 +1117,7 @@ export async function syncCustomPlaylists(supabase, userId, customPlaylists) {
     playlistId = upsertedPl.id;
     // ensure local object gets the actual UUID if it didn't have one
     if (!isUuid) {
-      pl.id = playlistId; 
+      pl.id = playlistId;
     }
 
     await supabase

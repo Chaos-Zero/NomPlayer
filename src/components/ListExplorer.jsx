@@ -1297,6 +1297,7 @@ export default function ListExplorer({
   onUpdateSupportList,
   onUpdateNominationList,
   onUpdateCustomPlaylists,
+  onToggleNomination,
   onPlayNow,
   onAddToPlaylist,
   onRemoveFromPlaylist,
@@ -2833,6 +2834,20 @@ export default function ListExplorer({
               >
                 <HeartIcon />
                 <span>Update Support</span>
+              </button>
+            )}
+            {!nominationList.some(
+              (v) => v.videoId === contextMenu.video.videoId,
+            ) && (
+              <button
+                className="database-context-menu-item"
+                onClick={() => {
+                  onToggleNomination?.(contextMenu.video);
+                  closeContextMenu();
+                }}
+              >
+                <StarIcon />
+                <span>Add to Nominations</span>
               </button>
             )}
             <button
