@@ -488,6 +488,16 @@ export default function App() {
   const [customPlaylists, setCustomPlaylists] = useState(
     initialPlayerState.customPlaylists || [],
   );
+  const supportListRef = useRef(supportList);
+  const nominationListRef = useRef(nominationList);
+
+  useEffect(() => {
+    supportListRef.current = supportList;
+  }, [supportList]);
+
+  useEffect(() => {
+    nominationListRef.current = nominationList;
+  }, [nominationList]);
   const [supportToastMessage, setSupportToastMessage] = useState('');
   const [appToastMessage, setAppToastMessage] = useState('');
   const [appToastTone, setAppToastTone] = useState('default');
@@ -3706,10 +3716,13 @@ export default function App() {
 
       const currentCatalog = catalogTrackByVideoIdRef.current;
 
+      const currentSupportList = supportListRef.current;
+      const currentNominationList = nominationListRef.current;
+
       const result = appendUniqueVideos(
-        supportList,
+        currentSupportList,
         allowedVideos,
-        new Set(nominationList.map((entry) => entry.videoId)),
+        new Set(currentNominationList.map((entry) => entry.videoId)),
       );
 
       const resultSummary = {
@@ -3750,7 +3763,7 @@ export default function App() {
 
       return resultSummary;
     },
-    [nominationList, supportList, partitionRetiredVideos, showSupportToast],
+    [partitionRetiredVideos, showSupportToast],
   );
 
   const handleRemoveFromNominationList = useCallback((videoIdsOrId) => {
@@ -3778,8 +3791,10 @@ export default function App() {
 
       const currentCatalog = catalogTrackByVideoIdRef.current;
 
+      const currentNominationList = nominationListRef.current;
+
       const nominationResult = appendUniqueVideos(
-        nominationList,
+        currentNominationList,
         allowedVideos,
       );
 
@@ -3824,7 +3839,7 @@ export default function App() {
 
       return resultSummary;
     },
-    [nominationList, partitionRetiredVideos],
+    [partitionRetiredVideos],
   );
 
   const handleSaveTrackMetadata = useCallback(

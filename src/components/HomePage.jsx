@@ -1714,6 +1714,7 @@ export default function HomePage({
                 <div className="dashboard-stat-label-box">
                   {!isDashboardLoading ? (
                     <TextType
+                      key={dashboardStatTexts.join('|')}
                       text={dashboardStatTexts}
                       className="dashboard-stat-label-rotation"
                       typingSpeed={60}

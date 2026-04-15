@@ -89,17 +89,6 @@ const TextType = ({
     }
   }, [showCursor, cursorBlinkDuration]);
 
-  const [prevTextContent, setPrevTextContent] = useState(textArray.join('|'));
-
-  // Reset if content changed significantly - done during render as per React 18+ best practices
-  if (textArray.join('|') !== prevTextContent) {
-    setPrevTextContent(textArray.join('|'));
-    setDisplayedText('');
-    setCurrentCharIndex(0);
-    setIsDeleting(false);
-    setCurrentTextIndex(0);
-  }
-
   useEffect(() => {
     if (!isVisible) return;
 
