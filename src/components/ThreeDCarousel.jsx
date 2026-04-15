@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import useMediaQuery from '../hooks/useMediaQuery';
 
 const ThreeDCarousel = ({
@@ -12,6 +12,7 @@ const ThreeDCarousel = ({
   const [touchStart, setTouchStart] = useState(null);
   const [touchEnd, setTouchEnd] = useState(null);
   const isMobile = useMediaQuery('(max-width: 960px)');
+  const containerRef = useRef(null);
   const minSwipeDistance = 50;
   const items = React.Children.toArray(children);
   const count = items.length;
@@ -19,7 +20,11 @@ const ThreeDCarousel = ({
   useEffect(() => {
     if (autoRotate && !isHovering && count > 1) {
       const interval = setInterval(() => {
-        setActive((prev) => (prev + 1) % count);
+        // Safe asynchronous check of DOM state to handle stale React state
+        // after portal/context menu interactions.
+        if (!containerRef.current?.matches(':hover')) {
+          setActive((prev) => (prev + 1) % count);
+        }
       }, rotateInterval);
       return () => clearInterval(interval);
     }
@@ -98,6 +103,7 @@ const ThreeDCarousel = ({
 
   return (
     <div
+      ref={containerRef}
       className={`threed-carousel-container ${className}`}
       onMouseEnter={() => setIsHovering(true)}
       onMouseLeave={() => setIsHovering(false)}

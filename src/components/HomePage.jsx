@@ -194,48 +194,10 @@ export function NominationUpdateCard({
   isFeedbackPanelOpen = false,
   resolveTrack,
   isMetadataLoading = false,
+  onContextMenu,
 }) {
   const displayIdentity = parseStoredProfileUsername(update.username);
   const nominationCount = update.nominations.length;
-  const [contextMenu, setContextMenu] = useState(null);
-
-  const handleContextAction = useCallback(
-    (action, e, video) => {
-      setContextMenu(null);
-      const resolved = resolveTrack(video);
-      if (action === 'play') onPlayTrack(resolved);
-      else if (action === 'add') onAddTrack([resolved]);
-      else if (action === 'support') {
-        if (!supportStatusById[video.videoId]?.isSupported) {
-          onToggleSupport?.(resolved);
-          if (onOpenSupportDropdown && e) {
-            onOpenSupportDropdown(resolved, {
-              top: e.clientY,
-              left: e.clientX,
-            });
-          }
-        } else {
-          onToggleSupport?.(resolved);
-        }
-      } else if (action === 'comments' && e) {
-        onShowComments?.(resolved, {
-          top: e.clientY,
-          left: e.clientX,
-          width: 0,
-          height: 0,
-        });
-      }
-    },
-    [
-      onPlayTrack,
-      onAddTrack,
-      onToggleSupport,
-      onOpenSupportDropdown,
-      onShowComments,
-      resolveTrack,
-      supportStatusById,
-    ],
-  );
 
   const renderPeekRowActivity = (video, index) => {
     const hasSupport = supportStatusById[video.videoId]?.isSupported;
@@ -265,7 +227,7 @@ export function NominationUpdateCard({
         onContextMenu={(e) => {
           e.preventDefault();
           e.stopPropagation();
-          setContextMenu({
+          onContextMenu({
             x: e.clientX,
             y: e.clientY,
             video,
@@ -569,57 +531,6 @@ export function NominationUpdateCard({
           </>
         )}
       </article>
-
-      {contextMenu && (
-        <ContextMenuPortal
-          x={contextMenu.x}
-          y={contextMenu.y}
-          onClose={() => setContextMenu(null)}
-          className="playlist-context-menu"
-        >
-          <button
-            className="playlist-context-menu-item"
-            onClick={(e) => handleContextAction('play', e, contextMenu.video)}
-          >
-            <span>Play Now</span>
-          </button>
-          <button
-            className="playlist-context-menu-item"
-            onClick={(e) => handleContextAction('add', e, contextMenu.video)}
-          >
-            <span>Add to current playlist</span>
-          </button>
-          <button
-            className={`playlist-context-menu-item ${
-              supportStatusById[contextMenu.video.videoId]?.isSupported
-                ? 'active has-feedback'
-                : ''
-            }`}
-            onClick={(e) =>
-              handleContextAction('support', e, contextMenu.video)
-            }
-            onContextMenu={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              handleContextAction('support', e, contextMenu.video);
-            }}
-          >
-            <span>
-              {supportStatusById[contextMenu.video.videoId]?.isSupported
-                ? 'Remove from support list'
-                : 'Add to support list'}
-            </span>
-          </button>
-          <button
-            className="playlist-context-menu-item"
-            onClick={(e) =>
-              handleContextAction('comments', e, contextMenu.video)
-            }
-          >
-            <span>View activity and comments</span>
-          </button>
-        </ContextMenuPortal>
-      )}
     </>
   );
 }
@@ -927,6 +838,7 @@ export default function HomePage({
   );
   const [maxVgmcNumber, setMaxVgmcNumber] = useState(24);
   const [discoveryContextMenu, setDiscoveryContextMenu] = useState(null);
+  const [nominationContextMenu, setNominationContextMenu] = useState(null);
   const lastAppliedBatchRef = useRef(null);
 
   // Patch discovery items when metadata is saved (handles both title changes and URL/videoId changes)
@@ -1728,6 +1640,44 @@ export default function HomePage({
     ],
   );
 
+  const handleNominationContextAction = useCallback(
+    (action, e, video) => {
+      setNominationContextMenu(null);
+      const resolved = resolveTrack(video);
+      if (action === 'play') onPlayNow?.(resolved);
+      else if (action === 'add') onAddToPlaylist?.([resolved]);
+      else if (action === 'support') {
+        if (!supportStatusById[video.videoId]?.isSupported) {
+          onToggleSupport?.(resolved);
+          if (onOpenSupportDropdown && e) {
+            onOpenSupportDropdown(resolved, {
+              top: e.clientY,
+              left: e.clientX,
+            });
+          }
+        } else {
+          onToggleSupport?.(resolved);
+        }
+      } else if (action === 'comments' && e) {
+        onShowComments?.(resolved, {
+          top: e.clientY,
+          left: e.clientX,
+          width: 0,
+          height: 0,
+        });
+      }
+    },
+    [
+      onPlayNow,
+      onAddToPlaylist,
+      onToggleSupport,
+      onOpenSupportDropdown,
+      onShowComments,
+      resolveTrack,
+      supportStatusById,
+    ],
+  );
+
   return (
     <div className="home-shell dashboard-home-shell">
       <section className="dashboard-hero" aria-label="Dashboard overview">
@@ -2099,7 +2049,11 @@ export default function HomePage({
               )}
               <div className="dashboard-nominations-carousel-container animate-fade-in">
                 <ThreeDCarousel
-                  autoRotate={!expandedUserId && !isFeedbackPanelOpen}
+                  autoRotate={
+                    !expandedUserId &&
+                    !isFeedbackPanelOpen &&
+                    !nominationContextMenu
+                  }
                 >
                   {visibleNominationUpdates.slice(0, 10).map((update) => (
                     <NominationUpdateCard
@@ -2120,6 +2074,7 @@ export default function HomePage({
                       isFeedbackPanelOpen={isFeedbackPanelOpen}
                       resolveTrack={resolveTrack}
                       isMetadataLoading={isMetadataLoading}
+                      onContextMenu={setNominationContextMenu}
                     />
                   ))}
                 </ThreeDCarousel>
@@ -2255,6 +2210,74 @@ export default function HomePage({
               <span>Update metadata</span>
             </button>
           )}
+        </ContextMenuPortal>
+      )}
+
+      {nominationContextMenu && (
+        <ContextMenuPortal
+          x={nominationContextMenu.x}
+          y={nominationContextMenu.y}
+          onClose={() => setNominationContextMenu(null)}
+          className="playlist-context-menu"
+        >
+          <button
+            className="playlist-context-menu-item"
+            onClick={(e) =>
+              handleNominationContextAction(
+                'play',
+                e,
+                nominationContextMenu.video,
+              )
+            }
+          >
+            <span>Play Now</span>
+          </button>
+          <button
+            className="playlist-context-menu-item"
+            onClick={(e) =>
+              handleNominationContextAction(
+                'add',
+                e,
+                nominationContextMenu.video,
+              )
+            }
+          >
+            <span>Add to current playlist</span>
+          </button>
+          <button
+            className={`playlist-context-menu-item ${
+              supportStatusById[nominationContextMenu.video.videoId]
+                ?.isSupported
+                ? 'active has-feedback'
+                : ''
+            }`}
+            onClick={(e) =>
+              handleNominationContextAction(
+                'support',
+                e,
+                nominationContextMenu.video,
+              )
+            }
+          >
+            <span>
+              {supportStatusById[nominationContextMenu.video.videoId]
+                ?.isSupported
+                ? 'Remove from support list'
+                : 'Add to support list'}
+            </span>
+          </button>
+          <button
+            className="playlist-context-menu-item"
+            onClick={(e) =>
+              handleNominationContextAction(
+                'comments',
+                e,
+                nominationContextMenu.video,
+              )
+            }
+          >
+            <span>View activity and comments</span>
+          </button>
         </ContextMenuPortal>
       )}
     </div>
