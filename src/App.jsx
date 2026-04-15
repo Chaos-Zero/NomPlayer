@@ -3704,20 +3704,22 @@ export default function App() {
       const { allowedVideos, retiredVideos } =
         await partitionRetiredVideos(videos);
 
-      let resultSummary = {
-        addedCount: 0,
-        blockedNominationCount: 0,
+      const currentCatalog = catalogTrackByVideoIdRef.current;
+
+      const result = appendUniqueVideos(
+        supportList,
+        allowedVideos,
+        new Set(nominationList.map((entry) => entry.videoId)),
+      );
+
+      const resultSummary = {
+        addedCount: result.addedCount,
+        blockedNominationCount: result.blockedCount,
         blockedRetiredCount: retiredVideos.length,
       };
 
-      const currentCatalog = catalogTrackByVideoIdRef.current;
-
-      setSupportList((previousList) => {
-        const result = appendUniqueVideos(
-          previousList,
-          allowedVideos,
-          new Set(nominationList.map((entry) => entry.videoId)),
-        );
+      if (result.addedCount > 0) {
+        setSupportList(result.nextList);
 
         const newTracksMissingMetadata = result.addedVideos.filter((video) => {
           const catalogItem = currentCatalog[video.videoId];
@@ -3739,15 +3741,6 @@ export default function App() {
           });
         }
 
-        resultSummary = {
-          addedCount: result.addedCount,
-          blockedNominationCount: result.blockedCount,
-          blockedRetiredCount: retiredVideos.length,
-        };
-        return result.nextList;
-      });
-
-      if (resultSummary.addedCount > 0) {
         showSupportToast(
           resultSummary.addedCount === 1
             ? 'Added 1 song to Support list'
@@ -3757,7 +3750,7 @@ export default function App() {
 
       return resultSummary;
     },
-    [nominationList, partitionRetiredVideos, showSupportToast],
+    [nominationList, supportList, partitionRetiredVideos, showSupportToast],
   );
 
   const handleRemoveFromNominationList = useCallback((videoIdsOrId) => {
@@ -3783,25 +3776,21 @@ export default function App() {
       const { allowedVideos, retiredVideos } =
         await partitionRetiredVideos(videos);
 
-      let resultSummary = {
-        addedCount: 0,
-        blockedNominationCount: 0,
+      const currentCatalog = catalogTrackByVideoIdRef.current;
+
+      const nominationResult = appendUniqueVideos(
+        nominationList,
+        allowedVideos,
+      );
+
+      const resultSummary = {
+        addedCount: nominationResult.addedCount,
+        blockedNominationCount: nominationResult.blockedVideoIds.length,
         blockedRetiredCount: retiredVideos.length,
       };
 
-      const currentCatalog = catalogTrackByVideoIdRef.current;
-
-      setNominationList((previousList) => {
-        const nominationResult = appendUniqueVideos(
-          previousList,
-          allowedVideos,
-        );
-
-        if (!nominationResult.addedCount) {
-          resultSummary.blockedNominationCount =
-            nominationResult.blockedVideoIds.length;
-          return previousList;
-        }
+      if (nominationResult.addedCount > 0) {
+        setNominationList(nominationResult.nextList);
 
         const newTracksMissingMetadata = nominationResult.addedVideos.filter(
           (video) => {
@@ -3825,25 +3814,17 @@ export default function App() {
           });
         }
 
-        resultSummary = {
-          addedCount: nominationResult.addedCount,
-          blockedNominationCount: nominationResult.blockedVideoIds.length,
-          blockedRetiredCount: retiredVideos.length,
-        };
-
-        return nominationResult.nextList;
-      });
-
-      // After updating nominations, we need to ensure they are removed from the support list
-      setSupportList((previousList) => {
-        return previousList.filter((entry) => {
-          return !allowedVideos.some((v) => v.videoId === entry.videoId);
+        // After updating nominations, we need to ensure they are removed from the support list
+        setSupportList((previousList) => {
+          return previousList.filter((entry) => {
+            return !allowedVideos.some((v) => v.videoId === entry.videoId);
+          });
         });
-      });
+      }
 
       return resultSummary;
     },
-    [partitionRetiredVideos],
+    [nominationList, partitionRetiredVideos],
   );
 
   const handleSaveTrackMetadata = useCallback(
