@@ -295,6 +295,12 @@ describe('App', () => {
 
     fireEvent.click(supportButton);
 
+    // The button opens a level picker — select a level to add to the support list
+    const possibleButton = await screen.findByRole('button', {
+      name: /Possible Support/i,
+    });
+    fireEvent.click(possibleButton);
+
     await waitFor(() => {
       expect(
         screen.getByRole('button', { name: 'Remove from support list' }),
