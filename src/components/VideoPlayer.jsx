@@ -146,7 +146,8 @@ const VideoPlayer = forwardRef(function VideoPlayer(
     restorePauseGuardUntilRef.current = Date.now() + 2500;
 
     if (!isPlayingRef.current) {
-      onPlaybackChange?.(true);
+      clearVisibilityResumeTracking();
+      return;
     }
 
     safelyControlPlayer(playerRef.current, 'playVideo');
@@ -161,7 +162,7 @@ const VideoPlayer = forwardRef(function VideoPlayer(
         safelyControlPlayer(playerRef.current, 'playVideo');
       }, 1500),
     ];
-  }, [clearRestorePauseGuard, onPlaybackChange]);
+  }, [clearRestorePauseGuard, clearVisibilityResumeTracking]);
 
   const verifyPauseState = useCallback(() => {
     clearPauseVerification();
@@ -204,11 +205,7 @@ const VideoPlayer = forwardRef(function VideoPlayer(
   useEffect(() => {
     isPlayingRef.current = isPlaying;
 
-    if (
-      !isPlaying &&
-      document.visibilityState === 'visible' &&
-      document.hasFocus()
-    ) {
+    if (!isPlaying && document.visibilityState === 'visible') {
       clearVisibilityResumeTracking();
     }
   }, [clearVisibilityResumeTracking, isPlaying]);
