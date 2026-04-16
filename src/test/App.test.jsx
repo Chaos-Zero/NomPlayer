@@ -296,7 +296,7 @@ describe('App', () => {
     fireEvent.click(supportButton);
 
     // The button opens a level picker — select a level to add to the support list
-    const possibleButton = await screen.findByRole('button', {
+    const possibleButton = await screen.findByRole('menuitem', {
       name: /Possible Support/i,
     });
     fireEvent.click(possibleButton);
