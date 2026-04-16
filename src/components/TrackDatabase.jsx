@@ -517,8 +517,11 @@ export default function TrackDatabase({
   onUpdateMetadata,
   onToggleNomination,
   onOpenSupportDropdown,
+  initialTracks = [],
+  initialScrollOffset = 0,
+  onUnmount,
 }) {
-  const [tracks, setTracks] = useState([]);
+  const [tracks, setTracks] = useState(initialTracks);
   const [userFeedback, setUserFeedback] = useState({});
   const [loading, setLoading] = useState(true);
   const [totalCount, setTotalCount] = useState(0);
@@ -550,6 +553,9 @@ export default function TrackDatabase({
   const resizingRef = useRef(null);
   const tableWrapperRef = useRef(null);
   const scrollPositionRef = useRef(0);
+  const preserveScrollRef = useRef(false);
+  const isFirstLoadRef = useRef(initialTracks.length > 0);
+  const tracksRef = useRef(initialTracks);
   const [selectedTrack, setSelectedTrack] = useState(null);
   const [maxVgmc, setMaxVgmc] = useState(24);
   const [expandedCell, setExpandedCell] = useState(null);
@@ -583,13 +589,25 @@ export default function TrackDatabase({
     init();
   }, [supabase]);
 
-  // Clear tracks on unmount
+  // Keep tracksRef current so the unmount callback captures fresh data
+  useEffect(() => {
+    tracksRef.current = tracks;
+  }, [tracks]);
+
+  // Save tracks + scroll offset to parent cache on unmount
   useEffect(() => {
     return () => {
-      setTracks([]);
+      onUnmount?.(tracksRef.current, tableWrapperRef.current?.scrollTop ?? 0);
       clearCatalogCache();
     };
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Restore scroll position when remounting with cached data
+  useLayoutEffect(() => {
+    if (initialScrollOffset > 0 && tableWrapperRef.current) {
+      tableWrapperRef.current.scrollTop = initialScrollOffset;
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Context Menu Lifecycle
 
@@ -702,10 +720,19 @@ export default function TrackDatabase({
       const currentLoadingId = ++loadingIdRef.current;
 
       setLoading(true);
-      setTracks([]);
 
-      if (tableWrapperRef.current) {
-        tableWrapperRef.current.scrollTop = 0;
+      if (isFirstLoadRef.current) {
+        // Remounting with cached data — keep tracks visible while refreshing
+        isFirstLoadRef.current = false;
+      } else {
+        setTracks([]);
+        if (tableWrapperRef.current) {
+          if (preserveScrollRef.current) {
+            scrollPositionRef.current = tableWrapperRef.current.scrollTop;
+            preserveScrollRef.current = false;
+          }
+          tableWrapperRef.current.scrollTop = 0;
+        }
       }
 
       try {
@@ -1268,6 +1295,7 @@ export default function TrackDatabase({
           maxVgmc={maxVgmc}
           onClose={() => setShowDuplicateModal(false)}
           onMerged={() => {
+            preserveScrollRef.current = true;
             setRefreshKey((prev) => prev + 1);
             setSelectedTrack(null);
           }}
