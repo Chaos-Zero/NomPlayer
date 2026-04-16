@@ -145,6 +145,8 @@ vi.mock('../lib/feedback.js', () => ({
 
 vi.mock('../lib/trackCatalog.js', () => ({
   fetchTrackCatalogByVideoIds: vi.fn().mockResolvedValue([]),
+  fetchTrackCatalogByTrackIds: vi.fn().mockResolvedValue([]),
+  fetchSupportedTracks: vi.fn().mockResolvedValue([]),
   ingestYouTubeTrackSources: vi.fn().mockResolvedValue([]),
   searchTrackCatalog: vi.fn().mockResolvedValue([]),
   mapTrackCatalogEntryToVideo: (entry) => entry,
