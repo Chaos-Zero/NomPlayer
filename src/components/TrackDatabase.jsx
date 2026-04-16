@@ -782,7 +782,6 @@ export default function TrackDatabase({
     debouncedSearchTerm,
     vgmcFilter,
     viewMode,
-    onShowToast,
     sortColumn,
     sortAsc,
   ]);
