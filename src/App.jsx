@@ -67,6 +67,8 @@ import {
 } from './lib/playerState.js';
 import {
   fetchTrackCatalogByVideoIds,
+  fetchTrackCatalogByTrackIds,
+  fetchSupportedTracks,
   ingestYouTubeTrackSources,
   patchCatalogCache,
 } from './lib/trackCatalog.js';
@@ -1279,9 +1281,9 @@ export default function App() {
     };
 
     const keys = Object.keys(nextValue);
-    if (keys.length > 500) {
-      // Retain the newest 400 to prevent constant eviction thrashing
-      const keysToRemove = keys.slice(0, keys.length - 400);
+    if (keys.length > 2000) {
+      // Retain the newest 1600 to prevent constant eviction thrashing
+      const keysToRemove = keys.slice(0, keys.length - 1600);
       for (const key of keysToRemove) {
         delete nextValue[key];
       }
@@ -1407,6 +1409,74 @@ export default function App() {
     },
     [mergeCatalogTrackSummaries, supabase],
   );
+
+  // Pre-populate catalog with supported tracks on mount so the leaderboard
+  // renders immediately with correct support counts from the live DB view.
+  useEffect(() => {
+    if (!supabase) return;
+    let cancelled = false;
+
+    fetchSupportedTracks(supabase)
+      .then((tracks) => {
+        if (cancelled) return;
+        mergeCatalogTrackSummaries(tracks);
+      })
+      .catch((err) => {
+        console.warn('Failed to pre-load supported tracks:', err);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [supabase, mergeCatalogTrackSummaries]);
+
+  // Supabase Realtime: refresh support counts when track_supports rows change.
+  // Debounces rapid changes into a single batch re-fetch of the track_catalog view.
+  useEffect(() => {
+    if (!supabase) return;
+
+    const pendingTrackIds = new Set();
+    let debounceTimer = null;
+
+    const flush = () => {
+      debounceTimer = null;
+      if (pendingTrackIds.size === 0) return;
+      const ids = Array.from(pendingTrackIds);
+      pendingTrackIds.clear();
+
+      fetchTrackCatalogByTrackIds(supabase, ids)
+        .then((refreshed) => {
+          mergeCatalogTrackSummaries(refreshed);
+        })
+        .catch((err) => {
+          console.warn('Realtime catalog refresh error:', err);
+        });
+    };
+
+    const schedule = (trackId) => {
+      if (trackId) pendingTrackIds.add(trackId);
+      if (debounceTimer) clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(flush, 2000);
+    };
+
+    const channel = supabase
+      .channel('track_supports_changes')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'track_supports' },
+        (payload) => {
+          const trackId =
+            payload.new?.track_id ?? payload.old?.track_id ?? null;
+          schedule(trackId);
+        },
+      )
+      .subscribe();
+
+    return () => {
+      if (debounceTimer) clearTimeout(debounceTimer);
+      supabase.removeChannel(channel);
+    };
+  }, [supabase, mergeCatalogTrackSummaries]);
 
   useEffect(() => {
     const activeCatalogVideoId =

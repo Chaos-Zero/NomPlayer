@@ -857,6 +857,13 @@ export async function syncNominations(
   const currentTrackIds = currentEntries.map((v) => v.trackId);
   const currentSet = new Set(currentTrackIds);
 
+  // Guard: if current list is empty and we have no previous cache, we cannot
+  // distinguish "user genuinely cleared everything" from "state wasn't loaded
+  // yet". Skip rather than risk deleting rows that still exist in the DB.
+  if (currentEntries.length === 0 && previousList === null) {
+    return;
+  }
+
   let trackIdsToDelete;
   if (previousList !== null) {
     // Use cached previous state — no SELECT needed
@@ -923,6 +930,12 @@ export async function syncSupports(
     (v) => v.trackId != null && v.supportLevel,
   );
   const currentSet = new Set(validSupports.map((v) => v.trackId));
+
+  // Guard: if current list is empty and we have no previous cache, skip.
+  // Cannot distinguish "genuinely empty" from "state not yet loaded".
+  if (validSupports.length === 0 && previousList === null) {
+    return;
+  }
 
   let trackIdsToDelete;
   if (previousList !== null) {
@@ -1047,8 +1060,10 @@ export async function saveActiveQueue(
         .upsert(tracksToUpsert, { onConflict: 'playlist_id,track_id' });
       if (tracksError) throw tracksError;
     }
-  } else {
-    // First sync or no cache — full replace
+  } else if (currentEntries.length > 0) {
+    // First sync or no cache — full replace, but only if there are tracks.
+    // If current is empty and we have no cache, skip: cannot distinguish
+    // "genuinely empty" from "state not yet loaded". Avoids wiping the table.
     await supabase
       .from('user_playlist_tracks')
       .delete()
@@ -1060,12 +1075,10 @@ export async function saveActiveQueue(
       order_index: i,
     }));
 
-    if (tracksToInsert.length > 0) {
-      const { error: tracksError } = await supabase
-        .from('user_playlist_tracks')
-        .insert(tracksToInsert);
-      if (tracksError) throw tracksError;
-    }
+    const { error: tracksError } = await supabase
+      .from('user_playlist_tracks')
+      .insert(tracksToInsert);
+    if (tracksError) throw tracksError;
   }
 }
 

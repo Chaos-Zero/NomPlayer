@@ -340,6 +340,88 @@ export async function fetchTrackCatalogByVideoIds(supabase, videoIds) {
     : [];
 }
 
+export async function fetchTrackCatalogByTrackIds(supabase, trackIds) {
+  const normalizedIds = Array.from(
+    new Set(
+      Array.isArray(trackIds)
+        ? trackIds.filter((id) => typeof id === 'string' && id.trim())
+        : [],
+    ),
+  );
+
+  if (!supabase || normalizedIds.length === 0) {
+    return [];
+  }
+
+  const { data, error } = await supabase
+    .from('track_catalog')
+    .select(
+      `
+        track_id,
+        game_title,
+        track_title,
+        display_title,
+        is_retired,
+        retired_by_tournament_name,
+        source_external_id,
+        source_url,
+        submitted_url,
+        source_title,
+        source_channel_title,
+        source_thumbnail_url,
+        tournaments,
+        support_count_1,
+        support_count_2,
+        support_count_3
+      `,
+    )
+    .in('track_id', normalizedIds);
+
+  if (error) {
+    throw error;
+  }
+
+  return Array.isArray(data)
+    ? data.map(normalizeTrackCatalogEntry).filter(Boolean)
+    : [];
+}
+
+export async function fetchSupportedTracks(supabase) {
+  if (!supabase) return [];
+
+  const { data, error } = await supabase
+    .from('track_catalog')
+    .select(
+      `
+        track_id,
+        game_title,
+        track_title,
+        display_title,
+        is_retired,
+        retired_by_tournament_name,
+        source_external_id,
+        source_url,
+        submitted_url,
+        source_title,
+        source_channel_title,
+        source_thumbnail_url,
+        tournaments,
+        support_count_1,
+        support_count_2,
+        support_count_3
+      `,
+    )
+    .or('support_count_1.gt.0,support_count_2.gt.0,support_count_3.gt.0');
+
+  if (error) {
+    throw error;
+  }
+
+  return Array.isArray(data)
+    ? data.map(normalizeTrackCatalogEntry).filter(Boolean)
+    : [];
+}
+
 export async function fetchAllTracks(supabase) {
   if (!supabase) return [];
 
