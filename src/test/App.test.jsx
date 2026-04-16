@@ -130,6 +130,11 @@ vi.mock('../lib/supabase.js', () => {
       }),
       getUser: vi.fn().mockResolvedValue({ data: { user: null }, error: null }),
     },
+    channel: vi.fn().mockReturnValue({
+      on: vi.fn().mockReturnThis(),
+      subscribe: vi.fn().mockReturnValue({ unsubscribe: vi.fn() }),
+    }),
+    removeChannel: vi.fn(),
     then: (onFullfilled) => onFullfilled({ data: [], error: null }),
   };
   return {
