@@ -596,8 +596,9 @@ export default function TrackDatabase({
 
   // Save tracks + scroll offset to parent cache on unmount
   useEffect(() => {
+    const tableWrapper = tableWrapperRef.current;
     return () => {
-      onUnmount?.(tracksRef.current, tableWrapperRef.current?.scrollTop ?? 0);
+      onUnmount?.(tracksRef.current, tableWrapper?.scrollTop ?? 0);
       clearCatalogCache();
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
