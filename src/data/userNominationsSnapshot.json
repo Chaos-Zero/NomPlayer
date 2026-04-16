@@ -1,113 +1,24 @@
 {
-  "exportedAt": "2026-04-15T09:30:12.142Z",
-  "totalCount": 4,
+  "exportedAt": "2026-04-16T07:55:05.284Z",
+  "totalCount": 2,
   "users": [
-    {
-      "user_id": "6452d560-7b18-4e7b-8a22-208e09bddc28",
-      "username": "dc:CalzoneB",
-      "avatar_url": "https://images-ext-1.discordapp.net/external/y2Co85kS3Mh3VsdtU2Ac44E2zDM5BfkXeE-zi-5a4FQ/%3Fsize%3D1024/https/cdn.discordapp.com/avatars/268487608680579072/783e089fb3fbb4d845543e17a35ada0e.webp?format=webp&width=745&height=745",
-      "gamefaqs_username": "-Chaos-Zero-",
-      "updated_at": "2026-04-15T08:24:44.971463+00:00",
-      "nominations": [
-        {
-          "title": "Fall Guys - Fall 'N' Roll",
-          "trackId": "fa8e4af3-aed5-4df5-9f9e-3f14bce05f20",
-          "videoId": "LL70vTa0E2g",
-          "gameTitle": "Fall Guys",
-          "thumbnail": "https://i.ytimg.com/vi/LL70vTa0E2g/mqdefault.jpg",
-          "trackTitle": "Fall 'N' Roll",
-          "channelTitle": "Jukio Kallio - Topic",
-          "displayTitle": "Fall Guys - Fall 'N' Roll"
-        },
-        {
-          "title": "Ape Escape 3 - Mount Amazing 2",
-          "trackId": "dd089c59-8094-4879-8ea6-cce89f3c4ace",
-          "videoId": "XYi-zuFRGUE",
-          "gameTitle": "Ape Escape 3",
-          "thumbnail": "https://i.ytimg.com/vi/XYi-zuFRGUE/mqdefault.jpg",
-          "trackTitle": "Mount Amazing 2",
-          "channelTitle": "Soichi Terada - Topic",
-          "displayTitle": "Ape Escape 3 - Mount Amazing 2"
-        },
-        {
-          "title": "Hyper Light Breaker - Apocalyptic Blues Paean",
-          "trackId": "a35849f4-4482-4a2b-b7ed-e5b97a418717",
-          "videoId": "qfSRCzeiQ0I",
-          "gameTitle": "Hyper Light Breaker",
-          "thumbnail": "https://i.ytimg.com/vi/qfSRCzeiQ0I/mqdefault.jpg",
-          "trackTitle": "Apocalyptic Blues Paean",
-          "channelTitle": null,
-          "displayTitle": "Hyper Light Breaker - Apocalyptic Blues Paean"
-        },
-        {
-          "title": "Satisfactory - Nostalgium",
-          "trackId": "1af05484-738d-4e80-b046-b70393917613",
-          "videoId": "PPS7fiGA1iI",
-          "gameTitle": "Satisfactory",
-          "thumbnail": "https://i.ytimg.com/vi/PPS7fiGA1iI/mqdefault.jpg",
-          "trackTitle": "Nostalgium",
-          "channelTitle": "Bartek888_888",
-          "displayTitle": "Satisfactory - Nostalgium"
-        },
-        {
-          "title": "Dicey Dungeons: Reunion - No Time To Dice",
-          "trackId": "0c033014-04c1-4f84-8d10-4ac90048180f",
-          "videoId": "ei8H5iATrgg",
-          "gameTitle": "Dicey Dungeons: Reunion",
-          "thumbnail": "https://i.ytimg.com/vi/ei8H5iATrgg/mqdefault.jpg",
-          "trackTitle": "No Time To Dice",
-          "channelTitle": "chipzel",
-          "displayTitle": "Dicey Dungeons: Reunion - No Time To Dice"
-        },
-        {
-          "title": "Jetpack Joyride - Main Theme",
-          "trackId": "9425f368-9c1f-424c-8964-0f47e989a52b",
-          "videoId": "MiUjLJJligs",
-          "gameTitle": "Jetpack Joyride",
-          "thumbnail": "https://i.ytimg.com/vi/MiUjLJJligs/mqdefault.jpg",
-          "trackTitle": "Main Theme",
-          "channelTitle": "Halfbrick Studios",
-          "displayTitle": "Jetpack Joyride - Main Theme"
-        },
-        {
-          "title": "The Legend of Zelda: The Minish Cap - Minish Village",
-          "trackId": "9873a0fd-738f-4fc3-ba84-40fb8cfe828b",
-          "videoId": "BbQgK8DIK3M",
-          "gameTitle": "The Legend of Zelda: The Minish Cap",
-          "thumbnail": "https://i.ytimg.com/vi/BbQgK8DIK3M/mqdefault.jpg",
-          "trackTitle": "Minish Village",
-          "channelTitle": null,
-          "displayTitle": "The Legend of Zelda: The Minish Cap - Minish Village"
-        },
-        {
-          "title": "Tatsunoko vs. Capcom: Ultimate All-Stars - Orbital Ring Systems Cargo Bay",
-          "trackId": "71981b63-c2cc-4709-8f85-30c0af0094a3",
-          "videoId": "bp1ZkMq26A8",
-          "gameTitle": "Tatsunoko vs. Capcom: Ultimate All-Stars",
-          "thumbnail": "https://i.ytimg.com/vi/bp1ZkMq26A8/mqdefault.jpg",
-          "trackTitle": "Orbital Ring Systems Cargo Bay",
-          "channelTitle": "PikawilMusic",
-          "displayTitle": "Tatsunoko vs. Capcom: Ultimate All-Stars - Orbital Ring Systems Cargo Bay"
-        },
-        {
-          "title": "Tekken 8 - Volcanic Bomb (Climax)",
-          "trackId": "fc6a193c-41af-4743-94a9-f6f91b84ddaf",
-          "videoId": "zKXHxdShsr0",
-          "gameTitle": "Tekken 8",
-          "thumbnail": "https://i.ytimg.com/vi/zKXHxdShsr0/mqdefault.jpg",
-          "trackTitle": "Volcanic Bomb (Climax)",
-          "channelTitle": "TEKKEN Project - Topic",
-          "displayTitle": "Tekken 8 - Volcanic Bomb (Climax)"
-        }
-      ]
-    },
     {
       "user_id": "4e4a8c44-6dd3-43d7-8057-8d09a396d98e",
       "username": "dc:azuarc",
       "avatar_url": "https://cdn.discordapp.com/avatars/165663829135458305/0c6fd993b2868794b13ac011d4c1d74a.png",
       "gamefaqs_username": null,
-      "updated_at": "2026-04-14T19:24:35.713937+00:00",
+      "updated_at": "2026-04-15T12:58:25.680543+00:00",
       "nominations": [
+        {
+          "title": "Genshin Impact - Across Dimming Asterisms",
+          "trackId": "e3fe3339-821a-4c61-9342-db9d3f0c20c6",
+          "videoId": "YvLZzUcyDWY",
+          "gameTitle": "Genshin Impact",
+          "thumbnail": "https://i.ytimg.com/vi/YvLZzUcyDWY/mqdefault.jpg",
+          "trackTitle": "Across Dimming Asterisms",
+          "channelTitle": null,
+          "displayTitle": "Genshin Impact - Across Dimming Asterisms"
+        },
         {
           "title": "Chrono Trigger - Schala’s Theme",
           "trackId": "cc942f94-a198-4a5f-b2e7-6b5c748885df",
@@ -119,16 +30,6 @@
           "displayTitle": "Chrono Trigger - Schala’s Theme"
         },
         {
-          "title": "Final Fantasy VIII - Compression of Time",
-          "trackId": "abe6ded3-2948-4572-8a56-f0824abfd2da",
-          "videoId": "0oH5dksLgv8",
-          "gameTitle": "Final Fantasy VIII",
-          "thumbnail": "https://i.ytimg.com/vi/0oH5dksLgv8/mqdefault.jpg",
-          "trackTitle": "Compression of Time",
-          "channelTitle": null,
-          "displayTitle": "Final Fantasy VIII - Compression of Time"
-        },
-        {
           "title": "Lost Odyssey - Dark Saint",
           "trackId": "1c301823-13fb-4129-93e1-29ad7203b2de",
           "videoId": "nI3tq4AP5E4",
@@ -137,16 +38,6 @@
           "trackTitle": "Dark Saint",
           "channelTitle": null,
           "displayTitle": "Lost Odyssey - Dark Saint"
-        },
-        {
-          "title": "Guilty Gear XX - Still in the Dark",
-          "trackId": "654820b9-80a9-4035-bb2c-9e8b11f5c7c8",
-          "videoId": "p_S43AP1tgc",
-          "gameTitle": "Guilty Gear XX",
-          "thumbnail": "https://i.ytimg.com/vi/p_S43AP1tgc/mqdefault.jpg",
-          "trackTitle": "Still in the Dark",
-          "channelTitle": null,
-          "displayTitle": "Guilty Gear XX - Still in the Dark"
         },
         {
           "title": "World of Goo - Red Carpet Extend-o-Matic",
@@ -177,16 +68,6 @@
           "trackTitle": "Rock Garden",
           "channelTitle": null,
           "displayTitle": "Tyrian - Rock Garden"
-        },
-        {
-          "title": "The Legend of Heroes: Trails of Cold Steel - Don't be Defeated By a Friend",
-          "trackId": "dfcc5aba-b238-4232-b01e-f84f069cb714",
-          "videoId": "jsfGVHAqwMc",
-          "gameTitle": "The Legend of Heroes: Trails of Cold Steel",
-          "thumbnail": "https://i.ytimg.com/vi/jsfGVHAqwMc/mqdefault.jpg",
-          "trackTitle": "Don't be Defeated By a Friend",
-          "channelTitle": null,
-          "displayTitle": "The Legend of Heroes: Trails of Cold Steel - Don't be Defeated By a Friend"
         },
         {
           "title": "Shantae & The Pirate's Curse - We Love Burning Town",
@@ -279,24 +160,24 @@
           "displayTitle": "UNBEATABLE - WORN OUT TAPES"
         },
         {
-          "title": "Genshin Impact - Across Dimming Asterisms",
-          "trackId": "e3fe3339-821a-4c61-9342-db9d3f0c20c6",
-          "videoId": "YvLZzUcyDWY",
-          "gameTitle": "Genshin Impact",
-          "thumbnail": "https://i.ytimg.com/vi/YvLZzUcyDWY/mqdefault.jpg",
-          "trackTitle": "Across Dimming Asterisms",
+          "title": "Silver Surfer - Stage 1",
+          "trackId": "5a0a51a3-5494-4fcb-93ae-434d12327203",
+          "videoId": "BGNSHNf-nlU",
+          "gameTitle": "Silver Surfer",
+          "thumbnail": "https://i.ytimg.com/vi/BGNSHNf-nlU/mqdefault.jpg",
+          "trackTitle": "Stage 1",
           "channelTitle": null,
-          "displayTitle": "Genshin Impact - Across Dimming Asterisms"
+          "displayTitle": "Silver Surfer - Stage 1"
         },
         {
-          "title": "Goddess of Victory: NIKKE - TuNGSTeN",
-          "trackId": "3653280a-a526-487b-afde-abacff635882",
-          "videoId": "DQDs56LuKEs",
-          "gameTitle": "Goddess of Victory: NIKKE",
-          "thumbnail": "https://i.ytimg.com/vi/DQDs56LuKEs/mqdefault.jpg",
-          "trackTitle": "TuNGSTeN",
+          "title": "Guilty Gear X - Awe of She",
+          "trackId": "2b876601-bf94-413f-8da9-1481b5b01410",
+          "videoId": "u9LtKHiVRCw",
+          "gameTitle": "Guilty Gear X",
+          "thumbnail": "https://i.ytimg.com/vi/u9LtKHiVRCw/mqdefault.jpg",
+          "trackTitle": "Awe of She",
           "channelTitle": null,
-          "displayTitle": "Goddess of Victory: NIKKE - TuNGSTeN"
+          "displayTitle": "Guilty Gear X - Awe of She"
         }
       ]
     },
@@ -506,205 +387,6 @@
           "trackTitle": "Mountain Peak",
           "channelTitle": null,
           "displayTitle": "Yu Yu Hakusho: Makyou Touitsusen - Mountain Peak"
-        }
-      ]
-    },
-    {
-      "user_id": "e63d2f90-9be3-4f22-9f10-76cc496817b4",
-      "username": "dc:Chaeix",
-      "avatar_url": "https://cdn.discordapp.com/avatars/278330645418344449/eec61ae7400d93fe245d91101b3d824a.png",
-      "gamefaqs_username": "Chaeix",
-      "updated_at": "2026-04-14T19:24:35.713937+00:00",
-      "nominations": [
-        {
-          "title": "Shining Wind - Heart-Shaped Chant",
-          "trackId": "b142f3ff-9f69-4a61-9426-97ce2feb8f6a",
-          "videoId": "1FOn-tQmO6o",
-          "gameTitle": "Shining Wind",
-          "thumbnail": "https://i.ytimg.com/vi/1FOn-tQmO6o/mqdefault.jpg",
-          "trackTitle": "Heart-Shaped Chant",
-          "channelTitle": "sleeping0dragon",
-          "displayTitle": "Shining Wind - Heart-Shaped Chant"
-        },
-        {
-          "title": "Honkai Stair Rail - Rondo Across Countless Kalpas",
-          "trackId": "2740255e-a83d-4ae3-86ef-a3037329f7e2",
-          "videoId": "B5UeNLlnUOA",
-          "gameTitle": "Honkai Stair Rail",
-          "thumbnail": "https://i.ytimg.com/vi/B5UeNLlnUOA/mqdefault.jpg",
-          "trackTitle": "Rondo Across Countless Kalpas",
-          "channelTitle": "HOYO-MiX - Topic",
-          "displayTitle": "Honkai Stair Rail - Rondo Across Countless Kalpas"
-        },
-        {
-          "title": "Danganronpa V3 - Climactic Re-enactment V3",
-          "trackId": "d09d688b-e3cb-46a8-a908-019efd039b39",
-          "videoId": "GYtsAyA_mUk",
-          "gameTitle": "Danganronpa V3",
-          "thumbnail": "https://i.ytimg.com/vi/GYtsAyA_mUk/mqdefault.jpg",
-          "trackTitle": "Climactic Re-enactment V3",
-          "channelTitle": "A1st",
-          "displayTitle": "Danganronpa V3 - Climactic Re-enactment V3"
-        },
-        {
-          "title": "Ace Attorney Investigations - Prelude to Pursuit - Search for the Truth",
-          "trackId": "202c9226-bcab-4ff2-8276-116a277a65e0",
-          "videoId": "nSP6E1pb9fw",
-          "gameTitle": "Ace Attorney Investigations",
-          "thumbnail": "https://i.ytimg.com/vi/nSP6E1pb9fw/mqdefault.jpg",
-          "trackTitle": "Prelude to Pursuit - Search for the Truth",
-          "channelTitle": "Shankey",
-          "displayTitle": "Ace Attorney Investigations - Prelude to Pursuit - Search for the Truth"
-        },
-        {
-          "title": "Need for Speed: The Run - Make Up Time",
-          "trackId": "76fdbe04-7535-417b-9dce-e09a121123d0",
-          "videoId": "7SNhg2DtqR0",
-          "gameTitle": "Need for Speed: The Run",
-          "thumbnail": "https://i.ytimg.com/vi/7SNhg2DtqR0/mqdefault.jpg",
-          "trackTitle": "Make Up Time",
-          "channelTitle": "SiulSC",
-          "displayTitle": "Need for Speed: The Run - Make Up Time"
-        },
-        {
-          "title": "World of Wacraft - Garden of Life",
-          "trackId": "59e6f2c3-a219-47a0-9815-30602f91386c",
-          "videoId": "RJTM3Si10U4",
-          "gameTitle": "World of Wacraft",
-          "thumbnail": "https://i.ytimg.com/vi/RJTM3Si10U4/mqdefault.jpg",
-          "trackTitle": "Garden of Life",
-          "channelTitle": "Release - Topic",
-          "displayTitle": "World of Wacraft - Garden of Life"
-        },
-        {
-          "title": "Honkai: Star Rail - NAME == Entelechy",
-          "trackId": "05dae8bb-6ab4-49b3-bfef-e782937d785f",
-          "videoId": "8EyFgUqtFK8",
-          "gameTitle": "Honkai: Star Rail",
-          "thumbnail": "https://i.ytimg.com/vi/8EyFgUqtFK8/mqdefault.jpg",
-          "trackTitle": "NAME == Entelechy",
-          "channelTitle": "Pom-Pom’s Workstation",
-          "displayTitle": "Honkai: Star Rail - NAME == Entelechy"
-        },
-        {
-          "title": "Ace Combat: Assault Horizon - Shall Defend",
-          "trackId": "9632bc01-42b8-4486-9a91-ed1e04f99fd2",
-          "videoId": "PseSGiek5-M",
-          "gameTitle": "Ace Combat: Assault Horizon",
-          "thumbnail": "https://i.ytimg.com/vi/PseSGiek5-M/mqdefault.jpg",
-          "trackTitle": "Shall Defend",
-          "channelTitle": "Ham",
-          "displayTitle": "Ace Combat: Assault Horizon - Shall Defend"
-        },
-        {
-          "title": "Pokemon Legends: Z-A - Battle! Lysandre",
-          "trackId": "fe5cf35b-e7fd-4b09-98e3-359bde868259",
-          "videoId": "zcrTFTlxC2s",
-          "gameTitle": "Pokemon Legends: Z-A",
-          "thumbnail": "https://i.ytimg.com/vi/zcrTFTlxC2s/mqdefault.jpg",
-          "trackTitle": "Battle! Lysandre",
-          "channelTitle": "RezyMania",
-          "displayTitle": "Pokemon Legends: Z-A - Battle! Lysandre"
-        },
-        {
-          "title": "The House in Fata Morgana - Girlhood in Shambles (in-game version)",
-          "trackId": "c2e54026-eaa1-4a69-abe6-0c87bbb78033",
-          "videoId": "-CCswRgA8cc",
-          "gameTitle": "The House in Fata Morgana",
-          "thumbnail": "https://i.ytimg.com/vi/-CCswRgA8cc/mqdefault.jpg",
-          "trackTitle": "Girlhood in Shambles (in-game version)",
-          "channelTitle": "Simone Martini",
-          "displayTitle": "The House in Fata Morgana - Girlhood in Shambles (in-game version)"
-        },
-        {
-          "title": "Need for Speed World - Static",
-          "trackId": "bdd08661-a14a-4caf-be38-136c7b54e9be",
-          "videoId": "i77Xd1QAti4",
-          "gameTitle": "Need for Speed World",
-          "thumbnail": "https://i.ytimg.com/vi/i77Xd1QAti4/mqdefault.jpg",
-          "trackTitle": "Static",
-          "channelTitle": "Trilogy94",
-          "displayTitle": "Need for Speed World - Static"
-        },
-        {
-          "title": "Wild Arms XF - Intrude Upon Happiness, Plunder the Future",
-          "trackId": "e0251b44-8f6d-46bb-a06a-5b76548b91ae",
-          "videoId": "z8iuwPgdVQg",
-          "gameTitle": "Wild Arms XF",
-          "thumbnail": "https://i.ytimg.com/vi/z8iuwPgdVQg/mqdefault.jpg",
-          "trackTitle": "Intrude Upon Happiness, Plunder the Future",
-          "channelTitle": "sleeping0dragon",
-          "displayTitle": "Wild Arms XF - Intrude Upon Happiness, Plunder the Future"
-        },
-        {
-          "title": "Disaster: Day of Crisis - Main Theme",
-          "trackId": "f55e6331-2b6c-4e41-9a8f-c7ec7bc99045",
-          "videoId": "-qdhp1YhIsY",
-          "gameTitle": "Disaster: Day of Crisis",
-          "thumbnail": "https://i.ytimg.com/vi/-qdhp1YhIsY/mqdefault.jpg",
-          "trackTitle": "Main Theme",
-          "channelTitle": "FireoftheNight",
-          "displayTitle": "Disaster: Day of Crisis - Main Theme"
-        },
-        {
-          "title": "Final Fantasy XIV - Weight of the World (Prelude Version)",
-          "trackId": "43696bd7-6d5d-42b5-8f08-df0d15e6a335",
-          "videoId": "gPSOaSwdEaE",
-          "gameTitle": "Final Fantasy XIV",
-          "thumbnail": "https://i.ytimg.com/vi/gPSOaSwdEaE/mqdefault.jpg",
-          "trackTitle": "Weight of the World (Prelude Version)",
-          "channelTitle": "Masayoshi Soken - Topic",
-          "displayTitle": "Final Fantasy XIV - Weight of the World (Prelude Version)"
-        },
-        {
-          "title": "World of Goo - Red Carpet Extend-o-Matic",
-          "trackId": "2c94478c-4dcf-47b3-8bfa-d413023ffc1b",
-          "videoId": "HwmxrIwetyU",
-          "gameTitle": "World of Goo",
-          "thumbnail": "https://i.ytimg.com/vi/HwmxrIwetyU/mqdefault.jpg",
-          "trackTitle": "Red Carpet Extend-o-Matic",
-          "channelTitle": "Rickkity-T",
-          "displayTitle": "World of Goo - Red Carpet Extend-o-Matic"
-        },
-        {
-          "title": "Old Spice Dikembe Mutombo's 4 1/2 Weeks to Save the World - We Saved the World",
-          "trackId": "257b2b0e-c9f9-4055-81ec-9494e6387bb2",
-          "videoId": "KuTeD9l8vXI",
-          "gameTitle": "Old Spice Dikembe Mutombo's 4 1/2 Weeks to Save the World",
-          "thumbnail": "https://i.ytimg.com/vi/KuTeD9l8vXI/mqdefault.jpg",
-          "trackTitle": "We Saved the World",
-          "channelTitle": "RYAN TURNBULL",
-          "displayTitle": "Old Spice Dikembe Mutombo's 4 1/2 Weeks to Save the World - We Saved the World"
-        },
-        {
-          "title": "Donkey Kong Country: Tropical Freeze - Seashore War",
-          "trackId": "82229f81-8f55-40fb-8d93-a650d76d3b56",
-          "videoId": "Boqy0Q-4c_M",
-          "gameTitle": "Donkey Kong Country: Tropical Freeze",
-          "thumbnail": "https://i.ytimg.com/vi/Boqy0Q-4c_M/mqdefault.jpg",
-          "trackTitle": "Seashore War",
-          "channelTitle": "piplupwater",
-          "displayTitle": "Donkey Kong Country: Tropical Freeze - Seashore War"
-        },
-        {
-          "title": "Metroid Prime - Menu Select",
-          "trackId": "1e5da35e-4fc8-486c-9ab7-bbff2dfd747f",
-          "videoId": "k0_-BkhG9Sw",
-          "gameTitle": "Metroid Prime",
-          "thumbnail": "https://i.ytimg.com/vi/k0_-BkhG9Sw/mqdefault.jpg",
-          "trackTitle": "Menu Select",
-          "channelTitle": "Metroid Music Channel",
-          "displayTitle": "Metroid Prime - Menu Select"
-        },
-        {
-          "title": "Ori and the Blind Forest - Light of Nibel",
-          "trackId": "022884b4-8055-43f1-bc75-2fcbe71ca779",
-          "videoId": "t6vWDz5NzOY",
-          "gameTitle": "Ori and the Blind Forest",
-          "thumbnail": "https://i.ytimg.com/vi/t6vWDz5NzOY/mqdefault.jpg",
-          "trackTitle": "Light of Nibel",
-          "channelTitle": "Gareth Coker - Topic",
-          "displayTitle": "Ori and the Blind Forest - Light of Nibel"
         }
       ]
     }
