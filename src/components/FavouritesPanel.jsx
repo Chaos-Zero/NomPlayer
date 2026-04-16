@@ -877,15 +877,9 @@ export default function FavouritesPanel({
               role="menuitem"
               onClick={handleAddToCurrentPlaylist}
             >
-              Add to Current Playlist
+              Add to Playlist
             </button>
-            <div
-              style={{
-                height: '1px',
-                background: 'var(--border)',
-                margin: '4px 0',
-              }}
-            />
+            <div className="context-menu-divider" />
             {tone !== 'nomination' && (
               <button
                 className="support-context-menu-item"
@@ -939,13 +933,7 @@ export default function FavouritesPanel({
                 Add to Nominations
               </button>
             )}
-            <div
-              style={{
-                height: '1px',
-                background: 'var(--border)',
-                margin: '4px 0',
-              }}
-            />
+            <div className="context-menu-divider" />
             {authUser && (
               <button
                 className="support-context-menu-item"

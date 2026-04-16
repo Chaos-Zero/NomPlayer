@@ -1302,13 +1302,7 @@ export default function TrackDatabase({
 
           {authUser && (
             <>
-              <div
-                style={{
-                  height: '1px',
-                  background: 'rgba(255,255,255,0.08)',
-                  margin: '4px 8px',
-                }}
-              />
+              <div className="context-menu-divider" />
               <button
                 className="database-context-menu-item"
                 onClick={() => {
@@ -1333,13 +1327,7 @@ export default function TrackDatabase({
               >
                 <SupportIcon /> Set Support Level
               </button>
-              <div
-                style={{
-                  height: '1px',
-                  background: 'rgba(255,255,255,0.08)',
-                  margin: '4px 8px',
-                }}
-              />
+              <div className="context-menu-divider" />
               <button
                 className="database-context-menu-item"
                 onClick={() => {

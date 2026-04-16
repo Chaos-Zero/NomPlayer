@@ -2190,6 +2190,7 @@ export default function HomePage({
           >
             <span>Add to Playlist</span>
           </button>
+          <div className="context-menu-divider" />
           {!(
             supportStatusById[discoveryContextMenu.candidate.videoId]
               ?.isSupported &&
@@ -2234,6 +2235,7 @@ export default function HomePage({
               <span>Add to Nominations</span>
             </button>
           )}
+          <div className="context-menu-divider" />
           <button
             className="playlist-context-menu-item"
             onClick={(e) =>
@@ -2244,7 +2246,7 @@ export default function HomePage({
               )
             }
           >
-            <span>View activity and comments</span>
+            <span>View Activity and Comments</span>
           </button>
           {authUser && (
             <button
@@ -2257,7 +2259,7 @@ export default function HomePage({
                 )
               }
             >
-              <span>Update metadata</span>
+              <span>Update Metadata</span>
             </button>
           )}
         </ContextMenuPortal>
@@ -2292,8 +2294,9 @@ export default function HomePage({
               )
             }
           >
-            <span>Add to current playlist</span>
+            <span>Add to Playlist</span>
           </button>
+          <div className="context-menu-divider" />
           <button
             className={`playlist-context-menu-item ${
               supportStatusById[nominationContextMenu.video.videoId]
@@ -2312,8 +2315,8 @@ export default function HomePage({
             <span>
               {supportStatusById[nominationContextMenu.video.videoId]
                 ?.isSupported
-                ? 'Remove from support list'
-                : 'Add to support list'}
+                ? 'Remove from Support List'
+                : 'Add to Support List'}
             </span>
           </button>
           {!supportStatusById[nominationContextMenu.video.videoId]
@@ -2331,6 +2334,7 @@ export default function HomePage({
               <span>Add to Nominations</span>
             </button>
           )}
+          <div className="context-menu-divider" />
           <button
             className="playlist-context-menu-item"
             onClick={(e) =>
@@ -2341,7 +2345,7 @@ export default function HomePage({
               )
             }
           >
-            <span>View activity and comments</span>
+            <span>View Activity and Comments</span>
           </button>
         </ContextMenuPortal>
       )}

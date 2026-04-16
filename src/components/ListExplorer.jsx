@@ -2828,13 +2828,18 @@ export default function ListExplorer({
               </button>
             )}
             {contextMenu.sourceListId !== 'nominations' && (
-              <button
-                className="database-context-menu-item"
-                onClick={(e) => handleToggleTrackSupport(contextMenu.video, e)}
-              >
-                <HeartIcon />
-                <span>Update Support</span>
-              </button>
+              <>
+                <div className="context-menu-divider" />
+                <button
+                  className="database-context-menu-item"
+                  onClick={(e) =>
+                    handleToggleTrackSupport(contextMenu.video, e)
+                  }
+                >
+                  <HeartIcon />
+                  <span>Update Support</span>
+                </button>
+              </>
             )}
             {!nominationList.some(
               (v) => v.videoId === contextMenu.video.videoId,
@@ -2863,13 +2868,7 @@ export default function ListExplorer({
             {contextMenu.sourceListId !== 'nominations' &&
               contextMenu.sourceListId !== 'peer' && (
                 <>
-                  <div
-                    style={{
-                      height: '1px',
-                      background: 'rgba(255,255,255,0.08)',
-                      margin: '4px 8px',
-                    }}
-                  />
+                  <div className="context-menu-divider" />
                   <button
                     className="database-context-menu-item danger"
                     onClick={() => {

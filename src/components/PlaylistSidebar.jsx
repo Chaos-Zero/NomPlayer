@@ -1190,67 +1190,26 @@ export default function PlaylistSidebar({
           onClose={() => setContextMenu(null)}
           className="playlist-context-menu"
         >
-          {!supportIds.has(contextMenu.video.videoId) &&
-            !nominationIds.has(contextMenu.video.videoId) && (
-              <button
-                className="playlist-context-menu-item"
-                type="button"
-                role="menuitem"
-                onClick={() => {
-                  onToggleSupport(contextMenu.video, 1);
-                  setContextMenu(null);
-                }}
-              >
-                Support
-              </button>
-            )}
+          <button
+            className="playlist-context-menu-item"
+            type="button"
+            role="menuitem"
+            onClick={(e) => {
+              const rect = e.currentTarget.getBoundingClientRect();
+              onOpenSupportDropdown(contextMenu.video, {
+                top: rect.top,
+                left: rect.left,
+                width: rect.width,
+                height: rect.height,
+              });
+              setContextMenu(null);
+            }}
+          >
+            Update Support
+          </button>
           {supportIds.has(contextMenu.video.videoId) && (
             <>
-              <button
-                className="playlist-context-menu-item"
-                type="button"
-                role="menuitem"
-                onClick={() => {
-                  onToggleSupport(contextMenu.video, 1);
-                  setContextMenu(null);
-                }}
-              >
-                <span style={{ color: 'var(--gold)', marginRight: 8 }}>♥</span>{' '}
-                Set Possible Support
-              </button>
-              <button
-                className="playlist-context-menu-item"
-                type="button"
-                role="menuitem"
-                onClick={() => {
-                  onToggleSupport(contextMenu.video, 2);
-                  setContextMenu(null);
-                }}
-              >
-                <span style={{ color: 'var(--gold)', marginRight: 8 }}>♥♥</span>{' '}
-                Set Likely Support
-              </button>
-              <button
-                className="playlist-context-menu-item"
-                type="button"
-                role="menuitem"
-                onClick={() => {
-                  onToggleSupport(contextMenu.video, 3);
-                  setContextMenu(null);
-                }}
-              >
-                <span style={{ color: 'var(--gold)', marginRight: 8 }}>
-                  ♥♥♥
-                </span>{' '}
-                Set Definite Support
-              </button>
-              <div
-                style={{
-                  height: '1px',
-                  background: 'var(--border)',
-                  margin: '4px 0',
-                }}
-              />
+              <div className="context-menu-divider" />
               <button
                 className="playlist-context-menu-item danger"
                 type="button"

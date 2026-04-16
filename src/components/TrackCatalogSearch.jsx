@@ -281,7 +281,7 @@ export default function TrackCatalogSearch({
               setContextMenu(null);
             }}
           >
-            Play now
+            Play Now
           </button>
           <button
             className="playlist-context-menu-item"
@@ -292,7 +292,7 @@ export default function TrackCatalogSearch({
               setContextMenu(null);
             }}
           >
-            Add to playlist
+            Add to Playlist
           </button>
         </ContextMenuPortal>
       )}

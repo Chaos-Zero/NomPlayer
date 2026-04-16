@@ -6676,6 +6676,12 @@ button.playlist-search-indicator:hover {
   opacity: 0.8;
 }
 
+.context-menu-divider {
+  height: 1px;
+  background: var(--border);
+  margin: 4px 0;
+}
+
 @keyframes context-menu-appear {
   from {
     opacity: 0;
