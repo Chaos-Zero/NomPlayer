@@ -20,7 +20,7 @@ import {
   deleteUserFeedback,
 } from '../lib/feedback.js';
 import DuplicateReviewModal from './DuplicateReviewModal.jsx';
-import { DotLottiePlayer } from '@dotlottie/react-player';
+import { DotLottieReact } from '@lottiefiles/dotlottie-react';
 import useMediaQuery from '../hooks/useMediaQuery.js';
 import { useVirtualizer } from '@tanstack/react-virtual';
 
@@ -109,6 +109,32 @@ function MetadataIcon() {
       fill="currentColor"
     >
       <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" />
+    </svg>
+  );
+}
+
+function NominateIcon() {
+  return (
+    <svg
+      className="transport-icon"
+      viewBox="0 0 24 24"
+      aria-hidden="true"
+      fill="currentColor"
+    >
+      <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
+    </svg>
+  );
+}
+
+function SupportIcon() {
+  return (
+    <svg
+      className="transport-icon"
+      viewBox="0 0 24 24"
+      aria-hidden="true"
+      fill="currentColor"
+    >
+      <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
     </svg>
   );
 }
@@ -489,6 +515,8 @@ export default function TrackDatabase({
   listenedStatusById = {},
   hasPlayer = false,
   onUpdateMetadata,
+  onToggleNomination,
+  onOpenSupportDropdown,
 }) {
   const [tracks, setTracks] = useState([]);
   const [userFeedback, setUserFeedback] = useState({});
@@ -1006,7 +1034,7 @@ export default function TrackDatabase({
               className={`database-loading-overlay ${tracks.length === 0 ? 'initial' : ''}`}
             >
               <div className="lottie-player-container">
-                <DotLottiePlayer
+                <DotLottieReact
                   src="/loading.lottie"
                   autoplay
                   loop
@@ -1160,7 +1188,12 @@ export default function TrackDatabase({
               {paddingTop > 0 && (
                 <tr className="virtual-padding-top">
                   <td
-                    style={{ height: `${paddingTop}px`, padding: 0, border: 0, transition: 'none' }}
+                    style={{
+                      height: `${paddingTop}px`,
+                      padding: 0,
+                      border: 0,
+                      transition: 'none',
+                    }}
                     colSpan={8}
                   />
                 </tr>
@@ -1201,7 +1234,12 @@ export default function TrackDatabase({
               {paddingBottom > 0 && (
                 <tr className="virtual-padding-bottom">
                   <td
-                    style={{ height: `${paddingBottom}px`, padding: 0, border: 0, transition: 'none' }}
+                    style={{
+                      height: `${paddingBottom}px`,
+                      padding: 0,
+                      border: 0,
+                      transition: 'none',
+                    }}
                     colSpan={8}
                   />
                 </tr>
@@ -1264,6 +1302,37 @@ export default function TrackDatabase({
 
           {authUser && (
             <>
+              <div
+                style={{
+                  height: '1px',
+                  background: 'rgba(255,255,255,0.08)',
+                  margin: '4px 8px',
+                }}
+              />
+              <button
+                className="database-context-menu-item"
+                onClick={() => {
+                  onToggleNomination?.(contextMenu.track);
+                  setContextMenu(null);
+                }}
+              >
+                <NominateIcon /> Add to Nominations
+              </button>
+              <button
+                className="database-context-menu-item"
+                onClick={(e) => {
+                  const rect = e.currentTarget.getBoundingClientRect();
+                  onOpenSupportDropdown?.(contextMenu.track, {
+                    top: rect.top,
+                    left: rect.left,
+                    width: rect.width,
+                    height: rect.height,
+                  });
+                  setContextMenu(null);
+                }}
+              >
+                <SupportIcon /> Set Support Level
+              </button>
               <div
                 style={{
                   height: '1px',

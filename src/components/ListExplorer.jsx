@@ -37,7 +37,7 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import { PointerSensor as CorePointerSensor } from '@dnd-kit/core';
 import { SortableSupportItem, SupportItem } from './FavouritesPanel.jsx';
-import { DotLottiePlayer } from '@dotlottie/react-player';
+import { DotLottieReact } from '@lottiefiles/dotlottie-react';
 import {
   HeartIcon,
   LockIcon,
@@ -952,7 +952,7 @@ function CommentsView({
     return (
       <div className="comments-view-loading-overlay">
         <div className="lottie-player-container">
-          <DotLottiePlayer
+          <DotLottieReact
             src="/loading.lottie"
             autoplay
             loop

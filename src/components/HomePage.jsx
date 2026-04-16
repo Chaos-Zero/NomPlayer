@@ -637,12 +637,19 @@ function HeroLeaderboard({
   const [currentView, setCurrentView] = useState(
     authUser ? 'nominations' : 'global',
   );
+  const [showAllGlobal, setShowAllGlobal] = useState(false);
   const [prevAuthUser, setPrevAuthUser] = useState(authUser);
 
   if (authUser !== prevAuthUser) {
     setPrevAuthUser(authUser);
     setCurrentView(authUser ? 'nominations' : 'global');
+    setShowAllGlobal(false);
   }
+
+  const switchView = (view) => {
+    setCurrentView(view);
+    setShowAllGlobal(false);
+  };
 
   let data = [];
   let title = '';
@@ -657,6 +664,12 @@ function HeroLeaderboard({
     title = 'Your Supports';
   }
 
+  const GLOBAL_PREVIEW_LIMIT = 20;
+  const displayData =
+    currentView === 'global' && !showAllGlobal
+      ? data.slice(0, GLOBAL_PREVIEW_LIMIT)
+      : data;
+
   return (
     <article className="dashboard-feature-card dashboard-feature-card-hero hero-leaderboard-card animate-fade-in">
       <div className="hero-leaderboard-header">
@@ -666,14 +679,14 @@ function HeroLeaderboard({
             <>
               <button
                 className={`hero-leaderboard-tab ${currentView === 'nominations' ? 'active' : ''}`}
-                onClick={() => setCurrentView('nominations')}
+                onClick={() => switchView('nominations')}
                 title="Your Nominations"
               >
                 Noms
               </button>
               <button
                 className={`hero-leaderboard-tab ${currentView === 'supports' ? 'active' : ''}`}
-                onClick={() => setCurrentView('supports')}
+                onClick={() => switchView('supports')}
                 title="Your Supports"
               >
                 Supports
@@ -682,7 +695,7 @@ function HeroLeaderboard({
           )}
           <button
             className={`hero-leaderboard-tab ${currentView === 'global' ? 'active' : ''}`}
-            onClick={() => setCurrentView('global')}
+            onClick={() => switchView('global')}
             title="Global Leaderboard"
           >
             Global
@@ -700,94 +713,106 @@ function HeroLeaderboard({
             <p>No tracks available for this view.</p>
           </div>
         ) : (
-          data.map((track, idx) => (
-            <div
-              key={track.videoId}
-              className="hero-leaderboard-row"
-              onDoubleClick={() => onPlayTrack(track)}
-              onClick={(e) => {
-                if (isFeedbackPanelOpen) {
-                  const rect = e.currentTarget.getBoundingClientRect();
-                  onShowComments?.(resolveTrack(track), {
-                    top: rect.top,
-                    left: rect.left,
-                    width: rect.width,
-                    height: rect.height,
-                  });
-                }
-              }}
-              onContextMenu={(e) => onContextMenu(e, track, currentView)}
-              title="Double-click to play (Right-click for options)"
-            >
-              <span className="hero-leaderboard-rank">{idx + 1}</span>
-              <img
-                src={track.thumbnail}
-                alt=""
-                className="hero-leaderboard-thumb"
-                loading="lazy"
-              />
-              <div className="hero-leaderboard-info">
-                <div className="hero-leaderboard-info-top">
-                  <span className="hero-leaderboard-track-title">
-                    {track.title}
-                  </span>
-                  {globalCommentedVideoIds?.has(track.videoId) && (
-                    <button
-                      className="hero-leaderboard-comment-btn"
-                      title="View Comments"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        const rect = e.currentTarget.getBoundingClientRect();
-                        onShowComments?.(resolveTrack(track), {
-                          top: rect.top,
-                          left: rect.left,
-                          width: rect.width,
-                          height: rect.height,
-                        });
-                      }}
-                    >
-                      <SpeechBubbleIcon size={14} />
-                    </button>
-                  )}
-                </div>
-                <div className="hero-leaderboard-stats">
-                  {track.totalSupport > 0 && (
-                    <span className="hero-leaderboard-total-stat">
-                      Total: {track.totalSupport}
+          <>
+            {displayData.map((track, idx) => (
+              <div
+                key={track.videoId}
+                className="hero-leaderboard-row"
+                onDoubleClick={() => onPlayTrack(track)}
+                onClick={(e) => {
+                  if (isFeedbackPanelOpen) {
+                    const rect = e.currentTarget.getBoundingClientRect();
+                    onShowComments?.(resolveTrack(track), {
+                      top: rect.top,
+                      left: rect.left,
+                      width: rect.width,
+                      height: rect.height,
+                    });
+                  }
+                }}
+                onContextMenu={(e) => onContextMenu(e, track, currentView)}
+                title="Double-click to play (Right-click for options)"
+              >
+                <span className="hero-leaderboard-rank">{idx + 1}</span>
+                <img
+                  src={track.thumbnail}
+                  alt=""
+                  className="hero-leaderboard-thumb"
+                  loading="lazy"
+                />
+                <div className="hero-leaderboard-info">
+                  <div className="hero-leaderboard-info-top">
+                    <span className="hero-leaderboard-track-title">
+                      {track.title}
                     </span>
-                  )}
-                  {track.totalSupport > 0 && (
-                    <div className="hero-leaderboard-stat-icons">
-                      {track.supportCount3 > 0 && (
-                        <span
-                          className="stat-badge highest"
-                          title="Definite Supports"
-                        >
-                          <LockIcon size={10} /> {track.supportCount3}
-                        </span>
-                      )}
-                      {track.supportCount2 > 0 && (
-                        <span
-                          className="stat-badge strong"
-                          title="Likely Supports"
-                        >
-                          <HeartIcon size={10} /> {track.supportCount2}
-                        </span>
-                      )}
-                      {track.supportCount1 > 0 && (
-                        <span
-                          className="stat-badge normal"
-                          title="Possible Supports"
-                        >
-                          <HeartIcon size={10} /> {track.supportCount1}
-                        </span>
-                      )}
-                    </div>
-                  )}
+                    {globalCommentedVideoIds?.has(track.videoId) && (
+                      <button
+                        className="hero-leaderboard-comment-btn"
+                        title="View Comments"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const rect = e.currentTarget.getBoundingClientRect();
+                          onShowComments?.(resolveTrack(track), {
+                            top: rect.top,
+                            left: rect.left,
+                            width: rect.width,
+                            height: rect.height,
+                          });
+                        }}
+                      >
+                        <SpeechBubbleIcon size={14} />
+                      </button>
+                    )}
+                  </div>
+                  <div className="hero-leaderboard-stats">
+                    {track.totalSupport > 0 && (
+                      <span className="hero-leaderboard-total-stat">
+                        Total: {track.totalSupport}
+                      </span>
+                    )}
+                    {track.totalSupport > 0 && (
+                      <div className="hero-leaderboard-stat-icons">
+                        {track.supportCount3 > 0 && (
+                          <span
+                            className="stat-badge highest"
+                            title="Definite Supports"
+                          >
+                            <LockIcon size={10} /> {track.supportCount3}
+                          </span>
+                        )}
+                        {track.supportCount2 > 0 && (
+                          <span
+                            className="stat-badge strong"
+                            title="Likely Supports"
+                          >
+                            <HeartIcon size={10} /> {track.supportCount2}
+                          </span>
+                        )}
+                        {track.supportCount1 > 0 && (
+                          <span
+                            className="stat-badge normal"
+                            title="Possible Supports"
+                          >
+                            <HeartIcon size={10} /> {track.supportCount1}
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
-          ))
+            ))}
+            {currentView === 'global' &&
+              !showAllGlobal &&
+              data.length > GLOBAL_PREVIEW_LIMIT && (
+                <button
+                  className="hero-leaderboard-show-all"
+                  onClick={() => setShowAllGlobal(true)}
+                >
+                  Show all {data.length} nominations
+                </button>
+              )}
+          </>
         )}
       </div>
     </article>
@@ -1060,8 +1085,7 @@ export default function HomePage({
         if (b.supportCount2 !== a.supportCount2)
           return b.supportCount2 - a.supportCount2;
         return b.supportCount1 - a.supportCount1;
-      })
-      .slice(0, 20);
+      });
   }, [mergedMetadata]);
 
   const yourNominations = useMemo(() => {
@@ -1098,8 +1122,7 @@ export default function HomePage({
         if (b.supportCount2 !== a.supportCount2)
           return b.supportCount2 - a.supportCount2;
         return b.supportCount1 - a.supportCount1;
-      })
-      .slice(0, 20);
+      });
   }, [authUser, nominationUpdates, mergedMetadata]);
 
   const yourSupports = useMemo(() => {
@@ -1135,8 +1158,7 @@ export default function HomePage({
         if (b.supportCount2 !== a.supportCount2)
           return b.supportCount2 - a.supportCount2;
         return b.supportCount1 - a.supportCount1;
-      })
-      .slice(0, 20);
+      });
   }, [authUser, supportStatusById, mergedMetadata]);
 
   const discoveryCandidates = useMemo(() => {

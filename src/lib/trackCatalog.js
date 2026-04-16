@@ -473,24 +473,14 @@ export async function fetchAllTracks(supabase) {
 
 export async function fetchMaxVgmcNumber(supabase) {
   if (!supabase) return 0;
-  // Sample tracks to find max sequence number
   const { data, error } = await supabase
-    .from('track_catalog')
-    .select('tournaments')
-    .not('tournaments', 'eq', '[]')
-    .limit(1000);
+    .from('tournaments')
+    .select('sequence_number')
+    .order('sequence_number', { ascending: false })
+    .limit(1);
 
-  if (error || !data) return 24;
-
-  let max = 0;
-  data.forEach((row) => {
-    row.tournaments?.forEach((t) => {
-      if (t.sequence_number > max) max = t.sequence_number;
-      if (t.sequenceNumber > max) max = t.sequenceNumber;
-    });
-  });
-
-  return max || 24;
+  if (error || !data?.[0]) return 24;
+  return data[0].sequence_number || 24;
 }
 export async function findTrackInCatalog(supabase, videoId) {
   if (!videoId) return null;

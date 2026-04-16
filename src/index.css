@@ -12950,6 +12950,25 @@ body.is-resizing .resize-handle {
   flex-direction: column;
 }
 
+.hero-leaderboard-show-all {
+  margin: 8px auto 4px;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 6px 16px;
+  cursor: pointer;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.hero-leaderboard-show-all:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: #fff;
+}
+
 .hero-leaderboard-row {
   display: flex;
   align-items: center;

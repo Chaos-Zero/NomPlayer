@@ -5027,6 +5027,10 @@ export default function App() {
                   applyUpdatesToList(trackId, updates);
                 }}
                 onUpdateMetadata={handleOpenMetadataUpdate}
+                onToggleNomination={handleToggleNominationFromPlaylist}
+                onOpenSupportDropdown={(video, position) =>
+                  setSupportLevelDropdown({ video, position })
+                }
               />
             </Suspense>
           )}
