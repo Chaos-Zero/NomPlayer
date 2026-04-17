@@ -5085,6 +5085,7 @@ export default function App() {
               lastMetadataUpdateBatch={lastMetadataUpdateBatch}
               onPlayCommunityListFromTrack={handlePlayCommunityListFromTrack}
               userProfile={userProfile}
+              nominationList={nominationList}
             />
           )}
 

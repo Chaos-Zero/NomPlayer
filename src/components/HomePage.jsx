@@ -847,9 +847,40 @@ export default function HomePage({
   lastMetadataUpdateBatch = null,
   isAuthReady = true,
   userProfile = null,
+  nominationList = [],
 }) {
   const isMobileLayout = useMediaQuery('(max-width: 960px)');
   const [nominationUpdates, setNominationUpdates] = useState([]);
+
+  // Build a live entry for the current user from local nomination state so the
+  // leaderboard and carousel update immediately without a page reload.
+  const liveUserEntry = useMemo(() => {
+    if (!authUser || nominationList.length === 0) return null;
+    return {
+      userId: authUser.id,
+      username: userProfile?.username || authUser.email || 'You',
+      gamefaqsUsername: userProfile?.gamefaqs_username ?? null,
+      avatarUrl: userProfile?.avatar_url ?? null,
+      updatedAt: null,
+      nominations: nominationList.map((v) => ({
+        videoId: v.videoId,
+        title: v.title || v.displayTitle || 'Untitled video',
+        thumbnail: v.thumbnail || '',
+        channelTitle: v.channelTitle || '',
+      })),
+    };
+  }, [authUser, nominationList, userProfile]);
+
+  // Merge liveUserEntry into nominationUpdates, replacing any stale DB entry
+  // for the current user so the carousel and leaderboard stay in sync.
+  const mergedNominationUpdates = useMemo(() => {
+    if (!liveUserEntry) return nominationUpdates;
+    const withoutUser = nominationUpdates.filter(
+      (u) => u.userId !== liveUserEntry.userId,
+    );
+    return [liveUserEntry, ...withoutUser];
+  }, [liveUserEntry, nominationUpdates]);
+
   const [unplacedFallbackTracks, setUnplacedFallbackTracks] = useState([]);
   const [persistentDiscoveryItems, setPersistentDiscoveryItems] = useState([]);
   const [dashboardError, setDashboardError] = useState('');
@@ -1057,12 +1088,12 @@ export default function HomePage({
 
   const visibleNominationUpdates = useMemo(() => {
     if (isHidingOwnNominations) {
-      return nominationUpdates.filter(
+      return mergedNominationUpdates.filter(
         (update) => update.userId !== authUser?.id,
       );
     }
-    return nominationUpdates;
-  }, [authUser?.id, nominationUpdates, isHidingOwnNominations]);
+    return mergedNominationUpdates;
+  }, [authUser?.id, mergedNominationUpdates, isHidingOwnNominations]);
 
   const globalLeaderboard = useMemo(() => {
     return Object.values(mergedMetadata)
@@ -1097,7 +1128,9 @@ export default function HomePage({
 
   const yourNominations = useMemo(() => {
     if (!authUser) return [];
-    const myUpdate = nominationUpdates.find((u) => u.userId === authUser.id);
+    const myUpdate = mergedNominationUpdates.find(
+      (u) => u.userId === authUser.id,
+    );
     if (!myUpdate) return [];
 
     return myUpdate.nominations
@@ -1130,7 +1163,7 @@ export default function HomePage({
           return b.supportCount2 - a.supportCount2;
         return b.supportCount1 - a.supportCount1;
       });
-  }, [authUser, nominationUpdates, mergedMetadata]);
+  }, [authUser, mergedNominationUpdates, mergedMetadata]);
 
   const yourSupports = useMemo(() => {
     if (!authUser) return [];
