@@ -1749,6 +1749,9 @@ export default function HomePage({
           </p>
 
           <div className="dashboard-hero-footer">
+            <div className="dashboard-hero-start-hint">
+              Start here <span className="dashboard-hero-start-arrow">↓</span>
+            </div>
             <div className="dashboard-hero-actions">
               <Dock items={dockItems} />
             </div>
