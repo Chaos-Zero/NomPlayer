@@ -956,7 +956,7 @@ function CommentsView({
             src="/loading.lottie"
             autoplay
             loop
-            style={{ width: '144px', height: '144px' }}
+            style={{ width: '220px', height: '220px' }}
           />
         </div>
         <div className="database-loading-text">

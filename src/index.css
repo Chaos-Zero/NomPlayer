@@ -9531,8 +9531,8 @@ body.is-resizing .resize-handle {
 }
 
 .lottie-player-container {
-  width: 200px;
-  height: 200px;
+  width: 220px;
+  height: 220px;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -10049,8 +10049,7 @@ body.is-resizing .resize-handle {
   justify-content: center;
   background: rgba(10, 10, 15, 0.4);
   backdrop-filter: blur(2px);
-  gap: 12px;
-  animation: fadeIn 0.3s ease;
+  gap: 4px;
 }
 
 .database-loading-overlay.initial {
@@ -10259,8 +10258,7 @@ body.is-resizing .resize-handle {
   align-items: center;
   justify-content: center;
   background: var(--bg-base);
-  gap: 12px;
-  animation: fadeIn 0.4s ease;
+  gap: 4px;
 }
 
 .list-explorer-grid.comments-mode .list-explorer-column {
