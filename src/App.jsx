@@ -74,6 +74,7 @@ import {
 } from './lib/trackCatalog.js';
 import { fetchDashboardNominationUpdates } from './lib/dashboard.js';
 import { fetchUserFeedback } from './lib/feedback.js';
+import { reportError } from './lib/errorReporter.js';
 import { getSupabaseClient, isSupabaseConfigured } from './lib/supabase.js';
 import {
   formatTime,
@@ -784,7 +785,8 @@ export default function App() {
       }
 
       ingestYouTubeTrackSources(supabase, videos).catch((error) => {
-        setAuthError(error.message || 'Failed to sync nomination tracks.');
+        reportError('Sync nomination tracks to catalog', error);
+        setAuthError('Database error. Your nominations are saved locally.');
       });
     },
     [supabase],
@@ -2075,7 +2077,8 @@ export default function App() {
           setGuestImportSelections(null);
         }
       } catch (error) {
-        setAuthError(error.message || 'Failed to load your account data.');
+        reportError('Load account data on login', error);
+        setAuthError('Database error. Failed to load your account data.');
       } finally {
         setIsAuthReady(true);
       }
@@ -2115,7 +2118,8 @@ export default function App() {
         }
       } catch (error) {
         if (!isActive) return;
-        setAuthError(error.message || 'Failed to restore your session.');
+        reportError('Restore session', error);
+        setAuthError('Database error. Failed to restore your session.');
         setIsAuthReady(true);
       }
     }
@@ -2464,7 +2468,8 @@ export default function App() {
         setAuthDialogMode(null);
       } catch (error) {
         pendingGuestImportStateRef.current = null;
-        setAuthError(error.message || 'Failed to log in.');
+        reportError('Login', error);
+        setAuthError('Database error. Failed to log in.');
       } finally {
         setIsAuthSubmitting(false);
       }
@@ -2544,7 +2549,8 @@ export default function App() {
         pendingGuestImportStateRef.current = null;
         pendingPreferredUsernameRef.current = '';
         pendingGamefaqsUsernameRef.current = '';
-        setAuthError(error.message || 'Failed to create your account.');
+        reportError('Create account', error);
+        setAuthError('Database error. Failed to create your account.');
       } finally {
         setIsAuthSubmitting(false);
       }
@@ -2578,7 +2584,8 @@ export default function App() {
         setAuthDialogMode('signin');
         setAuthMessage('Check your email for a password reset link.');
       } catch (error) {
-        setAuthError(error.message || 'Failed to send a password reset email.');
+        reportError('Send password reset email', error);
+        setAuthError('Database error. Failed to send a password reset email.');
       } finally {
         setIsAuthSubmitting(false);
       }
@@ -2644,7 +2651,8 @@ export default function App() {
       pendingGuestImportStateRef.current = null;
       pendingPreferredUsernameRef.current = '';
       pendingGamefaqsUsernameRef.current = '';
-      setAuthError(error.message || 'Failed to continue with Discord.');
+      reportError('Discord OAuth (initiate)', error);
+      setAuthError('Database error. Failed to continue with Discord.');
       setIsAuthSubmitting(false);
     }
   }, [createPlayerStateSnapshot, startDiscordOAuth, supabase]);
@@ -2669,7 +2677,8 @@ export default function App() {
 
     window.setTimeout(() => {
       startDiscordOAuth({ silent: false }).catch((error) => {
-        setAuthError(error.message || 'Failed to continue with Discord.');
+        reportError('Discord OAuth (callback)', error);
+        setAuthError('Database error. Failed to continue with Discord.');
         setIsAuthSubmitting(false);
       });
     }, 0);
@@ -2701,7 +2710,8 @@ export default function App() {
         setAuthDialogMode(null);
         showDefaultAppToast('Password updated.');
       } catch (error) {
-        setAuthError(error.message || 'Failed to update your password.');
+        reportError('Update password', error);
+        setAuthError('Database error. Failed to update your password.');
       } finally {
         setIsAuthSubmitting(false);
       }
@@ -2769,7 +2779,8 @@ export default function App() {
       finalizeLogout();
     } catch (error) {
       setIsLogoutTransitioning(false);
-      setAuthError(error.message || 'Failed to log out.');
+      reportError('Log out', error);
+      setAuthError('Database error. Failed to log out.');
     }
   }, [applyPersistedPlayerState, currentVideo, supabase]);
 
@@ -2806,7 +2817,8 @@ export default function App() {
       }, 3000);
     } catch (error) {
       console.error('Account deletion failed:', error);
-      setAuthError(error.message || 'Failed to delete account.');
+      reportError('Delete account', error);
+      setAuthError('Database error. Failed to delete your account.');
       setIsDeleteAccountConfirmOpen(false);
     } finally {
       setIsDeletingAccount(false);
@@ -2842,7 +2854,8 @@ export default function App() {
         setUserProfile(profile);
         setSettingsNotice('Settings saved.');
       } catch (error) {
-        setSettingsError(error.message || 'Failed to save your settings.');
+        reportError('Save user settings', error);
+        setSettingsError('Database error. Failed to save your settings.');
       } finally {
         setIsSettingsSubmitting(false);
       }
@@ -4102,9 +4115,8 @@ export default function App() {
 
             if (error) {
               console.error('RPC Error details:', error);
-              handleShowDashboardToast(
-                `DB Error: ${error.message || 'Failed to save track'}`,
-              );
+              reportError('Save track metadata', error);
+              handleShowDashboardToast('Database error. Failed to save track.');
             }
 
             if (trackId && !error) {
