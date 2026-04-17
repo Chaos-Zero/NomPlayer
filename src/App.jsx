@@ -2065,13 +2065,31 @@ export default function App() {
         const hydratedDbState = await fetchUserHydratedState(supabase, user.id);
         const persistedQueue = loadPersistedAuthSyncQueue(user.id);
 
+        // Build the nomination list: start with DB-resolved entries, then append
+        // any unresolved (no trackId) entries from the JSONB state that aren't
+        // already represented. The JSONB state is the only place URL-only
+        // nominations (pending metadata) are stored.
+        const latestJsonbNominationList =
+          persistedQueue.playerState?.nominationList ??
+          normalizedState.nominationList ??
+          [];
+        const dbNominationList = hydratedDbState.nominationList || [];
+        const dbVideoIdSet = new Set(dbNominationList.map((v) => v.videoId));
+        const unresolvedNominationEntries = latestJsonbNominationList.filter(
+          (v) => !v.trackId && !dbVideoIdSet.has(v.videoId),
+        );
+        const mergedNominationList = [
+          ...dbNominationList,
+          ...unresolvedNominationEntries,
+        ];
+
         const baseHydratedState = normalizePersistedPlayerState({
           ...normalizedState,
           ...(persistedQueue.playerState || {}),
           playlist: hydratedDbState.playlist || [],
           customPlaylists: hydratedDbState.customPlaylists || [],
           supportList: hydratedDbState.supportList || [],
-          nominationList: hydratedDbState.nominationList || [],
+          nominationList: mergedNominationList,
           listenedStatusById: normalizedState.listenedStatusById,
         });
 
