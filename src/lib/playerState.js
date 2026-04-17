@@ -338,9 +338,18 @@ export function parseStoredProfileUsername(username, fallback = 'User') {
   const rawUsername =
     typeof username === 'string' && username.trim() ? username.trim() : '';
   const isDiscordUsername = rawUsername.startsWith(DISCORD_USERNAME_PREFIX);
-  const displayName = isDiscordUsername
+  let displayName = isDiscordUsername
     ? rawUsername.slice(DISCORD_USERNAME_PREFIX.length).trim()
     : rawUsername;
+
+  if (isDiscordUsername && displayName.includes('#')) {
+    const hashIndex = displayName.lastIndexOf('#');
+    const discriminator = displayName.slice(hashIndex + 1);
+    // Strip if it's the legacy 4-digit discriminator or the new #0 placeholder
+    if (discriminator === '0' || /^\d{4}$/.test(discriminator)) {
+      displayName = displayName.slice(0, hashIndex);
+    }
+  }
 
   return {
     rawUsername,
@@ -389,12 +398,20 @@ function deriveBaseProfileUsername(user, existingUsername = '') {
 }
 
 export function deriveProfileUsername(user, existingUsername = '') {
-  const baseUsername = deriveBaseProfileUsername(
+  let baseUsername = deriveBaseProfileUsername(
     user,
     parseStoredProfileUsername(existingUsername, '').displayName,
   );
 
   if (isDiscordAuthUser(user)) {
+    // Strip Discord discriminator if present in the base username
+    if (baseUsername.includes('#')) {
+      const hashIndex = baseUsername.lastIndexOf('#');
+      const discriminator = baseUsername.slice(hashIndex + 1);
+      if (discriminator === '0' || /^\d{4}$/.test(discriminator)) {
+        baseUsername = baseUsername.slice(0, hashIndex);
+      }
+    }
     return `${DISCORD_USERNAME_PREFIX}${baseUsername}`;
   }
 
