@@ -222,7 +222,7 @@ export function NominationUpdateCard({
         }}
         onDoubleClick={(e) => {
           e.stopPropagation();
-          onPlayTrack(resolveTrack(video));
+          onPlayTrack(resolveTrack(video), update);
         }}
         onContextMenu={(e) => {
           e.preventDefault();
@@ -329,7 +329,7 @@ export function NominationUpdateCard({
             type="button"
             onClick={(e) => {
               e.stopPropagation();
-              onPlayTrack(resolveTrack(video));
+              onPlayTrack(resolveTrack(video), update);
             }}
             title="Play now"
           >
@@ -835,6 +835,7 @@ export default function HomePage({
   onOpenNominationsAdding,
   onToggleSupport,
   onToggleNomination,
+  onPlayCommunityListFromTrack,
 
   onOpenSupportDropdown,
   supportStatusById = {},
@@ -1473,10 +1474,18 @@ export default function HomePage({
   );
 
   const handlePlayDiscoveryCandidate = useCallback(
-    (video) => {
-      onPlayNow?.(resolveTrack(video));
+    (video, update) => {
+      if (update?.userId && onPlayCommunityListFromTrack) {
+        onPlayCommunityListFromTrack(
+          update.userId,
+          video.videoId,
+          update.nominations,
+        );
+      } else {
+        onPlayNow?.(resolveTrack(video));
+      }
     },
-    [onPlayNow, resolveTrack],
+    [onPlayNow, onPlayCommunityListFromTrack, resolveTrack],
   );
 
   const handleAddWholeList = useCallback(

@@ -3311,6 +3311,49 @@ export default function App() {
     [communityNominations, currentVideoIdRef, markVideoStarted, transientVideo],
   );
 
+  const handlePlayCommunityListFromTrack = useCallback(
+    (userId, startVideoId, nominations) => {
+      let communityUser = communityNominations.find((u) => u.userId === userId);
+
+      if (!communityUser && nominations?.length > 0) {
+        communityUser = { userId, nominations };
+        setCommunityNominations((prev) =>
+          prev.some((u) => u.userId === userId)
+            ? prev
+            : [...prev, communityUser],
+        );
+      }
+
+      if (!communityUser || communityUser.nominations.length === 0) return;
+
+      setActivePlaylistView({ type: 'community', userId });
+
+      const track =
+        communityUser.nominations.find(
+          (n) => (n.videoId || n.video_id || n.id) === startVideoId,
+        ) || communityUser.nominations[0];
+
+      const trackWithProperId = {
+        ...track,
+        videoId: track.videoId || track.video_id || track.id,
+      };
+
+      if (!transientVideo) {
+        transientResumeVideoIdRef.current = currentVideoIdRef.current;
+      }
+
+      setTransientVideo({
+        ...trackWithProperId,
+        source: 'community-view',
+        communityUserId: userId,
+      });
+      setCurrentVideoId(null);
+      markVideoStarted(trackWithProperId.videoId);
+      setIsPlaying(true);
+    },
+    [communityNominations, currentVideoIdRef, markVideoStarted, transientVideo],
+  );
+
   const handlePlayExplorerList = useCallback(
     (id) => {
       if (id.startsWith('peer-')) {
@@ -5014,6 +5057,7 @@ export default function App() {
               onUpdateMetadata={handleOpenMetadataUpdate}
               catalogMetadata={catalogTrackByVideoId}
               lastMetadataUpdateBatch={lastMetadataUpdateBatch}
+              onPlayCommunityListFromTrack={handlePlayCommunityListFromTrack}
             />
           )}
 
