@@ -36,6 +36,7 @@ import {
   PlayIcon,
   SpeechBubbleIcon,
   StarIcon,
+  UsersIcon,
 } from './Icons.jsx';
 
 import { AnimatedGridPattern } from './AnimatedGridPattern.jsx';
@@ -198,11 +199,25 @@ export function NominationUpdateCard({
 }) {
   const displayIdentity = parseStoredProfileUsername(update.username);
   const nominationCount = update.nominations.length;
+  const [supportTooltip, setSupportTooltip] = useState(null);
+
+  useEffect(() => {
+    if (!supportTooltip) return;
+    const close = () => setSupportTooltip(null);
+    document.addEventListener('click', close);
+    return () => document.removeEventListener('click', close);
+  }, [supportTooltip]);
 
   const renderPeekRowActivity = (video, index) => {
     const hasSupport = supportStatusById[video.videoId]?.isSupported;
     const hasComments = globalCommentedVideoIds.has(video.videoId);
     const hasActivity = hasSupport || hasComments;
+    const meta = metadataById[video.videoId];
+    const sc1 = meta?.supportCount1 || 0;
+    const sc2 = meta?.supportCount2 || 0;
+    const sc3 = meta?.supportCount3 || 0;
+    const totalSupport = sc1 + sc2 + sc3;
+    const isTooltipOpen = supportTooltip?.videoId === video.videoId;
 
     return (
       <div
@@ -237,9 +252,45 @@ export function NominationUpdateCard({
         <span className="dashboard-update-peek-index" aria-hidden="true">
           {index + 1}
         </span>
+        <div className="dashboard-update-peek-content">
+          <span className="dashboard-update-peek-game">
+            {metadataById[video.videoId]?.gameTitle || 'Metadata Needed'}
+          </span>
+          <span className="dashboard-update-peek-title">
+            {metadataById[video.videoId]?.trackTitle || video.title}
+          </span>
+        </div>
+
+        {totalSupport > 0 && (
+          <button
+            className={`peek-support-chip${isTooltipOpen ? ' expanded' : ''}`}
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              if (isTooltipOpen) {
+                setSupportTooltip(null);
+              } else {
+                const rect = e.currentTarget.getBoundingClientRect();
+                setSupportTooltip({
+                  videoId: video.videoId,
+                  top: rect.bottom + 6,
+                  left: rect.left + rect.width / 2,
+                  sc1,
+                  sc2,
+                  sc3,
+                });
+              }
+            }}
+            title={`${totalSupport} support${totalSupport !== 1 ? 's' : ''}`}
+          >
+            <HeartIcon className="peek-chip-icon" />
+            <span>{totalSupport}</span>
+          </button>
+        )}
+
         {hasActivity && (
           <button
-            className="peek-action-btn peek-action-btn-activity"
+            className={`peek-action-btn peek-action-btn-activity${hasComments ? ' has-comments' : ''}`}
             type="button"
             onClick={(e) => {
               e.stopPropagation();
@@ -256,14 +307,6 @@ export function NominationUpdateCard({
             <SpeechBubbleIcon size={18} />
           </button>
         )}
-        <div className="dashboard-update-peek-content">
-          <span className="dashboard-update-peek-game">
-            {metadataById[video.videoId]?.gameTitle || 'Metadata Needed'}
-          </span>
-          <span className="dashboard-update-peek-title">
-            {metadataById[video.videoId]?.trackTitle || video.title}
-          </span>
-        </div>
 
         <div className="dashboard-update-peek-actions">
           <button
@@ -531,6 +574,35 @@ export function NominationUpdateCard({
           </>
         )}
       </article>
+
+      {supportTooltip && (
+        <ModalPortal>
+          <div
+            className="peek-support-tooltip"
+            style={{ top: supportTooltip.top, left: supportTooltip.left }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {supportTooltip.sc1 > 0 && (
+              <span className="stat-badge normal">
+                <HeartIcon className="peek-chip-icon" />
+                {supportTooltip.sc1}
+              </span>
+            )}
+            {supportTooltip.sc2 > 0 && (
+              <span className="stat-badge strong">
+                <HeartIcon className="peek-chip-icon" />
+                {supportTooltip.sc2}
+              </span>
+            )}
+            {supportTooltip.sc3 > 0 && (
+              <span className="stat-badge highest">
+                <LockIcon className="peek-chip-icon" />
+                {supportTooltip.sc3}
+              </span>
+            )}
+          </div>
+        </ModalPortal>
+      )}
     </>
   );
 }
@@ -581,7 +653,7 @@ function DiscoveryGridItem({ candidate, metadata, onPlayNow, onContextMenu }) {
                     className="discovery-support-stat nominators"
                     title={`${candidate.nominationCount} Users Nominated`}
                   >
-                    <SpeechBubbleIcon size={14} />
+                    <UsersIcon />
                     <span>{candidate.nominationCount}</span>
                   </div>
                 )}

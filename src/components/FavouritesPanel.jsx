@@ -66,10 +66,22 @@ export function SupportItem({
   removeButtonAriaLabel,
   tone,
   hasComments = false,
+  onShowComments,
   userComment = null,
+  showBreakdown = false,
 }) {
   const [imgError, setImgError] = useState(false);
   const display = getPlaylistItemDisplay(video);
+  const totalSupport =
+    (video.supportCount1 || 0) +
+    (video.supportCount2 || 0) +
+    (video.supportCount3 || 0);
+  const dominantSupportClass =
+    video.supportCount3 > 0
+      ? 'highest'
+      : video.supportCount2 > 0
+        ? 'strong'
+        : 'normal';
 
   return (
     <div
@@ -151,31 +163,13 @@ export function SupportItem({
                 {display.gameTitle && (
                   <div className="meta-game-title">{display.gameTitle}</div>
                 )}
-                <div className="meta-track-title">
-                  {display.trackTitle}
-                  {hasComments && (
-                    <span
-                      className="track-comment-indicator"
-                      title="Has community comments"
-                    >
-                      <SpeechBubbleIcon />
-                    </span>
-                  )}
-                </div>
+                <div className="meta-track-title">{display.trackTitle}</div>
               </div>
             ) : (
               <div className="playlist-item-title-raw">
                 <div className="meta-game-placeholder">Metadata Needed</div>
                 <div className="meta-track-raw-title">
                   {display.trackTitle || video.videoId}
-                  {hasComments && (
-                    <span
-                      className="track-comment-indicator"
-                      title="Has community comments"
-                    >
-                      <SpeechBubbleIcon />
-                    </span>
-                  )}
                 </div>
               </div>
             )}
@@ -202,32 +196,46 @@ export function SupportItem({
           }}
         >
           <div className="fav-item-support-stats" style={{ flexShrink: 0 }}>
-            {video.supportCount1 > 0 && (
-              <div
-                className="fav-support-stat normal"
-                title={`${video.supportCount1} Possible Supports`}
-              >
-                <HeartIcon />
-                <span>{video.supportCount1}</span>
-              </div>
-            )}
-            {video.supportCount2 > 0 && (
-              <div
-                className="fav-support-stat strong"
-                title={`${video.supportCount2} Likely Supports`}
-              >
-                <HeartIcon />
-                <span>{video.supportCount2}</span>
-              </div>
-            )}
-            {video.supportCount3 > 0 && (
-              <div
-                className="fav-support-stat highest"
-                title={`${video.supportCount3} Definite Supports`}
-              >
-                <LockIcon />
-                <span>{video.supportCount3}</span>
-              </div>
+            {showBreakdown ? (
+              <>
+                {video.supportCount1 > 0 && (
+                  <div
+                    className="fav-support-stat normal"
+                    title={`${video.supportCount1} Possible Supports`}
+                  >
+                    <HeartIcon />
+                    <span>{video.supportCount1}</span>
+                  </div>
+                )}
+                {video.supportCount2 > 0 && (
+                  <div
+                    className="fav-support-stat strong"
+                    title={`${video.supportCount2} Likely Supports`}
+                  >
+                    <HeartIcon />
+                    <span>{video.supportCount2}</span>
+                  </div>
+                )}
+                {video.supportCount3 > 0 && (
+                  <div
+                    className="fav-support-stat highest"
+                    title={`${video.supportCount3} Definite Supports`}
+                  >
+                    <LockIcon />
+                    <span>{video.supportCount3}</span>
+                  </div>
+                )}
+              </>
+            ) : (
+              totalSupport > 0 && (
+                <div
+                  className={`fav-support-stat ${dominantSupportClass}`}
+                  title={`${totalSupport} Total Supports`}
+                >
+                  {video.supportCount3 > 0 ? <LockIcon /> : <HeartIcon />}
+                  <span>{totalSupport}</span>
+                </div>
+              )
             )}
           </div>
 
@@ -238,6 +246,26 @@ export function SupportItem({
             >
               {video.rating}/10
             </span>
+          )}
+
+          {hasComments && (
+            <button
+              className={`comment-bubble-btn${tone === 'nomination' ? ' nomination' : ''}`}
+              type="button"
+              title="View community comments"
+              onClick={(e) => {
+                e.stopPropagation();
+                const rect = e.currentTarget.getBoundingClientRect();
+                onShowComments?.(video, {
+                  top: rect.top,
+                  left: rect.left,
+                  width: rect.width,
+                  height: rect.height,
+                });
+              }}
+            >
+              <SpeechBubbleIcon />
+            </button>
           )}
 
           {tone === 'support' && (
@@ -304,6 +332,8 @@ export function SortableSupportItem({
   removeButtonAriaLabel,
   tone,
   hasComments = false,
+  onShowComments,
+  showBreakdown = false,
 }) {
   const {
     attributes,
@@ -350,6 +380,8 @@ export function SortableSupportItem({
         onOpenSupportDropdown={onOpenSupportDropdown}
         tone={tone}
         hasComments={hasComments}
+        onShowComments={onShowComments}
+        showBreakdown={showBreakdown}
       />
     </div>
   );
@@ -389,6 +421,8 @@ export default function FavouritesPanel({
   authUser = null,
   highlightAdd = false,
   onPlayList,
+  globalCommentedVideoIds = new Set(),
+  onShowComments,
 }) {
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -401,6 +435,7 @@ export default function FavouritesPanel({
   const [contextMenu, setContextMenu] = useState(null);
   const [toastMessage, setToastMessage] = useState('');
   const [isSortingByRating, setIsSortingByRating] = useState(false);
+  const [showSupportBreakdown, setShowSupportBreakdown] = useState(false);
   const toastTimeoutRef = useRef(null);
 
   const selectedIdSet = useMemo(() => new Set(selectedIds), [selectedIds]);
@@ -662,6 +697,23 @@ export default function FavouritesPanel({
                   <YouTubeIcon />
                 </button>
                 <button
+                  className={`fav-panel-action-btn${showSupportBreakdown ? ' active' : ''}`}
+                  type="button"
+                  onClick={() => setShowSupportBreakdown((v) => !v)}
+                  title={
+                    showSupportBreakdown
+                      ? 'Show support total'
+                      : 'Show support breakdown'
+                  }
+                  aria-label={
+                    showSupportBreakdown
+                      ? 'Show support total'
+                      : 'Show support breakdown'
+                  }
+                >
+                  {showSupportBreakdown ? 'Total' : 'Breakdown'}
+                </button>
+                <button
                   className={`fav-panel-action-btn icon-only${isSortingByRating ? ' active' : ''}`}
                   type="button"
                   onClick={() => {
@@ -763,6 +815,9 @@ export default function FavouritesPanel({
                 removeButtonTitle={removeButtonTitle}
                 removeButtonAriaLabel={removeButtonAriaLabel}
                 tone={tone}
+                hasComments={globalCommentedVideoIds.has(video.videoId)}
+                onShowComments={onShowComments}
+                showBreakdown={showSupportBreakdown}
               />
             ))
           ) : (
@@ -790,6 +845,9 @@ export default function FavouritesPanel({
                     removeButtonTitle={removeButtonTitle}
                     removeButtonAriaLabel={removeButtonAriaLabel}
                     tone={tone}
+                    hasComments={globalCommentedVideoIds.has(video.videoId)}
+                    onShowComments={onShowComments}
+                    showBreakdown={showSupportBreakdown}
                   />
                 ))}
               </SortableContext>

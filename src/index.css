@@ -1926,22 +1926,6 @@ body {
   display: flex;
 }
 
-.dashboard-update-peek-row.has-activity .dashboard-update-peek-content {
-  padding-right: 32px;
-  /* Reserve space for the activity/speech bubble icon */
-}
-
-/* On hover, let the action toolbar naturally push the text more,
-   but keep the padding if activity is also present */
-.dashboard-update-peek-row:hover .dashboard-update-peek-content {
-  padding-right: 8px;
-  /* Reduce default padding to maximize icon space */
-}
-
-.dashboard-update-peek-row.has-activity:hover .dashboard-update-peek-content {
-  padding-right: 32px;
-}
-
 @media (max-width: 960px) {
   .dashboard-update-peek-actions {
     display: none !important;
@@ -1960,22 +1944,12 @@ body {
 
   /* Style the comment icon on mobile to match the activity symbol's importance */
   .dashboard-update-peek-row.has-activity .peek-action-btn-comments {
-    color: var(--support-gold) !important;
+    color: #a78bfa !important;
     opacity: 1 !important;
   }
 
   .peek-action-btn-activity {
     display: none !important;
-    /* Hide the non-interactive bubble on mobile in favor of the interactive one */
-  }
-
-  .dashboard-update-peek-row .dashboard-update-peek-content {
-    padding-right: 8px;
-  }
-
-  .dashboard-update-peek-row.has-activity .dashboard-update-peek-content {
-    padding-right: 0;
-    /* Toolbar takes the space naturally */
   }
 }
 
@@ -2007,19 +1981,66 @@ body {
 }
 
 .peek-action-btn-activity {
-  position: absolute;
-  right: 12px;
-  top: 50%;
-  transform: translateY(-50%);
-  color: var(--support-gold) !important;
-  opacity: 1 !important;
-  z-index: 10;
-  pointer-events: none;
-  transition: opacity 0.3s ease;
+  flex-shrink: 0;
+  color: var(--text-secondary) !important;
+  opacity: 0.7;
+  transition:
+    opacity 0.2s ease,
+    color 0.2s ease;
 }
 
-.dashboard-update-peek-row:hover .peek-action-btn-activity {
-  opacity: 0 !important;
+.peek-action-btn-activity.has-comments {
+  color: #a78bfa !important;
+  opacity: 1;
+}
+
+.dashboard-update-peek-row:hover .peek-action-btn-activity,
+.dashboard-update-peek-row.support-expanded .peek-action-btn-activity {
+  display: none !important;
+}
+
+.peek-support-chip {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 7px;
+  border-radius: 20px;
+  border: 1px solid rgba(251, 191, 36, 0.3);
+  background: rgba(251, 191, 36, 0.08);
+  color: #fbbf24;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    border-color 0.15s;
+}
+
+.peek-support-chip:hover,
+.peek-support-chip.expanded {
+  background: rgba(251, 191, 36, 0.18);
+  border-color: rgba(251, 191, 36, 0.6);
+}
+
+.peek-chip-icon {
+  width: 10px !important;
+  height: 10px !important;
+}
+
+.peek-support-tooltip {
+  position: fixed;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+  z-index: 9999;
+  animation: peekActionFadeIn 0.12s ease-out;
   pointer-events: none;
 }
 
@@ -2051,7 +2072,7 @@ body {
 }
 
 .dashboard-update-peek-row.has-activity .peek-action-btn-comments:hover {
-  color: var(--support-gold) !important;
+  color: #c4b5fd !important;
 }
 
 .peek-action-btn-play:hover {
@@ -13288,6 +13309,54 @@ body.is-resizing .resize-handle {
 .theme-light .hero-leaderboard-comment-btn:hover {
   background: rgba(0, 0, 0, 0.08);
   color: #111;
+}
+
+.comment-bubble-btn {
+  background: transparent;
+  color: var(--text-secondary);
+  border: none;
+  padding: 2px 4px;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  border-radius: 4px;
+  flex-shrink: 0;
+  transition:
+    background 0.2s,
+    color 0.2s;
+}
+
+.comment-bubble-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-primary);
+}
+
+.comment-bubble-btn svg {
+  width: 13px;
+  height: 13px;
+}
+
+.theme-light .comment-bubble-btn:hover {
+  background: rgba(0, 0, 0, 0.08);
+  color: #111;
+}
+
+.comment-bubble-btn.nomination {
+  color: #a78bfa;
+}
+
+.comment-bubble-btn.nomination:hover {
+  background: rgba(167, 139, 250, 0.12);
+  color: #c4b5fd;
+}
+
+.theme-light .comment-bubble-btn.nomination {
+  color: #7c3aed;
+}
+
+.theme-light .comment-bubble-btn.nomination:hover {
+  background: rgba(124, 58, 237, 0.1);
+  color: #6d28d9;
 }
 
 @media (max-width: 1880px) {

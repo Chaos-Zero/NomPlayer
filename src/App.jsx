@@ -4241,6 +4241,7 @@ export default function App() {
       applyUpdatesToList(updatesMap);
 
       setManualMetadataTracks(null);
+      setTracksNeedingMetadata([]);
 
       // Emit update batch so HomePage can patch its discovery items
       setLastMetadataUpdateBatch(
@@ -5363,6 +5364,8 @@ export default function App() {
               activePlaylistView={activePlaylistView}
               onSwitchView={setActivePlaylistView}
               communityNominations={communityNominations}
+              globalCommentedVideoIds={globalCommentedVideoIds}
+              onShowComments={handleShowComments}
             />
             {!effectivePlaylistCollapsed && apiKeyMissing && (
               <div className="api-key-notice">
@@ -5445,6 +5448,8 @@ export default function App() {
           onExport={handleOpenExportModal}
           onSavePlaylist={handleCreateYTPlaylist}
           onPlayList={() => handlePlayExplorerList('support')}
+          globalCommentedVideoIds={globalCommentedVideoIds}
+          onShowComments={handleShowComments}
         />
       )}
 
@@ -5482,6 +5487,8 @@ export default function App() {
           onSavePlaylist={handleCreateYTPlaylist}
           onPlayList={() => handlePlayExplorerList('nominations')}
           highlightAdd={isAddNominationHighlighted}
+          globalCommentedVideoIds={globalCommentedVideoIds}
+          onShowComments={handleShowComments}
         />
       )}
 
