@@ -965,7 +965,7 @@ body {
 .dashboard-hero {
   position: relative;
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 420px;
   align-items: flex-start;
   width: 100%;
   max-width: 100%;
@@ -7349,6 +7349,7 @@ button.playlist-search-indicator:hover {
   flex-direction: column;
   gap: 2px;
   min-width: 0;
+  flex: 1;
 }
 
 .history-item-title {
@@ -7373,6 +7374,70 @@ button.playlist-search-indicator:hover {
   color: var(--text-muted);
   text-align: center;
   padding: 40px 0;
+}
+
+.history-tab-bar {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 0;
+}
+
+.history-tab {
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  cursor: pointer;
+  transition:
+    color var(--transition),
+    border-color var(--transition);
+}
+
+.history-tab:hover {
+  color: var(--text-primary);
+}
+
+.history-tab.active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+
+.history-item-count {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+  white-space: nowrap;
+  margin-left: auto;
+  padding-right: 4px;
+}
+
+.history-item-queue-btn {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition:
+    color var(--transition),
+    background var(--transition);
+}
+
+.history-item-queue-btn:hover {
+  color: var(--accent);
+  background: rgba(124, 58, 237, 0.12);
 }
 
 .auth-dialog-warning {
@@ -11207,11 +11272,8 @@ body.is-resizing .resize-handle {
 
 .dashboard-hero-loader-placeholder {
   width: 100% !important;
-  min-width: 420px !important;
-  max-width: 420px !important;
   min-height: 418px !important;
   /* Total typical card height */
-  flex: 0 1 420px !important;
   margin-left: auto;
   display: flex !important;
   flex-direction: column !important;

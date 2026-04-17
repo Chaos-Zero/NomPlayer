@@ -4891,7 +4891,11 @@ export default function App() {
           onToggleTheme={handleToggleTheme}
           isPlaying={isPlaying}
           hidePlaybackControls={
-            isPlaying && activePage !== 'player' && !isMobileLayout
+            isPlaying &&
+            activePage !== 'player' &&
+            !isMobileLayout &&
+            !showSupportList &&
+            !showNominationsList
           }
           setIsPlaying={handleSetIsPlaying}
           onPrev={handlePrev}
@@ -5308,6 +5312,9 @@ export default function App() {
         onPlayTrack={handlePlayCatalogTrack}
         getTrackHistory={getTrackHistory}
         onClearHistory={clearTrackHistory}
+        supabase={supabase}
+        authUser={authUser}
+        onAddToPlaylist={handleQueueFromSupportList}
       />
 
       <GuestImportDialog
