@@ -1356,15 +1356,21 @@ export default function HomePage({
 
     loadDashboardUpdates();
 
-    // Fetch several unplaced tracks for grid fallback
+    // Fetch several unplaced tracks for grid fallback, starting at a random
+    // offset so the Discover grid shows different tracks each page load.
     async function loadMarqueeFallbacks() {
       if (!supabase) return;
       try {
+        const { totalCount } = await fetchPagedTracks(supabase, {
+          viewMode: 'unplaced',
+          limit: 1,
+        });
+        const randomOffset =
+          totalCount > 30 ? Math.floor(Math.random() * (totalCount - 30)) : 0;
         const { data } = await fetchPagedTracks(supabase, {
           viewMode: 'unplaced',
           limit: 30,
-          sortColumn: 'submissions',
-          sortAsc: false,
+          offset: randomOffset,
         });
         if (isActive && data) {
           setUnplacedFallbackTracks(data);
