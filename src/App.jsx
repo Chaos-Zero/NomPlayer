@@ -1803,7 +1803,7 @@ export default function App() {
   const isPlayerPage = activePage === 'player';
   const isDatabasePage = activePage === 'database';
   const isListExplorerPage = activePage === 'listExplorer';
-  const dbCacheRef = useRef({ tracks: [], scrollOffset: 0 });
+  const dbCacheRef = useRef({ tracks: [], selectedVideoId: null });
   const shouldRenderDesktopPlaylistOverlay = !isMobileLayout && !isPlayerPage;
   const effectivePlaylistCollapsed = isPlayerPage
     ? isPlaylistCollapsed
@@ -5033,9 +5033,9 @@ export default function App() {
                   setSupportLevelDropdown({ video, position })
                 }
                 initialTracks={dbCacheRef.current.tracks}
-                initialScrollOffset={dbCacheRef.current.scrollOffset}
-                onUnmount={(tracks, scrollOffset) => {
-                  dbCacheRef.current = { tracks, scrollOffset };
+                initialSelectedVideoId={dbCacheRef.current.selectedVideoId}
+                onUnmount={(tracks, selectedVideoId) => {
+                  dbCacheRef.current = { tracks, selectedVideoId };
                 }}
               />
             </Suspense>

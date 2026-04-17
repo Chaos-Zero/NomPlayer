@@ -518,7 +518,7 @@ export default function TrackDatabase({
   onToggleNomination,
   onOpenSupportDropdown,
   initialTracks = [],
-  initialScrollOffset = 0,
+  initialSelectedVideoId = null,
   onUnmount,
 }) {
   const [tracks, setTracks] = useState(initialTracks);
@@ -556,8 +556,10 @@ export default function TrackDatabase({
   const preserveScrollRef = useRef(false);
   const isFirstLoadRef = useRef(initialTracks.length > 0);
   const tracksRef = useRef(initialTracks);
+  const selectedTrackRef = useRef(null);
+  const hasRestoredRef = useRef(false);
   const [selectedTrack, setSelectedTrack] = useState(null);
-  const [maxVgmc, setMaxVgmc] = useState(24);
+  const [maxVgmc, setMaxVgmc] = useState(null);
   const [expandedCell, setExpandedCell] = useState(null);
   const [showDuplicateModal, setShowDuplicateModal] = useState(false);
   const [controlsOffset, setControlsOffset] = useState(0);
@@ -589,25 +591,20 @@ export default function TrackDatabase({
     init();
   }, [supabase]);
 
-  // Keep tracksRef current so the unmount callback captures fresh data
+  // Keep refs current for unmount callback
   useEffect(() => {
     tracksRef.current = tracks;
   }, [tracks]);
-
-  // Save tracks + scroll offset to parent cache on unmount
   useEffect(() => {
-    const tableWrapper = tableWrapperRef.current;
+    selectedTrackRef.current = selectedTrack;
+  }, [selectedTrack]);
+
+  // Save tracks + selected track to parent cache on unmount
+  useEffect(() => {
     return () => {
-      onUnmount?.(tracksRef.current, tableWrapper?.scrollTop ?? 0);
+      onUnmount?.(tracksRef.current, selectedTrackRef.current?.videoId ?? null);
       clearCatalogCache();
     };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Restore scroll position when remounting with cached data
-  useLayoutEffect(() => {
-    if (initialScrollOffset > 0 && tableWrapperRef.current) {
-      tableWrapperRef.current.scrollTop = initialScrollOffset;
-    }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Context Menu Lifecycle
@@ -717,7 +714,7 @@ export default function TrackDatabase({
   // Initial load and feedback fetch
   useEffect(() => {
     const loadInitialData = async () => {
-      if (!supabase) return;
+      if (!supabase || maxVgmc === null) return;
       const currentLoadingId = ++loadingIdRef.current;
 
       setLoading(true);
@@ -801,6 +798,22 @@ export default function TrackDatabase({
       ? rowVirtualizer.getTotalSize() -
         virtualItems[virtualItems.length - 1].end
       : 0;
+
+  // Scroll to previously selected track on remount
+  useEffect(() => {
+    if (
+      hasRestoredRef.current ||
+      loading ||
+      !initialSelectedVideoId ||
+      tracks.length === 0
+    )
+      return;
+    const idx = tracks.findIndex((t) => t.videoId === initialSelectedVideoId);
+    if (idx !== -1) {
+      hasRestoredRef.current = true;
+      rowVirtualizer.scrollToIndex(idx, { align: 'center' });
+    }
+  }, [loading, tracks, initialSelectedVideoId, rowVirtualizer]);
 
   const handleUpdateFeedback = useCallback(
     async (trackId, updates) => {
@@ -978,12 +991,17 @@ export default function TrackDatabase({
                 onChange={(e) => setVgmcFilter(e.target.value)}
               >
                 <option value="">All VGMCs</option>
-                {Array.from({ length: maxVgmc }, (_, i) => i + 1).map((num) => (
-                  <option key={num} value={num}>
-                    VGMC {num}
-                  </option>
-                ))}
-                <option value={maxVgmc + 1}>VGMC {maxVgmc + 1}</option>
+                {maxVgmc !== null &&
+                  Array.from({ length: maxVgmc }, (_, i) => i + 1).map(
+                    (num) => (
+                      <option key={num} value={num}>
+                        VGMC {num}
+                      </option>
+                    ),
+                  )}
+                {maxVgmc !== null && (
+                  <option value={maxVgmc + 1}>VGMC {maxVgmc + 1}</option>
+                )}
               </select>
             </div>
           </div>

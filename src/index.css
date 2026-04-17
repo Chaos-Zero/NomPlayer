@@ -3,6 +3,7 @@
   color-scheme: dark;
   --bg-base: #0a0a0f;
   --bg-surface: #12121a;
+  --bg-surface-hover: #1c1c2a;
   --bg-deep: #0f0f15;
   --bg-glass: rgba(255, 255, 255, 0.04);
   --bg-glass-hover: rgba(255, 255, 255, 0.08);
