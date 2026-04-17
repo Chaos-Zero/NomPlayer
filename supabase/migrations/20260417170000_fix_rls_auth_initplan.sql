@@ -21,6 +21,9 @@
 
 -- tournaments
 DROP POLICY IF EXISTS "tournaments_write_authenticated" ON public.tournaments;
+DROP POLICY IF EXISTS "tournaments_insert_authenticated" ON public.tournaments;
+DROP POLICY IF EXISTS "tournaments_update_authenticated" ON public.tournaments;
+DROP POLICY IF EXISTS "tournaments_delete_authenticated" ON public.tournaments;
 CREATE POLICY "tournaments_insert_authenticated" ON public.tournaments
   FOR INSERT WITH CHECK ((select auth.role()) = 'authenticated');
 CREATE POLICY "tournaments_update_authenticated" ON public.tournaments
@@ -32,6 +35,9 @@ CREATE POLICY "tournaments_delete_authenticated" ON public.tournaments
 
 -- tracks
 DROP POLICY IF EXISTS "tracks_write_authenticated" ON public.tracks;
+DROP POLICY IF EXISTS "tracks_insert_authenticated" ON public.tracks;
+DROP POLICY IF EXISTS "tracks_update_authenticated" ON public.tracks;
+DROP POLICY IF EXISTS "tracks_delete_authenticated" ON public.tracks;
 CREATE POLICY "tracks_insert_authenticated" ON public.tracks
   FOR INSERT WITH CHECK ((select auth.role()) = 'authenticated');
 CREATE POLICY "tracks_update_authenticated" ON public.tracks
@@ -43,6 +49,9 @@ CREATE POLICY "tracks_delete_authenticated" ON public.tracks
 
 -- track_sources
 DROP POLICY IF EXISTS "track_sources_write_authenticated" ON public.track_sources;
+DROP POLICY IF EXISTS "track_sources_insert_authenticated" ON public.track_sources;
+DROP POLICY IF EXISTS "track_sources_update_authenticated" ON public.track_sources;
+DROP POLICY IF EXISTS "track_sources_delete_authenticated" ON public.track_sources;
 CREATE POLICY "track_sources_insert_authenticated" ON public.track_sources
   FOR INSERT WITH CHECK ((select auth.role()) = 'authenticated');
 CREATE POLICY "track_sources_update_authenticated" ON public.track_sources
@@ -54,6 +63,9 @@ CREATE POLICY "track_sources_delete_authenticated" ON public.track_sources
 
 -- track_tournament_appearances
 DROP POLICY IF EXISTS "track_tournament_appearances_write_authenticated" ON public.track_tournament_appearances;
+DROP POLICY IF EXISTS "track_tournament_appearances_insert_authenticated" ON public.track_tournament_appearances;
+DROP POLICY IF EXISTS "track_tournament_appearances_update_authenticated" ON public.track_tournament_appearances;
+DROP POLICY IF EXISTS "track_tournament_appearances_delete_authenticated" ON public.track_tournament_appearances;
 CREATE POLICY "track_tournament_appearances_insert_authenticated" ON public.track_tournament_appearances
   FOR INSERT WITH CHECK ((select auth.role()) = 'authenticated');
 CREATE POLICY "track_tournament_appearances_update_authenticated" ON public.track_tournament_appearances
@@ -68,16 +80,10 @@ CREATE POLICY "track_tournament_appearances_delete_authenticated" ON public.trac
 -- (superseded by broader select_public USING(true) policies)
 -- ============================================================
 
--- profiles: select_own and select_authenticated are both superseded by select_public
 DROP POLICY IF EXISTS "profiles_select_own" ON public.profiles;
 DROP POLICY IF EXISTS "profiles_select_authenticated" ON public.profiles;
-
--- track_supports: select_authenticated is superseded by select_public
 DROP POLICY IF EXISTS "track_supports_select_authenticated" ON public.track_supports;
--- Also drop the old select_own that may still exist from older migrations
 DROP POLICY IF EXISTS "track_supports_select_own" ON public.track_supports;
-
--- track_user_feedback: select_all_authenticated is superseded by select_public
 DROP POLICY IF EXISTS "track_user_feedback_select_all_authenticated" ON public.track_user_feedback;
 
 -- ============================================================
