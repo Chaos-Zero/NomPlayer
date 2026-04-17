@@ -12,11 +12,17 @@ const FEEDBACK_SECRET = import.meta.env.VITE_FEEDBACK_API_SECRET;
 /** Derive the /log endpoint from the base feedback API URL. */
 function getLogEndpoint() {
   if (!FEEDBACK_URL) return null;
-  // Replace the last path segment with /log
-  // e.g. https://bot.example.com/feedback → https://bot.example.com/log
-  const url = new URL(FEEDBACK_URL);
-  url.pathname = url.pathname.replace(/\/[^/]*$/, '/log');
-  return url.toString();
+  try {
+    // Replace the last path segment with /log
+    // e.g. https://bot.example.com/feedback → https://bot.example.com/log
+    const url = new URL(FEEDBACK_URL);
+    url.pathname = url.pathname.replace(/\/[^/]*$/, '/log');
+    return url.toString();
+  } catch {
+    // FEEDBACK_URL is not a valid absolute URL (e.g. a relative path).
+    // Fall back to a simple string replacement so reporting still works.
+    return FEEDBACK_URL.replace(/\/[^/]*$/, '/log');
+  }
 }
 
 const LOG_URL = getLogEndpoint();
