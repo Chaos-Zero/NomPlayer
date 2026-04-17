@@ -213,11 +213,11 @@ function TrackInfoPanel({
       note: personalFeedback.note,
       rating: personalFeedback.rating,
       videoId: track?.videoId,
+      isLoading: isLoadingData,
     });
     setLocalComment(personalFeedback.note || track?.comment || '');
     setLocalRating(personalFeedback.rating || '');
 
-    // Default to collapsed if feedback exists, or open for new (Wait for load per User Request)
     if (!isLoadingData) {
       if (!personalFeedback.rating && !personalFeedback.note) {
         setIsEditing(true);
@@ -227,26 +227,9 @@ function TrackInfoPanel({
     }
   }
 
-  // Trigger sync on load status change specifically
   if (isLoadingData !== prevSync.isLoading) {
     setPrevSync((prev) => ({ ...prev, isLoading: isLoadingData }));
 
-    // When loading finishes, decide whether to show or hide the input
-    if (!isLoadingData) {
-      const hasFeedback = personalFeedback.rating || personalFeedback.note;
-      if (!hasFeedback) {
-        setIsEditing(true);
-      } else {
-        setIsEditing(false);
-      }
-    }
-  }
-
-  // Trigger sync on load status change specifically
-  if (isLoadingData !== prevSync.isLoading) {
-    setPrevSync((prev) => ({ ...prev, isLoading: isLoadingData }));
-
-    // When loading finishes, decide whether to show or hide the input
     if (!isLoadingData) {
       const hasFeedback = personalFeedback.rating || personalFeedback.note;
       if (!hasFeedback) {
@@ -698,6 +681,7 @@ function SortableListExplorerCard({
             onDoubleQueue={() => onPlayNow(video)}
             onOpenContextMenu={onContextMenu}
             onOpenSupportDropdown={onOpenSupportDropdown}
+            onShowComments={() => onSelect?.(video.videoId)}
             tone={isSupportList ? 'support' : undefined}
             itemAriaPrefix="List Explorer track"
             hasComments={hasComments}
@@ -2231,6 +2215,10 @@ export default function ListExplorer({
   ]);
 
   const prevActiveColumnIdsRef = useRef([]);
+  const nominationListRef = useRef(nominationList);
+  useEffect(() => {
+    nominationListRef.current = nominationList;
+  }, [nominationList]);
 
   // Auto-scroll when new columns are added
   useEffect(() => {
@@ -2290,7 +2278,7 @@ export default function ListExplorer({
       setIsLoadingActivity(true);
       try {
         // Collect track IDs from nominations and support list for peer feedback lookup
-        const nominatedTrackIds = (nominationList || [])
+        const nominatedTrackIds = (nominationListRef.current || [])
           .map((v) => v.trackId || v.id)
           .filter((id) => id && /^[0-9a-f-]{36}$/i.test(id));
 
@@ -2314,14 +2302,7 @@ export default function ListExplorer({
     ) {
       fetchActivity();
     }
-  }, [
-    explorerView,
-    activityRefreshKey,
-    refreshKey,
-    supabase,
-    authUser?.id,
-    nominationList,
-  ]);
+  }, [explorerView, activityRefreshKey, refreshKey, supabase, authUser?.id]);
 
   return (
     <div

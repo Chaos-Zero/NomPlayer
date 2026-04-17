@@ -72,8 +72,9 @@ import {
   fetchSupportedTracks,
   ingestYouTubeTrackSources,
   patchCatalogCache,
+  getFullCatalog,
+  mapTrackCatalogEntryToVideo,
 } from './lib/trackCatalog.js';
-import { fetchDashboardNominationUpdates } from './lib/dashboard.js';
 import { fetchUserFeedback } from './lib/feedback.js';
 import { reportError } from './lib/errorReporter.js';
 import { getSupabaseClient, isSupabaseConfigured } from './lib/supabase.js';
@@ -578,6 +579,7 @@ export default function App() {
   const [userFeedback, setUserFeedback] = useState({});
   const [feedbackRefreshKey, setFeedbackRefreshKey] = useState(0);
   const [isAuthReady, setIsAuthReady] = useState(!isSupabaseConfigured);
+  const [isUserHydrated, setIsUserHydrated] = useState(!isSupabaseConfigured);
   const [isAuthSubmitting, setIsAuthSubmitting] = useState(false);
   const [authDialogMode, setAuthDialogMode] = useState(null);
   const [footerCurrentTime, setFooterCurrentTime] = useState(0);
@@ -610,19 +612,9 @@ export default function App() {
     useState(false);
   const authUserIdRef = useRef(null);
 
-  const fetchCommunityCatalog = useCallback(async () => {
-    if (!supabase) return;
-    try {
-      const updates = await fetchDashboardNominationUpdates(supabase);
-      setCommunityNominations(updates);
-    } catch (error) {
-      console.error('Failed to fetch community nominations catalog:', error);
-    }
-  }, [supabase]);
-
-  useEffect(() => {
-    fetchCommunityCatalog();
-  }, [fetchCommunityCatalog]);
+  const handleNominationsLoaded = useCallback((updates) => {
+    setCommunityNominations(updates);
+  }, []);
 
   useEffect(
     () => () => {
@@ -1157,7 +1149,7 @@ export default function App() {
   }, [authUser?.id]);
 
   useEffect(() => {
-    if (!supabase || !authUser?.id || !isAuthReady) {
+    if (!supabase || !authUser?.id || !isUserHydrated) {
       return;
     }
 
@@ -1231,7 +1223,7 @@ export default function App() {
       });
   }, [
     authUser?.id,
-    isAuthReady,
+    isUserHydrated,
     playlist,
     supportList,
     nominationList,
@@ -2055,19 +2047,48 @@ export default function App() {
     ) => {
       if (!supabase || !user) return;
 
-      setIsAuthReady(false);
-
       try {
-        const profile = await ensureUserProfile(
-          user,
-          preferredUsername,
-          preferredGamefaqsUsername,
-          preferredAvatarUrl,
-        );
+        const [profile, remoteState, hydratedDbState, catalog] =
+          await Promise.all([
+            ensureUserProfile(
+              user,
+              preferredUsername,
+              preferredGamefaqsUsername,
+              preferredAvatarUrl,
+            ),
+            fetchUserPlayerState(supabase, user.id),
+            fetchUserHydratedState(supabase, user.id),
+            getFullCatalog(supabase),
+          ]);
         setUserProfile(profile);
-        const remoteState = await fetchUserPlayerState(supabase, user.id);
+
+        // Enrich lightweight RPC items (videoId + trackId only) with full
+        // metadata from the in-memory catalog.
+        const catalogByTrackId = new Map(
+          (catalog || []).map((entry) => [entry.trackId, entry]),
+        );
+        const enrichItem = (item) => {
+          if (!item?.trackId) return item;
+          const entry = catalogByTrackId.get(item.trackId);
+          if (!entry) return item;
+          const video = mapTrackCatalogEntryToVideo(entry);
+          return video ? { ...video, ...item } : item;
+        };
+        const enrichedDbState = {
+          nominationList: (hydratedDbState.nominationList || []).map(
+            enrichItem,
+          ),
+          supportList: (hydratedDbState.supportList || []).map(enrichItem),
+          playlist: (hydratedDbState.playlist || []).map(enrichItem),
+          customPlaylists: (hydratedDbState.customPlaylists || []).map(
+            (pl) => ({
+              ...pl,
+              videos: (pl.videos || []).map(enrichItem),
+            }),
+          ),
+        };
+
         const normalizedState = normalizePersistedPlayerState(remoteState);
-        const hydratedDbState = await fetchUserHydratedState(supabase, user.id);
         const persistedQueue = loadPersistedAuthSyncQueue(user.id);
 
         // Build the nomination list: start with DB-resolved entries, then append
@@ -2078,7 +2099,7 @@ export default function App() {
           persistedQueue.playerState?.nominationList ??
           normalizedState.nominationList ??
           [];
-        const dbNominationList = hydratedDbState.nominationList || [];
+        const dbNominationList = enrichedDbState.nominationList;
         const dbVideoIdSet = new Set(dbNominationList.map((v) => v.videoId));
         const unresolvedNominationEntries = latestJsonbNominationList.filter(
           (v) => !v.trackId && !dbVideoIdSet.has(v.videoId),
@@ -2091,9 +2112,9 @@ export default function App() {
         const baseHydratedState = normalizePersistedPlayerState({
           ...normalizedState,
           ...(persistedQueue.playerState || {}),
-          playlist: hydratedDbState.playlist || [],
-          customPlaylists: hydratedDbState.customPlaylists || [],
-          supportList: hydratedDbState.supportList || [],
+          playlist: enrichedDbState.playlist,
+          customPlaylists: enrichedDbState.customPlaylists,
+          supportList: enrichedDbState.supportList,
           nominationList: mergedNominationList,
           listenedStatusById: normalizedState.listenedStatusById,
         });
@@ -2141,7 +2162,7 @@ export default function App() {
         reportError('Load account data on login', error);
         setAuthError('Database error. Failed to load your account data.');
       } finally {
-        setIsAuthReady(true);
+        setIsUserHydrated(true);
       }
     },
     [applyPersistedPlayerState, ensureUserProfile, supabase],
@@ -2172,7 +2193,9 @@ export default function App() {
         setAuthSession(session);
 
         if (session?.user) {
-          await hydrateAuthenticatedUserRef.current?.(session.user);
+          setIsUserHydrated(false);
+          setIsAuthReady(true);
+          hydrateAuthenticatedUserRef.current?.(session.user);
         } else {
           setUserProfile(null);
           setIsAuthReady(true);
@@ -2213,6 +2236,7 @@ export default function App() {
         setIsSettingsOpen(false);
         setGuestImportState(null);
         setGuestImportSelections(null);
+        setIsUserHydrated(false);
         setIsAuthReady(true);
         return;
       }
@@ -2238,6 +2262,8 @@ export default function App() {
         return;
       }
 
+      setIsUserHydrated(false);
+      setIsAuthReady(true);
       window.setTimeout(() => {
         if (!isActive) return;
         hydrateAuthenticatedUserRef.current?.(session.user, {
@@ -2254,7 +2280,7 @@ export default function App() {
   }, [supabase]);
 
   useEffect(() => {
-    if (!supabase || !authUser || !isAuthReady) {
+    if (!supabase || !authUser || !isUserHydrated) {
       return undefined;
     }
 
@@ -2281,7 +2307,7 @@ export default function App() {
   }, [
     authUser,
     createAccountPlayerStateSnapshot,
-    isAuthReady,
+    isUserHydrated,
     scheduleQueuedAuthSyncFlush,
     supabase,
   ]);
@@ -5229,6 +5255,7 @@ export default function App() {
               onPlayFromSupportList={handlePlayFromSupportList}
               userProfile={userProfile}
               nominationList={nominationList}
+              onNominationsLoaded={handleNominationsLoaded}
             />
           )}
 

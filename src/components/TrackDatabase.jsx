@@ -12,6 +12,7 @@ import {
   fetchFilteredTracks,
   fetchMaxVgmcNumber,
   clearCatalogCache,
+  loadCatalogStatsIfNeeded,
 } from '../lib/trackCatalog.js';
 import {
   fetchCommunityFeedback,
@@ -581,11 +582,15 @@ export default function TrackDatabase({
     return () => clearTimeout(timer);
   }, [searchTerm]);
 
-  // Fetch Max VGMC on mount
+  // Fetch Max VGMC on mount, and load all-time comment/rating stats into the
+  // catalog so sort-by-comments and sort-by-rating work in this view.
   useEffect(() => {
     const init = async () => {
       if (!supabase) return;
-      const max = await fetchMaxVgmcNumber(supabase);
+      const [max] = await Promise.all([
+        fetchMaxVgmcNumber(supabase),
+        loadCatalogStatsIfNeeded(supabase),
+      ]);
       setMaxVgmc(max);
     };
     init();

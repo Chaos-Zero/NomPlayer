@@ -1,4 +1,3 @@
-import Fuse from 'fuse.js';
 import { getYouTubeThumbnailUrl, parseYouTubeInput } from '../utils/youtube.js';
 import { checkContent } from '../utils/profanityFilter.js';
 
@@ -491,59 +490,7 @@ export async function findTrackInCatalog(supabase, videoId) {
 
 let memoryCatalog = null;
 let activeCatalogPromise = null;
-let fuseInstance = null;
-
-function refreshFuseIndex() {
-  if (!memoryCatalog) {
-    fuseInstance = null;
-    return;
-  }
-
-  // Pre-process catalog to add searchable fields with no spaces/punctuation
-  const searchableCatalog = memoryCatalog.map((item) => {
-    const cleanGame = (item.gameTitle || '')
-      .replace(/[^a-z0-9]/gi, '')
-      .toLowerCase();
-    const cleanTrack = (item.trackTitle || '')
-      .replace(/[^a-z0-9]/gi, '')
-      .toLowerCase();
-    return {
-      ...item,
-      cleanGame,
-      cleanTrack,
-      searchTitle: `${cleanGame}${cleanTrack}`,
-    };
-  });
-
-  const options = {
-    keys: [
-      { name: 'gameTitle', weight: 1.0 },
-      { name: 'trackTitle', weight: 0.8 },
-      { name: 'cleanGame', weight: 0.8 },
-      { name: 'searchTitle', weight: 0.5 },
-      { name: 'displayTitle', weight: 0.3 },
-    ],
-    threshold: 0.3, // Slightly tighter threshold based on user feedback to reduce noise
-    distance: 100,
-    ignoreLocation: true,
-    minMatchCharLength: 2,
-    useExtendedSearch: true,
-  };
-
-  try {
-    const ActualFuse = typeof Fuse === 'function' ? Fuse : Fuse.default;
-
-    if (typeof ActualFuse === 'function') {
-      fuseInstance = new ActualFuse(searchableCatalog, options);
-    } else {
-      console.warn('TrackCatalog: Fuse constructor not found');
-      fuseInstance = null;
-    }
-  } catch (e) {
-    console.error('TrackCatalog: refreshFuseIndex error', e);
-    fuseInstance = null;
-  }
-}
+let catalogStatsLoaded = false;
 
 export async function getFullCatalog(supabase) {
   if (memoryCatalog) return memoryCatalog;
@@ -565,24 +512,33 @@ export async function getFullCatalog(supabase) {
 
       // Attach stats formatting seamlessly and normalize once
       const output = [];
-      const statsMap = {};
       const deletedIds = new Set();
       const deltaMap = {};
+      const supportStatsMap = {};
 
       if (supabase) {
-        // 2. Fetch Delta, Stats & Deletions concurrently
-        const [deltaRes, statsRes, deletionRes] = await Promise.all([
+        // 2. Fetch Delta, Deletions & live support counts concurrently.
+        // track_stats_summary (all-time comments/ratings) is deferred — only
+        // loaded when the track database opens via loadCatalogStatsIfNeeded().
+        const [deltaRes, deletionRes, supportStatsRes] = await Promise.all([
           supabase
             .from('track_catalog')
             .select('*')
             .gt('updated_at', exportedAt),
           supabase
-            .from('track_stats_summary')
-            .select('track_id, total_comments, average_rating'),
-          supabase
             .from('track_deletions')
             .select('track_id')
             .gt('deleted_at', exportedAt),
+          // Support counts are maintained by triggers and don't touch tracks.updated_at,
+          // so the snapshot+delta approach misses them. Fetch all live counts here.
+          supabase
+            .from('track_allotment_stats')
+            .select(
+              'track_id, support_count_1, support_count_2, support_count_3',
+            )
+            .or(
+              'support_count_1.gt.0,support_count_2.gt.0,support_count_3.gt.0',
+            ),
         ]);
 
         if (deltaRes.error) {
@@ -593,8 +549,8 @@ export async function getFullCatalog(supabase) {
         }
 
         const deltaTracks = deltaRes.data || [];
-        const statsList = statsRes.data || [];
-        for (const s of statsList) statsMap[s.track_id] = s;
+        const supportStatsList = supportStatsRes.data || [];
+        for (const s of supportStatsList) supportStatsMap[s.track_id] = s;
         for (const d of deletionRes.data || []) deletedIds.add(d.track_id);
         for (const t of deltaTracks) deltaMap[t.track_id] = t;
       }
@@ -631,19 +587,22 @@ export async function getFullCatalog(supabase) {
 
       // Normalization and indexing
       for (const t of merged) {
-        const s = statsMap[t.track_id];
+        const ss = supportStatsMap[t.track_id];
         const normalized = normalizeTrackCatalogEntry(t);
         if (normalized) {
-          normalized.totalComments = s ? s.total_comments : 0;
-          normalized.averageRating = s ? s.average_rating : 0;
           normalized.hasResult = Boolean(t.has_result);
           normalized.tournamentCount = t.tournament_count || 0;
+          // Override snapshot support counts with live trigger-maintained values
+          if (ss) {
+            normalized.supportCount1 = ss.support_count_1 || 0;
+            normalized.supportCount2 = ss.support_count_2 || 0;
+            normalized.supportCount3 = ss.support_count_3 || 0;
+          }
           output.push(normalized);
         }
       }
 
       memoryCatalog = output;
-      refreshFuseIndex();
       return memoryCatalog;
     } catch (error) {
       console.error('Catalog Sync: Fatal error loading catalog.', error);
@@ -658,7 +617,28 @@ export async function getFullCatalog(supabase) {
 
 export function clearCatalogCache() {
   memoryCatalog = null;
-  fuseInstance = null;
+  catalogStatsLoaded = false;
+}
+
+export async function loadCatalogStatsIfNeeded(supabase) {
+  if (!supabase || catalogStatsLoaded || !memoryCatalog) return;
+  catalogStatsLoaded = true;
+
+  const { data, error } = await supabase
+    .from('track_stats_summary')
+    .select('track_id, total_comments, average_rating');
+
+  if (error || !data) return;
+
+  const statsMap = {};
+  for (const s of data) statsMap[s.track_id] = s;
+  for (const track of memoryCatalog) {
+    const s = statsMap[track.trackId];
+    if (s) {
+      track.totalComments = s.total_comments;
+      track.averageRating = s.average_rating;
+    }
+  }
 }
 
 export function patchCatalogCache(updates = [], deletedTrackIds = []) {
@@ -719,8 +699,6 @@ export function patchCatalogCache(updates = [], deletedTrackIds = []) {
           update.hasResult !== undefined ? update.hasResult : entry.hasResult,
       };
     });
-
-  refreshFuseIndex();
 }
 
 export async function fetchFilteredTracks(
@@ -740,19 +718,22 @@ export async function fetchFilteredTracks(
 ) {
   let catalog = await getFullCatalog(supabase);
 
-  // Search filter
+  // Search filter — delegate to DB slim search RPC; client-side filtering
+  // (vgmcFilter, viewMode, sort) is applied to the returned rows below.
   if (searchTerm && searchTerm.trim().length >= 2) {
-    // If we're searching, we must provide real matches or an empty list.
-    // We no longer fall back to showing everything if search fails.
     catalog = [];
-
-    if (!fuseInstance) {
-      refreshFuseIndex();
-    }
-
-    if (fuseInstance) {
-      const results = fuseInstance.search(searchTerm);
-      catalog = results.map((r) => r.item);
+    if (supabase) {
+      const { data: rawResults, error: searchError } = await supabase.rpc(
+        'search_track_catalog_slim',
+        { search_term: searchTerm.trim(), result_limit: 200 },
+      );
+      if (searchError) {
+        console.error('Catalog search error:', searchError);
+      } else {
+        catalog = (rawResults || [])
+          .map(normalizeTrackCatalogEntry)
+          .filter(Boolean);
+      }
     }
   }
 
@@ -978,48 +959,34 @@ export async function bulkUpdateTracks(supabase, updatesMap) {
 export async function findPotentialDuplicates(supabase, track) {
   if (!supabase || !track) return [];
 
-  // Make sure we have a local catalog to search
-  const catalog = await getFullCatalog(supabase);
-  if (!catalog || catalog.length === 0) return [];
+  const searchTerm = [track.gameTitle, track.trackTitle]
+    .filter(Boolean)
+    .join(' ')
+    .trim();
+  if (!searchTerm) return [];
 
-  // Use a specialized Fuse instance for duplicates with tighter constraints
-  const ActualFuse = typeof Fuse === 'function' ? Fuse : Fuse.default;
-  if (typeof ActualFuse !== 'function') return [];
+  const { data: rawResults, error } = await supabase.rpc(
+    'search_track_catalog_slim',
+    { search_term: searchTerm, result_limit: 50 },
+  );
+  if (error || !rawResults) return [];
 
-  const duplicateFuse = new ActualFuse(catalog, {
-    keys: [
-      { name: 'gameTitle', weight: 0.5 },
-      { name: 'trackTitle', weight: 0.5 },
-    ],
-    threshold: 0.3, // Stricter than general search
-    includeScore: true,
-    useExtendedSearch: true,
-  });
+  const targetGame = String(track.gameTitle || '').toLowerCase();
+  const targetTrack = String(track.trackTitle || '').toLowerCase();
 
-  const results = duplicateFuse.search({
-    $and: [{ gameTitle: track.gameTitle }, { trackTitle: track.trackTitle }],
-  });
-
-  const candidates = results
-    .filter((res) => {
-      const { item } = res;
+  return rawResults
+    .map(normalizeTrackCatalogEntry)
+    .filter(Boolean)
+    .filter((item) => {
       if (item.trackId === track.trackId) return false;
 
-      // CONSENSUS LOGIC:
-      // Both the game and the track should have some level of similarity
-      // Or one is an exact match while the other is very close.
       const gameSim = String(item.gameTitle || '').toLowerCase();
-      const targetGame = String(track.gameTitle || '').toLowerCase();
       const trackSim = String(item.trackTitle || '').toLowerCase();
-      const targetTrack = String(track.trackTitle || '').toLowerCase();
 
       const gameExact = gameSim === targetGame;
       const trackExact = trackSim === targetTrack;
 
-      // If both exact, it's definitely a duplicate
       if (gameExact && trackExact) return true;
-
-      // If one is exact, the other must be at least partially present
       if (
         gameExact &&
         (trackSim.includes(targetTrack) || targetTrack.includes(trackSim))
@@ -1031,8 +998,6 @@ export async function findPotentialDuplicates(supabase, track) {
       )
         return true;
 
-      // Fuzzy consensus: Ensure neither field is completely off
-      // We check if at least one significant word from the target is in the item
       const hasGameWord = targetGame
         .split(/\s+/)
         .some(
@@ -1050,10 +1015,7 @@ export async function findPotentialDuplicates(supabase, track) {
 
       return hasGameWord && hasTrackWord;
     })
-    .map((res) => res.item)
     .slice(0, 15);
-
-  return candidates;
 }
 
 export async function mergeTracks(

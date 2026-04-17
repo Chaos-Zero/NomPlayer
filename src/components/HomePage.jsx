@@ -223,6 +223,10 @@ export function NominationUpdateCard({
       <div
         key={video.videoId}
         className={`dashboard-update-peek-row ${hasActivity ? 'has-activity' : ''}`}
+        onMouseLeave={() => {
+          if (supportTooltip?.videoId === video.videoId)
+            setSupportTooltip(null);
+        }}
         onClick={(e) => {
           if (isFeedbackPanelOpen) {
             e.stopPropagation();
@@ -932,6 +936,7 @@ export default function HomePage({
   isAuthReady = true,
   userProfile = null,
   nominationList = [],
+  onNominationsLoaded = null,
 }) {
   const isMobileLayout = useMediaQuery('(max-width: 960px)');
   const [nominationUpdates, setNominationUpdates] = useState([]);
@@ -1425,6 +1430,7 @@ export default function HomePage({
         );
         if (!isActive) return;
         setNominationUpdates(data);
+        onNominationsLoaded?.(data);
         setDashboardError('');
       } catch (error) {
         if (!isActive) return;
@@ -1468,7 +1474,7 @@ export default function HomePage({
     return () => {
       isActive = false;
     };
-  }, [supabase, isAuthReady]);
+  }, [supabase, isAuthReady, onNominationsLoaded]);
 
   useEffect(() => {
     if (!isAuthReady) return undefined;
