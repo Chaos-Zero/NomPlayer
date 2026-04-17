@@ -965,7 +965,7 @@ body {
 .dashboard-hero {
   position: relative;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 420px;
+  grid-template-columns: 1fr 840px 1fr;
   align-items: flex-start;
   width: 100%;
   max-width: 100%;
@@ -1131,8 +1131,7 @@ body {
   display: flex;
   align-items: stretch;
   width: 100%;
-  max-width: none;
-  flex: 1;
+  max-width: 420px;
   margin-left: auto;
   overflow: hidden;
 }
@@ -13208,7 +13207,7 @@ body.is-resizing .resize-handle {
   color: #111;
 }
 
-@media (max-width: 1200px) {
+@media (max-width: 1880px) {
   .dashboard-hero {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
