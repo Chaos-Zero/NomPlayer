@@ -1795,7 +1795,8 @@ export default function HomePage({
           <div className="dashboard-hero-spotlight">
             {!isAuthReady ||
             ((isDashboardLoading || isExtraLoading) &&
-              !fastSpotlightCandidate) ? (
+              !fastSpotlightCandidate &&
+              !featuredDiscoveryCandidate) ? (
               <div className="dashboard-feature-card dashboard-feature-card-hero dashboard-hero-loader-placeholder">
                 <div className="hero-loader-image-skeleton">
                   <div
@@ -1814,7 +1815,7 @@ export default function HomePage({
                   </div>
                 </div>
               </div>
-            ) : fastSpotlightCandidate || featuredDiscoveryCandidate ? (
+            ) : featuredDiscoveryCandidate || fastSpotlightCandidate ? (
               <article className="dashboard-feature-card dashboard-feature-card-hero animate-fade-in">
                 {isMobileLayout && (
                   <div className="dashboard-feature-mobile-header">
@@ -1826,7 +1827,7 @@ export default function HomePage({
                       type="button"
                       onClick={() =>
                         handlePlayDiscoveryCandidate(
-                          fastSpotlightCandidate || featuredDiscoveryCandidate,
+                          featuredDiscoveryCandidate || fastSpotlightCandidate,
                         )
                       }
                     >
@@ -1837,7 +1838,7 @@ export default function HomePage({
                 <img
                   className="dashboard-feature-thumb"
                   src={
-                    (fastSpotlightCandidate || featuredDiscoveryCandidate)
+                    (featuredDiscoveryCandidate || fastSpotlightCandidate)
                       .thumbnail
                   }
                   alt=""
@@ -1849,7 +1850,7 @@ export default function HomePage({
                       x: e.clientX,
                       y: e.clientY,
                       candidate:
-                        fastSpotlightCandidate || featuredDiscoveryCandidate,
+                        featuredDiscoveryCandidate || fastSpotlightCandidate,
                       source: 'spotlight',
                     });
                   }}
@@ -1863,7 +1864,7 @@ export default function HomePage({
                     <ScrollingText
                       text={(() => {
                         const spotlightVideo =
-                          fastSpotlightCandidate || featuredDiscoveryCandidate;
+                          featuredDiscoveryCandidate || fastSpotlightCandidate;
                         const meta = mergedMetadata[spotlightVideo.videoId];
                         return meta
                           ? `${meta.gameTitle} - ${meta.trackTitle}`
@@ -1881,7 +1882,7 @@ export default function HomePage({
                     <p className="dashboard-feature-meta-nominators">
                       Nominated by{' '}
                       {(
-                        fastSpotlightCandidate || featuredDiscoveryCandidate
+                        featuredDiscoveryCandidate || fastSpotlightCandidate
                       ).nominators
                         .map((nominator) =>
                           getDisplayProfileName(nominator.username),
@@ -1909,7 +1910,7 @@ export default function HomePage({
                       type="button"
                       onClick={() =>
                         handleAddDiscoveryCandidate(
-                          fastSpotlightCandidate || featuredDiscoveryCandidate,
+                          featuredDiscoveryCandidate || fastSpotlightCandidate,
                         )
                       }
                     >
