@@ -803,6 +803,7 @@ export default function App() {
           setAuthError('Database error. Your nominations are saved locally.');
         });
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [supabase],
   );
 
@@ -834,6 +835,7 @@ export default function App() {
       .catch((error) => {
         reportError('Sync support tracks to catalog', error);
       });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [supabase, authUser?.id, supportList]);
 
   useEffect(() => {
