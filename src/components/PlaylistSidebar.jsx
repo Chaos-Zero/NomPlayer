@@ -361,6 +361,7 @@ export default function PlaylistSidebar({
   currentIndex,
   flashVideoIds = [],
   isShuffleEnabled = false,
+  isShuffleAvailable = true,
   isPreviewModeEnabled = false,
   isCollapsed = false,
   showOriginalOrder = false,
@@ -763,12 +764,20 @@ export default function PlaylistSidebar({
           {isMobileLayout && (
             <>
               <button
-                className={`sidebar-icon-btn shuffle${isShuffleEnabled ? ' active' : ''}`}
+                className={`sidebar-icon-btn shuffle${isShuffleEnabled ? ' active' : ''}${!isShuffleAvailable ? ' disabled' : ''}`}
                 type="button"
-                onClick={onShuffle}
-                disabled={playlist.length < 2}
-                aria-label="Shuffle playlist"
-                title="Shuffle playlist"
+                onClick={isShuffleAvailable ? onShuffle : undefined}
+                disabled={!isShuffleAvailable || playlist.length < 2}
+                aria-label={
+                  isShuffleAvailable
+                    ? 'Shuffle playlist'
+                    : 'Play from My Playlist to use shuffle'
+                }
+                title={
+                  isShuffleAvailable
+                    ? 'Shuffle playlist'
+                    : 'Play from My Playlist to use shuffle'
+                }
               >
                 🔀
               </button>

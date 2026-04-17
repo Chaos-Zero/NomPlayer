@@ -54,6 +54,7 @@ export default function TopBar({
   showNominationsList,
   setShowNominationsList,
   isShuffleEnabled = false,
+  isShuffleAvailable = true,
   onShuffle,
   isPreviewModeEnabled = false,
   previewCountdown = 30,
@@ -548,11 +549,20 @@ export default function TopBar({
         >
           {showModeButtons && (
             <button
-              className={`footer-control-btn shuffle${isShuffleEnabled ? ' active' : ''}`}
-              onClick={onShuffle}
-              title="Shuffle playlist"
-              aria-label="Shuffle playlist"
+              className={`footer-control-btn shuffle${isShuffleEnabled ? ' active' : ''}${!isShuffleAvailable ? ' disabled' : ''}`}
+              onClick={isShuffleAvailable ? onShuffle : undefined}
+              title={
+                isShuffleAvailable
+                  ? 'Shuffle playlist'
+                  : 'Play from My Playlist to use shuffle'
+              }
+              aria-label={
+                isShuffleAvailable
+                  ? 'Shuffle playlist'
+                  : 'Play from My Playlist to use shuffle'
+              }
               aria-pressed={isShuffleEnabled}
+              disabled={!isShuffleAvailable}
               tabIndex={hidden || hidePlaybackControls ? -1 : 0}
             >
               <ShuffleIcon />
@@ -1022,12 +1032,7 @@ export default function TopBar({
           {theme === 'dark' ? <SunIcon /> : <MoonIcon />}
         </button>
 
-        {authUser && (
-          <FeedbackDialog 
-            user={authUser} 
-            profile={userProfile} 
-          />
-        )}
+        {authUser && <FeedbackDialog user={authUser} profile={userProfile} />}
 
         <UserMenu
           user={authUser}

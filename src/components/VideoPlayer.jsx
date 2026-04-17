@@ -56,6 +56,8 @@ const VideoPlayer = forwardRef(function VideoPlayer(
     userProfile,
     onShowToast,
     onProgressUpdate,
+    playingListLabel,
+    onOpenPlayingList,
   },
   ref,
 ) {
@@ -289,8 +291,15 @@ const VideoPlayer = forwardRef(function VideoPlayer(
       if (isPlaying) {
         safelyControlPlayer(event.target, 'playVideo');
       }
+      try {
+        const dur = event.target.getDuration?.() ?? 0;
+        const time = event.target.getCurrentTime?.() ?? 0;
+        onProgressUpdate?.({ currentTime: time, duration: dur });
+      } catch {
+        // player may be re-initializing
+      }
     },
-    [isPlaying, onReady],
+    [isPlaying, onReady, onProgressUpdate],
   );
 
   const handleEnd = useCallback(() => {
@@ -312,12 +321,23 @@ const VideoPlayer = forwardRef(function VideoPlayer(
           pauseVerificationTimeoutRef.current = 0;
           verifyPauseState();
         }, 180);
+      } else if (event?.data === 3) {
+        // Buffering — duration is reliably available here even before first play
+        try {
+          const player = playerRef.current;
+          const dur = player?.getDuration?.() ?? 0;
+          const time = player?.getCurrentTime?.() ?? 0;
+          if (dur > 0) onProgressUpdate?.({ currentTime: time, duration: dur });
+        } catch {
+          // player may be re-initializing
+        }
       }
     },
     [
       clearPauseVerification,
       isPauseIgnoredDuringRestore,
       onPlaybackChange,
+      onProgressUpdate,
       verifyPauseState,
     ],
   );
@@ -347,6 +367,26 @@ const VideoPlayer = forwardRef(function VideoPlayer(
   };
 
   const isFull = variant === 'full';
+
+  const nowPlayingListNode =
+    showMetadata && isFull ? (
+      <div className="now-playing-list-label">
+        {playingListLabel ? (
+          <>
+            <span className="now-playing-list-prefix">Now Playing List: </span>
+            <button
+              className="now-playing-list-btn"
+              type="button"
+              onClick={onOpenPlayingList}
+            >
+              {playingListLabel}
+            </button>
+          </>
+        ) : (
+          <span className="now-playing-list-prefix">Now Playing</span>
+        )}
+      </div>
+    ) : null;
 
   const metadataNode =
     showMetadata && (video.trackTitle || video.gameTitle || video.title) ? (
@@ -544,6 +584,7 @@ const VideoPlayer = forwardRef(function VideoPlayer(
       <div className={`player-stage${isFull ? ' has-community-activity' : ''}`}>
         <div className="player-video-stack">
           {isFull && <div className="player-grid-top-spacer" />}
+          {isFull && nowPlayingListNode}
           <div
             className={
               isFull ? 'player-grid-video-row' : 'player-grid-video-row-minimal'

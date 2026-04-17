@@ -286,10 +286,12 @@ function TrackInfoPanel({
     return communityData.tournaments || track.tournaments || [];
   }, [track, communityData.tournaments]);
 
-  const vgmcStatus =
-    trackTournaments.length > 0 && trackTournaments[0].sequence_number != null
-      ? `VGMC ${trackTournaments[0].sequence_number}`
-      : 'New to VGMC';
+  const vgmcStatus = (() => {
+    if (!trackTournaments.length) return 'New to VGMC';
+    const seq =
+      trackTournaments[0].sequenceNumber ?? trackTournaments[0].sequence_number;
+    return seq != null ? `VGMC ${seq}` : 'New to VGMC';
+  })();
 
   const handleCommentChange = (ev) => {
     const val = ev.target.value;

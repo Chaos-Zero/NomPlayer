@@ -632,6 +632,8 @@ function HeroLeaderboard({
   onShowComments,
   isFeedbackPanelOpen,
   onPlayTrack,
+  onPlayFromNominationList,
+  onPlayFromSupportList,
   onContextMenu,
 }) {
   const [currentView, setCurrentView] = useState(
@@ -718,7 +720,15 @@ function HeroLeaderboard({
               <div
                 key={track.videoId}
                 className="hero-leaderboard-row"
-                onDoubleClick={() => onPlayTrack(track)}
+                onDoubleClick={() => {
+                  if (currentView === 'nominations') {
+                    onPlayFromNominationList?.(resolveTrack(track));
+                  } else if (currentView === 'supports') {
+                    onPlayFromSupportList?.(resolveTrack(track));
+                  } else {
+                    onPlayTrack(track);
+                  }
+                }}
                 onClick={(e) => {
                   if (isFeedbackPanelOpen) {
                     const rect = e.currentTarget.getBoundingClientRect();
@@ -836,6 +846,8 @@ export default function HomePage({
   onToggleSupport,
   onToggleNomination,
   onPlayCommunityListFromTrack,
+  onPlayFromNominationList,
+  onPlayFromSupportList,
 
   onOpenSupportDropdown,
   supportStatusById = {},
@@ -1836,6 +1848,8 @@ export default function HomePage({
             onShowComments={onShowComments}
             isFeedbackPanelOpen={isFeedbackPanelOpen}
             onPlayTrack={handlePlayDiscoveryCandidate}
+            onPlayFromNominationList={onPlayFromNominationList}
+            onPlayFromSupportList={onPlayFromSupportList}
             onContextMenu={(e, item, source) => {
               e.preventDefault();
               setDiscoveryContextMenu({

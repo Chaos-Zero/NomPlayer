@@ -64,6 +64,7 @@ import {
   getTrackHistory,
   clearTrackHistory,
   LEGACY_SUPPORT_STORAGE_KEY,
+  getDisplayProfileName,
 } from './lib/playerState.js';
 import {
   fetchTrackCatalogByVideoIds,
@@ -1620,6 +1621,8 @@ export default function App() {
     () => shuffleOrderIds.length > 0 && playOrderIds === shuffleOrderIds,
     [playOrderIds, shuffleOrderIds],
   );
+
+  const isShuffleAvailable = activePlaylistView.type === 'personal';
 
   const supportStatusById = useMemo(() => {
     const status = {};
@@ -3475,6 +3478,36 @@ export default function App() {
     ],
   );
 
+  const handlePlayFromNominationList = useCallback(
+    (video) => {
+      if (!video || nominationList.length === 0) return;
+      setActivePlaylistView({ type: 'nominations' });
+      if (!transientVideo) {
+        transientResumeVideoIdRef.current = currentVideoIdRef.current;
+      }
+      setTransientVideo({ ...video, source: 'nominations-view' });
+      setCurrentVideoId(null);
+      markVideoStarted(video.videoId);
+      setIsPlaying(true);
+    },
+    [nominationList, transientVideo, currentVideoIdRef, markVideoStarted],
+  );
+
+  const handlePlayFromSupportList = useCallback(
+    (video) => {
+      if (!video || supportList.length === 0) return;
+      setActivePlaylistView({ type: 'support' });
+      if (!transientVideo) {
+        transientResumeVideoIdRef.current = currentVideoIdRef.current;
+      }
+      setTransientVideo({ ...video, source: 'support-view' });
+      setCurrentVideoId(null);
+      markVideoStarted(video.videoId);
+      setIsPlaying(true);
+    },
+    [supportList, transientVideo, currentVideoIdRef, markVideoStarted],
+  );
+
   const handlePrev = useCallback(() => {
     if (
       transientVideo?.source === 'community-view' ||
@@ -4714,6 +4747,39 @@ export default function App() {
     setActivePlaylistView({ type: 'personal' });
   }, [isPlayerPage]);
 
+  // True when playing from a named list; false for one-off "play now" transients.
+  const isPlayingFromList =
+    !transientVideo || transientVideo.source?.endsWith('-view') === true;
+
+  const playingListLabel = useMemo(() => {
+    if (!isPlayingFromList) return null;
+    if (activePlaylistView.type === 'nominations') return 'My Nominations';
+    if (activePlaylistView.type === 'support') return 'My Support List';
+    if (activePlaylistView.type === 'community') {
+      const communityUser = communityNominations.find(
+        (u) => u.userId === activePlaylistView.userId,
+      );
+      const displayName = communityUser?.username
+        ? getDisplayProfileName(communityUser.username)
+        : null;
+      return displayName
+        ? `${displayName}'s Nominations`
+        : 'Community Nominations';
+    }
+    return 'My Playlist';
+  }, [isPlayingFromList, activePlaylistView, communityNominations]);
+
+  // activePlaylistView is already set to the correct type when a list plays,
+  // so we only need to open/uncollapse the sidebar here.
+  const handleOpenPlayingList = useCallback(() => {
+    if (!isPlayerPage) {
+      setIsDesktopOverlayPlaylistOpen(true);
+      setIsPlaylistCollapsed(false);
+    } else {
+      setIsPlaylistCollapsed(false);
+    }
+  }, [isPlayerPage]);
+
   const handleNavigateToPlayer = useCallback(() => {
     handleNavigate('player');
   }, [handleNavigate]);
@@ -4778,6 +4844,11 @@ export default function App() {
     return globalCommentedVideoIds.has(currentVideo.videoId);
   }, [currentVideo?.videoId, globalCommentedVideoIds]);
 
+  const handleProgressUpdate = useCallback(({ currentTime, duration }) => {
+    setFooterCurrentTime(currentTime);
+    setFooterDuration(duration);
+  }, []);
+
   const handleSeek = useCallback((e) => {
     const newTime = parseFloat(e.target.value);
     setFooterCurrentTime(newTime);
@@ -4795,10 +4866,7 @@ export default function App() {
         isPlaying={isPlaying}
         onVideoEnd={handleVideoEnd}
         onPlaybackChange={handlePlayerPlaybackChange}
-        onProgressUpdate={({ currentTime, duration }) => {
-          setFooterCurrentTime(currentTime);
-          setFooterDuration(duration);
-        }}
+        onProgressUpdate={handleProgressUpdate}
         onPrev={handlePrev}
         onNext={handleNext}
         onTogglePlay={() =>
@@ -4821,6 +4889,8 @@ export default function App() {
         onAddToPlaylist={handleQueueFromSupportList}
         variant={playerPresentation}
         showMetadata={isPlayerPage}
+        playingListLabel={playingListLabel}
+        onOpenPlayingList={handleOpenPlayingList}
         supabase={supabase}
         authUser={authUser}
         userProfile={userProfile}
@@ -4829,6 +4899,26 @@ export default function App() {
 
       {isDesktopDetachedFooter && (
         <div className="detached-footer-premium-container">
+          {/* Full-width label row */}
+          <div className="detached-footer-list-label">
+            {playingListLabel ? (
+              <>
+                <span className="now-playing-list-prefix">
+                  Now Playing List:{' '}
+                </span>
+                <button
+                  className="now-playing-list-btn"
+                  type="button"
+                  onClick={handleOpenPlayingList}
+                >
+                  {playingListLabel}
+                </button>
+              </>
+            ) : (
+              <span className="now-playing-list-prefix">Now Playing</span>
+            )}
+          </div>
+
           {/* Left Block: Now Playing */}
           <div className="detached-footer-left">
             <div className="now-playing-footer">
@@ -4846,9 +4936,14 @@ export default function App() {
           <div className="detached-footer-center">
             <div className="footer-playback-controls">
               <button
-                className={`footer-control-btn shuffle${isShuffleEnabled ? ' active' : ''}`}
-                onClick={handleShufflePlaylist}
-                title="Shuffle"
+                className={`footer-control-btn shuffle${isShuffleEnabled ? ' active' : ''}${!isShuffleAvailable ? ' disabled' : ''}`}
+                onClick={isShuffleAvailable ? handleShufflePlaylist : undefined}
+                title={
+                  isShuffleAvailable
+                    ? 'Shuffle'
+                    : 'Play from My Playlist to use shuffle'
+                }
+                disabled={!isShuffleAvailable}
               >
                 <ShuffleIcon />
               </button>
@@ -5051,6 +5146,7 @@ export default function App() {
             }
           }}
           isShuffleEnabled={isShuffleEnabled}
+          isShuffleAvailable={isShuffleAvailable}
           onShuffle={handleShufflePlaylist}
           isPreviewModeEnabled={isPreviewModeEnabled}
           previewCountdown={previewCountdown}
@@ -5128,6 +5224,8 @@ export default function App() {
               catalogMetadata={catalogTrackByVideoId}
               lastMetadataUpdateBatch={lastMetadataUpdateBatch}
               onPlayCommunityListFromTrack={handlePlayCommunityListFromTrack}
+              onPlayFromNominationList={handlePlayFromNominationList}
+              onPlayFromSupportList={handlePlayFromSupportList}
               userProfile={userProfile}
               nominationList={nominationList}
             />
@@ -5211,6 +5309,7 @@ export default function App() {
               currentIndex={currentDisplayIndex}
               flashVideoIds={flashVideoIds}
               isShuffleEnabled={isShuffleEnabled}
+              isShuffleAvailable={isShuffleAvailable}
               isPreviewModeEnabled={isPreviewModeEnabled}
               isCollapsed={effectivePlaylistCollapsed}
               showOriginalOrder={showOriginalOrder}
@@ -5312,7 +5411,7 @@ export default function App() {
           isOpen={showSupportList}
           onClose={handleRequestCloseSupportList}
           onExited={handleSupportListExited}
-          onPlayNow={handlePlayNowFromSupportList}
+          onPlayNow={handlePlayFromSupportList}
           onAddToPlaylist={handleQueueFromSupportList}
           onRemove={handleRemoveFromSupportList}
           onToggleSupport={handleToggleSupportFromPlaylist}
@@ -5356,7 +5455,7 @@ export default function App() {
           isOpen={showNominationsList}
           onClose={handleRequestCloseNominationsList}
           onExited={handleNominationsListExited}
-          onPlayNow={handlePlayNowFromSupportList}
+          onPlayNow={handlePlayFromNominationList}
           onAddToPlaylist={handleQueueFromSupportList}
           onRemove={handleRemoveFromNominationList}
           onToggleSupport={handleToggleSupportFromPlaylist}
