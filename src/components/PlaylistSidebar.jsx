@@ -1190,39 +1190,42 @@ export default function PlaylistSidebar({
           onClose={() => setContextMenu(null)}
           className="playlist-context-menu"
         >
-          <button
-            className="playlist-context-menu-item"
-            type="button"
-            role="menuitem"
-            onClick={(e) => {
-              const rect = e.currentTarget.getBoundingClientRect();
-              onOpenSupportDropdown(contextMenu.video, {
-                top: rect.top,
-                left: rect.left,
-                width: rect.width,
-                height: rect.height,
-              });
-              setContextMenu(null);
-            }}
-          >
-            Update Support
-          </button>
-          {supportIds.has(contextMenu.video.videoId) && (
-            <>
-              <div className="context-menu-divider" />
-              <button
-                className="playlist-context-menu-item danger"
-                type="button"
-                role="menuitem"
-                onClick={() => {
-                  onToggleSupport(contextMenu.video, 0);
-                  setContextMenu(null);
-                }}
-              >
-                Remove Support
-              </button>
-            </>
+          {!nominationIds.has(contextMenu.video.videoId) && (
+            <button
+              className="playlist-context-menu-item"
+              type="button"
+              role="menuitem"
+              onClick={(e) => {
+                const rect = e.currentTarget.getBoundingClientRect();
+                onOpenSupportDropdown(contextMenu.video, {
+                  top: rect.top,
+                  left: rect.left,
+                  width: rect.width,
+                  height: rect.height,
+                });
+                setContextMenu(null);
+              }}
+            >
+              Update Support
+            </button>
           )}
+          {supportIds.has(contextMenu.video.videoId) &&
+            !nominationIds.has(contextMenu.video.videoId) && (
+              <>
+                <div className="context-menu-divider" />
+                <button
+                  className="playlist-context-menu-item danger"
+                  type="button"
+                  role="menuitem"
+                  onClick={() => {
+                    onToggleSupport(contextMenu.video, 0);
+                    setContextMenu(null);
+                  }}
+                >
+                  Remove Support
+                </button>
+              </>
+            )}
 
           {!nominationIds.has(contextMenu.video.videoId) && (
             <button

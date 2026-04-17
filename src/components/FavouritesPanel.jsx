@@ -877,7 +877,7 @@ export default function FavouritesPanel({
               role="menuitem"
               onClick={handleAddToCurrentPlaylist}
             >
-              Add to Playlist
+              Add to Current Playlist
             </button>
             <div className="context-menu-divider" />
             {tone !== 'nomination' && (

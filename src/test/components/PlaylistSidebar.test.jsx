@@ -94,9 +94,11 @@ describe('PlaylistSidebar', () => {
 
     fireEvent.contextMenu(screen.getByLabelText('Play Alpha'));
 
-    fireEvent.pointerDown(screen.getByRole('menuitem', { name: 'Support' }));
-    fireEvent.click(screen.getByRole('menuitem', { name: 'Support' }));
-    expect(props.onToggleSupport).toHaveBeenCalledWith(video, 1);
+    fireEvent.pointerDown(
+      screen.getByRole('menuitem', { name: 'Update Support' }),
+    );
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Update Support' }));
+    expect(props.onOpenSupportDropdown).toHaveBeenCalled();
 
     fireEvent.contextMenu(screen.getByLabelText('Play Alpha'));
     fireEvent.pointerDown(
@@ -123,13 +125,7 @@ describe('PlaylistSidebar', () => {
       screen.queryByRole('menuitem', { name: 'Support' }),
     ).not.toBeInTheDocument();
     expect(
-      screen.getByRole('menuitem', { name: /Set Possible Support/ }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole('menuitem', { name: /Set Likely Support/ }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole('menuitem', { name: /Set Definite Support/ }),
+      screen.getByRole('menuitem', { name: 'Update Support' }),
     ).toBeInTheDocument();
   });
 
@@ -145,10 +141,7 @@ describe('PlaylistSidebar', () => {
     fireEvent.contextMenu(screen.getByLabelText('Play Alpha'));
 
     expect(
-      screen.queryByRole('menuitem', { name: 'Support' }),
-    ).not.toBeInTheDocument();
-    expect(
-      screen.queryByRole('menuitem', { name: /Set Possible Support/ }),
+      screen.queryByRole('menuitem', { name: 'Update Support' }),
     ).not.toBeInTheDocument();
   });
 

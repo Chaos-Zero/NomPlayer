@@ -101,6 +101,7 @@ describe('NominationUpdateCard', () => {
         gameTitle: 'Resolved Game',
         title: 'Resolved Game - Resolved Track',
       }),
+      mockUpdate,
     );
   });
 
