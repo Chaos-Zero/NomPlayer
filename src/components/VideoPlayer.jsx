@@ -146,8 +146,7 @@ const VideoPlayer = forwardRef(function VideoPlayer(
     restorePauseGuardUntilRef.current = Date.now() + 2500;
 
     if (!isPlayingRef.current) {
-      clearVisibilityResumeTracking();
-      return;
+      onPlaybackChange?.(true);
     }
 
     safelyControlPlayer(playerRef.current, 'playVideo');
@@ -162,7 +161,7 @@ const VideoPlayer = forwardRef(function VideoPlayer(
         safelyControlPlayer(playerRef.current, 'playVideo');
       }, 1500),
     ];
-  }, [clearRestorePauseGuard, clearVisibilityResumeTracking]);
+  }, [clearRestorePauseGuard, onPlaybackChange]);
 
   const verifyPauseState = useCallback(() => {
     clearPauseVerification();

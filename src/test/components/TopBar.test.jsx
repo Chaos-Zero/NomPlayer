@@ -275,7 +275,7 @@ describe('TopBar', () => {
       name: /Gamma Game - Skyline/i,
     });
     fireEvent.contextMenu(result);
-    fireEvent.click(screen.getByRole('menuitem', { name: 'Add to playlist' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Add to Playlist' }));
 
     expect(onAddCatalogToPlaylist).toHaveBeenCalledWith([
       {
