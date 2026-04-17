@@ -803,7 +803,7 @@ export default function App() {
           setAuthError('Database error. Your nominations are saved locally.');
         });
     },
-    [supabase, applyUpdatesToList],
+    [supabase],
   );
 
   useEffect(() => {
@@ -834,7 +834,7 @@ export default function App() {
       .catch((error) => {
         reportError('Sync support tracks to catalog', error);
       });
-  }, [supabase, authUser?.id, supportList, applyUpdatesToList]);
+  }, [supabase, authUser?.id, supportList]);
 
   useEffect(() => {
     authUserIdRef.current = authUser?.id ?? null;
