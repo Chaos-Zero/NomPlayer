@@ -1,7 +1,126 @@
 {
-  "exportedAt": "2026-04-16T07:55:05.284Z",
-  "totalCount": 2,
+  "exportedAt": "2026-04-17T03:13:30.252Z",
+  "totalCount": 3,
   "users": [
+    {
+      "user_id": "6452d560-7b18-4e7b-8a22-208e09bddc28",
+      "username": "dc:CalzoneB",
+      "avatar_url": "https://images-ext-1.discordapp.net/external/y2Co85kS3Mh3VsdtU2Ac44E2zDM5BfkXeE-zi-5a4FQ/%3Fsize%3D1024/https/cdn.discordapp.com/avatars/268487608680579072/783e089fb3fbb4d845543e17a35ada0e.webp?format=webp&width=745&height=745",
+      "gamefaqs_username": "-Chaos-Zero-",
+      "updated_at": "2026-04-17T00:36:04.048929+00:00",
+      "nominations": [
+        {
+          "title": "Hyper Light Breaker - Apocalyptic Blues Paean",
+          "trackId": "a35849f4-4482-4a2b-b7ed-e5b97a418717",
+          "videoId": "qfSRCzeiQ0I",
+          "gameTitle": "Hyper Light Breaker",
+          "thumbnail": "https://i.ytimg.com/vi/qfSRCzeiQ0I/mqdefault.jpg",
+          "trackTitle": "Apocalyptic Blues Paean",
+          "channelTitle": null,
+          "displayTitle": "Hyper Light Breaker - Apocalyptic Blues Paean"
+        },
+        {
+          "title": "Satisfactory - Nostalgium",
+          "trackId": "1af05484-738d-4e80-b046-b70393917613",
+          "videoId": "PPS7fiGA1iI",
+          "gameTitle": "Satisfactory",
+          "thumbnail": "https://i.ytimg.com/vi/PPS7fiGA1iI/mqdefault.jpg",
+          "trackTitle": "Nostalgium",
+          "channelTitle": "Bartek888_888",
+          "displayTitle": "Satisfactory - Nostalgium"
+        },
+        {
+          "title": "Jetpack Joyride - Main Theme",
+          "trackId": "9425f368-9c1f-424c-8964-0f47e989a52b",
+          "videoId": "MiUjLJJligs",
+          "gameTitle": "Jetpack Joyride",
+          "thumbnail": "https://i.ytimg.com/vi/MiUjLJJligs/mqdefault.jpg",
+          "trackTitle": "Main Theme",
+          "channelTitle": "Halfbrick Studios",
+          "displayTitle": "Jetpack Joyride - Main Theme"
+        },
+        {
+          "title": "Dicey Dungeons: Reunion - Just Roll With It",
+          "trackId": "3d0d9c09-eec2-480d-815a-94a0c0ccd676",
+          "videoId": "oThk7mXxEW0",
+          "gameTitle": "Dicey Dungeons: Reunion",
+          "thumbnail": "https://i.ytimg.com/vi/oThk7mXxEW0/mqdefault.jpg",
+          "trackTitle": "Just Roll With It",
+          "channelTitle": "chipzel",
+          "displayTitle": "Dicey Dungeons: Reunion - Just Roll With It"
+        },
+        {
+          "title": "The Legend of Zelda: The Minish Cap - Minish Village",
+          "trackId": "9873a0fd-738f-4fc3-ba84-40fb8cfe828b",
+          "videoId": "BbQgK8DIK3M",
+          "gameTitle": "The Legend of Zelda: The Minish Cap",
+          "thumbnail": "https://i.ytimg.com/vi/BbQgK8DIK3M/mqdefault.jpg",
+          "trackTitle": "Minish Village",
+          "channelTitle": null,
+          "displayTitle": "The Legend of Zelda: The Minish Cap - Minish Village"
+        },
+        {
+          "title": "Astro Bot - Marine Serene",
+          "trackId": "1cd881cf-343e-4fa7-abcf-a00a78c885fa",
+          "videoId": "TZ9x6FP8BNw",
+          "gameTitle": "Astro Bot",
+          "thumbnail": "https://i.ytimg.com/vi/TZ9x6FP8BNw/mqdefault.jpg",
+          "trackTitle": "Marine Serene",
+          "channelTitle": null,
+          "displayTitle": "Astro Bot - Marine Serene"
+        },
+        {
+          "title": "Ape Escape 3 - Mount Amazing 2",
+          "trackId": "dd089c59-8094-4879-8ea6-cce89f3c4ace",
+          "videoId": "XYi-zuFRGUE",
+          "gameTitle": "Ape Escape 3",
+          "thumbnail": "https://i.ytimg.com/vi/XYi-zuFRGUE/mqdefault.jpg",
+          "trackTitle": "Mount Amazing 2",
+          "channelTitle": "Soichi Terada - Topic",
+          "displayTitle": "Ape Escape 3 - Mount Amazing 2"
+        },
+        {
+          "title": "Tatsunoko vs. Capcom: Ultimate All-Stars - Orbital Ring Systems Cargo Bay",
+          "trackId": "71981b63-c2cc-4709-8f85-30c0af0094a3",
+          "videoId": "bp1ZkMq26A8",
+          "gameTitle": "Tatsunoko vs. Capcom: Ultimate All-Stars",
+          "thumbnail": "https://i.ytimg.com/vi/bp1ZkMq26A8/mqdefault.jpg",
+          "trackTitle": "Orbital Ring Systems Cargo Bay",
+          "channelTitle": "PikawilMusic",
+          "displayTitle": "Tatsunoko vs. Capcom: Ultimate All-Stars - Orbital Ring Systems Cargo Bay"
+        },
+        {
+          "title": "Swarmlake - Swarmlake (Original Game Soundtrack)",
+          "trackId": "8335ba95-8aa6-404a-bc75-3206b1d130fa",
+          "videoId": "YljDiA_Rp1Q",
+          "gameTitle": "Swarmlake",
+          "thumbnail": "https://i.ytimg.com/vi/YljDiA_Rp1Q/mqdefault.jpg",
+          "trackTitle": "Swarmlake (Original Game Soundtrack)",
+          "channelTitle": null,
+          "displayTitle": "Swarmlake - Swarmlake (Original Game Soundtrack)"
+        },
+        {
+          "title": "Tekken 8 - Volcanic Bomb (Climax)",
+          "trackId": "fc6a193c-41af-4743-94a9-f6f91b84ddaf",
+          "videoId": "zKXHxdShsr0",
+          "gameTitle": "Tekken 8",
+          "thumbnail": "https://i.ytimg.com/vi/zKXHxdShsr0/mqdefault.jpg",
+          "trackTitle": "Volcanic Bomb (Climax)",
+          "channelTitle": "TEKKEN Project - Topic",
+          "displayTitle": "Tekken 8 - Volcanic Bomb (Climax)"
+        },
+        {
+          "title": "Fall Guys - Fall 'N' Roll",
+          "trackId": "fa8e4af3-aed5-4df5-9f9e-3f14bce05f20",
+          "videoId": "LL70vTa0E2g",
+          "gameTitle": "Fall Guys",
+          "thumbnail": "https://i.ytimg.com/vi/LL70vTa0E2g/mqdefault.jpg",
+          "trackTitle": "Fall 'N' Roll",
+          "channelTitle": "Jukio Kallio - Topic",
+          "displayTitle": "Fall Guys - Fall 'N' Roll"
+        }
+      ]
+    },
     {
       "user_id": "4e4a8c44-6dd3-43d7-8057-8d09a396d98e",
       "username": "dc:azuarc",
@@ -9,16 +128,6 @@
       "gamefaqs_username": null,
       "updated_at": "2026-04-15T12:58:25.680543+00:00",
       "nominations": [
-        {
-          "title": "Genshin Impact - Across Dimming Asterisms",
-          "trackId": "e3fe3339-821a-4c61-9342-db9d3f0c20c6",
-          "videoId": "YvLZzUcyDWY",
-          "gameTitle": "Genshin Impact",
-          "thumbnail": "https://i.ytimg.com/vi/YvLZzUcyDWY/mqdefault.jpg",
-          "trackTitle": "Across Dimming Asterisms",
-          "channelTitle": null,
-          "displayTitle": "Genshin Impact - Across Dimming Asterisms"
-        },
         {
           "title": "Chrono Trigger - Schala’s Theme",
           "trackId": "cc942f94-a198-4a5f-b2e7-6b5c748885df",
@@ -30,6 +139,16 @@
           "displayTitle": "Chrono Trigger - Schala’s Theme"
         },
         {
+          "title": "Silver Surfer - Stage 1",
+          "trackId": "5a0a51a3-5494-4fcb-93ae-434d12327203",
+          "videoId": "BGNSHNf-nlU",
+          "gameTitle": "Silver Surfer",
+          "thumbnail": "https://i.ytimg.com/vi/BGNSHNf-nlU/mqdefault.jpg",
+          "trackTitle": "Stage 1",
+          "channelTitle": null,
+          "displayTitle": "Silver Surfer - Stage 1"
+        },
+        {
           "title": "Lost Odyssey - Dark Saint",
           "trackId": "1c301823-13fb-4129-93e1-29ad7203b2de",
           "videoId": "nI3tq4AP5E4",
@@ -38,6 +157,16 @@
           "trackTitle": "Dark Saint",
           "channelTitle": null,
           "displayTitle": "Lost Odyssey - Dark Saint"
+        },
+        {
+          "title": "Guilty Gear X - Awe of She",
+          "trackId": "2b876601-bf94-413f-8da9-1481b5b01410",
+          "videoId": "u9LtKHiVRCw",
+          "gameTitle": "Guilty Gear X",
+          "thumbnail": "https://i.ytimg.com/vi/u9LtKHiVRCw/mqdefault.jpg",
+          "trackTitle": "Awe of She",
+          "channelTitle": null,
+          "displayTitle": "Guilty Gear X - Awe of She"
         },
         {
           "title": "World of Goo - Red Carpet Extend-o-Matic",
@@ -160,24 +289,14 @@
           "displayTitle": "UNBEATABLE - WORN OUT TAPES"
         },
         {
-          "title": "Silver Surfer - Stage 1",
-          "trackId": "5a0a51a3-5494-4fcb-93ae-434d12327203",
-          "videoId": "BGNSHNf-nlU",
-          "gameTitle": "Silver Surfer",
-          "thumbnail": "https://i.ytimg.com/vi/BGNSHNf-nlU/mqdefault.jpg",
-          "trackTitle": "Stage 1",
+          "title": "Genshin Impact - Across Dimming Asterisms",
+          "trackId": "e3fe3339-821a-4c61-9342-db9d3f0c20c6",
+          "videoId": "YvLZzUcyDWY",
+          "gameTitle": "Genshin Impact",
+          "thumbnail": "https://i.ytimg.com/vi/YvLZzUcyDWY/mqdefault.jpg",
+          "trackTitle": "Across Dimming Asterisms",
           "channelTitle": null,
-          "displayTitle": "Silver Surfer - Stage 1"
-        },
-        {
-          "title": "Guilty Gear X - Awe of She",
-          "trackId": "2b876601-bf94-413f-8da9-1481b5b01410",
-          "videoId": "u9LtKHiVRCw",
-          "gameTitle": "Guilty Gear X",
-          "thumbnail": "https://i.ytimg.com/vi/u9LtKHiVRCw/mqdefault.jpg",
-          "trackTitle": "Awe of She",
-          "channelTitle": null,
-          "displayTitle": "Guilty Gear X - Awe of She"
+          "displayTitle": "Genshin Impact - Across Dimming Asterisms"
         }
       ]
     },
