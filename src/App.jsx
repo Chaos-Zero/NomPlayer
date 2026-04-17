@@ -784,12 +784,26 @@ export default function App() {
         return;
       }
 
-      ingestYouTubeTrackSources(supabase, videos).catch((error) => {
-        reportError('Sync nomination tracks to catalog', error);
-        setAuthError('Database error. Your nominations are saved locally.');
-      });
+      ingestYouTubeTrackSources(supabase, videos)
+        .then((ingestResult) => {
+          if (!Array.isArray(ingestResult) || ingestResult.length === 0) return;
+          const updatesMap = {};
+          for (const row of ingestResult) {
+            if (row.youtube_video_id && row.track_id) {
+              updatesMap[row.youtube_video_id] = { trackId: row.track_id };
+            }
+          }
+          if (Object.keys(updatesMap).length > 0) {
+            forceImmediateSyncRef.current = true;
+            applyUpdatesToList(updatesMap);
+          }
+        })
+        .catch((error) => {
+          reportError('Sync nomination tracks to catalog', error);
+          setAuthError('Database error. Your nominations are saved locally.');
+        });
     },
-    [supabase],
+    [supabase, applyUpdatesToList],
   );
 
   useEffect(() => {
