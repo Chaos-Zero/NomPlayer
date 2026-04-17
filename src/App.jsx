@@ -5058,6 +5058,7 @@ export default function App() {
               catalogMetadata={catalogTrackByVideoId}
               lastMetadataUpdateBatch={lastMetadataUpdateBatch}
               onPlayCommunityListFromTrack={handlePlayCommunityListFromTrack}
+              userProfile={userProfile}
             />
           )}
 

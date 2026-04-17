@@ -846,6 +846,7 @@ export default function HomePage({
   catalogMetadata = {},
   lastMetadataUpdateBatch = null,
   isAuthReady = true,
+  userProfile = null,
 }) {
   const isMobileLayout = useMediaQuery('(max-width: 960px)');
   const [nominationUpdates, setNominationUpdates] = useState([]);
@@ -866,6 +867,7 @@ export default function HomePage({
   const [maxVgmcNumber, setMaxVgmcNumber] = useState(24);
   const [discoveryContextMenu, setDiscoveryContextMenu] = useState(null);
   const [nominationContextMenu, setNominationContextMenu] = useState(null);
+  const [isHidingOwnNominations, setIsHidingOwnNominations] = useState(false);
   const lastAppliedBatchRef = useRef(null);
 
   // Patch discovery items when metadata is saved (handles both title changes and URL/videoId changes)
@@ -1053,10 +1055,14 @@ export default function HomePage({
     [currentPlaylist],
   );
 
-  const visibleNominationUpdates = useMemo(
-    () => nominationUpdates.filter((update) => update.userId !== authUser?.id),
-    [authUser?.id, nominationUpdates],
-  );
+  const visibleNominationUpdates = useMemo(() => {
+    if (isHidingOwnNominations) {
+      return nominationUpdates.filter(
+        (update) => update.userId !== authUser?.id,
+      );
+    }
+    return nominationUpdates;
+  }, [authUser?.id, nominationUpdates, isHidingOwnNominations]);
 
   const globalLeaderboard = useMemo(() => {
     return Object.values(mergedMetadata)
@@ -2067,6 +2073,46 @@ export default function HomePage({
           isCollapsed={isMobileLayout && mobileCollapsedSections.nominations}
           onToggleCollapse={() => toggleMobileSection('nominations')}
           summary={sectionSummaries.nominations}
+          actions={
+            authUser && (
+              <button
+                className={`dashboard-nominations-user-toggle ${
+                  isHidingOwnNominations ? 'is-hiding' : ''
+                }`}
+                type="button"
+                onClick={() =>
+                  setIsHidingOwnNominations(!isHidingOwnNominations)
+                }
+                title={
+                  isHidingOwnNominations
+                    ? 'Show your nominations'
+                    : 'Hide your nominations'
+                }
+              >
+                {userProfile?.avatar_url ||
+                authUser?.user_metadata?.avatar_url ? (
+                  <img
+                    className="dashboard-nominations-user-avatar"
+                    src={
+                      userProfile?.avatar_url ||
+                      authUser?.user_metadata?.avatar_url
+                    }
+                    alt=""
+                  />
+                ) : (
+                  <div className="dashboard-nominations-user-avatar-placeholder">
+                    {(
+                      userProfile?.username ||
+                      authUser?.user_metadata?.username ||
+                      'U'
+                    )
+                      .slice(0, 1)
+                      .toUpperCase()}
+                  </div>
+                )}
+              </button>
+            )
+          }
         >
           {isDashboardLoading ? (
             <div className="dashboard-nominations-loader">
