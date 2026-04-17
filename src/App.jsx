@@ -813,6 +813,30 @@ export default function App() {
   }, [nominationList, authUser?.id, syncCatalogForNominationVideos]);
 
   useEffect(() => {
+    if (!supabase || !authUser?.id || supportList.length === 0) return;
+    const missing = supportList.filter((v) => !v.trackId);
+    if (missing.length === 0) return;
+
+    ingestYouTubeTrackSources(supabase, missing)
+      .then((ingestResult) => {
+        if (!Array.isArray(ingestResult) || ingestResult.length === 0) return;
+        const updatesMap = {};
+        for (const row of ingestResult) {
+          if (row.youtube_video_id && row.track_id) {
+            updatesMap[row.youtube_video_id] = { trackId: row.track_id };
+          }
+        }
+        if (Object.keys(updatesMap).length > 0) {
+          forceImmediateSyncRef.current = true;
+          applyUpdatesToList(updatesMap);
+        }
+      })
+      .catch((error) => {
+        reportError('Sync support tracks to catalog', error);
+      });
+  }, [supabase, authUser?.id, supportList, applyUpdatesToList]);
+
+  useEffect(() => {
     authUserIdRef.current = authUser?.id ?? null;
   }, [authUser]);
 
