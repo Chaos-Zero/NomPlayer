@@ -1,13 +1,17 @@
+import { getYouTubeThumbnailUrl } from '../utils/youtube.js';
+
 function normalizeVideoEntry(entry) {
   if (!entry || typeof entry !== 'object') return null;
-  if (typeof entry.videoId !== 'string' || entry.videoId.trim() === '') {
-    return null;
-  }
+  const videoId = typeof entry.videoId === 'string' ? entry.videoId.trim() : '';
+  if (!videoId) return null;
 
   return {
-    videoId: entry.videoId,
+    videoId,
     title: typeof entry.title === 'string' ? entry.title : 'Untitled video',
-    thumbnail: typeof entry.thumbnail === 'string' ? entry.thumbnail : '',
+    thumbnail:
+      typeof entry.thumbnail === 'string' && entry.thumbnail
+        ? entry.thumbnail
+        : getYouTubeThumbnailUrl(videoId),
     channelTitle:
       typeof entry.channelTitle === 'string' ? entry.channelTitle : '',
   };

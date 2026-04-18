@@ -36,6 +36,7 @@ import {
   PlayIcon,
   SpeechBubbleIcon,
   StarIcon,
+  UsersIcon,
 } from './Icons.jsx';
 
 import { AnimatedGridPattern } from './AnimatedGridPattern.jsx';
@@ -198,16 +199,33 @@ export function NominationUpdateCard({
 }) {
   const displayIdentity = parseStoredProfileUsername(update.username);
   const nominationCount = update.nominations.length;
+  const [supportTooltip, setSupportTooltip] = useState(null);
+
+  useEffect(() => {
+    if (!supportTooltip) return;
+    const close = () => setSupportTooltip(null);
+    document.addEventListener('click', close);
+    return () => document.removeEventListener('click', close);
+  }, [supportTooltip]);
 
   const renderPeekRowActivity = (video, index) => {
-    const hasSupport = supportStatusById[video.videoId]?.isSupported;
     const hasComments = globalCommentedVideoIds.has(video.videoId);
-    const hasActivity = hasSupport || hasComments;
+    const meta = metadataById[video.videoId];
+    const sc1 = meta?.supportCount1 || 0;
+    const sc2 = meta?.supportCount2 || 0;
+    const sc3 = meta?.supportCount3 || 0;
+    const totalSupport = sc1 + sc2 + sc3;
+    const hasActivity = totalSupport > 0 || hasComments;
+    const isTooltipOpen = supportTooltip?.videoId === video.videoId;
 
     return (
       <div
         key={video.videoId}
         className={`dashboard-update-peek-row ${hasActivity ? 'has-activity' : ''}`}
+        onMouseLeave={() => {
+          if (supportTooltip?.videoId === video.videoId)
+            setSupportTooltip(null);
+        }}
         onClick={(e) => {
           if (isFeedbackPanelOpen) {
             e.stopPropagation();
@@ -237,25 +255,6 @@ export function NominationUpdateCard({
         <span className="dashboard-update-peek-index" aria-hidden="true">
           {index + 1}
         </span>
-        {hasActivity && (
-          <button
-            className="peek-action-btn peek-action-btn-activity"
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              const rect = e.currentTarget.getBoundingClientRect();
-              onShowComments?.(resolveTrack(video), {
-                top: rect.top,
-                left: rect.left,
-                width: rect.width,
-                height: rect.height,
-              });
-            }}
-            title="View activity and comments"
-          >
-            <SpeechBubbleIcon size={18} />
-          </button>
-        )}
         <div className="dashboard-update-peek-content">
           <span className="dashboard-update-peek-game">
             {metadataById[video.videoId]?.gameTitle || 'Metadata Needed'}
@@ -287,16 +286,18 @@ export function NominationUpdateCard({
             onClick={(e) => {
               e.stopPropagation();
               const resolved = resolveTrack(video);
+              const rect = e.currentTarget.getBoundingClientRect();
+
               if (!supportStatusById[video.videoId]?.isSupported) {
-                onToggleSupport?.(resolved);
-                const rect = e.currentTarget.getBoundingClientRect();
-                onOpenSupportDropdown?.(resolved, {
-                  top: rect.top,
-                  left: rect.left + rect.width / 2,
-                });
-              } else {
+                // If not supported yet, toggle on default support first
                 onToggleSupport?.(resolved);
               }
+
+              // Always open the menu to allow changing level or removing
+              onOpenSupportDropdown?.(resolved, {
+                top: rect.top,
+                left: rect.left + rect.width / 2,
+              });
             }}
             onContextMenu={(e) => {
               e.preventDefault();
@@ -310,7 +311,7 @@ export function NominationUpdateCard({
             }}
             title={
               supportStatusById[video.videoId]?.isSupported
-                ? 'Remove support'
+                ? 'Change or remove support'
                 : 'Support this track'
             }
           >
@@ -335,8 +336,36 @@ export function NominationUpdateCard({
           >
             <PlayIcon size={20} />
           </button>
+
+          {totalSupport > 0 && (
+            <button
+              className={`peek-support-chip${isTooltipOpen ? ' expanded' : ''}`}
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                if (isTooltipOpen) {
+                  setSupportTooltip(null);
+                } else {
+                  const rect = e.currentTarget.getBoundingClientRect();
+                  setSupportTooltip({
+                    videoId: video.videoId,
+                    top: rect.bottom + 6,
+                    left: rect.left + rect.width / 2,
+                    sc1,
+                    sc2,
+                    sc3,
+                  });
+                }
+              }}
+              title={`${totalSupport} support${totalSupport !== 1 ? 's' : ''} (Click for details)`}
+            >
+              <HeartIcon className="peek-chip-icon" />
+              <span>{totalSupport}</span>
+            </button>
+          )}
+
           <button
-            className="peek-action-btn peek-action-btn-comments"
+            className={`peek-action-btn peek-action-btn-comments${hasComments ? ' has-comments' : ''}`}
             type="button"
             onClick={(e) => {
               e.stopPropagation();
@@ -348,7 +377,9 @@ export function NominationUpdateCard({
                 height: rect.height,
               });
             }}
-            title="View comments"
+            title={
+              hasComments ? 'View comments and activity' : 'No comments yet'
+            }
           >
             <SpeechBubbleIcon size={18} />
           </button>
@@ -531,6 +562,35 @@ export function NominationUpdateCard({
           </>
         )}
       </article>
+
+      {supportTooltip && (
+        <ModalPortal>
+          <div
+            className="peek-support-tooltip"
+            style={{ top: supportTooltip.top, left: supportTooltip.left }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {supportTooltip.sc1 > 0 && (
+              <span className="stat-badge normal">
+                <HeartIcon className="peek-chip-icon" />
+                {supportTooltip.sc1}
+              </span>
+            )}
+            {supportTooltip.sc2 > 0 && (
+              <span className="stat-badge strong">
+                <HeartIcon className="peek-chip-icon" />
+                {supportTooltip.sc2}
+              </span>
+            )}
+            {supportTooltip.sc3 > 0 && (
+              <span className="stat-badge highest">
+                <LockIcon className="peek-chip-icon" />
+                {supportTooltip.sc3}
+              </span>
+            )}
+          </div>
+        </ModalPortal>
+      )}
     </>
   );
 }
@@ -581,7 +641,7 @@ function DiscoveryGridItem({ candidate, metadata, onPlayNow, onContextMenu }) {
                     className="discovery-support-stat nominators"
                     title={`${candidate.nominationCount} Users Nominated`}
                   >
-                    <SpeechBubbleIcon size={14} />
+                    <UsersIcon />
                     <span>{candidate.nominationCount}</span>
                   </div>
                 )}
@@ -860,6 +920,7 @@ export default function HomePage({
   isAuthReady = true,
   userProfile = null,
   nominationList = [],
+  onNominationsLoaded = null,
 }) {
   const isMobileLayout = useMediaQuery('(max-width: 960px)');
   const [nominationUpdates, setNominationUpdates] = useState([]);
@@ -1353,6 +1414,7 @@ export default function HomePage({
         );
         if (!isActive) return;
         setNominationUpdates(data);
+        onNominationsLoaded?.(data);
         setDashboardError('');
       } catch (error) {
         if (!isActive) return;
@@ -1396,7 +1458,7 @@ export default function HomePage({
     return () => {
       isActive = false;
     };
-  }, [supabase, isAuthReady]);
+  }, [supabase, isAuthReady, onNominationsLoaded]);
 
   useEffect(() => {
     if (!isAuthReady) return undefined;

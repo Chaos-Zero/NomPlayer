@@ -22,7 +22,7 @@ import YouTubeIcon from './YouTubeIcon.jsx';
 import ScrollingText from './ScrollingText.jsx';
 import useMediaQuery from '../hooks/useMediaQuery.js';
 import { getDisplayProfileName } from '../lib/playerState.js';
-import { SortByRatingIcon } from './Icons.jsx';
+import { SortByRatingIcon, SpeechBubbleIcon } from './Icons.jsx';
 
 function FastForwardIcon() {
   return (
@@ -122,6 +122,8 @@ function PlaylistItem({
   selectionMode,
   isSelected,
   onToggleSelected,
+  hasComments = false,
+  onShowComments,
 }) {
   const [imgError, setImgError] = useState(false);
   const tickLabel =
@@ -264,6 +266,25 @@ function PlaylistItem({
             {video.rating}
           </span>
         )}
+        {hasComments && (
+          <button
+            className="comment-bubble-btn"
+            type="button"
+            title="View community comments"
+            onClick={(e) => {
+              e.stopPropagation();
+              const rect = e.currentTarget.getBoundingClientRect();
+              onShowComments?.(video, {
+                top: rect.top,
+                left: rect.left,
+                width: rect.width,
+                height: rect.height,
+              });
+            }}
+          >
+            <SpeechBubbleIcon />
+          </button>
+        )}
         <div className="item-fav-container">
           <button
             className={`item-fav-btn${starStateClass}`}
@@ -304,6 +325,8 @@ function SortablePlaylistItem({
   onToggleSupport,
   onOpenSupportDropdown,
   onOpenContextMenu,
+  hasComments = false,
+  onShowComments,
 }) {
   const {
     attributes,
@@ -351,6 +374,8 @@ function SortablePlaylistItem({
         selectionMode={false}
         isSelected={false}
         onToggleSelected={() => {}}
+        hasComments={hasComments}
+        onShowComments={onShowComments}
       />
     </div>
   );
@@ -393,6 +418,8 @@ export default function PlaylistSidebar({
   activePlaylistView = { type: 'personal' },
   onSwitchView,
   communityNominations = [],
+  globalCommentedVideoIds = new Set(),
+  onShowComments,
 }) {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
@@ -1127,6 +1154,8 @@ export default function PlaylistSidebar({
                 selectionMode={true}
                 isSelected={selectedIdSet.has(video.videoId)}
                 onToggleSelected={handleToggleSelected}
+                hasComments={globalCommentedVideoIds.has(video.videoId)}
+                onShowComments={onShowComments}
               />
             ))
           ) : canReorder ? (
@@ -1159,6 +1188,8 @@ export default function PlaylistSidebar({
                     onToggleSupport={onToggleSupport}
                     onOpenSupportDropdown={handleOpenSupportDropdown}
                     onOpenContextMenu={handleOpenContextMenu}
+                    hasComments={globalCommentedVideoIds.has(video.videoId)}
+                    onShowComments={onShowComments}
                   />
                 ))}
               </SortableContext>
@@ -1186,6 +1217,8 @@ export default function PlaylistSidebar({
                 selectionMode={false}
                 isSelected={false}
                 onToggleSelected={() => {}}
+                hasComments={globalCommentedVideoIds.has(video.videoId)}
+                onShowComments={onShowComments}
               />
             ))
           )}

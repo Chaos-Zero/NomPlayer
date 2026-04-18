@@ -5,6 +5,7 @@ import React, {
   useEffect,
   useRef,
 } from 'react';
+import { useVirtualizer } from '@tanstack/react-virtual';
 import {
   getDisplayProfileName,
   deriveProfileAvatarUrl,
@@ -213,11 +214,11 @@ function TrackInfoPanel({
       note: personalFeedback.note,
       rating: personalFeedback.rating,
       videoId: track?.videoId,
+      isLoading: isLoadingData,
     });
     setLocalComment(personalFeedback.note || track?.comment || '');
     setLocalRating(personalFeedback.rating || '');
 
-    // Default to collapsed if feedback exists, or open for new (Wait for load per User Request)
     if (!isLoadingData) {
       if (!personalFeedback.rating && !personalFeedback.note) {
         setIsEditing(true);
@@ -227,26 +228,9 @@ function TrackInfoPanel({
     }
   }
 
-  // Trigger sync on load status change specifically
   if (isLoadingData !== prevSync.isLoading) {
     setPrevSync((prev) => ({ ...prev, isLoading: isLoadingData }));
 
-    // When loading finishes, decide whether to show or hide the input
-    if (!isLoadingData) {
-      const hasFeedback = personalFeedback.rating || personalFeedback.note;
-      if (!hasFeedback) {
-        setIsEditing(true);
-      } else {
-        setIsEditing(false);
-      }
-    }
-  }
-
-  // Trigger sync on load status change specifically
-  if (isLoadingData !== prevSync.isLoading) {
-    setPrevSync((prev) => ({ ...prev, isLoading: isLoadingData }));
-
-    // When loading finishes, decide whether to show or hide the input
     if (!isLoadingData) {
       const hasFeedback = personalFeedback.rating || personalFeedback.note;
       if (!hasFeedback) {
@@ -698,6 +682,7 @@ function SortableListExplorerCard({
             onDoubleQueue={() => onPlayNow(video)}
             onOpenContextMenu={onContextMenu}
             onOpenSupportDropdown={onOpenSupportDropdown}
+            onShowComments={() => onSelect?.(video.videoId)}
             tone={isSupportList ? 'support' : undefined}
             itemAriaPrefix="List Explorer track"
             hasComments={hasComments}
@@ -745,6 +730,17 @@ function ListExplorerColumn({
       listId: id,
     },
   });
+
+  const listScrollRef = useRef(null);
+  const safeVideos = videos || [];
+  // eslint-disable-next-line react-hooks/incompatible-library
+  const virtualizer = useVirtualizer({
+    count: safeVideos.length,
+    getScrollElement: () => listScrollRef.current,
+    estimateSize: () => 82,
+    overscan: 5,
+  });
+  const virtualItems = virtualizer.getVirtualItems();
 
   const isCustom =
     id !== 'nominations' &&
@@ -902,39 +898,62 @@ function ListExplorerColumn({
           </form>
         )}
 
-        <SortableContext
-          items={(videos || []).map((v) => `${id}:${v.videoId}`)}
-          strategy={verticalListSortingStrategy}
-        >
-          <div className="list-explorer-list">
-            {!videos || videos.length === 0 ? (
+        <div className="list-explorer-list-scroll" ref={listScrollRef}>
+          <SortableContext
+            items={safeVideos.map((v) => `${id}:${v.videoId}`)}
+            strategy={verticalListSortingStrategy}
+          >
+            {safeVideos.length === 0 ? (
               <div className="list-explorer-list-empty">
                 <span>No tracks here yet</span>
               </div>
             ) : (
-              videos.map((video, index) => (
-                <SortableListExplorerCard
-                  key={`${id}:${video.videoId}`}
-                  sortableId={`${id}:${video.videoId}`}
-                  video={video}
-                  index={index}
-                  isSelected={selectedTrackId === video.videoId}
-                  onSelect={onSelectTrack}
-                  onContextMenu={onContextMenu}
-                  onPlayNow={onPlayNow}
-                  onRemove={onRemove}
-                  isReadOnly={isReadOnly}
-                  hasComments={
-                    globalCommentedVideoIds?.has(video.videoId) ||
-                    (!!video.comment &&
-                      (id.startsWith('peer-') || id === 'new-nominations'))
-                  }
-                  userComment={video.comment}
-                />
-              ))
+              <div
+                className="list-explorer-list"
+                style={{
+                  height: `${virtualizer.getTotalSize()}px`,
+                  position: 'relative',
+                }}
+              >
+                {virtualItems.map((virtualItem) => {
+                  const video = safeVideos[virtualItem.index];
+                  return (
+                    <div
+                      key={`${id}:${video.videoId}`}
+                      style={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        width: '100%',
+                        paddingBottom: '16px',
+                        transform: `translateY(${virtualItem.start}px)`,
+                      }}
+                    >
+                      <SortableListExplorerCard
+                        sortableId={`${id}:${video.videoId}`}
+                        video={video}
+                        index={virtualItem.index}
+                        isSelected={selectedTrackId === video.videoId}
+                        onSelect={onSelectTrack}
+                        onContextMenu={onContextMenu}
+                        onPlayNow={onPlayNow}
+                        onRemove={onRemove}
+                        isReadOnly={isReadOnly}
+                        hasComments={
+                          globalCommentedVideoIds?.has(video.videoId) ||
+                          (!!video.comment &&
+                            (id.startsWith('peer-') ||
+                              id === 'new-nominations'))
+                        }
+                        userComment={video.comment}
+                      />
+                    </div>
+                  );
+                })}
+              </div>
             )}
-          </div>
-        </SortableContext>
+          </SortableContext>
+        </div>
       </div>
     </div>
   );
@@ -2231,6 +2250,10 @@ export default function ListExplorer({
   ]);
 
   const prevActiveColumnIdsRef = useRef([]);
+  const nominationListRef = useRef(nominationList);
+  useEffect(() => {
+    nominationListRef.current = nominationList;
+  }, [nominationList]);
 
   // Auto-scroll when new columns are added
   useEffect(() => {
@@ -2290,7 +2313,7 @@ export default function ListExplorer({
       setIsLoadingActivity(true);
       try {
         // Collect track IDs from nominations and support list for peer feedback lookup
-        const nominatedTrackIds = (nominationList || [])
+        const nominatedTrackIds = (nominationListRef.current || [])
           .map((v) => v.trackId || v.id)
           .filter((id) => id && /^[0-9a-f-]{36}$/i.test(id));
 
@@ -2314,14 +2337,7 @@ export default function ListExplorer({
     ) {
       fetchActivity();
     }
-  }, [
-    explorerView,
-    activityRefreshKey,
-    refreshKey,
-    supabase,
-    authUser?.id,
-    nominationList,
-  ]);
+  }, [explorerView, activityRefreshKey, refreshKey, supabase, authUser?.id]);
 
   return (
     <div
