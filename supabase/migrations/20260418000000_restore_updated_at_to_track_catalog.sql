@@ -5,7 +5,8 @@
 DROP FUNCTION IF EXISTS public.search_track_catalog(text, integer);
 DROP VIEW IF EXISTS public.track_catalog CASCADE;
 
-CREATE VIEW public.track_catalog AS
+CREATE VIEW public.track_catalog
+WITH (security_invoker = true) AS
 SELECT
   tracks.id                        AS track_id,
   tracks.canonical_game_title      AS game_title,
@@ -92,7 +93,7 @@ CREATE OR REPLACE FUNCTION public.search_track_catalog(
 RETURNS SETOF public.track_catalog
 LANGUAGE sql
 STABLE
-SECURITY DEFINER
+SECURITY INVOKER
 SET search_path = public
 AS $$
   SELECT track_catalog.*

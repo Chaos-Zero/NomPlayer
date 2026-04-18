@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { fetchTrackCatalogByVideoIds } from '../lib/trackCatalog.js';
+import { fetchListenHistory } from '../lib/playerState.js';
 
 function PlaylistPlusIcon() {
   return (
@@ -27,17 +28,26 @@ export default function ListeningHistoryDialog({
 }) {
   const [activeTab, setActiveTab] = useState('recent');
   const [localHistory, setLocalHistory] = useState([]);
+  const [recentLoading, setRecentLoading] = useState(false);
   const [mostPlayed, setMostPlayed] = useState([]);
   const [mostPlayedLoading, setMostPlayedLoading] = useState(false);
 
-  // Refresh recent history from localStorage whenever dialog opens
+  // Refresh recent history whenever dialog opens
   useEffect(() => {
-    if (isOpen) {
+    if (!isOpen) return;
+
+    if (authUser && supabase) {
+      setRecentLoading(true);
+      fetchListenHistory(supabase)
+        .then(setLocalHistory)
+        .catch((err) => console.error('Failed to load listen history:', err))
+        .finally(() => setRecentLoading(false));
+    } else {
       setLocalHistory(
         typeof getTrackHistory === 'function' ? getTrackHistory() : [],
       );
     }
-  }, [isOpen, getTrackHistory]);
+  }, [isOpen, authUser, supabase, getTrackHistory]);
 
   const loadMostPlayed = useCallback(async () => {
     if (!supabase || !authUser) return;
@@ -158,7 +168,7 @@ export default function ListeningHistoryDialog({
             <div className="settings-history-section">
               <div className="settings-history-header">
                 <h3>Recent Tracks</h3>
-                {localHistory.length > 0 && (
+                {!authUser && localHistory.length > 0 && (
                   <button
                     className="btn btn-text btn-clear-history"
                     type="button"
@@ -173,7 +183,9 @@ export default function ListeningHistoryDialog({
                   </button>
                 )}
               </div>
-              {localHistory.length === 0 ? (
+              {recentLoading ? (
+                <p className="settings-history-empty">Loading…</p>
+              ) : localHistory.length === 0 ? (
                 <p className="settings-history-empty">
                   No history recorded yet.
                 </p>

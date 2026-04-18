@@ -1248,30 +1248,12 @@ export default function App() {
   useEffect(() => {
     if (!supabase) return;
 
-    const fetchGlobalFeedbackStatus = async () => {
-      try {
-        // Fetch comment IDs from DB and support IDs from catalog in parallel.
-        // The track_supports full-table scan is replaced by reading support
-        // counts already present in the in-memory catalog.
-        const [{ data, error }, catalog] = await Promise.all([
-          supabase
-            .from('track_user_feedback')
-            .select('tracks!inner(track_sources!inner(external_id))')
-            .not('note', 'is', null)
-            .not('note', 'eq', ''),
-          getFullCatalog(supabase).catch(() => []),
-        ]);
-
-        if (error) throw error;
-
+    getFullCatalog(supabase)
+      .then((catalog) => {
         const ids = new Set();
-        data?.forEach((row) => {
-          row.tracks?.track_sources?.forEach((src) => {
-            if (src.external_id) ids.add(src.external_id);
-          });
-        });
         for (const entry of catalog) {
           if (
+            entry.commentCount > 0 ||
             entry.supportCount1 > 0 ||
             entry.supportCount2 > 0 ||
             entry.supportCount3 > 0
@@ -1279,14 +1261,11 @@ export default function App() {
             ids.add(entry.videoId);
           }
         }
-
         setGlobalCommentedVideoIds(ids);
-      } catch (err) {
-        console.error('Error fetching global feedback status:', err);
-      }
-    };
-
-    fetchGlobalFeedbackStatus();
+      })
+      .catch((err) => {
+        console.error('Error building feedback status:', err);
+      });
   }, [supabase]);
 
   const mergeCatalogTrackSummaries = useCallback((summaries) => {

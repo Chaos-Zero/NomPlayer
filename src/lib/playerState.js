@@ -824,6 +824,20 @@ export function clearTrackHistory() {
   localStorage.removeItem(HISTORY_STORAGE_KEY);
 }
 
+export async function fetchListenHistory(supabase, limit = 200) {
+  const { data, error } = await supabase.rpc('get_user_listen_history', {
+    p_limit: limit,
+  });
+  if (error) throw error;
+  return (Array.isArray(data) ? data : []).map((row) => ({
+    videoId: row.video_id,
+    trackId: row.track_id,
+    trackTitle: row.track_title || '',
+    gameTitle: row.game_title || '',
+    timestamp: row.last_listened_at,
+  }));
+}
+
 export async function fetchUserHydratedState(supabase, userId) {
   const { data, error } = await supabase.rpc('get_user_hydrated_state', {
     req_user_id: userId,

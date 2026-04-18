@@ -173,6 +173,8 @@ function normalizeTrackCatalogEntry(entry) {
       Number(entry.support_count_2) || Number(entry.supportCount2) || 0,
     supportCount3:
       Number(entry.support_count_3) || Number(entry.supportCount3) || 0,
+    commentCount:
+      Number(entry.comment_count) || Number(entry.commentCount) || 0,
     tournaments,
   };
 }
@@ -302,9 +304,18 @@ export async function fetchTrackCatalogByVideoIds(supabase, videoIds) {
     ),
   );
 
-  if (!supabase || normalizedIds.length === 0) {
+  if (normalizedIds.length === 0) {
     return [];
   }
+
+  // Serve from memory cache when available — avoids a DB roundtrip.
+  const cached = getCachedCatalog();
+  if (cached) {
+    const idSet = new Set(normalizedIds);
+    return cached.filter((entry) => idSet.has(entry.videoId));
+  }
+
+  if (!supabase) return [];
 
   const { data, error } = await supabase
     .from('track_catalog')
