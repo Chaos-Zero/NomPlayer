@@ -69,10 +69,10 @@ import {
 import {
   fetchTrackCatalogByVideoIds,
   fetchTrackCatalogByTrackIds,
-  fetchSupportedTracks,
   ingestYouTubeTrackSources,
   patchCatalogCache,
   getFullCatalog,
+  getCachedCatalog,
   mapTrackCatalogEntryToVideo,
 } from './lib/trackCatalog.js';
 import { fetchUserFeedback } from './lib/feedback.js';
@@ -1239,23 +1239,28 @@ export default function App() {
     }
   }, [authUser]);
 
+  // Warm the catalog cache as early as possible so it's ready before login.
+  // getFullCatalog is idempotent — subsequent calls return the cached result instantly.
+  useEffect(() => {
+    if (supabase) getFullCatalog(supabase).catch(() => {});
+  }, [supabase]);
+
   useEffect(() => {
     if (!supabase) return;
 
     const fetchGlobalFeedbackStatus = async () => {
       try {
-        // Fetch tracks with comments (matching working logic from ListExplorer)
-        // We use a simpler query first to ensure it works
-        const { data, error } = await supabase
-          .from('track_user_feedback')
-          .select('tracks!inner(track_sources!inner(external_id))')
-          .not('note', 'is', null)
-          .not('note', 'eq', '');
-
-        // Also fetch tracks with supports (this table is small and usually reliable)
-        const { data: supportData } = await supabase
-          .from('track_supports')
-          .select('tracks!inner(track_sources!inner(external_id))');
+        // Fetch comment IDs from DB and support IDs from catalog in parallel.
+        // The track_supports full-table scan is replaced by reading support
+        // counts already present in the in-memory catalog.
+        const [{ data, error }, catalog] = await Promise.all([
+          supabase
+            .from('track_user_feedback')
+            .select('tracks!inner(track_sources!inner(external_id))')
+            .not('note', 'is', null)
+            .not('note', 'eq', ''),
+          getFullCatalog(supabase).catch(() => []),
+        ]);
 
         if (error) throw error;
 
@@ -1265,11 +1270,15 @@ export default function App() {
             if (src.external_id) ids.add(src.external_id);
           });
         });
-        supportData?.forEach((row) => {
-          row.tracks?.track_sources?.forEach((src) => {
-            if (src.external_id) ids.add(src.external_id);
-          });
-        });
+        for (const entry of catalog) {
+          if (
+            entry.supportCount1 > 0 ||
+            entry.supportCount2 > 0 ||
+            entry.supportCount3 > 0
+          ) {
+            ids.add(entry.videoId);
+          }
+        }
 
         setGlobalCommentedVideoIds(ids);
       } catch (err) {
@@ -1447,24 +1456,6 @@ export default function App() {
 
   // Pre-populate catalog with supported tracks on mount so the leaderboard
   // renders immediately with correct support counts from the live DB view.
-  useEffect(() => {
-    if (!supabase) return;
-    let cancelled = false;
-
-    fetchSupportedTracks(supabase)
-      .then((tracks) => {
-        if (cancelled) return;
-        mergeCatalogTrackSummaries(tracks);
-      })
-      .catch((err) => {
-        console.warn('Failed to pre-load supported tracks:', err);
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [supabase, mergeCatalogTrackSummaries]);
-
   // Supabase Realtime: refresh support counts when track_supports rows change.
   // Debounces rapid changes into a single batch re-fetch of the track_catalog view.
   useEffect(() => {
@@ -2047,46 +2038,56 @@ export default function App() {
     ) => {
       if (!supabase || !user) return;
 
-      try {
-        const [profile, remoteState, hydratedDbState, catalog] =
-          await Promise.all([
-            ensureUserProfile(
-              user,
-              preferredUsername,
-              preferredGamefaqsUsername,
-              preferredAvatarUrl,
-            ),
-            fetchUserPlayerState(supabase, user.id),
-            fetchUserHydratedState(supabase, user.id),
-            getFullCatalog(supabase),
-          ]);
-        setUserProfile(profile);
+      // Kick off catalog in background — may already be loading from the warm
+      // effect. We do NOT await it here; phase 1 completes without it.
+      const catalogPromise = getFullCatalog(supabase);
+      let rawHydratedDbState = null;
 
-        // Enrich lightweight RPC items (videoId + trackId only) with full
-        // metadata from the in-memory catalog.
-        const catalogByTrackId = new Map(
-          (catalog || []).map((entry) => [entry.trackId, entry]),
-        );
-        const enrichItem = (item) => {
-          if (!item?.trackId) return item;
-          const entry = catalogByTrackId.get(item.trackId);
-          if (!entry) return item;
-          const video = mapTrackCatalogEntryToVideo(entry);
-          return video ? { ...video, ...item } : item;
-        };
-        const enrichedDbState = {
-          nominationList: (hydratedDbState.nominationList || []).map(
-            enrichItem,
+      try {
+        // ── Phase 1: fast DB queries only ────────────────────────────────────
+        // Resolves in ~1s. UI becomes interactive as soon as this completes.
+        const [profile, remoteState, hydratedDbState] = await Promise.all([
+          ensureUserProfile(
+            user,
+            preferredUsername,
+            preferredGamefaqsUsername,
+            preferredAvatarUrl,
           ),
-          supportList: (hydratedDbState.supportList || []).map(enrichItem),
-          playlist: (hydratedDbState.playlist || []).map(enrichItem),
-          customPlaylists: (hydratedDbState.customPlaylists || []).map(
-            (pl) => ({
-              ...pl,
-              videos: (pl.videos || []).map(enrichItem),
-            }),
-          ),
+          fetchUserPlayerState(supabase, user.id),
+          fetchUserHydratedState(supabase, user.id),
+        ]);
+        setUserProfile(profile);
+        rawHydratedDbState = hydratedDbState;
+
+        // Use whatever catalog is already in memory (may be fully loaded if the
+        // warm effect finished first, or empty if still loading).
+        const buildEnrichedState = (catalog) => {
+          const catalogByTrackId = new Map(
+            (catalog || []).map((entry) => [entry.trackId, entry]),
+          );
+          const enrichItem = (item) => {
+            if (!item?.trackId) return item;
+            const entry = catalogByTrackId.get(item.trackId);
+            if (!entry) return item;
+            const video = mapTrackCatalogEntryToVideo(entry);
+            return video ? { ...video, ...item } : item;
+          };
+          return {
+            nominationList: (hydratedDbState.nominationList || []).map(
+              enrichItem,
+            ),
+            supportList: (hydratedDbState.supportList || []).map(enrichItem),
+            playlist: (hydratedDbState.playlist || []).map(enrichItem),
+            customPlaylists: (hydratedDbState.customPlaylists || []).map(
+              (pl) => ({
+                ...pl,
+                videos: (pl.videos || []).map(enrichItem),
+              }),
+            ),
+          };
         };
+
+        const enrichedDbState = buildEnrichedState(getCachedCatalog());
 
         const normalizedState = normalizePersistedPlayerState(remoteState);
         const persistedQueue = loadPersistedAuthSyncQueue(user.id);
@@ -2162,10 +2163,76 @@ export default function App() {
         reportError('Load account data on login', error);
         setAuthError('Database error. Failed to load your account data.');
       } finally {
+        // UI is unblocked — nominations/leaderboard are visible now.
         setIsUserHydrated(true);
       }
+
+      // ── Phase 2: catalog enrichment (background) ─────────────────────────
+      // Only needed if catalog wasn't loaded during phase 1. UI is already
+      // visible at this point — this just fills in titles/thumbnails.
+      const catalogWasReady = Boolean(getCachedCatalog());
+      try {
+        const catalog = await catalogPromise;
+        const supportedTracks = catalog.filter(
+          (e) =>
+            e.supportCount1 > 0 || e.supportCount2 > 0 || e.supportCount3 > 0,
+        );
+        if (supportedTracks.length) mergeCatalogTrackSummaries(supportedTracks);
+
+        // Only re-enrich if catalog wasn't available during phase 1
+        if (!catalogWasReady && rawHydratedDbState) {
+          const catalogByTrackId = new Map(catalog.map((e) => [e.trackId, e]));
+          const enrichItem = (item) => {
+            if (!item?.trackId) return item;
+            const entry = catalogByTrackId.get(item.trackId);
+            if (!entry) return item;
+            const video = mapTrackCatalogEntryToVideo(entry);
+            return video ? { ...video, ...item } : item;
+          };
+          const enrichedNoms = (rawHydratedDbState.nominationList || []).map(
+            enrichItem,
+          );
+          const enrichedSupports = (rawHydratedDbState.supportList || []).map(
+            enrichItem,
+          );
+          const enrichedPlaylist = (rawHydratedDbState.playlist || []).map(
+            enrichItem,
+          );
+          const byVideoId = (arr) => new Map(arr.map((e) => [e.videoId, e]));
+          const nomMap = byVideoId(enrichedNoms);
+          const supMap = byVideoId(enrichedSupports);
+          const plMap = byVideoId(enrichedPlaylist);
+          setNominationList((prev) =>
+            prev.map((item) => nomMap.get(item.videoId) || item),
+          );
+          setSupportList((prev) =>
+            prev.map((item) => supMap.get(item.videoId) || item),
+          );
+          setPlaylist((prev) =>
+            prev.map((item) => plMap.get(item.videoId) || item),
+          );
+          setCustomPlaylists((prev) =>
+            prev.map((pl) => {
+              const enrichedVideos = (pl.videos || []).map((v) => {
+                const enriched = rawHydratedDbState.customPlaylists
+                  ?.find((p) => p.id === pl.id)
+                  ?.videos?.find((e) => e.videoId === v.videoId);
+                return enriched ? enrichItem(enriched) : v;
+              });
+              return { ...pl, videos: enrichedVideos };
+            }),
+          );
+        }
+      } catch {
+        // Catalog enrichment failure is non-fatal
+      }
     },
-    [applyPersistedPlayerState, ensureUserProfile, supabase],
+    [
+      applyPersistedPlayerState,
+      ensureUserProfile,
+      mergeCatalogTrackSummaries,
+      supabase,
+    ],
   );
 
   useEffect(() => {

@@ -615,6 +615,10 @@ export async function getFullCatalog(supabase) {
   return activeCatalogPromise;
 }
 
+export function getCachedCatalog() {
+  return memoryCatalog;
+}
+
 export function clearCatalogCache() {
   memoryCatalog = null;
   catalogStatsLoaded = false;
