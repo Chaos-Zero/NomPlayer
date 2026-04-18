@@ -5,6 +5,7 @@ import React, {
   useEffect,
   useRef,
 } from 'react';
+import { useVirtualizer } from '@tanstack/react-virtual';
 import {
   getDisplayProfileName,
   deriveProfileAvatarUrl,
@@ -730,6 +731,17 @@ function ListExplorerColumn({
     },
   });
 
+  const listScrollRef = useRef(null);
+  const safeVideos = videos || [];
+  // eslint-disable-next-line react-hooks/incompatible-library
+  const virtualizer = useVirtualizer({
+    count: safeVideos.length,
+    getScrollElement: () => listScrollRef.current,
+    estimateSize: () => 82,
+    overscan: 5,
+  });
+  const virtualItems = virtualizer.getVirtualItems();
+
   const isCustom =
     id !== 'nominations' &&
     id !== 'support' &&
@@ -886,39 +898,62 @@ function ListExplorerColumn({
           </form>
         )}
 
-        <SortableContext
-          items={(videos || []).map((v) => `${id}:${v.videoId}`)}
-          strategy={verticalListSortingStrategy}
-        >
-          <div className="list-explorer-list">
-            {!videos || videos.length === 0 ? (
+        <div className="list-explorer-list-scroll" ref={listScrollRef}>
+          <SortableContext
+            items={safeVideos.map((v) => `${id}:${v.videoId}`)}
+            strategy={verticalListSortingStrategy}
+          >
+            {safeVideos.length === 0 ? (
               <div className="list-explorer-list-empty">
                 <span>No tracks here yet</span>
               </div>
             ) : (
-              videos.map((video, index) => (
-                <SortableListExplorerCard
-                  key={`${id}:${video.videoId}`}
-                  sortableId={`${id}:${video.videoId}`}
-                  video={video}
-                  index={index}
-                  isSelected={selectedTrackId === video.videoId}
-                  onSelect={onSelectTrack}
-                  onContextMenu={onContextMenu}
-                  onPlayNow={onPlayNow}
-                  onRemove={onRemove}
-                  isReadOnly={isReadOnly}
-                  hasComments={
-                    globalCommentedVideoIds?.has(video.videoId) ||
-                    (!!video.comment &&
-                      (id.startsWith('peer-') || id === 'new-nominations'))
-                  }
-                  userComment={video.comment}
-                />
-              ))
+              <div
+                className="list-explorer-list"
+                style={{
+                  height: `${virtualizer.getTotalSize()}px`,
+                  position: 'relative',
+                }}
+              >
+                {virtualItems.map((virtualItem) => {
+                  const video = safeVideos[virtualItem.index];
+                  return (
+                    <div
+                      key={`${id}:${video.videoId}`}
+                      style={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        width: '100%',
+                        paddingBottom: '16px',
+                        transform: `translateY(${virtualItem.start}px)`,
+                      }}
+                    >
+                      <SortableListExplorerCard
+                        sortableId={`${id}:${video.videoId}`}
+                        video={video}
+                        index={virtualItem.index}
+                        isSelected={selectedTrackId === video.videoId}
+                        onSelect={onSelectTrack}
+                        onContextMenu={onContextMenu}
+                        onPlayNow={onPlayNow}
+                        onRemove={onRemove}
+                        isReadOnly={isReadOnly}
+                        hasComments={
+                          globalCommentedVideoIds?.has(video.videoId) ||
+                          (!!video.comment &&
+                            (id.startsWith('peer-') ||
+                              id === 'new-nominations'))
+                        }
+                        userComment={video.comment}
+                      />
+                    </div>
+                  );
+                })}
+              </div>
             )}
-          </div>
-        </SortableContext>
+          </SortableContext>
+        </div>
       </div>
     </div>
   );

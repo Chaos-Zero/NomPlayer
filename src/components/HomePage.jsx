@@ -209,14 +209,13 @@ export function NominationUpdateCard({
   }, [supportTooltip]);
 
   const renderPeekRowActivity = (video, index) => {
-    const hasSupport = supportStatusById[video.videoId]?.isSupported;
     const hasComments = globalCommentedVideoIds.has(video.videoId);
-    const hasActivity = hasSupport || hasComments;
     const meta = metadataById[video.videoId];
     const sc1 = meta?.supportCount1 || 0;
     const sc2 = meta?.supportCount2 || 0;
     const sc3 = meta?.supportCount3 || 0;
     const totalSupport = sc1 + sc2 + sc3;
+    const hasActivity = totalSupport > 0 || hasComments;
     const isTooltipOpen = supportTooltip?.videoId === video.videoId;
 
     return (
@@ -265,53 +264,6 @@ export function NominationUpdateCard({
           </span>
         </div>
 
-        {totalSupport > 0 && (
-          <button
-            className={`peek-support-chip${isTooltipOpen ? ' expanded' : ''}`}
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              if (isTooltipOpen) {
-                setSupportTooltip(null);
-              } else {
-                const rect = e.currentTarget.getBoundingClientRect();
-                setSupportTooltip({
-                  videoId: video.videoId,
-                  top: rect.bottom + 6,
-                  left: rect.left + rect.width / 2,
-                  sc1,
-                  sc2,
-                  sc3,
-                });
-              }
-            }}
-            title={`${totalSupport} support${totalSupport !== 1 ? 's' : ''}`}
-          >
-            <HeartIcon className="peek-chip-icon" />
-            <span>{totalSupport}</span>
-          </button>
-        )}
-
-        {hasActivity && (
-          <button
-            className={`peek-action-btn peek-action-btn-activity${hasComments ? ' has-comments' : ''}`}
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              const rect = e.currentTarget.getBoundingClientRect();
-              onShowComments?.(resolveTrack(video), {
-                top: rect.top,
-                left: rect.left,
-                width: rect.width,
-                height: rect.height,
-              });
-            }}
-            title="View activity and comments"
-          >
-            <SpeechBubbleIcon size={18} />
-          </button>
-        )}
-
         <div className="dashboard-update-peek-actions">
           <button
             className="peek-action-btn peek-action-btn-add"
@@ -334,16 +286,18 @@ export function NominationUpdateCard({
             onClick={(e) => {
               e.stopPropagation();
               const resolved = resolveTrack(video);
+              const rect = e.currentTarget.getBoundingClientRect();
+
               if (!supportStatusById[video.videoId]?.isSupported) {
-                onToggleSupport?.(resolved);
-                const rect = e.currentTarget.getBoundingClientRect();
-                onOpenSupportDropdown?.(resolved, {
-                  top: rect.top,
-                  left: rect.left + rect.width / 2,
-                });
-              } else {
+                // If not supported yet, toggle on default support first
                 onToggleSupport?.(resolved);
               }
+
+              // Always open the menu to allow changing level or removing
+              onOpenSupportDropdown?.(resolved, {
+                top: rect.top,
+                left: rect.left + rect.width / 2,
+              });
             }}
             onContextMenu={(e) => {
               e.preventDefault();
@@ -357,7 +311,7 @@ export function NominationUpdateCard({
             }}
             title={
               supportStatusById[video.videoId]?.isSupported
-                ? 'Remove support'
+                ? 'Change or remove support'
                 : 'Support this track'
             }
           >
@@ -382,8 +336,36 @@ export function NominationUpdateCard({
           >
             <PlayIcon size={20} />
           </button>
+
+          {totalSupport > 0 && (
+            <button
+              className={`peek-support-chip${isTooltipOpen ? ' expanded' : ''}`}
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                if (isTooltipOpen) {
+                  setSupportTooltip(null);
+                } else {
+                  const rect = e.currentTarget.getBoundingClientRect();
+                  setSupportTooltip({
+                    videoId: video.videoId,
+                    top: rect.bottom + 6,
+                    left: rect.left + rect.width / 2,
+                    sc1,
+                    sc2,
+                    sc3,
+                  });
+                }
+              }}
+              title={`${totalSupport} support${totalSupport !== 1 ? 's' : ''} (Click for details)`}
+            >
+              <HeartIcon className="peek-chip-icon" />
+              <span>{totalSupport}</span>
+            </button>
+          )}
+
           <button
-            className="peek-action-btn peek-action-btn-comments"
+            className={`peek-action-btn peek-action-btn-comments${hasComments ? ' has-comments' : ''}`}
             type="button"
             onClick={(e) => {
               e.stopPropagation();
@@ -395,7 +377,9 @@ export function NominationUpdateCard({
                 height: rect.height,
               });
             }}
-            title="View comments"
+            title={
+              hasComments ? 'View comments and activity' : 'No comments yet'
+            }
           >
             <SpeechBubbleIcon size={18} />
           </button>

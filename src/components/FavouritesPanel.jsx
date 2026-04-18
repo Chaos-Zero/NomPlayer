@@ -121,6 +121,7 @@ export function SupportItem({
           className="playlist-thumb"
           src={video.thumbnail}
           alt=""
+          loading="lazy"
           onError={() => setImgError(true)}
           style={{ width: 64, height: 36 }}
         />
