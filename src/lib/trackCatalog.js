@@ -736,7 +736,6 @@ export async function fetchFilteredTracks(
   // Search filter — delegate to DB slim search RPC; client-side filtering
   // (vgmcFilter, viewMode, sort) is applied to the returned rows below.
   if (searchTerm && searchTerm.trim().length >= 2) {
-    catalog = [];
     if (supabase) {
       const { data: rawResults, error: searchError } = await supabase.rpc(
         'search_track_catalog_slim',
@@ -744,11 +743,23 @@ export async function fetchFilteredTracks(
       );
       if (searchError) {
         console.error('Catalog search error:', searchError);
+        catalog = [];
       } else {
         catalog = (rawResults || [])
           .map(normalizeTrackCatalogEntry)
           .filter(Boolean);
       }
+    } else {
+      // Lightweight client-side fallback (mostly for integration tests)
+      const normalize = (s) =>
+        (s || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+      const term = normalize(searchTerm);
+      catalog = (catalog || []).filter(
+        (t) =>
+          normalize(t.gameTitle).includes(term) ||
+          normalize(t.trackTitle).includes(term) ||
+          normalize(t.displayTitle).includes(term),
+      );
     }
   }
 

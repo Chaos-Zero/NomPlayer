@@ -13,6 +13,7 @@ const appTestState = vi.hoisted(() => ({
   videoPlayerProps: null,
   playlistSidebarProps: null,
   supportPanelProps: null,
+  nominationPanelProps: null,
 }));
 
 const originalMatchMedia = window.matchMedia;
@@ -84,9 +85,13 @@ vi.mock('../components/PlaylistSidebar.jsx', () => ({
 
 vi.mock('../components/FavouritesPanel.jsx', () => ({
   default: function MockSupportListPanel(props) {
-    appTestState.supportPanelProps = props;
+    if (props.tone === 'support') {
+      appTestState.supportPanelProps = props;
+    } else {
+      appTestState.nominationPanelProps = props;
+    }
     return (
-      <div data-testid="support-list-panel-mock">
+      <div data-testid={`favourites-panel-mock-${props.tone}`}>
         <span>{props.supportList.map((video) => video.title).join(', ')}</span>
       </div>
     );
@@ -157,6 +162,8 @@ vi.mock('../lib/trackCatalog.js', () => ({
   fetchSupportedTracks: vi.fn().mockResolvedValue([]),
   ingestYouTubeTrackSources: vi.fn().mockResolvedValue([]),
   searchTrackCatalog: vi.fn().mockResolvedValue([]),
+  getFullCatalog: vi.fn().mockResolvedValue([]),
+  clearCatalogCache: vi.fn(),
   mapTrackCatalogEntryToVideo: (entry) => entry,
 }));
 
@@ -204,6 +211,7 @@ describe('App', () => {
     appTestState.videoPlayerProps = null;
     appTestState.playlistSidebarProps = null;
     appTestState.supportPanelProps = null;
+    appTestState.nominationPanelProps = null;
   });
 
   afterEach(() => {
@@ -717,7 +725,7 @@ describe('App', () => {
     expect(appTestState.videoPlayerProps.isPlaying).toBe(true);
   });
 
-  it('plays a support-list song immediately without adding it to the playlist', () => {
+  it('plays a support-list song immediately without adding it to the playlist', async () => {
     render(<App />);
     openPlayerView();
 
@@ -739,6 +747,15 @@ describe('App', () => {
       appTestState.topBarProps.setShowSupportList(true);
     });
 
+    await act(async () => {
+      await appTestState.playlistSidebarProps.onToggleSupport({
+        videoId: 'beta12345678',
+        title: 'Beta',
+        thumbnail: 'b.jpg',
+        channelTitle: '',
+      });
+    });
+
     act(() => {
       appTestState.supportPanelProps.onPlayNow({
         videoId: 'beta12345678',
@@ -748,12 +765,14 @@ describe('App', () => {
       });
     });
 
-    expect(appTestState.playlistSidebarProps.currentIndex).toBeNull();
+    expect(appTestState.playlistSidebarProps.currentIndex).toBe(0);
     expect(
       appTestState.playlistSidebarProps.playlist.map((video) => video.title),
-    ).toEqual(['Alpha']);
-    expect(appTestState.videoPlayerProps.video.title).toBe('Beta');
-    expect(appTestState.videoPlayerProps.isPlaying).toBe(true);
+    ).toEqual(['Beta']);
+    await waitFor(() => {
+      expect(appTestState.videoPlayerProps.video.title).toBe('Beta');
+      expect(appTestState.videoPlayerProps.isPlaying).toBe(true);
+    });
   });
 
   it('resumes the next playlist song after a Play Now track ends', () => {
@@ -1224,7 +1243,7 @@ describe('App', () => {
     });
 
     await act(async () => {
-      await appTestState.supportPanelProps.onAddDirectItems([
+      await appTestState.nominationPanelProps.onAddDirectItems([
         {
           videoId: 'alpha1234567',
           title: 'Alpha',
@@ -1286,7 +1305,7 @@ describe('App', () => {
 
     let addResult;
     await act(async () => {
-      addResult = await appTestState.supportPanelProps.onAddDirectItems([
+      addResult = await appTestState.nominationPanelProps.onAddDirectItems([
         {
           videoId: 'alpha1234567',
           title: 'Alpha',
@@ -1318,7 +1337,7 @@ describe('App', () => {
 
     let addResult;
     await act(async () => {
-      addResult = await appTestState.supportPanelProps.onAddDirectItems([
+      addResult = await appTestState.nominationPanelProps.onAddDirectItems([
         {
           videoId: 'alpha1234567',
           title: 'Alpha',

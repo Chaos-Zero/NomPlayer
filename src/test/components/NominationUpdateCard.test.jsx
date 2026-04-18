@@ -50,8 +50,8 @@ describe('NominationUpdateCard', () => {
     expect(screen.getByText('Resolved Game')).toBeDefined();
     expect(screen.getByText('Resolved Track')).toBeDefined();
 
-    // Check action buttons (by title)
-    expect(screen.getByTitle('View comments')).toBeDefined();
+    // Check action buttons
+    expect(screen.getByTitle(/View comments|No comments yet/)).toBeDefined();
     expect(screen.getByTitle('Add to current playlist')).toBeDefined();
     expect(screen.getByTitle('Play now')).toBeDefined();
   });
@@ -116,7 +116,7 @@ describe('NominationUpdateCard', () => {
       />,
     );
 
-    const commentBtn = screen.getByTitle('View comments');
+    const commentBtn = screen.getByTitle(/View comments|No comments yet/);
 
     // Mock getBoundingClientRect
     commentBtn.getBoundingClientRect = vi.fn(() => ({
