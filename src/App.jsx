@@ -466,6 +466,7 @@ export default function App() {
     }
   });
   const [communityNominations, setCommunityNominations] = useState([]);
+  const [nominationRefreshToken, setNominationRefreshToken] = useState(0);
   const hasReachedPlaylistEndRef = useRef(false);
 
   useEffect(() => {
@@ -592,8 +593,8 @@ export default function App() {
   const [isFeedbackForcedEdit, setIsFeedbackForcedEdit] = useState(false);
   const [feedbackTrack, setFeedbackTrack] = useState(null);
   const [feedbackPosition, setFeedbackPosition] = useState(null);
-  const [globalCommentedVideoIds, setGlobalCommentedVideoIds] = useState(
-    new Set(),
+  const [globalActivityByVideoId, setGlobalActivityByVideoId] = useState(
+    new Map(),
   );
   const [isDeleteAccountConfirmOpen, setIsDeleteAccountConfirmOpen] =
     useState(false);
@@ -614,6 +615,21 @@ export default function App() {
 
   const handleNominationsLoaded = useCallback((updates) => {
     setCommunityNominations(updates);
+  }, []);
+
+  const handleFeedbackSaved = useCallback((videoId, { rating, note }) => {
+    if (!videoId) return;
+    setGlobalActivityByVideoId((prev) => {
+      const next = new Map(prev);
+      if (note?.trim()) {
+        next.set(videoId, 'commented');
+      } else if (rating) {
+        next.set(videoId, 'rated');
+      } else {
+        next.delete(videoId);
+      }
+      return next;
+    });
   }, []);
 
   useEffect(
@@ -1250,18 +1266,15 @@ export default function App() {
 
     getFullCatalog(supabase)
       .then((catalog) => {
-        const ids = new Set();
+        const activity = new Map();
         for (const entry of catalog) {
-          if (
-            entry.commentCount > 0 ||
-            entry.supportCount1 > 0 ||
-            entry.supportCount2 > 0 ||
-            entry.supportCount3 > 0
-          ) {
-            ids.add(entry.videoId);
+          if (entry.commentCount > 0) {
+            activity.set(entry.videoId, 'commented');
+          } else if (entry.avgRating != null) {
+            activity.set(entry.videoId, 'rated');
           }
         }
-        setGlobalCommentedVideoIds(ids);
+        setGlobalActivityByVideoId(activity);
       })
       .catch((err) => {
         console.error('Error building feedback status:', err);
@@ -1482,6 +1495,36 @@ export default function App() {
       supabase.removeChannel(channel);
     };
   }, [supabase, mergeCatalogTrackSummaries]);
+
+  // Supabase Realtime: refresh community nominations when any track_nominations
+  // row changes. Debounces to avoid hammering get_community_nominations_catalog
+  // when a user saves multiple nominations in quick succession.
+  useEffect(() => {
+    if (!supabase) return;
+
+    let debounceTimer = null;
+
+    const schedule = () => {
+      if (debounceTimer) clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => {
+        setNominationRefreshToken((t) => t + 1);
+      }, 3000);
+    };
+
+    const channel = supabase
+      .channel('track_nominations_changes')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'track_nominations' },
+        schedule,
+      )
+      .subscribe();
+
+    return () => {
+      if (debounceTimer) clearTimeout(debounceTimer);
+      supabase.removeChannel(channel);
+    };
+  }, [supabase]);
 
   useEffect(() => {
     const activeCatalogVideoId =
@@ -4914,8 +4957,8 @@ export default function App() {
 
   const currentVideoHasFeedback = useMemo(() => {
     if (!currentVideo?.videoId) return false;
-    return globalCommentedVideoIds.has(currentVideo.videoId);
-  }, [currentVideo?.videoId, globalCommentedVideoIds]);
+    return globalActivityByVideoId.has(currentVideo.videoId);
+  }, [currentVideo?.videoId, globalActivityByVideoId]);
 
   const handleProgressUpdate = useCallback(({ currentTime, duration }) => {
     setFooterCurrentTime(currentTime);
@@ -4968,6 +5011,7 @@ export default function App() {
         authUser={authUser}
         userProfile={userProfile}
         onShowToast={showDefaultAppToast}
+        onFeedbackSaved={handleFeedbackSaved}
       />
 
       {isDesktopDetachedFooter && (
@@ -5268,7 +5312,7 @@ export default function App() {
               isAuthReady={isAuthReady}
               currentPlaylist={playlist}
               supportStatusById={supportStatusById}
-              globalCommentedVideoIds={globalCommentedVideoIds}
+              globalActivityByVideoId={globalActivityByVideoId}
               listenedStatusById={listenedStatusById}
               isFeedbackPanelOpen={isFeedbackPanelOpen}
               onAddToPlaylist={handleQueueFromSupportList}
@@ -5302,6 +5346,7 @@ export default function App() {
               userProfile={userProfile}
               nominationList={nominationList}
               onNominationsLoaded={handleNominationsLoaded}
+              nominationRefreshToken={nominationRefreshToken}
             />
           )}
 
@@ -5329,6 +5374,7 @@ export default function App() {
                 onUnmount={(tracks, selectedVideoId) => {
                   dbCacheRef.current = { tracks, selectedVideoId };
                 }}
+                onFeedbackSaved={handleFeedbackSaved}
               />
             </Suspense>
           )}
@@ -5369,6 +5415,7 @@ export default function App() {
               onRefreshFeedback={refreshUserFeedback}
               refreshKey={feedbackRefreshKey}
               onShowComments={handleShowComments}
+              onFeedbackSaved={handleFeedbackSaved}
             />
           )}
           {persistentPlayer}
@@ -5437,7 +5484,7 @@ export default function App() {
               activePlaylistView={activePlaylistView}
               onSwitchView={setActivePlaylistView}
               communityNominations={communityNominations}
-              globalCommentedVideoIds={globalCommentedVideoIds}
+              globalActivityByVideoId={globalActivityByVideoId}
               onShowComments={handleShowComments}
             />
             {!effectivePlaylistCollapsed && apiKeyMissing && (
@@ -5521,7 +5568,7 @@ export default function App() {
           onExport={handleOpenExportModal}
           onSavePlaylist={handleCreateYTPlaylist}
           onPlayList={() => handlePlayExplorerList('support')}
-          globalCommentedVideoIds={globalCommentedVideoIds}
+          globalActivityByVideoId={globalActivityByVideoId}
           onShowComments={handleShowComments}
         />
       )}
@@ -5560,7 +5607,7 @@ export default function App() {
           onSavePlaylist={handleCreateYTPlaylist}
           onPlayList={() => handlePlayExplorerList('nominations')}
           highlightAdd={isAddNominationHighlighted}
-          globalCommentedVideoIds={globalCommentedVideoIds}
+          globalActivityByVideoId={globalActivityByVideoId}
           onShowComments={handleShowComments}
         />
       )}
@@ -5667,6 +5714,7 @@ export default function App() {
             onClose={handleCloseFeedbackPanel}
             onShowToast={showDefaultAppToast}
             onUpdate={refreshUserFeedback}
+            onFeedbackSaved={handleFeedbackSaved}
           />
         </ModalPortal>
       )}

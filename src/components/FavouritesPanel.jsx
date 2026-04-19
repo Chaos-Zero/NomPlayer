@@ -65,7 +65,7 @@ export function SupportItem({
   removeButtonTitle,
   removeButtonAriaLabel,
   tone,
-  hasComments = false,
+  commentActivity = null,
   onShowComments,
   userComment = null,
   showBreakdown = false,
@@ -249,9 +249,9 @@ export function SupportItem({
             </span>
           )}
 
-          {hasComments && (
+          {commentActivity && (
             <button
-              className={`comment-bubble-btn${tone === 'nomination' ? ' nomination' : ''}`}
+              className={`comment-bubble-btn${commentActivity === 'commented' ? ' has-comments' : ' has-rated'}`}
               type="button"
               title="View community comments"
               onClick={(e) => {
@@ -332,7 +332,7 @@ export function SortableSupportItem({
   removeButtonTitle,
   removeButtonAriaLabel,
   tone,
-  hasComments = false,
+  commentActivity = null,
   onShowComments,
   showBreakdown = false,
 }) {
@@ -380,7 +380,7 @@ export function SortableSupportItem({
         onToggleNomination={onToggleNomination}
         onOpenSupportDropdown={onOpenSupportDropdown}
         tone={tone}
-        hasComments={hasComments}
+        commentActivity={commentActivity}
         onShowComments={onShowComments}
         showBreakdown={showBreakdown}
       />
@@ -422,7 +422,7 @@ export default function FavouritesPanel({
   authUser = null,
   highlightAdd = false,
   onPlayList,
-  globalCommentedVideoIds = new Set(),
+  globalActivityByVideoId = new Map(),
   onShowComments,
 }) {
   const sensors = useSensors(
@@ -816,7 +816,9 @@ export default function FavouritesPanel({
                 removeButtonTitle={removeButtonTitle}
                 removeButtonAriaLabel={removeButtonAriaLabel}
                 tone={tone}
-                hasComments={globalCommentedVideoIds.has(video.videoId)}
+                commentActivity={
+                  globalActivityByVideoId.get(video.videoId) ?? null
+                }
                 onShowComments={onShowComments}
                 showBreakdown={showSupportBreakdown}
               />
@@ -846,7 +848,9 @@ export default function FavouritesPanel({
                     removeButtonTitle={removeButtonTitle}
                     removeButtonAriaLabel={removeButtonAriaLabel}
                     tone={tone}
-                    hasComments={globalCommentedVideoIds.has(video.videoId)}
+                    commentActivity={
+                      globalActivityByVideoId.get(video.videoId) ?? null
+                    }
                     onShowComments={onShowComments}
                     showBreakdown={showSupportBreakdown}
                   />

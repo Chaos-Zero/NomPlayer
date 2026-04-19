@@ -1948,8 +1948,10 @@ body {
   color: var(--text-secondary) !important;
 }
 
-/* Reveal comment bubble on activity or hover */
-.dashboard-update-peek-row.has-activity .peek-action-btn-comments,
+/* Reveal comment bubble persistently only when there is feedback (rating or comment) */
+.dashboard-update-peek-row.has-activity .peek-action-btn-comments.has-rated,
+.dashboard-update-peek-row.has-activity .peek-action-btn-comments.has-comments,
+/* Always reveal on hover regardless of feedback state */
 .dashboard-update-peek-row:hover .peek-action-btn-comments {
   opacity: 1;
   pointer-events: auto;
@@ -1976,10 +1978,16 @@ body {
     display: none !important;
   }
 
-  /* Style the comment icon on mobile to match the activity symbol's importance */
-  .dashboard-update-peek-row.has-activity .peek-action-btn-comments {
-    color: #a78bfa !important;
+  /* Style the comment icon on mobile — purple only when comments present, grey when rated-only */
+  .dashboard-update-peek-row.has-activity .peek-action-btn-comments.has-rated,
+  .dashboard-update-peek-row.has-activity
+    .peek-action-btn-comments.has-comments {
     opacity: 1 !important;
+  }
+
+  .dashboard-update-peek-row.has-activity
+    .peek-action-btn-comments.has-comments {
+    color: #a78bfa !important;
   }
 
   .peek-action-btn-activity {
@@ -13299,6 +13307,24 @@ body.is-resizing .resize-handle {
   color: #fff;
 }
 
+.hero-leaderboard-comment-btn.has-comments {
+  color: #a78bfa;
+}
+
+.hero-leaderboard-comment-btn.has-comments:hover {
+  background: rgba(167, 139, 250, 0.12);
+  color: #c4b5fd;
+}
+
+.theme-light .hero-leaderboard-comment-btn.has-comments {
+  color: #7c3aed;
+}
+
+.theme-light .hero-leaderboard-comment-btn.has-comments:hover {
+  background: rgba(124, 58, 237, 0.1);
+  color: #6d28d9;
+}
+
 .hero-leaderboard-empty {
   padding: 24px;
   text-align: center;
@@ -13376,20 +13402,24 @@ body.is-resizing .resize-handle {
   color: #111;
 }
 
-.comment-bubble-btn.nomination {
+.comment-bubble-btn.nomination,
+.comment-bubble-btn.has-comments {
   color: #a78bfa;
 }
 
-.comment-bubble-btn.nomination:hover {
+.comment-bubble-btn.nomination:hover,
+.comment-bubble-btn.has-comments:hover {
   background: rgba(167, 139, 250, 0.12);
   color: #c4b5fd;
 }
 
-.theme-light .comment-bubble-btn.nomination {
+.theme-light .comment-bubble-btn.nomination,
+.theme-light .comment-bubble-btn.has-comments {
   color: #7c3aed;
 }
 
-.theme-light .comment-bubble-btn.nomination:hover {
+.theme-light .comment-bubble-btn.nomination:hover,
+.theme-light .comment-bubble-btn.has-comments:hover {
   background: rgba(124, 58, 237, 0.1);
   color: #6d28d9;
 }

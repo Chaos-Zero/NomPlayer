@@ -122,7 +122,7 @@ function PlaylistItem({
   selectionMode,
   isSelected,
   onToggleSelected,
-  hasComments = false,
+  commentActivity = null,
   onShowComments,
 }) {
   const [imgError, setImgError] = useState(false);
@@ -266,9 +266,9 @@ function PlaylistItem({
             {video.rating}
           </span>
         )}
-        {hasComments && (
+        {commentActivity && (
           <button
-            className="comment-bubble-btn"
+            className={`comment-bubble-btn${commentActivity === 'commented' ? ' has-comments' : ' has-rated'}`}
             type="button"
             title="View community comments"
             onClick={(e) => {
@@ -325,7 +325,7 @@ function SortablePlaylistItem({
   onToggleSupport,
   onOpenSupportDropdown,
   onOpenContextMenu,
-  hasComments = false,
+  commentActivity = null,
   onShowComments,
 }) {
   const {
@@ -374,7 +374,7 @@ function SortablePlaylistItem({
         selectionMode={false}
         isSelected={false}
         onToggleSelected={() => {}}
-        hasComments={hasComments}
+        commentActivity={commentActivity}
         onShowComments={onShowComments}
       />
     </div>
@@ -418,7 +418,7 @@ export default function PlaylistSidebar({
   activePlaylistView = { type: 'personal' },
   onSwitchView,
   communityNominations = [],
-  globalCommentedVideoIds = new Set(),
+  globalActivityByVideoId = new Map(),
   onShowComments,
 }) {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -1154,7 +1154,9 @@ export default function PlaylistSidebar({
                 selectionMode={true}
                 isSelected={selectedIdSet.has(video.videoId)}
                 onToggleSelected={handleToggleSelected}
-                hasComments={globalCommentedVideoIds.has(video.videoId)}
+                commentActivity={
+                  globalActivityByVideoId.get(video.videoId) ?? null
+                }
                 onShowComments={onShowComments}
               />
             ))
@@ -1188,7 +1190,9 @@ export default function PlaylistSidebar({
                     onToggleSupport={onToggleSupport}
                     onOpenSupportDropdown={handleOpenSupportDropdown}
                     onOpenContextMenu={handleOpenContextMenu}
-                    hasComments={globalCommentedVideoIds.has(video.videoId)}
+                    commentActivity={
+                      globalActivityByVideoId.get(video.videoId) ?? null
+                    }
                     onShowComments={onShowComments}
                   />
                 ))}
@@ -1217,7 +1221,9 @@ export default function PlaylistSidebar({
                 selectionMode={false}
                 isSelected={false}
                 onToggleSelected={() => {}}
-                hasComments={globalCommentedVideoIds.has(video.videoId)}
+                commentActivity={
+                  globalActivityByVideoId.get(video.videoId) ?? null
+                }
                 onShowComments={onShowComments}
               />
             ))

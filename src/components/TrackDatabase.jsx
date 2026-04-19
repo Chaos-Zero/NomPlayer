@@ -231,6 +231,7 @@ const TrackRow = memo(
     setUserFeedback,
     onRefreshFeedback,
     onShowToast,
+    onFeedbackSaved,
   }) => {
     const vgmcElements = track.tournaments.map((t, i) => {
       const hasResult = t.placement || t.highestRound;
@@ -295,6 +296,7 @@ const TrackRow = memo(
               delete next[track.trackId];
               return next;
             });
+            onFeedbackSaved?.(track.videoId, { rating: null, note: '' });
             onRefreshFeedback?.();
             setLocalRating(null);
             setLocalNote(null);
@@ -308,8 +310,10 @@ const TrackRow = memo(
         supabase,
         authUser,
         track.trackId,
+        track.videoId,
         onShowToast,
         onRefreshFeedback,
+        onFeedbackSaved,
         setUserFeedback,
       ],
     );
@@ -521,6 +525,7 @@ export default function TrackDatabase({
   initialTracks = [],
   initialSelectedVideoId = null,
   onUnmount,
+  onFeedbackSaved,
 }) {
   const [tracks, setTracks] = useState(initialTracks);
   const [userFeedback, setUserFeedback] = useState({});
@@ -839,6 +844,7 @@ export default function TrackDatabase({
             ? updates.note?.trim() || ''
             : current.note;
 
+        const videoId = tracks.find((t) => t.trackId === trackId)?.videoId;
         if (newRating === null && newNote === '') {
           await deleteUserFeedback(supabase, authUser.id, trackId);
           setUserFeedback((prev) => {
@@ -846,6 +852,7 @@ export default function TrackDatabase({
             delete next[trackId];
             return next;
           });
+          onFeedbackSaved?.(videoId, { rating: null, note: '' });
         } else {
           await upsertUserFeedback(supabase, authUser.id, trackId, {
             rating: newRating,
@@ -855,6 +862,7 @@ export default function TrackDatabase({
             ...prev,
             [trackId]: { rating: newRating, note: newNote },
           }));
+          onFeedbackSaved?.(videoId, { rating: newRating, note: newNote });
         }
         onRefreshFeedback?.();
       } catch (err) {
@@ -862,7 +870,15 @@ export default function TrackDatabase({
         onShowToast?.('Failed to save feedback.');
       }
     },
-    [supabase, authUser, userFeedback, onShowToast, onRefreshFeedback],
+    [
+      supabase,
+      authUser,
+      userFeedback,
+      tracks,
+      onShowToast,
+      onRefreshFeedback,
+      onFeedbackSaved,
+    ],
   );
 
   const handleUpdateRating = useCallback(
@@ -1278,6 +1294,7 @@ export default function TrackDatabase({
                     setUserFeedback={setUserFeedback}
                     onRefreshFeedback={onRefreshFeedback}
                     onShowToast={onShowToast}
+                    onFeedbackSaved={onFeedbackSaved}
                   />
                 );
               })}

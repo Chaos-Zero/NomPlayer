@@ -17,6 +17,7 @@ export default function CommunityActivity({
   authUser,
   userProfile,
   onShowToast,
+  onFeedbackSaved,
 }) {
   const [trackId, setTrackId] = useState(null);
   const [supportersMenu, setSupportersMenu] = useState(null);
@@ -229,12 +230,14 @@ export default function CommunityActivity({
       if (finalRating === null && finalNote === '') {
         // Delete if both empty
         await deleteUserFeedback(supabase, authUser.id, trackId);
+        onFeedbackSaved?.(videoId, { rating: null, note: '' });
         onShowToast?.('Feedback cleared.');
       } else {
         await upsertUserFeedback(supabase, authUser.id, trackId, {
           rating: finalRating,
           note: finalNote,
         });
+        onFeedbackSaved?.(videoId, { rating: finalRating, note: finalNote });
         onShowToast?.('Feedback saved successfully!');
       }
 
@@ -276,6 +279,7 @@ export default function CommunityActivity({
     setIsSaving(true);
     try {
       await deleteUserFeedback(supabase, authUser.id, trackId);
+      onFeedbackSaved?.(videoId, { rating: null, note: '' });
 
       // Refresh local data
       const feedback = await fetchCommunityFeedback(supabase, trackId);

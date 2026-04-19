@@ -175,6 +175,12 @@ function normalizeTrackCatalogEntry(entry) {
       Number(entry.support_count_3) || Number(entry.supportCount3) || 0,
     commentCount:
       Number(entry.comment_count) || Number(entry.commentCount) || 0,
+    avgRating:
+      entry.avg_rating != null
+        ? Number(entry.avg_rating)
+        : entry.avgRating != null
+          ? Number(entry.avgRating)
+          : null,
     tournaments,
   };
 }

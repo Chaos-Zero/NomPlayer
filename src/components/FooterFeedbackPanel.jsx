@@ -28,6 +28,7 @@ export default function FooterFeedbackPanel({
   initialIsEditing = false,
   onUpdate,
   onClose,
+  onFeedbackSaved,
 }) {
   const [supportersMenu, setSupportersMenu] = useState(null);
   // To keep the popover aligned when the window resizes (e.g. modal centering)
@@ -309,9 +310,14 @@ export default function FooterFeedbackPanel({
       if (finalRating === null && finalNote === '') {
         // If everything is cleared, treat save as a delete
         await deleteUserFeedback(supabase, authUser.id, trackId);
+        onFeedbackSaved?.(track.videoId, { rating: null, note: '' });
         onShowToast?.('Feedback cleared.', 'dashboard');
       } else {
         await upsertUserFeedback(supabase, authUser.id, trackId, {
+          rating: finalRating,
+          note: finalNote,
+        });
+        onFeedbackSaved?.(track.videoId, {
           rating: finalRating,
           note: finalNote,
         });
@@ -354,6 +360,7 @@ export default function FooterFeedbackPanel({
       if (!trackId) throw new Error('Could not identify track.');
 
       await deleteUserFeedback(supabase, authUser.id, trackId);
+      onFeedbackSaved?.(track.videoId, { rating: null, note: '' });
 
       const feedback = await fetchCommunityFeedback(supabase, trackId);
       setCommunityData((prev) => ({ ...prev, feedback }));

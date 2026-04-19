@@ -191,7 +191,7 @@ export function NominationUpdateCard({
   onToggleSupport,
   onOpenSupportDropdown,
   supportStatusById = {},
-  globalCommentedVideoIds = new Set(),
+  globalActivityByVideoId = new Map(),
   isFeedbackPanelOpen = false,
   resolveTrack,
   isMetadataLoading = false,
@@ -209,13 +209,15 @@ export function NominationUpdateCard({
   }, [supportTooltip]);
 
   const renderPeekRowActivity = (video, index) => {
-    const hasComments = globalCommentedVideoIds.has(video.videoId);
+    const activity = globalActivityByVideoId.get(video.videoId);
+    const hasComments = activity === 'commented';
+    const hasRating = activity === 'rated';
     const meta = metadataById[video.videoId];
     const sc1 = meta?.supportCount1 || 0;
     const sc2 = meta?.supportCount2 || 0;
     const sc3 = meta?.supportCount3 || 0;
     const totalSupport = sc1 + sc2 + sc3;
-    const hasActivity = totalSupport > 0 || hasComments;
+    const hasActivity = totalSupport > 0 || !!activity;
     const isTooltipOpen = supportTooltip?.videoId === video.videoId;
 
     return (
@@ -365,7 +367,7 @@ export function NominationUpdateCard({
           )}
 
           <button
-            className={`peek-action-btn peek-action-btn-comments${hasComments ? ' has-comments' : ''}`}
+            className={`peek-action-btn peek-action-btn-comments${hasComments ? ' has-comments' : hasRating ? ' has-rated' : ''}`}
             type="button"
             onClick={(e) => {
               e.stopPropagation();
@@ -687,7 +689,7 @@ function HeroLeaderboard({
   globalLeaderboard,
   authUser,
   isLoading,
-  globalCommentedVideoIds,
+  globalActivityByVideoId,
   resolveTrack,
   onShowComments,
   isFeedbackPanelOpen,
@@ -815,24 +817,28 @@ function HeroLeaderboard({
                     <span className="hero-leaderboard-track-title">
                       {track.title}
                     </span>
-                    {globalCommentedVideoIds?.has(track.videoId) && (
-                      <button
-                        className="hero-leaderboard-comment-btn"
-                        title="View Comments"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          const rect = e.currentTarget.getBoundingClientRect();
-                          onShowComments?.(resolveTrack(track), {
-                            top: rect.top,
-                            left: rect.left,
-                            width: rect.width,
-                            height: rect.height,
-                          });
-                        }}
-                      >
-                        <SpeechBubbleIcon size={14} />
-                      </button>
-                    )}
+                    {(() => {
+                      const a = globalActivityByVideoId?.get(track.videoId);
+                      return a ? (
+                        <button
+                          className={`hero-leaderboard-comment-btn${a === 'commented' ? ' has-comments' : ' has-rated'}`}
+                          title="View Comments"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const rect =
+                              e.currentTarget.getBoundingClientRect();
+                            onShowComments?.(resolveTrack(track), {
+                              top: rect.top,
+                              left: rect.left,
+                              width: rect.width,
+                              height: rect.height,
+                            });
+                          }}
+                        >
+                          <SpeechBubbleIcon size={14} />
+                        </button>
+                      ) : null;
+                    })()}
                   </div>
                   <div className="hero-leaderboard-stats">
                     {track.totalSupport > 0 && (
@@ -912,7 +918,7 @@ export default function HomePage({
   onOpenSupportDropdown,
   supportStatusById = {},
   isFeedbackPanelOpen = false,
-  globalCommentedVideoIds = new Set(),
+  globalActivityByVideoId = new Map(),
   onShowToast,
   onUpdateMetadata,
   catalogMetadata = {},
@@ -921,6 +927,7 @@ export default function HomePage({
   userProfile = null,
   nominationList = [],
   onNominationsLoaded = null,
+  nominationRefreshToken = 0,
 }) {
   const isMobileLayout = useMediaQuery('(max-width: 960px)');
   const [nominationUpdates, setNominationUpdates] = useState([]);
@@ -953,6 +960,23 @@ export default function HomePage({
     );
     return [liveUserEntry, ...withoutUser];
   }, [liveUserEntry, nominationUpdates]);
+
+  // Silently re-fetch community nominations when the Realtime subscription
+  // detects a track_nominations change (token incremented by App.jsx).
+  useEffect(() => {
+    if (nominationRefreshToken === 0 || !supabase) return;
+    let isActive = true;
+    fetchDashboardNominationUpdates(supabase, null)
+      .then((data) => {
+        if (!isActive) return;
+        setNominationUpdates(data);
+        onNominationsLoaded?.(data);
+      })
+      .catch(() => {});
+    return () => {
+      isActive = false;
+    };
+  }, [nominationRefreshToken, supabase, onNominationsLoaded]);
 
   const [unplacedFallbackTracks, setUnplacedFallbackTracks] = useState([]);
   const [persistentDiscoveryItems, setPersistentDiscoveryItems] = useState([]);
@@ -1905,7 +1929,7 @@ export default function HomePage({
             globalLeaderboard={globalLeaderboard}
             authUser={authUser}
             isLoading={isDashboardLoading || isMetadataLoading}
-            globalCommentedVideoIds={globalCommentedVideoIds}
+            globalActivityByVideoId={globalActivityByVideoId}
             resolveTrack={resolveTrack}
             onShowComments={onShowComments}
             isFeedbackPanelOpen={isFeedbackPanelOpen}
@@ -2279,7 +2303,7 @@ export default function HomePage({
                       onToggleSupport={onToggleSupport}
                       onOpenSupportDropdown={onOpenSupportDropdown}
                       supportStatusById={supportStatusById}
-                      globalCommentedVideoIds={globalCommentedVideoIds}
+                      globalActivityByVideoId={globalActivityByVideoId}
                       isFeedbackPanelOpen={isFeedbackPanelOpen}
                       resolveTrack={resolveTrack}
                       isMetadataLoading={isMetadataLoading}

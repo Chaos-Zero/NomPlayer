@@ -625,7 +625,7 @@ function SortableListExplorerCard({
   onRemove,
   onOpenSupportDropdown,
   isReadOnly = false,
-  hasComments = false,
+  commentActivity = null,
   userComment = null,
 }) {
   const {
@@ -685,7 +685,7 @@ function SortableListExplorerCard({
             onShowComments={() => onSelect?.(video.videoId)}
             tone={isSupportList ? 'support' : undefined}
             itemAriaPrefix="List Explorer track"
-            hasComments={hasComments}
+            commentActivity={commentActivity}
             userComment={userComment}
           />
         </div>
@@ -719,7 +719,7 @@ function ListExplorerColumn({
   isReadOnly = false,
   onExport,
   onSavePlaylist,
-  globalCommentedVideoIds = null,
+  globalActivityByVideoId = null,
   onPlayExplorerList = null,
   userToggle = null,
 }) {
@@ -939,11 +939,12 @@ function ListExplorerColumn({
                         onPlayNow={onPlayNow}
                         onRemove={onRemove}
                         isReadOnly={isReadOnly}
-                        hasComments={
-                          globalCommentedVideoIds?.has(video.videoId) ||
+                        commentActivity={
+                          globalActivityByVideoId?.get(video.videoId) ??
                           (!!video.comment &&
-                            (id.startsWith('peer-') ||
-                              id === 'new-nominations'))
+                          (id.startsWith('peer-') || id === 'new-nominations')
+                            ? 'commented'
+                            : null)
                         }
                         userComment={video.comment}
                       />
@@ -1336,14 +1337,15 @@ export default function ListExplorer({
   onRefreshFeedback,
   onShowComments,
   refreshKey,
+  onFeedbackSaved,
 }) {
   const [focusedListId, setFocusedListId] = useState(null);
   const [activeCustomPlaylistId, setActiveCustomPlaylistId] = useState(null);
   const [selectedTrackId, setSelectedTrackId] = useState(null);
   const [selectedColumnId, setSelectedColumnId] = useState(null);
   const [isEditingInfo, setIsEditingInfo] = useState(false);
-  const [globalCommentedVideoIds, setGlobalCommentedVideoIds] = useState(
-    new Set(),
+  const [globalActivityByVideoId, setGlobalActivityByVideoId] = useState(
+    new Map(),
   );
   const [communityData, setCommunityData] = useState({
     feedback: [],
@@ -1444,18 +1446,18 @@ export default function ListExplorer({
 
         const { data, error } = await query;
         if (!error && data) {
-          const ids = new Set();
+          const activity = new Map();
           data.forEach((d) => {
             if (d.note && d.note.trim().length > 0) {
               const sources = d.tracks?.track_sources || [];
               sources.forEach((s) => {
                 if (s.external_id) {
-                  ids.add(s.external_id);
+                  activity.set(s.external_id, 'commented');
                 }
               });
             }
           });
-          setGlobalCommentedVideoIds(ids);
+          setGlobalActivityByVideoId(activity);
         }
       } catch (err) {
         console.error('Error fetching global comment status:', err);
@@ -1599,6 +1601,7 @@ export default function ListExplorer({
       onUpdatePlaylist(updateLocal(playlist));
 
       onShowToast?.('Feedback deleted.', 'dashboard');
+      onFeedbackSaved?.(trackToDelete.videoId, { rating: null, note: '' });
       onRefreshFeedback?.();
 
       // Trigger a full activity refresh to catch everything else
@@ -2492,6 +2495,10 @@ export default function ListExplorer({
               onUpdatePlaylist(updateLocalComment(playlist));
 
               onShowToast('Feedback saved!');
+              onFeedbackSaved?.(selectedTrack.videoId, {
+                rating: rating || null,
+                note: note || '',
+              });
               onRefreshFeedback?.();
 
               // Update community data with the saved record (with profile)
@@ -2586,7 +2593,7 @@ export default function ListExplorer({
                   onPlayExplorerList={onPlayExplorerList}
                   onExport={onExport}
                   onSavePlaylist={onSavePlaylist}
-                  globalCommentedVideoIds={globalCommentedVideoIds}
+                  globalActivityByVideoId={globalActivityByVideoId}
                 />
 
                 <ListExplorerColumn
@@ -2620,7 +2627,7 @@ export default function ListExplorer({
                   onPlayExplorerList={onPlayExplorerList}
                   onExport={onExport}
                   onSavePlaylist={onSavePlaylist}
-                  globalCommentedVideoIds={globalCommentedVideoIds}
+                  globalActivityByVideoId={globalActivityByVideoId}
                 />
 
                 {showCurrentPlaylist && (
@@ -2651,7 +2658,7 @@ export default function ListExplorer({
                     onExport={onExport}
                     onSavePlaylist={onSavePlaylist}
                     onPlayExplorerList={onPlayExplorerList}
-                    globalCommentedVideoIds={globalCommentedVideoIds}
+                    globalActivityByVideoId={globalActivityByVideoId}
                   />
                 )}
 
@@ -2684,7 +2691,7 @@ export default function ListExplorer({
                     onExport={onExport}
                     onSavePlaylist={onSavePlaylist}
                     onPlayExplorerList={onPlayExplorerList}
-                    globalCommentedVideoIds={globalCommentedVideoIds}
+                    globalActivityByVideoId={globalActivityByVideoId}
                   />
                 )}
 
@@ -2726,7 +2733,7 @@ export default function ListExplorer({
                     isReadOnly={true}
                     onExport={onExport}
                     onSavePlaylist={onSavePlaylist}
-                    globalCommentedVideoIds={globalCommentedVideoIds}
+                    globalActivityByVideoId={globalActivityByVideoId}
                   />
                 ))}
 
@@ -2784,7 +2791,7 @@ export default function ListExplorer({
                     }}
                     onExport={onExport}
                     onSavePlaylist={onSavePlaylist}
-                    globalCommentedVideoIds={globalCommentedVideoIds}
+                    globalActivityByVideoId={globalActivityByVideoId}
                   />
                 )}
               </Motion.div>

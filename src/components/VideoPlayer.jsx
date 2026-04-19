@@ -58,6 +58,7 @@ const VideoPlayer = forwardRef(function VideoPlayer(
     onProgressUpdate,
     playingListLabel,
     onOpenPlayingList,
+    onFeedbackSaved,
   },
   ref,
 ) {
@@ -603,6 +604,7 @@ const VideoPlayer = forwardRef(function VideoPlayer(
                   authUser={authUser}
                   userProfile={userProfile}
                   onShowToast={onShowToast}
+                  onFeedbackSaved={onFeedbackSaved}
                 />
               </div>
               <div className="player-filler" />
