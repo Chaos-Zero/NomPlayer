@@ -46,6 +46,7 @@ import {
   XIcon,
   SpeechBubbleIcon,
   FilterIcon,
+  StarIcon,
 } from './Icons.jsx';
 import { ContextMenuPortal } from './ContextMenuPortal';
 import ExportIcon from './ExportIcon.jsx';
