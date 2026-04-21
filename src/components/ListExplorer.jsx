@@ -1333,6 +1333,7 @@ export default function ListExplorer({
   onSavePlaylist,
   onOpenSupportDropdown,
   onPlayExplorerList,
+  onPlayCommunityListFromTrack,
   catalogTrackByVideoId,
   initialView = 'lists',
   onRefreshFeedback,
@@ -1824,7 +1825,18 @@ export default function ListExplorer({
   const closeContextMenu = () => setContextMenu(null);
 
   const handlePlayNow = (video) => {
-    onPlayNow(video);
+    const sourceListId = contextMenu?.sourceListId;
+    if (onPlayCommunityListFromTrack && sourceListId?.startsWith('peer-')) {
+      const userId = sourceListId.replace('peer-', '');
+      const col = peerColumns.find((c) => c.user_id === userId);
+      onPlayCommunityListFromTrack(
+        userId,
+        video.videoId,
+        col?.videos ?? [video],
+      );
+    } else {
+      onPlayNow(video);
+    }
     closeContextMenu();
   };
 
@@ -2706,7 +2718,15 @@ export default function ListExplorer({
                     isFocused={focusedListId === `peer-${col.user_id}`}
                     onFocus={() => setFocusedListId(`peer-${col.user_id}`)}
                     onUnfocus={() => setFocusedListId(null)}
-                    onPlayNow={onPlayNow}
+                    onPlayNow={(video) =>
+                      onPlayCommunityListFromTrack
+                        ? onPlayCommunityListFromTrack(
+                            col.user_id,
+                            video.videoId,
+                            col.videos,
+                          )
+                        : onPlayNow(video)
+                    }
                     colorVar="--gold"
                     onUpdateComment={() => {}}
                     onRename={() => {}}

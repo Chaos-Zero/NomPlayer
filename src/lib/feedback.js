@@ -5,7 +5,9 @@ export async function fetchUserFeedback(supabase, userId) {
 
   const { data, error } = await supabase
     .from('track_user_feedback')
-    .select('track_id, rating, note')
+    .select(
+      'track_id, rating, note, tracks(track_sources(external_id, is_primary))',
+    )
     .eq('user_id', userId);
 
   if (error) {
@@ -14,9 +16,15 @@ export async function fetchUserFeedback(supabase, userId) {
   }
 
   return (data || []).reduce((acc, item) => {
+    const primarySource = item.tracks?.track_sources?.find((s) => s.is_primary);
+    const videoId =
+      primarySource?.external_id ??
+      item.tracks?.track_sources?.[0]?.external_id ??
+      null;
     acc[item.track_id] = {
       rating: item.rating,
       note: item.note,
+      videoId,
     };
     return acc;
   }, {});

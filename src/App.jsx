@@ -465,6 +465,9 @@ export default function App() {
       return { type: 'personal' };
     }
   });
+  const [playingPlaylistView, setPlayingPlaylistView] = useState({
+    type: 'personal',
+  });
   const [communityNominations, setCommunityNominations] = useState([]);
   const [nominationRefreshToken, setNominationRefreshToken] = useState(0);
   const hasReachedPlaylistEndRef = useRef(false);
@@ -596,6 +599,9 @@ export default function App() {
   const [globalActivityByVideoId, setGlobalActivityByVideoId] = useState(
     new Map(),
   );
+  const [catalogActivityByVideoId, setCatalogActivityByVideoId] = useState(
+    new Map(),
+  );
   const [isDeleteAccountConfirmOpen, setIsDeleteAccountConfirmOpen] =
     useState(false);
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
@@ -619,17 +625,22 @@ export default function App() {
 
   const handleFeedbackSaved = useCallback((videoId, { rating, note }) => {
     if (!videoId) return;
-    setGlobalActivityByVideoId((prev) => {
-      const next = new Map(prev);
-      if (note?.trim()) {
-        next.set(videoId, 'commented');
-      } else if (rating) {
-        next.set(videoId, 'rated');
-      } else {
-        next.delete(videoId);
-      }
-      return next;
-    });
+    const trackId = catalogTrackByVideoIdRef.current[videoId]?.trackId;
+    if (trackId) {
+      setUserFeedback((prev) => {
+        const next = { ...prev };
+        if (rating || note?.trim()) {
+          next[trackId] = {
+            rating: rating || null,
+            note: note || null,
+            videoId,
+          };
+        } else {
+          delete next[trackId];
+        }
+        return next;
+      });
+    }
   }, []);
 
   useEffect(
@@ -1263,23 +1274,37 @@ export default function App() {
 
   useEffect(() => {
     if (!supabase) return;
-
     getFullCatalog(supabase)
       .then((catalog) => {
-        const activity = new Map();
+        const map = new Map();
         for (const entry of catalog) {
           if (entry.commentCount > 0) {
-            activity.set(entry.videoId, 'commented');
+            map.set(entry.videoId, 'commented');
           } else if (entry.avgRating != null) {
-            activity.set(entry.videoId, 'rated');
+            map.set(entry.videoId, 'rated');
           }
         }
-        setGlobalActivityByVideoId(activity);
+        setCatalogActivityByVideoId(map);
       })
-      .catch((err) => {
-        console.error('Error building feedback status:', err);
-      });
+      .catch(() => {});
   }, [supabase]);
+
+  useEffect(() => {
+    const merged = new Map(catalogActivityByVideoId);
+    for (const fb of Object.values(userFeedback)) {
+      if (!fb.videoId) continue;
+      const personal = fb.note?.trim()
+        ? 'commented'
+        : fb.rating
+          ? 'rated'
+          : null;
+      if (!personal) continue;
+      if (personal === 'commented' || merged.get(fb.videoId) !== 'commented') {
+        merged.set(fb.videoId, personal);
+      }
+    }
+    setGlobalActivityByVideoId(merged);
+  }, [catalogActivityByVideoId, userFeedback]);
 
   const mergeCatalogTrackSummaries = useCallback((summaries) => {
     if (!summaries.length) {
@@ -1834,6 +1859,64 @@ export default function App() {
     return displayPlaylist;
   }, [
     activePlaylistView,
+    communityNominations,
+    catalogTrackByVideoId,
+    userFeedback,
+    enrichedNominationList,
+    enrichedSupportList,
+    displayPlaylist,
+  ]);
+
+  const playingTracks = useMemo(() => {
+    if (playingPlaylistView.type === 'community') {
+      const communityUser = communityNominations.find(
+        (u) => u.userId === playingPlaylistView.userId,
+      );
+      if (communityUser) {
+        return communityUser.nominations.map((nom, index) => {
+          const catalogEntry = catalogTrackByVideoId[nom.videoId];
+          const personalRating =
+            (catalogEntry?.trackId &&
+              userFeedback[catalogEntry.trackId]?.rating) ||
+            (nom.trackId && userFeedback[nom.trackId]?.rating);
+          return {
+            ...nom,
+            loadIndex: index,
+            rating: personalRating || nom.rating || null,
+            title:
+              catalogEntry?.displayTitle ||
+              catalogEntry?.sourceTitle ||
+              nom.title ||
+              nom.videoId,
+            thumbnail:
+              catalogEntry?.sourceThumbnailUrl ||
+              nom.thumbnail ||
+              getYouTubeThumbnailUrl(nom.videoId),
+            channelTitle:
+              catalogEntry?.sourceChannelTitle || nom.channelTitle || '',
+            trackId: catalogEntry?.trackId ?? null,
+            gameTitle: catalogEntry?.gameTitle ?? nom.gameTitle ?? '',
+            trackTitle: catalogEntry?.trackTitle ?? nom.trackTitle ?? '',
+            displayTitle: catalogEntry?.displayTitle ?? nom.displayTitle ?? '',
+            supportCount1: catalogEntry?.supportCount1 || 0,
+            supportCount2: catalogEntry?.supportCount2 || 0,
+            supportCount3: catalogEntry?.supportCount3 || 0,
+            isRetired: Boolean(catalogEntry?.isRetired),
+            retiredByTournamentName:
+              catalogEntry?.retiredByTournamentName ||
+              nom.retiredByTournamentName ||
+              '',
+          };
+        });
+      }
+    } else if (playingPlaylistView.type === 'nominations') {
+      return enrichedNominationList;
+    } else if (playingPlaylistView.type === 'support') {
+      return enrichedSupportList;
+    }
+    return displayPlaylist;
+  }, [
+    playingPlaylistView,
     communityNominations,
     catalogTrackByVideoId,
     userFeedback,
@@ -3446,6 +3529,7 @@ export default function App() {
             source: activePlaylistView.type + '-view',
             communityUserId: activePlaylistView.userId || null,
           });
+          setPlayingPlaylistView(activePlaylistView);
           setCurrentVideoId(null);
 
           const shouldPlay = isPlaying || forcePlay;
@@ -3455,6 +3539,7 @@ export default function App() {
           }
         }
       } else {
+        setPlayingPlaylistView({ type: 'personal' });
         goToVideo(videoId, forcePlay);
       }
     },
@@ -3477,6 +3562,7 @@ export default function App() {
 
       // Switch to community view and start playback
       setActivePlaylistView({ type: 'community', userId });
+      setPlayingPlaylistView({ type: 'community', userId });
 
       const track = communityUser.nominations[0];
       const trackWithProperId = {
@@ -3516,6 +3602,7 @@ export default function App() {
       if (!communityUser || communityUser.nominations.length === 0) return;
 
       setActivePlaylistView({ type: 'community', userId });
+      setPlayingPlaylistView({ type: 'community', userId });
 
       const track =
         communityUser.nominations.find(
@@ -3550,6 +3637,7 @@ export default function App() {
       } else if (id === 'nominations') {
         if (nominationList.length === 0) return;
         setActivePlaylistView({ type: 'nominations' });
+        setPlayingPlaylistView({ type: 'nominations' });
         const videoId = nominationList[0].videoId;
         if (!transientVideo) {
           transientResumeVideoIdRef.current = currentVideoIdRef.current;
@@ -3564,6 +3652,7 @@ export default function App() {
       } else if (id === 'support') {
         if (supportList.length === 0) return;
         setActivePlaylistView({ type: 'support' });
+        setPlayingPlaylistView({ type: 'support' });
         const videoId = supportList[0].videoId;
         if (!transientVideo) {
           transientResumeVideoIdRef.current = currentVideoIdRef.current;
@@ -3578,6 +3667,7 @@ export default function App() {
       } else if (id === 'current' || id === 'personal') {
         if (playlist.length === 0) return;
         setActivePlaylistView({ type: 'personal' });
+        setPlayingPlaylistView({ type: 'personal' });
         goToVideo(playlist[0].videoId, true);
       }
     },
@@ -3597,6 +3687,7 @@ export default function App() {
     (video) => {
       if (!video || nominationList.length === 0) return;
       setActivePlaylistView({ type: 'nominations' });
+      setPlayingPlaylistView({ type: 'nominations' });
       if (!transientVideo) {
         transientResumeVideoIdRef.current = currentVideoIdRef.current;
       }
@@ -3612,6 +3703,7 @@ export default function App() {
     (video) => {
       if (!video || supportList.length === 0) return;
       setActivePlaylistView({ type: 'support' });
+      setPlayingPlaylistView({ type: 'support' });
       if (!transientVideo) {
         transientResumeVideoIdRef.current = currentVideoIdRef.current;
       }
@@ -3629,11 +3721,11 @@ export default function App() {
       transientVideo?.source === 'nominations-view' ||
       transientVideo?.source === 'support-view'
     ) {
-      const currentIndex = sidebarTracks.findIndex(
+      const currentIndex = playingTracks.findIndex(
         (v) => v.videoId === transientVideo.videoId,
       );
       if (currentIndex > 0) {
-        const prevTrack = sidebarTracks[currentIndex - 1];
+        const prevTrack = playingTracks[currentIndex - 1];
         setTransientVideo({
           ...prevTrack,
           source: transientVideo.source,
@@ -3668,7 +3760,7 @@ export default function App() {
       markVideoStarted(previousVideoId);
     }
     setCurrentVideoId(previousVideoId);
-  }, [sidebarTracks, transientVideo, isPlaying, markVideoStarted]);
+  }, [playingTracks, transientVideo, isPlaying, markVideoStarted]);
 
   const handleNext = useCallback(() => {
     if (
@@ -3676,11 +3768,11 @@ export default function App() {
       transientVideo?.source === 'nominations-view' ||
       transientVideo?.source === 'support-view'
     ) {
-      const currentIndex = sidebarTracks.findIndex(
+      const currentIndex = playingTracks.findIndex(
         (v) => v.videoId === transientVideo.videoId,
       );
-      if (currentIndex >= 0 && currentIndex < sidebarTracks.length - 1) {
-        const nextTrack = sidebarTracks[currentIndex + 1];
+      if (currentIndex >= 0 && currentIndex < playingTracks.length - 1) {
+        const nextTrack = playingTracks[currentIndex + 1];
         setTransientVideo({
           ...nextTrack,
           source: transientVideo.source,
@@ -3723,7 +3815,7 @@ export default function App() {
       markVideoStarted(nextVideoId);
     }
     setCurrentVideoId(nextVideoId);
-  }, [sidebarTracks, transientVideo, isPlaying, markVideoStarted]);
+  }, [playingTracks, transientVideo, isPlaying, markVideoStarted]);
 
   const handleVideoEnd = useCallback(() => {
     if (!isPlaying) return;
@@ -3739,11 +3831,11 @@ export default function App() {
         transientVideo.source === 'nominations-view' ||
         transientVideo.source === 'support-view'
       ) {
-        const currentIndex = sidebarTracks.findIndex(
+        const currentIndex = playingTracks.findIndex(
           (v) => v.videoId === transientVideo.videoId,
         );
-        if (currentIndex >= 0 && currentIndex < sidebarTracks.length - 1) {
-          const nextTrack = sidebarTracks[currentIndex + 1];
+        if (currentIndex >= 0 && currentIndex < playingTracks.length - 1) {
+          const nextTrack = playingTracks[currentIndex + 1];
           setTransientVideo({
             ...nextTrack,
             source: transientVideo.source,
@@ -3808,7 +3900,7 @@ export default function App() {
     markVideoCompleted,
     markVideoStarted,
     transientVideo,
-    sidebarTracks,
+    playingTracks,
   ]);
 
   // ── Shuffle ─────────────────────────────────────────────────────
@@ -4869,11 +4961,11 @@ export default function App() {
 
   const playingListLabel = useMemo(() => {
     if (!isPlayingFromList) return null;
-    if (activePlaylistView.type === 'nominations') return 'My Nominations';
-    if (activePlaylistView.type === 'support') return 'My Support List';
-    if (activePlaylistView.type === 'community') {
+    if (playingPlaylistView.type === 'nominations') return 'My Nominations';
+    if (playingPlaylistView.type === 'support') return 'My Support List';
+    if (playingPlaylistView.type === 'community') {
       const communityUser = communityNominations.find(
-        (u) => u.userId === activePlaylistView.userId,
+        (u) => u.userId === playingPlaylistView.userId,
       );
       const displayName = communityUser?.username
         ? getDisplayProfileName(communityUser.username)
@@ -4883,7 +4975,7 @@ export default function App() {
         : 'Community Nominations';
     }
     return 'My Playlist';
-  }, [isPlayingFromList, activePlaylistView, communityNominations]);
+  }, [isPlayingFromList, playingPlaylistView, communityNominations]);
 
   // activePlaylistView is already set to the correct type when a list plays,
   // so we only need to open/uncollapse the sidebar here.
@@ -5410,6 +5502,7 @@ export default function App() {
               onExport={handleOpenExportModal}
               onSavePlaylist={handleCreateYTPlaylist}
               onPlayExplorerList={handlePlayExplorerList}
+              onPlayCommunityListFromTrack={handlePlayCommunityListFromTrack}
               catalogTrackByVideoId={catalogTrackByVideoId}
               initialView={explorerInitialView}
               onRefreshFeedback={refreshUserFeedback}
