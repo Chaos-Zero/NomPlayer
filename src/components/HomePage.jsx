@@ -1310,8 +1310,7 @@ export default function HomePage({
       return !status || (status !== 'complete' && status !== 'partial');
     });
 
-    // Shuffle candidates to prioritize variety over popularity
-    return unlistenedCandidates.sort(() => Math.random() - 0.5);
+    return unlistenedCandidates;
   }, [
     authUser?.id,
     currentPlaylistIds,
@@ -1382,26 +1381,34 @@ export default function HomePage({
     listenedStatusById,
   ]);
 
-  // Pin the first discovery candidate as the featured one if none is set
-  // This prevents the card from rotating when the first track's status changes during playback
+  const spotlightPool = useMemo(
+    () =>
+      persistentDiscoveryItems.length > 0
+        ? persistentDiscoveryItems.filter((item) => !item.isFallback)
+        : discoveryCandidates,
+    [persistentDiscoveryItems, discoveryCandidates],
+  );
+
+  // Pin the first spotlight pool entry as the featured one; re-pin when the
+  // current ID is no longer in the pool (list changed or track was listened).
   useEffect(() => {
-    if (
-      !featuredDiscoveryId &&
-      discoveryCandidates.length > 0 &&
-      !isShowingFallback
-    ) {
-      setFeaturedDiscoveryId(discoveryCandidates[0].videoId);
+    if (spotlightPool.length === 0 || isShowingFallback) return;
+    const isValid = spotlightPool.some(
+      (c) => c.videoId === featuredDiscoveryId,
+    );
+    if (!isValid) {
+      setFeaturedDiscoveryId(spotlightPool[0].videoId);
     }
-  }, [discoveryCandidates, featuredDiscoveryId, isShowingFallback]);
+  }, [spotlightPool, featuredDiscoveryId, isShowingFallback]);
 
   const featuredDiscoveryCandidate = useMemo(() => {
-    if (isShowingFallback || discoveryCandidates.length === 0) return null;
+    if (isShowingFallback || spotlightPool.length === 0) return null;
     return (
-      discoveryCandidates.find(
+      spotlightPool.find(
         (candidate) => candidate.videoId === featuredDiscoveryId,
-      ) ?? discoveryCandidates[0]
+      ) ?? spotlightPool[0]
     );
-  }, [discoveryCandidates, featuredDiscoveryId, isShowingFallback]);
+  }, [spotlightPool, featuredDiscoveryId, isShowingFallback]);
 
   const totalVisibleNominationCount = useMemo(
     () =>
@@ -1664,7 +1671,7 @@ export default function HomePage({
     setFastSpotlightCandidate(null);
 
     const nextCandidate = pickNextDiscoveryCandidate(
-      discoveryCandidates,
+      spotlightPool,
       featuredDiscoveryId,
     );
 
@@ -1700,7 +1707,7 @@ export default function HomePage({
     onShowToast?.('No fresh nomination picks are available right now.');
   }, [
     featuredDiscoveryId,
-    discoveryCandidates,
+    spotlightPool,
     onShowToast,
     listenedStatusById,
     supabase,
