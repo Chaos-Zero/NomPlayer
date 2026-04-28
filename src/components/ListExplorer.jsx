@@ -5,6 +5,7 @@ import React, {
   useEffect,
   useRef,
 } from 'react';
+import { createPortal } from 'react-dom';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import {
   getDisplayProfileName,
@@ -47,10 +48,15 @@ import {
   SpeechBubbleIcon,
   FilterIcon,
   StarIcon,
+  FolderIcon,
+  ChevronRightIcon,
+  ChevronDownIcon,
+  PlusIcon,
 } from './Icons.jsx';
 import { ContextMenuPortal } from './ContextMenuPortal';
 import ExportIcon from './ExportIcon.jsx';
 import YouTubeIcon from './YouTubeIcon.jsx';
+import { CommunityPlaylistsView } from './CommunityPlaylistsView.jsx';
 
 function PlaylistPlusIcon() {
   return (
@@ -710,6 +716,8 @@ function ListExplorerColumn({
   activePlaylistId = null,
   onSelectPlaylist = null,
   onAddByUrl = null,
+  onRename = null,
+  onRemovePlaylist = null,
   selectedTrackId = null,
   onSelectTrack = null,
   onContextMenu = null,
@@ -725,6 +733,7 @@ function ListExplorerColumn({
   userToggle = null,
 }) {
   const [addUrl, setAddUrl] = useState('');
+  const playlistSelectRef = useRef(null);
   const { setNodeRef } = useDroppable({
     id: `column-${id}`,
     data: {
@@ -770,18 +779,24 @@ function ListExplorerColumn({
         <div className="list-explorer-column-title-group">
           {isCustom && playlists.length > 0 ? (
             <div className="list-explorer-playlist-selector-shell">
-              <select
-                className="list-explorer-playlist-select"
-                value={activePlaylistId || ''}
-                onChange={(ev) => onSelectPlaylist?.(ev.target.value)}
-              >
-                {playlists.map((pl) => (
-                  <option key={pl.id} value={pl.id}>
-                    {pl.name}
-                  </option>
-                ))}
-              </select>
-              <div className="list-explorer-column-subtitle">{subtitle}</div>
+              <div className="list-explorer-playlist-selector-wrapper">
+                <select
+                  ref={playlistSelectRef}
+                  className="list-explorer-playlist-select"
+                  value={activePlaylistId || ''}
+                  onChange={(ev) => onSelectPlaylist?.(ev.target.value)}
+                >
+                  {playlists.map((pl) => (
+                    <option key={pl.id} value={pl.id}>
+                      {pl.name}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDownIcon
+                  className="playlist-selector-chevron"
+                  onClick={() => playlistSelectRef.current?.click()}
+                />
+              </div>
             </div>
           ) : (
             <div className="list-explorer-column-title-row">
@@ -795,6 +810,27 @@ function ListExplorerColumn({
           )}
         </div>
         <div className="list-explorer-column-actions">
+          {isCustom && subtitle && (
+            <span className="list-explorer-column-subtitle">{subtitle}</span>
+          )}
+          {isCustom && onRename && (
+            <button
+              className="list-explorer-column-btn"
+              onClick={() => onRename(activePlaylistId)}
+              title="Rename playlist"
+            >
+              <PencilIcon />
+            </button>
+          )}
+          {isCustom && onRemovePlaylist && (
+            <button
+              className="list-explorer-column-btn danger"
+              onClick={() => onRemovePlaylist(activePlaylistId)}
+              title="Delete playlist"
+            >
+              <TrashIcon />
+            </button>
+          )}
           {videos && videos.length > 0 && (
             <button
               className="list-explorer-column-btn"
@@ -883,22 +919,6 @@ function ListExplorerColumn({
       </div>
 
       <div className="list-explorer-column-content">
-        {onAddByUrl && (
-          <form className="list-explorer-quick-add" onSubmit={handleAdd}>
-            <input
-              type="text"
-              placeholder="Paste YouTube link to add track..."
-              value={addUrl}
-              onChange={(ev) => setAddUrl(ev.target.value)}
-            />
-            <button type="submit" title="Add track">
-              <svg viewBox="0 0 20 20" fill="currentColor">
-                <path d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5v-4.5Z" />
-              </svg>
-            </button>
-          </form>
-        )}
-
         <div className="list-explorer-list-scroll" ref={listScrollRef}>
           <SortableContext
             items={safeVideos.map((v) => `${id}:${v.videoId}`)}
@@ -956,6 +976,22 @@ function ListExplorerColumn({
             )}
           </SortableContext>
         </div>
+
+        {onAddByUrl && (
+          <form className="list-explorer-quick-add" onSubmit={handleAdd}>
+            <input
+              type="text"
+              placeholder="Paste YouTube link to add track..."
+              value={addUrl}
+              onChange={(ev) => setAddUrl(ev.target.value)}
+            />
+            <button type="submit" title="Add track">
+              <svg viewBox="0 0 20 20" fill="currentColor">
+                <path d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5v-4.5Z" />
+              </svg>
+            </button>
+          </form>
+        )}
       </div>
     </div>
   );
@@ -1792,6 +1828,13 @@ export default function ListExplorer({
   };
 
   const [contextMenu, setContextMenu] = useState(null);
+  const [renameDialog, setRenameDialog] = useState(null); // { id, name }
+  const [renameValue, setRenameValue] = useState('');
+  const [deleteDialog, setDeleteDialog] = useState(null); // { id, name }
+  const [playlistSubmenuOpen, setPlaylistSubmenuOpen] = useState(false);
+  const [showNewPlaylistInput, setShowNewPlaylistInput] = useState(false);
+  const [newPlaylistName, setNewPlaylistName] = useState('');
+  const newPlaylistInputRef = useRef(null);
 
   const handleContextMenu = (e, video) => {
     // Suppress context menu if currently dragging (especially for right-click drag)
@@ -1822,7 +1865,43 @@ export default function ListExplorer({
     });
   };
 
-  const closeContextMenu = () => setContextMenu(null);
+  const closeContextMenu = () => {
+    setContextMenu(null);
+    setPlaylistSubmenuOpen(false);
+    setShowNewPlaylistInput(false);
+    setNewPlaylistName('');
+  };
+
+  const handleAddToCustomPlaylist = (video, playlistId) => {
+    const pl = customPlaylists.find((p) => p.id === playlistId);
+    if (!pl) return;
+    if (pl.videos.some((v) => v.videoId === video.videoId)) {
+      onShowToast('Track already in this playlist');
+      return;
+    }
+    onUpdateCustomPlaylists(
+      customPlaylists.map((p) =>
+        p.id === playlistId ? { ...p, videos: [...p.videos, video] } : p,
+      ),
+    );
+    setActiveCustomPlaylistId(playlistId);
+    onShowToast(`Added to "${pl.name}"`);
+    closeContextMenu();
+  };
+
+  const handleCreateAndAddPlaylist = (video, name) => {
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    const newPlaylist = {
+      id: crypto.randomUUID(),
+      name: trimmed,
+      videos: video ? [video] : [],
+    };
+    onUpdateCustomPlaylists([...customPlaylists, newPlaylist]);
+    setActiveCustomPlaylistId(newPlaylist.id);
+    onShowToast(`Created "${trimmed}"`);
+    closeContextMenu();
+  };
 
   const handlePlayNow = (video) => {
     const sourceListId = contextMenu?.sourceListId;
@@ -1923,37 +2002,39 @@ export default function ListExplorer({
   const handleRenamePlaylist = (id) => {
     const pl = customPlaylists.find((p) => p.id === id);
     if (!pl) return;
-    const newName = prompt('Enter new name:', pl.name);
-    if (newName && newName !== pl.name) {
+    setRenameDialog({ id, name: pl.name });
+    setRenameValue(pl.name);
+  };
+
+  const confirmRename = () => {
+    if (!renameDialog) return;
+    const trimmed = renameValue.trim();
+    if (trimmed && trimmed !== renameDialog.name) {
       onUpdateCustomPlaylists(
-        customPlaylists.map((p) => (p.id === id ? { ...p, name: newName } : p)),
+        customPlaylists.map((p) =>
+          p.id === renameDialog.id ? { ...p, name: trimmed } : p,
+        ),
       );
     }
+    setRenameDialog(null);
+    setRenameValue('');
   };
 
   const handleRemovePlaylist = (id) => {
     const pl = customPlaylists.find((p) => p.id === id);
     if (!pl) return;
-    if (confirm(`Are you sure you want to delete "${pl.name}"?`)) {
-      onUpdateCustomPlaylists(customPlaylists.filter((p) => p.id !== id));
-      if (focusedListId === id) setFocusedListId(null);
-    }
+    setDeleteDialog({ id, name: pl.name });
   };
 
-  /* const handleCreatePlaylist = () => {
-     const name = prompt('Enter playlist name:');
-     if (name) {
-       onUpdateCustomPlaylists([
-         ...customPlaylists,
-         {
-           id: `pl-${Math.random().toString(36).slice(2, 11)}`,
-           name,
-           videos: [],
-         },
-       ]);
-     }
-   };
- */
+  const confirmDelete = () => {
+    if (!deleteDialog) return;
+    onUpdateCustomPlaylists(
+      customPlaylists.filter((p) => p.id !== deleteDialog.id),
+    );
+    if (focusedListId === deleteDialog.id) setFocusedListId(null);
+    setDeleteDialog(null);
+  };
+
   const handleAddByUrl = async (id, url) => {
     const videoIdMatch = url.match(
       /(?:youtu\.be\/|youtube\.com\/(?:.*v=|.*\/|.*e\/))([^&?/#]+)/,
@@ -2013,6 +2094,7 @@ export default function ListExplorer({
   };
 
   const [showCurrentPlaylist, setShowCurrentPlaylist] = useState(true);
+  const [showCustomPlaylists, setShowCustomPlaylists] = useState(false);
 
   // Find the currently selected track object from ALL visible lists
   const selectedTrack = useMemo(() => {
@@ -2256,10 +2338,12 @@ export default function ListExplorer({
     if (showCurrentPlaylist) ids.push('current');
     if (showNewNominations) ids.push('new-nominations');
     peerColumns.forEach((col) => ids.push(`peer-${col.user_id}`));
-    if (activeCustomPlaylist) ids.push(activeCustomPlaylist.id);
+    if (showCustomPlaylists && activeCustomPlaylist)
+      ids.push(activeCustomPlaylist.id);
     return ids;
   }, [
     showCurrentPlaylist,
+    showCustomPlaylists,
     showNewNominations,
     peerColumns,
     activeCustomPlaylist,
@@ -2357,7 +2441,7 @@ export default function ListExplorer({
 
   return (
     <div
-      className={`list-explorer-container ${focusedListId ? 'has-focused' : ''} ${selectedTrackId && explorerView !== 'comments' ? 'has-selection' : ''}`}
+      className={`list-explorer-container ${focusedListId ? 'has-focused' : ''} ${selectedTrackId && explorerView === 'lists' ? 'has-selection' : ''}`}
     >
       <div className="list-explorer-header">
         <div className="list-explorer-title-group">
@@ -2370,11 +2454,14 @@ export default function ListExplorer({
             >
               <option value="lists">Manage Lists</option>
               <option value="comments">View Comments & Ratings</option>
+              <option value="community-playlists">Community Playlists</option>
             </select>
             <div className="list-explorer-view-indicator">
               {explorerView === 'lists'
                 ? 'Manage your lists and see community nominations'
-                : 'Your feedback and community interactions'}
+                : explorerView === 'comments'
+                  ? 'Your feedback and community interactions'
+                  : 'Browse and load public playlists from other users'}
             </div>
           </div>
         </div>
@@ -2387,7 +2474,23 @@ export default function ListExplorer({
                   className={`toolbar-toggle ${showCurrentPlaylist ? 'active' : ''}`}
                   onClick={() => setShowCurrentPlaylist(!showCurrentPlaylist)}
                 >
-                  Current Playlist
+                  My Playlist
+                </button>
+                <button
+                  className={`toolbar-toggle ${showCustomPlaylists ? 'active' : ''}`}
+                  onClick={() => {
+                    const next = !showCustomPlaylists;
+                    setShowCustomPlaylists(next);
+                    if (
+                      next &&
+                      !activeCustomPlaylistId &&
+                      customPlaylists.length > 0
+                    ) {
+                      setActiveCustomPlaylistId(customPlaylists[0].id);
+                    }
+                  }}
+                >
+                  Custom Playlists
                 </button>
                 <button
                   className={`toolbar-toggle ${showNewNominations ? 'active' : ''}`}
@@ -2603,6 +2706,7 @@ export default function ListExplorer({
                   onContextMenu={handleContextMenu}
                   canAddAll={true}
                   onAddAll={() => handleAddAllToCurrent(nominationList)}
+                  onAddByUrl={(url) => handleAddByUrl('nominations', url)}
                   onPlayExplorerList={onPlayExplorerList}
                   onExport={onExport}
                   onSavePlaylist={onSavePlaylist}
@@ -2618,7 +2722,7 @@ export default function ListExplorer({
                   onFocus={() => setFocusedListId('support')}
                   onUnfocus={() => setFocusedListId(null)}
                   onPlayNow={onPlayNow}
-                  colorVar="--support-pink"
+                  colorVar="--support-orange"
                   onUpdateComment={(videoId, comment) =>
                     handleUpdateComment('support', videoId, comment)
                   }
@@ -2637,6 +2741,7 @@ export default function ListExplorer({
                   onContextMenu={handleContextMenu}
                   canAddAll={true}
                   onAddAll={() => handleAddAllToCurrent(supportList)}
+                  onAddByUrl={(url) => handleAddByUrl('support', url)}
                   onPlayExplorerList={onPlayExplorerList}
                   onExport={onExport}
                   onSavePlaylist={onSavePlaylist}
@@ -2646,14 +2751,14 @@ export default function ListExplorer({
                 {showCurrentPlaylist && (
                   <ListExplorerColumn
                     id="current"
-                    title="Current Playlist"
+                    title="My Playlist"
                     subtitle={`${playlist.length} tracks`}
                     videos={playlist}
                     isFocused={focusedListId === 'current'}
                     onFocus={() => setFocusedListId('current')}
                     onUnfocus={() => setFocusedListId(null)}
                     onPlayNow={onPlayNow}
-                    colorVar="--info"
+                    colorVar="--playlist-white"
                     onUpdateComment={(videoId, comment) =>
                       handleUpdateComment('current', videoId, comment)
                     }
@@ -2727,7 +2832,7 @@ export default function ListExplorer({
                           )
                         : onPlayNow(video)
                     }
-                    colorVar="--gold"
+                    colorVar="--custom-blue"
                     onUpdateComment={() => {}}
                     onRename={() => {}}
                     onRemovePlaylist={() =>
@@ -2758,7 +2863,7 @@ export default function ListExplorer({
                   />
                 ))}
 
-                {activeCustomPlaylist && (
+                {showCustomPlaylists && activeCustomPlaylist && (
                   <ListExplorerColumn
                     id={activeCustomPlaylist.id}
                     title={activeCustomPlaylist.name}
@@ -2768,7 +2873,7 @@ export default function ListExplorer({
                     onFocus={() => setFocusedListId(activeCustomPlaylist.id)}
                     onUnfocus={() => setFocusedListId(null)}
                     onPlayNow={onPlayNow}
-                    colorVar="--gold"
+                    colorVar="--custom-blue"
                     onUpdateComment={(videoId, comment) =>
                       handleUpdateComment(
                         activeCustomPlaylist.id,
@@ -2791,8 +2896,7 @@ export default function ListExplorer({
                     }}
                     onContextMenu={handleContextMenu}
                     canClose={true}
-                    onClose={() => setActiveCustomPlaylistId(null)}
-                    canAddAll={true}
+                    onClose={() => setShowCustomPlaylists(false)}
                     onAddAll={() =>
                       handleAddAllToCurrent(activeCustomPlaylist.videos)
                     }
@@ -2816,7 +2920,7 @@ export default function ListExplorer({
                   />
                 )}
               </Motion.div>
-            ) : (
+            ) : explorerView === 'comments' ? (
               <Motion.div
                 key="comments"
                 initial={{ opacity: 0 }}
@@ -2843,6 +2947,29 @@ export default function ListExplorer({
                   onPlayNow={onPlayNow}
                 />
               </Motion.div>
+            ) : (
+              <Motion.div
+                key="community-playlists"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.3 }}
+                style={{ flex: 1, display: 'flex', overflow: 'hidden' }}
+              >
+                <CommunityPlaylistsView
+                  supabase={supabase}
+                  authUser={authUser}
+                  onLoadPlaylist={(videos) => onUpdatePlaylist(videos)}
+                  onAddToPlaylist={(videos) => {
+                    const existing = new Set(playlist.map((v) => v.videoId));
+                    onUpdatePlaylist([
+                      ...playlist,
+                      ...videos.filter((v) => !existing.has(v.videoId)),
+                    ]);
+                  }}
+                  onShowToast={onShowToast}
+                />
+              </Motion.div>
             )}
           </AnimatePresence>
         </div>
@@ -2861,32 +2988,19 @@ export default function ListExplorer({
               <PlayIcon />
               <span>Play Now</span>
             </button>
+
+            <div className="context-menu-divider" />
+
             {contextMenu.sourceListId !== 'current' && (
               <button
                 className="database-context-menu-item"
-                onClick={() => {
-                  handleAddTrackToPlaylist(contextMenu.video);
-                  closeContextMenu();
-                }}
+                onClick={() => handleAddTrackToPlaylist(contextMenu.video)}
               >
                 <PlaylistPlusIcon />
-                <span>Add to Playlist</span>
+                <span>Add to My Playlist</span>
               </button>
             )}
-            {contextMenu.sourceListId !== 'nominations' && (
-              <>
-                <div className="context-menu-divider" />
-                <button
-                  className="database-context-menu-item"
-                  onClick={(e) =>
-                    handleToggleTrackSupport(contextMenu.video, e)
-                  }
-                >
-                  <HeartIcon />
-                  <span>Update Support</span>
-                </button>
-              </>
-            )}
+
             {!nominationList.some(
               (v) => v.videoId === contextMenu.video.videoId,
             ) && (
@@ -2898,9 +3012,95 @@ export default function ListExplorer({
                 }}
               >
                 <StarIcon />
-                <span>Add to Nominations</span>
+                <span>Add to Nomination List</span>
               </button>
             )}
+
+            {contextMenu.sourceListId !== 'nominations' && (
+              <button
+                className="database-context-menu-item"
+                onClick={(e) => handleToggleTrackSupport(contextMenu.video, e)}
+              >
+                <HeartIcon />
+                <span>Add to Support List</span>
+              </button>
+            )}
+
+            <button
+              className={`database-context-menu-item${playlistSubmenuOpen ? ' active' : ''}`}
+              onClick={() => {
+                setPlaylistSubmenuOpen((v) => !v);
+                setShowNewPlaylistInput(false);
+                setNewPlaylistName('');
+              }}
+            >
+              <FolderIcon />
+              <span>Add to Custom Playlist</span>
+              <ChevronRightIcon
+                className={`context-menu-chevron${playlistSubmenuOpen ? ' open' : ''}`}
+              />
+            </button>
+
+            {playlistSubmenuOpen && (
+              <div className="context-playlist-submenu">
+                {!showNewPlaylistInput ? (
+                  <button
+                    className="database-context-menu-item context-playlist-submenu-create"
+                    onClick={() => {
+                      setShowNewPlaylistInput(true);
+                      setTimeout(() => newPlaylistInputRef.current?.focus(), 0);
+                    }}
+                  >
+                    <PlusIcon />
+                    <span>Create New Playlist</span>
+                  </button>
+                ) : (
+                  <input
+                    ref={newPlaylistInputRef}
+                    className="context-playlist-name-input"
+                    type="text"
+                    placeholder="Playlist name…"
+                    value={newPlaylistName}
+                    onChange={(e) => setNewPlaylistName(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter')
+                        handleCreateAndAddPlaylist(
+                          contextMenu.video,
+                          newPlaylistName,
+                        );
+                      if (e.key === 'Escape') {
+                        setShowNewPlaylistInput(false);
+                        setNewPlaylistName('');
+                      }
+                      e.stopPropagation();
+                    }}
+                  />
+                )}
+                {customPlaylists.length === 0 && !showNewPlaylistInput && (
+                  <span className="context-playlist-submenu-empty">
+                    No playlists yet
+                  </span>
+                )}
+                {customPlaylists.map((pl) => (
+                  <button
+                    key={pl.id}
+                    className="database-context-menu-item context-playlist-submenu-item"
+                    onClick={() =>
+                      handleAddToCustomPlaylist(contextMenu.video, pl.id)
+                    }
+                  >
+                    <FolderIcon />
+                    <span>{pl.name}</span>
+                    <span className="context-playlist-submenu-count">
+                      {pl.videos.length}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
+
+            <div className="context-menu-divider" />
+
             <button
               className="database-context-menu-item"
               onClick={() => {
@@ -2911,6 +3111,7 @@ export default function ListExplorer({
               <EditIcon />
               <span>Update Metadata</span>
             </button>
+
             {contextMenu.sourceListId !== 'nominations' &&
               contextMenu.sourceListId !== 'peer' && (
                 <>
@@ -2946,6 +3147,123 @@ export default function ListExplorer({
           ) : null}
         </DragOverlay>
       </DndContext>
+
+      {renameDialog &&
+        createPortal(
+          <div
+            className="modal-backdrop"
+            onClick={(e) => {
+              if (e.target === e.currentTarget) setRenameDialog(null);
+            }}
+          >
+            <div className="modal-card" style={{ maxWidth: 400 }}>
+              <div className="modal-header">
+                <h2>Rename Playlist</h2>
+                <button
+                  className="btn-close"
+                  onClick={() => setRenameDialog(null)}
+                  aria-label="Close"
+                >
+                  ✕
+                </button>
+              </div>
+              <div
+                className="auth-dialog-form"
+                style={{ padding: '0 24px 24px' }}
+              >
+                <div className="auth-dialog-field">
+                  <label htmlFor="rename-playlist-input">Playlist name</label>
+                  <input
+                    id="rename-playlist-input"
+                    type="text"
+                    value={renameValue}
+                    onChange={(e) => setRenameValue(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') confirmRename();
+                      if (e.key === 'Escape') setRenameDialog(null);
+                    }}
+                    autoFocus
+                  />
+                </div>
+                <div
+                  style={{
+                    display: 'flex',
+                    gap: 8,
+                    justifyContent: 'flex-end',
+                    marginTop: 16,
+                  }}
+                >
+                  <button className="btn" onClick={() => setRenameDialog(null)}>
+                    Cancel
+                  </button>
+                  <button
+                    className="btn btn-primary"
+                    onClick={confirmRename}
+                    disabled={
+                      !renameValue.trim() ||
+                      renameValue.trim() === renameDialog.name
+                    }
+                  >
+                    Save
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>,
+          document.getElementById('modal-root'),
+        )}
+
+      {deleteDialog &&
+        createPortal(
+          <div
+            className="modal-backdrop"
+            onClick={(e) => {
+              if (e.target === e.currentTarget) setDeleteDialog(null);
+            }}
+          >
+            <div
+              className="modal-card delete-account-dialog"
+              style={{ maxWidth: 400 }}
+            >
+              <div className="modal-header">
+                <h2>Delete Playlist</h2>
+                <button
+                  className="btn-close"
+                  onClick={() => setDeleteDialog(null)}
+                  aria-label="Close"
+                >
+                  ✕
+                </button>
+              </div>
+              <div
+                className="delete-dialog-body"
+                style={{ padding: '0 24px 24px' }}
+              >
+                <p>
+                  Are you sure you want to delete{' '}
+                  <strong>&ldquo;{deleteDialog.name}&rdquo;</strong>? This
+                  cannot be undone.
+                </p>
+                <div
+                  style={{
+                    display: 'flex',
+                    gap: 8,
+                    justifyContent: 'flex-end',
+                    marginTop: 20,
+                  }}
+                >
+                  <button className="btn" onClick={() => setDeleteDialog(null)}>
+                    Cancel
+                  </button>
+                  <button className="btn btn-danger" onClick={confirmDelete}>
+                    Delete
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>,
+          document.getElementById('modal-root'),
+        )}
     </div>
   );
 }

@@ -223,6 +223,7 @@ function createAccountPersistedPlayerState(state) {
     showOriginalOrder: state?.showOriginalOrder,
     supportList: state?.supportList,
     nominationList: state?.nominationList,
+    customPlaylists: state?.customPlaylists,
     transientVideo: state?.transientVideo,
   });
 }
