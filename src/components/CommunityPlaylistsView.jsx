@@ -43,14 +43,31 @@ function timeAgo(dateStr) {
   return `${Math.floor(d / 30)}mo ago`;
 }
 
-function CplAvatar({ username, userId, size = 'sm' }) {
+function CplAvatar({ username, userId, avatarUrl, size = 'sm' }) {
   return (
     <div
       className={`cpl-avatar cpl-avatar-${size}`}
-      style={{ background: playlistGradient(userId || username || '') }}
+      style={
+        avatarUrl
+          ? {}
+          : { background: playlistGradient(userId || username || '') }
+      }
       aria-hidden
     >
-      {avatarInitials(username)}
+      {avatarUrl ? (
+        <img
+          src={avatarUrl}
+          alt=""
+          style={{
+            width: '100%',
+            height: '100%',
+            objectFit: 'cover',
+            borderRadius: 'inherit',
+          }}
+        />
+      ) : (
+        avatarInitials(username)
+      )}
     </div>
   );
 }
@@ -81,10 +98,18 @@ function PlaylistCard({ playlist, onLoad, onAdd, loadingId, isOwn }) {
   return (
     <div className="cpl-card">
       <div className="cpl-card-cover">
-        <div
-          className="cpl-card-gradient"
-          style={{ background: playlistGradient(playlist.id) }}
-        />
+        {playlist.firstThumbnail ? (
+          <img
+            src={playlist.firstThumbnail}
+            alt=""
+            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+          />
+        ) : (
+          <div
+            className="cpl-card-gradient"
+            style={{ background: playlistGradient(playlist.id) }}
+          />
+        )}
         <span className="cpl-track-badge">{playlist.trackCount} tracks</span>
         {isPrivate && <span className="cpl-private-badge">Private</span>}
         <div className="cpl-card-overlay">
@@ -92,7 +117,7 @@ function PlaylistCard({ playlist, onLoad, onAdd, loadingId, isOwn }) {
             className="cpl-play-btn"
             onClick={() => onLoad(playlist)}
             disabled={busy}
-            title="Load into My Playlist"
+            title="Play Playlist"
           >
             <PlaySvg />
           </button>
@@ -104,6 +129,7 @@ function PlaylistCard({ playlist, onLoad, onAdd, loadingId, isOwn }) {
           <CplAvatar
             username={playlist.profile?.username}
             userId={playlist.user_id}
+            avatarUrl={playlist.profile?.avatar_url}
           />
           <span className="cpl-card-username">
             {getDisplayProfileName(playlist.profile?.username)}
@@ -116,7 +142,7 @@ function PlaylistCard({ playlist, onLoad, onAdd, loadingId, isOwn }) {
             onClick={() => onLoad(playlist)}
             disabled={busy}
           >
-            {busy ? '…' : 'Load'}
+            {busy ? '…' : 'Play'}
           </button>
           <button
             className="cpl-action-btn"
@@ -134,7 +160,7 @@ function PlaylistCard({ playlist, onLoad, onAdd, loadingId, isOwn }) {
 export function CommunityPlaylistsView({
   supabase,
   authUser,
-  onLoadPlaylist,
+  onPlayPlaylist,
   onAddToPlaylist,
   onShowToast,
 }) {
@@ -154,6 +180,7 @@ export function CommunityPlaylistsView({
         .select(
           'id, name, is_public, created_at, updated_at, user_id, user_playlist_tracks(count)',
         )
+        .eq('is_active_queue', false)
         .order('created_at', { ascending: false });
 
       if (authUser?.id) {
@@ -165,23 +192,52 @@ export function CommunityPlaylistsView({
       const { data: rawPls, error: plErr } = await query;
       if (plErr) throw plErr;
 
+      const playlistIds = (rawPls || []).map((p) => p.id);
       const userIds = [...new Set((rawPls || []).map((p) => p.user_id))];
+
       let profileMap = {};
-      if (userIds.length > 0) {
-        const { data: profilesData } = await supabase
-          .from('profiles')
-          .select('id, username, avatar_url')
-          .in('id', userIds);
-        (profilesData || []).forEach((p) => {
-          profileMap[p.id] = p;
-        });
-      }
+      let thumbnailMap = {};
+
+      await Promise.all([
+        userIds.length > 0 &&
+          supabase
+            .from('profiles')
+            .select('id, username, avatar_url')
+            .in('id', userIds)
+            .then(({ data }) => {
+              (data || []).forEach((p) => {
+                profileMap[p.id] = p;
+              });
+            }),
+        playlistIds.length > 0 &&
+          supabase
+            .from('user_playlist_tracks')
+            .select(
+              'playlist_id, order_index, tracks(track_sources(external_id, cached_thumbnail_url, is_primary))',
+            )
+            .in('playlist_id', playlistIds)
+            .order('order_index', { ascending: true })
+            .then(({ data }) => {
+              for (const pt of data || []) {
+                if (thumbnailMap[pt.playlist_id]) continue;
+                const src =
+                  pt.tracks?.track_sources?.find((s) => s.is_primary) ??
+                  pt.tracks?.track_sources?.[0];
+                if (src) {
+                  thumbnailMap[pt.playlist_id] =
+                    src.cached_thumbnail_url ||
+                    `https://i.ytimg.com/vi/${src.external_id}/mqdefault.jpg`;
+                }
+              }
+            }),
+      ]);
 
       setPlaylists(
         (rawPls || []).map((pl) => ({
           ...pl,
           trackCount: Number(pl.user_playlist_tracks?.[0]?.count ?? 0),
           profile: profileMap[pl.user_id] || null,
+          firstThumbnail: thumbnailMap[pl.id] || null,
         })),
       );
     } catch (err) {
@@ -253,8 +309,8 @@ export function CommunityPlaylistsView({
         onShowToast?.('This playlist has no tracks yet');
         return;
       }
-      onLoadPlaylist(videos);
-      onShowToast?.(`Loaded ${videos.length} tracks into My Playlist`);
+      onPlayPlaylist?.(videos, { id: playlist.id, name: playlist.name });
+      onShowToast?.(`Playing "${playlist.name}" — ${videos.length} tracks`);
     } catch {
       onShowToast?.('Failed to load playlist');
     } finally {
@@ -271,7 +327,7 @@ export function CommunityPlaylistsView({
         return;
       }
       onAddToPlaylist(videos);
-      onShowToast?.(`Added ${videos.length} tracks to My Playlist`);
+      onShowToast?.(`Added ${videos.length} tracks to your queue`);
     } catch {
       onShowToast?.('Failed to add playlist');
     } finally {
@@ -387,7 +443,12 @@ export function CommunityPlaylistsView({
                 )
               }
             >
-              <CplAvatar username={u.username} userId={u.user_id} size="md" />
+              <CplAvatar
+                username={u.username}
+                userId={u.user_id}
+                avatarUrl={u.avatar_url}
+                size="md"
+              />
               <div className="cpl-user-info">
                 <div className="cpl-user-name">
                   {getDisplayProfileName(u.username)}
@@ -409,17 +470,20 @@ export function CommunityPlaylistsView({
             <div className="cpl-hero-band">
               <div className="cpl-hero-left">
                 <div className="cpl-hero-eyebrow">Community Playlists</div>
-                <div className="cpl-hero-title">
-                  {playlists.length} playlist{playlists.length !== 1 ? 's' : ''}
-                  .
+                <div class="cpl-spotlight-name">
                   <br />
-                  All worth your time.
+                  <h2>
+                    {playlists.length} playlist{' '}
+                    {playlists.length !== 1 ? 's' : ''}
+                    available for listening
+                  </h2>
+                  <br />
                 </div>
                 <p className="cpl-hero-sub">
-                  Curated collections from the NomPlayer community — explore
-                  what others are listening to and load their tracks into your
-                  queue.
+                  Custom playlist made by and for the community.\n Take a listen
+                  or add playlists to your queue!
                 </p>
+                <br />
                 <div className="cpl-hero-stats">
                   {[
                     [playlists.length, 'Playlists'],
@@ -437,13 +501,25 @@ export function CommunityPlaylistsView({
               {featured && (
                 <div className="cpl-featured-card">
                   <div className="cpl-featured-cover">
-                    <div
-                      style={{
-                        width: '100%',
-                        height: '100%',
-                        background: playlistGradient(featured.id),
-                      }}
-                    />
+                    {featured.firstThumbnail ? (
+                      <img
+                        src={featured.firstThumbnail}
+                        alt=""
+                        style={{
+                          width: '100%',
+                          height: '100%',
+                          objectFit: 'cover',
+                        }}
+                      />
+                    ) : (
+                      <div
+                        style={{
+                          width: '100%',
+                          height: '100%',
+                          background: playlistGradient(featured.id),
+                        }}
+                      />
+                    )}
                     <span className="cpl-track-badge">
                       {featured.trackCount} tracks
                     </span>
@@ -453,11 +529,12 @@ export function CommunityPlaylistsView({
                       <span className="cpl-spin-dot" />
                       Featured pick
                     </div>
-                    <div className="cpl-featured-name">"{featured.name}"</div>
+                    <div className="cpl-featured-name">{featured.name}</div>
                     <div className="cpl-featured-creator">
                       <CplAvatar
                         username={featured.profile?.username}
                         userId={featured.user_id}
+                        avatarUrl={featured.profile?.avatar_url}
                       />
                       <span>
                         by {getDisplayProfileName(featured.profile?.username)} ·{' '}
@@ -470,14 +547,14 @@ export function CommunityPlaylistsView({
                         onClick={() => handleLoad(featured)}
                         disabled={loadingId === featured.id}
                       >
-                        {loadingId === featured.id ? '…' : 'Load into queue'}
+                        {loadingId === featured.id ? '…' : 'Play Playlist'}
                       </button>
                       <button
                         className="cpl-action-btn"
                         onClick={() => handleAdd(featured)}
                         disabled={loadingId === featured.id}
                       >
-                        Add to my queue
+                        Add to My Queue
                       </button>
                     </div>
                   </div>
@@ -503,13 +580,25 @@ export function CommunityPlaylistsView({
                         title={`Load "${pl.name}"`}
                       >
                         <div className="cpl-new-cover">
-                          <div
-                            style={{
-                              width: '100%',
-                              height: '100%',
-                              background: playlistGradient(pl.id),
-                            }}
-                          />
+                          {pl.firstThumbnail ? (
+                            <img
+                              src={pl.firstThumbnail}
+                              alt=""
+                              style={{
+                                width: '100%',
+                                height: '100%',
+                                objectFit: 'cover',
+                              }}
+                            />
+                          ) : (
+                            <div
+                              style={{
+                                width: '100%',
+                                height: '100%',
+                                background: playlistGradient(pl.id),
+                              }}
+                            />
+                          )}
                           <span className="cpl-track-badge cpl-track-badge-sm">
                             {pl.trackCount}
                           </span>
@@ -520,6 +609,7 @@ export function CommunityPlaylistsView({
                             <CplAvatar
                               username={pl.profile?.username}
                               userId={pl.user_id}
+                              avatarUrl={pl.profile?.avatar_url}
                               size="xs"
                             />
                             <span>
@@ -579,6 +669,7 @@ export function CommunityPlaylistsView({
                     <CplAvatar
                       username={featured.profile?.username}
                       userId={featured.user_id}
+                      avatarUrl={featured.profile?.avatar_url}
                     />
                     <span>
                       by {getDisplayProfileName(featured.profile?.username)} ·{' '}
@@ -598,14 +689,31 @@ export function CommunityPlaylistsView({
                       onClick={() => handleAdd(featured)}
                       disabled={loadingId === featured.id}
                     >
-                      Add to queue
+                      Add to My Queue
                     </button>
                   </div>
                 </div>
-                <div
-                  className="cpl-spotlight-cover"
-                  style={{ background: playlistGradient(featured.id) }}
-                />
+                <div className="cpl-spotlight-cover">
+                  {featured.firstThumbnail ? (
+                    <img
+                      src={featured.firstThumbnail}
+                      alt=""
+                      style={{
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'cover',
+                      }}
+                    />
+                  ) : (
+                    <div
+                      style={{
+                        width: '100%',
+                        height: '100%',
+                        background: playlistGradient(featured.id),
+                      }}
+                    />
+                  )}
+                </div>
               </div>
             )}
 

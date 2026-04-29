@@ -5721,7 +5721,6 @@ body {
 .community-view-avatar-fallback svg {
   width: 22px;
   height: 22px;
-  fill: currentColor;
 }
 
 .community-view-text {
@@ -5872,6 +5871,141 @@ body {
 .community-option.selected .community-option-count {
   color: var(--accent-light);
   opacity: 0.8;
+}
+
+/* Expandable playlist row */
+.community-option-expandable {
+  display: flex;
+  align-items: center;
+  padding: 0;
+  gap: 0;
+}
+
+.community-option-expandable.selected {
+  background: var(--accent-faint, rgba(139, 92, 246, 0.12));
+}
+
+.community-option-main {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: inherit;
+  text-align: left;
+  min-width: 0;
+}
+
+.community-option-main:hover {
+  background: var(--surface-hover, rgba(255, 255, 255, 0.06));
+}
+
+.community-option-expand-btn {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 36px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-secondary);
+  padding: 0;
+  border-radius: 4px;
+  transition:
+    color 0.15s,
+    transform 0.2s;
+}
+
+.community-option-expand-btn:hover {
+  color: var(--text-primary);
+  background: var(--surface-hover, rgba(255, 255, 255, 0.06));
+}
+
+.community-option-expand-btn svg {
+  width: 14px;
+  height: 14px;
+  transition: transform 0.2s;
+}
+
+.community-option-expand-btn.open svg {
+  transform: rotate(180deg);
+}
+
+/* Indented sub-items */
+.community-option-sub {
+  padding-left: 28px;
+}
+
+/* Back-to-main option — styled as a regular list row */
+.community-playlists-back {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 12px;
+  background: none;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 400;
+  text-align: left;
+  transition: background 0.15s;
+}
+
+.community-playlists-back:hover {
+  background: var(--surface-hover, rgba(255, 255, 255, 0.06));
+}
+
+.community-playlists-back-chevron {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--bg-deep);
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.community-playlists-back-chevron svg {
+  width: 14px;
+  height: 14px;
+  transform: rotate(90deg);
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* Browse all button — styled as a regular option row */
+.community-option-browse {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 12px;
+  background: none;
+  border: none;
+  border-top: 1px solid var(--border);
+  cursor: pointer;
+  color: var(--accent, #7c3aed);
+  font-size: 13px;
+  font-weight: 500;
+  text-align: left;
+  transition: background 0.15s;
+}
+
+.community-option-browse:hover {
+  background: var(--surface-hover, rgba(255, 255, 255, 0.06));
 }
 
 .sidebar-title {

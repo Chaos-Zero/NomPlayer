@@ -85,6 +85,9 @@ export default function TopBar({
   isMenuOpen = false,
   onToggleMenu,
   hidePlaybackControls = false,
+  customPlaylists,
+  onUpdateCustomPlaylists,
+  onShowToast,
 }) {
   const isMobileLayout = useMediaQuery('(max-width: 960px)');
   const [urlValue, setUrlValue] = useState('');
@@ -159,7 +162,7 @@ export default function TopBar({
 
   const mobileNowPlayingText = currentVideoDisplayTitle;
   const playerActionLabel = isPlayerPage
-    ? 'Add to playlist'
+    ? 'Add to queue'
     : isMobileLayout
       ? 'Player'
       : 'Go to player';
@@ -553,13 +556,13 @@ export default function TopBar({
               onClick={isShuffleAvailable ? onShuffle : undefined}
               title={
                 isShuffleAvailable
-                  ? 'Shuffle playlist'
-                  : 'Play from My Playlist to use shuffle'
+                  ? 'Shuffle queue'
+                  : 'Play from My Queue to use shuffle'
               }
               aria-label={
                 isShuffleAvailable
-                  ? 'Shuffle playlist'
-                  : 'Play from My Playlist to use shuffle'
+                  ? 'Shuffle queue'
+                  : 'Play from My Queue to use shuffle'
               }
               aria-pressed={isShuffleEnabled}
               disabled={!isShuffleAvailable}
@@ -721,6 +724,9 @@ export default function TopBar({
                 onAddCatalogToPlaylist?.(videos);
                 setIsCatalogSearchOpen(false);
               }}
+              customPlaylists={customPlaylists}
+              onUpdateCustomPlaylists={onUpdateCustomPlaylists}
+              onShowToast={onShowToast}
               className="mobile-header-catalog-search"
               autoFocus={isCatalogSearchOpen}
               value={mobileSearchQuery}
@@ -843,8 +849,8 @@ export default function TopBar({
                         className={`btn btn-icon add-to-playlist-btn mobile-add-to-playlist-btn${isCurrentVideoInPlaylist ? ' hidden' : ''}`}
                         type="button"
                         onClick={() => onAddToPlaylist?.([currentVideo])}
-                        aria-label="Add to current playlist"
-                        title="Add to current playlist"
+                        aria-label="Add to Queue"
+                        title="Add to Queue"
                         disabled={!currentVideo}
                         tabIndex={effectiveInputOpen ? -1 : 0}
                       >
@@ -900,7 +906,7 @@ export default function TopBar({
                 <button
                   className="mobile-topbar-close"
                   type="button"
-                  aria-label="Close add to playlist"
+                  aria-label="Close add to queue"
                   onClick={closeInput}
                   tabIndex={effectiveInputOpen ? 0 : -1}
                 >
@@ -929,6 +935,9 @@ export default function TopBar({
                 supabase={supabase}
                 onPlayNow={onCatalogPlayNow}
                 onAddToPlaylist={onAddCatalogToPlaylist}
+                customPlaylists={customPlaylists}
+                onUpdateCustomPlaylists={onUpdateCustomPlaylists}
+                onShowToast={onShowToast}
               />
             </div>
           ) : (
@@ -975,7 +984,7 @@ export default function TopBar({
               <button
                 className="btn btn-icon url-close-btn"
                 type="button"
-                aria-label="Close add to playlist"
+                aria-label="Close add to queue"
                 onClick={closeInput}
                 tabIndex={effectiveInputOpen ? 0 : -1}
               >

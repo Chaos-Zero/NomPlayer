@@ -476,8 +476,8 @@ const VideoPlayer = forwardRef(function VideoPlayer(
           <button
             className={`btn btn-icon add-to-playlist-btn${isCurrentVideoInPlaylist ? ' hidden' : ''}`}
             onClick={() => onAddToPlaylist?.([video])}
-            title="Add to current playlist"
-            aria-label="Add to current playlist"
+            title="Add to Queue"
+            aria-label="Add to Queue"
           >
             <PlaylistPlusIcon />
           </button>
@@ -533,8 +533,8 @@ const VideoPlayer = forwardRef(function VideoPlayer(
               className={`player-overlay-chip shuffle${isShuffleEnabled ? ' active' : ''}`}
               type="button"
               onClick={onShuffle}
-              aria-label="Shuffle playlist"
-              title="Shuffle playlist"
+              aria-label="Shuffle queue"
+              title="Shuffle queue"
             >
               <ShuffleIcon />
             </button>

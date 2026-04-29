@@ -17,6 +17,7 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import { ContextMenuPortal } from './ContextMenuPortal';
 import CollectionAdder from './CollectionAdder.jsx';
+import CustomPlaylistSubmenu from './CustomPlaylistSubmenu.jsx';
 import ExportIcon from './ExportIcon.jsx';
 import YouTubeIcon from './YouTubeIcon.jsx';
 import {
@@ -424,6 +425,8 @@ export default function FavouritesPanel({
   onPlayList,
   globalActivityByVideoId = new Map(),
   onShowComments,
+  customPlaylists,
+  onUpdateCustomPlaylists,
 }) {
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -942,6 +945,14 @@ export default function FavouritesPanel({
             >
               Add to Current Playlist
             </button>
+            <CustomPlaylistSubmenu
+              videos={contextMenu.videos}
+              customPlaylists={customPlaylists}
+              onUpdateCustomPlaylists={onUpdateCustomPlaylists}
+              onShowToast={showToast}
+              onClose={() => setContextMenu(null)}
+              itemClassName="support-context-menu-item"
+            />
             <div className="context-menu-divider" />
             {tone !== 'nomination' && (
               <button

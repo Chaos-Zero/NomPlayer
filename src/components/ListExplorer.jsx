@@ -48,10 +48,8 @@ import {
   SpeechBubbleIcon,
   FilterIcon,
   StarIcon,
-  FolderIcon,
   ChevronRightIcon,
   ChevronDownIcon,
-  PlusIcon,
 } from './Icons.jsx';
 import { ContextMenuPortal } from './ContextMenuPortal';
 import ExportIcon from './ExportIcon.jsx';
@@ -1370,6 +1368,7 @@ export default function ListExplorer({
   onOpenSupportDropdown,
   onPlayExplorerList,
   onPlayCommunityListFromTrack,
+  onPlayCommunityPlaylist,
   catalogTrackByVideoId,
   initialView = 'lists',
   onRefreshFeedback,
@@ -1920,7 +1919,7 @@ export default function ListExplorer({
 
   const handleAddTrackToPlaylist = (video) => {
     onAddToPlaylist([video]);
-    onShowToast('Track added to playlist');
+    onShowToast('Track added to queue');
     closeContextMenu();
   };
 
@@ -2077,7 +2076,7 @@ export default function ListExplorer({
     }
 
     setListById(id, [...currentList, newTrack]);
-    onShowToast('Added track to playlist');
+    onShowToast('Added track to queue');
   };
 
   const handleAddAllToCurrent = (tracks) => {
@@ -2085,11 +2084,11 @@ export default function ListExplorer({
       (t) => !playlist.some((p) => p.videoId === t.videoId),
     );
     if (newTracks.length === 0) {
-      onShowToast('All tracks are already in your playlist');
+      onShowToast('All tracks are already in your queue');
       return;
     }
     onUpdatePlaylist([...playlist, ...newTracks]);
-    onShowToast(`Added ${newTracks.length} tracks to playlist`);
+    onShowToast(`Added ${newTracks.length} tracks to queue`);
   };
 
   const [showCurrentPlaylist, setShowCurrentPlaylist] = useState(true);
@@ -2473,7 +2472,7 @@ export default function ListExplorer({
                   className={`toolbar-toggle ${showCurrentPlaylist ? 'active' : ''}`}
                   onClick={() => setShowCurrentPlaylist(!showCurrentPlaylist)}
                 >
-                  My Playlist
+                  My Queue
                 </button>
                 <button
                   className={`toolbar-toggle ${showCustomPlaylists ? 'active' : ''}`}
@@ -2750,7 +2749,7 @@ export default function ListExplorer({
                 {showCurrentPlaylist && (
                   <ListExplorerColumn
                     id="current"
-                    title="My Playlist"
+                    title="My Queue"
                     subtitle={`${playlist.length} tracks`}
                     videos={playlist}
                     isFocused={focusedListId === 'current'}
@@ -2916,6 +2915,7 @@ export default function ListExplorer({
                     onExport={onExport}
                     onSavePlaylist={onSavePlaylist}
                     globalActivityByVideoId={globalActivityByVideoId}
+                    onPlayExplorerList={onPlayExplorerList}
                   />
                 )}
               </Motion.div>
@@ -2958,7 +2958,7 @@ export default function ListExplorer({
                 <CommunityPlaylistsView
                   supabase={supabase}
                   authUser={authUser}
-                  onLoadPlaylist={(videos) => onUpdatePlaylist(videos)}
+                  onPlayPlaylist={onPlayCommunityPlaylist}
                   onAddToPlaylist={(videos) => {
                     const existing = new Set(playlist.map((v) => v.videoId));
                     onUpdatePlaylist([
@@ -2996,7 +2996,7 @@ export default function ListExplorer({
                 onClick={() => handleAddTrackToPlaylist(contextMenu.video)}
               >
                 <PlaylistPlusIcon />
-                <span>Add to My Playlist</span>
+                <span>Add to My Queue</span>
               </button>
             )}
 
@@ -3033,7 +3033,6 @@ export default function ListExplorer({
                 setNewPlaylistName('');
               }}
             >
-              <FolderIcon />
               <span>Add to Custom Playlist</span>
               <ChevronRightIcon
                 className={`context-menu-chevron${playlistSubmenuOpen ? ' open' : ''}`}
@@ -3050,8 +3049,7 @@ export default function ListExplorer({
                       setTimeout(() => newPlaylistInputRef.current?.focus(), 0);
                     }}
                   >
-                    <PlusIcon />
-                    <span>Create New Playlist</span>
+                    <span>+ Create New Playlist</span>
                   </button>
                 ) : (
                   <input
@@ -3088,7 +3086,6 @@ export default function ListExplorer({
                       handleAddToCustomPlaylist(contextMenu.video, pl.id)
                     }
                   >
-                    <FolderIcon />
                     <span>{pl.name}</span>
                     <span className="context-playlist-submenu-count">
                       {pl.videos.length}

@@ -1,5 +1,6 @@
 import { useDeferredValue, useEffect, useRef, useState } from 'react';
 import { ContextMenuPortal } from './ContextMenuPortal';
+import CustomPlaylistSubmenu from './CustomPlaylistSubmenu.jsx';
 import {
   getTrackCatalogTournamentSummary,
   mapTrackCatalogEntryToVideo,
@@ -42,6 +43,9 @@ export default function TrackCatalogSearch({
   supabase,
   onPlayNow,
   onAddToPlaylist,
+  customPlaylists,
+  onUpdateCustomPlaylists,
+  onShowToast,
   className = '',
   inputId = 'track-catalog-search',
   value,
@@ -292,8 +296,16 @@ export default function TrackCatalogSearch({
               setContextMenu(null);
             }}
           >
-            Add to Playlist
+            Add to Queue
           </button>
+          <CustomPlaylistSubmenu
+            videos={[contextMenu.result.video]}
+            customPlaylists={customPlaylists}
+            onUpdateCustomPlaylists={onUpdateCustomPlaylists}
+            onShowToast={onShowToast}
+            onClose={() => setContextMenu(null)}
+            itemClassName="playlist-context-menu-item"
+          />
         </ContextMenuPortal>
       )}
     </div>

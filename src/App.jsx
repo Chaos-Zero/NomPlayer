@@ -1856,6 +1856,8 @@ export default function App() {
       return enrichedNominationList;
     } else if (activePlaylistView.type === 'support') {
       return enrichedSupportList;
+    } else if (activePlaylistView.type === 'community-playlist') {
+      return activePlaylistView.videos || [];
     }
     return displayPlaylist;
   }, [
@@ -1914,6 +1916,8 @@ export default function App() {
       return enrichedNominationList;
     } else if (playingPlaylistView.type === 'support') {
       return enrichedSupportList;
+    } else if (playingPlaylistView.type === 'community-playlist') {
+      return playingPlaylistView.videos || [];
     }
     return displayPlaylist;
   }, [
@@ -3554,6 +3558,30 @@ export default function App() {
     ],
   );
 
+  const handlePlayCommunityPlaylist = useCallback(
+    (videos, meta) => {
+      if (!videos.length) return;
+      const view = {
+        type: 'community-playlist',
+        videos,
+        name: meta?.name,
+        id: meta?.id,
+      };
+      setActivePlaylistView(view);
+      setPlayingPlaylistView(view);
+      if (meta?.id)
+        setLastCommunityPlaylist({ id: meta.id, name: meta.name, videos });
+      if (!transientVideo) {
+        transientResumeVideoIdRef.current = currentVideoIdRef.current;
+      }
+      setTransientVideo({ ...videos[0], source: 'community-playlist' });
+      setCurrentVideoId(null);
+      markVideoStarted(videos[0].videoId);
+      setIsPlaying(true);
+    },
+    [currentVideoIdRef, markVideoStarted, transientVideo],
+  );
+
   const handlePlayCommunityList = useCallback(
     (userId) => {
       const communityUser = communityNominations.find(
@@ -3672,6 +3700,30 @@ export default function App() {
         setActivePlaylistView({ type: 'personal' });
         setPlayingPlaylistView({ type: 'personal' });
         goToVideo(playlist[0].videoId, true);
+      } else {
+        const customPlaylist = customPlaylists.find((p) => p.id === id);
+        if (!customPlaylist || customPlaylist.videos.length === 0) return;
+        const { videos } = customPlaylist;
+        const view = {
+          type: 'community-playlist',
+          videos,
+          name: customPlaylist.name,
+          id: customPlaylist.id,
+        };
+        setActivePlaylistView(view);
+        setPlayingPlaylistView(view);
+        setLastCommunityPlaylist({
+          id: customPlaylist.id,
+          name: customPlaylist.name,
+          videos,
+        });
+        if (!transientVideo) {
+          transientResumeVideoIdRef.current = currentVideoIdRef.current;
+        }
+        setTransientVideo({ ...videos[0], source: 'community-playlist' });
+        setCurrentVideoId(null);
+        markVideoStarted(videos[0].videoId);
+        setIsPlaying(true);
       }
     },
     [
@@ -3679,6 +3731,7 @@ export default function App() {
       nominationList,
       supportList,
       playlist,
+      customPlaylists,
       goToVideo,
       currentVideoIdRef,
       markVideoStarted,
@@ -3722,7 +3775,8 @@ export default function App() {
     if (
       transientVideo?.source === 'community-view' ||
       transientVideo?.source === 'nominations-view' ||
-      transientVideo?.source === 'support-view'
+      transientVideo?.source === 'support-view' ||
+      transientVideo?.source === 'community-playlist'
     ) {
       const currentIndex = playingTracks.findIndex(
         (v) => v.videoId === transientVideo.videoId,
@@ -3769,7 +3823,8 @@ export default function App() {
     if (
       transientVideo?.source === 'community-view' ||
       transientVideo?.source === 'nominations-view' ||
-      transientVideo?.source === 'support-view'
+      transientVideo?.source === 'support-view' ||
+      transientVideo?.source === 'community-playlist'
     ) {
       const currentIndex = playingTracks.findIndex(
         (v) => v.videoId === transientVideo.videoId,
@@ -3832,7 +3887,8 @@ export default function App() {
       if (
         transientVideo.source === 'community-view' ||
         transientVideo.source === 'nominations-view' ||
-        transientVideo.source === 'support-view'
+        transientVideo.source === 'support-view' ||
+        transientVideo.source === 'community-playlist'
       ) {
         const currentIndex = playingTracks.findIndex(
           (v) => v.videoId === transientVideo.videoId,
@@ -4960,7 +5016,9 @@ export default function App() {
 
   // True when playing from a named list; false for one-off "play now" transients.
   const isPlayingFromList =
-    !transientVideo || transientVideo.source?.endsWith('-view') === true;
+    !transientVideo ||
+    transientVideo.source?.endsWith('-view') === true ||
+    transientVideo.source === 'community-playlist';
 
   const playingListLabel = useMemo(() => {
     if (!isPlayingFromList) return null;
@@ -4977,8 +5035,25 @@ export default function App() {
         ? `${displayName}'s Nominations`
         : 'Community Nominations';
     }
-    return 'My Playlist';
-  }, [isPlayingFromList, playingPlaylistView, communityNominations]);
+    if (playingPlaylistView.type === 'community-playlist') {
+      const playlistName = playingPlaylistView.name || 'Playlist';
+      const isOwnPlaylist = customPlaylists.some(
+        (p) => p.id === playingPlaylistView.id,
+      );
+      if (isOwnPlaylist && userProfile?.username) {
+        const displayName = getDisplayProfileName(userProfile.username);
+        return `${displayName}'s ${playlistName}`;
+      }
+      return playlistName;
+    }
+    return 'My Queue';
+  }, [
+    isPlayingFromList,
+    playingPlaylistView,
+    communityNominations,
+    customPlaylists,
+    userProfile,
+  ]);
 
   // activePlaylistView is already set to the correct type when a list plays,
   // so we only need to open/uncollapse the sidebar here.
@@ -4996,6 +5071,12 @@ export default function App() {
   }, [handleNavigate]);
 
   const [explorerInitialView, setExplorerInitialView] = useState('lists');
+  const [lastCommunityPlaylist, setLastCommunityPlaylist] = useState(null);
+
+  const handleNavigateToCommunityPlaylists = useCallback(() => {
+    setExplorerInitialView('community-playlists');
+    handleNavigate('listExplorer');
+  }, [handleNavigate]);
 
   const handleNavigateToExplorer = useCallback(() => {
     setExplorerInitialView('lists');
@@ -5153,7 +5234,7 @@ export default function App() {
                 title={
                   isShuffleAvailable
                     ? 'Shuffle'
-                    : 'Play from My Playlist to use shuffle'
+                    : 'Play from My Queue to use shuffle'
                 }
                 disabled={!isShuffleAvailable}
               >
@@ -5216,8 +5297,8 @@ export default function App() {
               className={`btn btn-icon add-to-playlist-btn detached-footer-add-btn${isCurrentVideoInPlaylist ? ' hidden' : ''}`}
               type="button"
               onClick={() => handleQueueFromSupportList([currentVideo])}
-              aria-label="Add to current playlist"
-              title="Add to current playlist"
+              aria-label="Add to Queue"
+              title="Add to Queue"
               disabled={!currentVideo}
             >
               <PlaylistPlusIcon />
@@ -5394,6 +5475,9 @@ export default function App() {
           }
           onExport={handleOpenExportModal}
           onSavePlaylist={handleCreateYTPlaylist}
+          customPlaylists={customPlaylists}
+          onUpdateCustomPlaylists={setCustomPlaylists}
+          onShowToast={(msg) => showDefaultAppToast(msg, 'dashboard')}
         />
 
         <main
@@ -5442,6 +5526,8 @@ export default function App() {
               nominationList={nominationList}
               onNominationsLoaded={handleNominationsLoaded}
               nominationRefreshToken={nominationRefreshToken}
+              customPlaylists={customPlaylists}
+              onUpdateCustomPlaylists={setCustomPlaylists}
             />
           )}
 
@@ -5470,6 +5556,8 @@ export default function App() {
                   dbCacheRef.current = { tracks, selectedVideoId };
                 }}
                 onFeedbackSaved={handleFeedbackSaved}
+                customPlaylists={customPlaylists}
+                onUpdateCustomPlaylists={setCustomPlaylists}
               />
             </Suspense>
           )}
@@ -5506,6 +5594,7 @@ export default function App() {
               onSavePlaylist={handleCreateYTPlaylist}
               onPlayExplorerList={handlePlayExplorerList}
               onPlayCommunityListFromTrack={handlePlayCommunityListFromTrack}
+              onPlayCommunityPlaylist={handlePlayCommunityPlaylist}
               catalogTrackByVideoId={catalogTrackByVideoId}
               initialView={explorerInitialView}
               onRefreshFeedback={refreshUserFeedback}
@@ -5582,6 +5671,15 @@ export default function App() {
               communityNominations={communityNominations}
               globalActivityByVideoId={globalActivityByVideoId}
               onShowComments={handleShowComments}
+              supabase={supabase}
+              lastCommunityPlaylist={lastCommunityPlaylist}
+              onPlayCommunityPlaylist={handlePlayCommunityPlaylist}
+              onNavigateToCommunityPlaylists={
+                handleNavigateToCommunityPlaylists
+              }
+              customPlaylists={customPlaylists}
+              onUpdateCustomPlaylists={setCustomPlaylists}
+              onShowToast={(msg) => showDefaultAppToast(msg, 'dashboard')}
             />
             {!effectivePlaylistCollapsed && apiKeyMissing && (
               <div className="api-key-notice">
@@ -5666,6 +5764,8 @@ export default function App() {
           onPlayList={() => handlePlayExplorerList('support')}
           globalActivityByVideoId={globalActivityByVideoId}
           onShowComments={handleShowComments}
+          customPlaylists={customPlaylists}
+          onUpdateCustomPlaylists={setCustomPlaylists}
         />
       )}
 
@@ -5705,6 +5805,8 @@ export default function App() {
           highlightAdd={isAddNominationHighlighted}
           globalActivityByVideoId={globalActivityByVideoId}
           onShowComments={handleShowComments}
+          customPlaylists={customPlaylists}
+          onUpdateCustomPlaylists={setCustomPlaylists}
         />
       )}
 
