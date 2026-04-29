@@ -76,6 +76,7 @@ import {
   mapTrackCatalogEntryToVideo,
 } from './lib/trackCatalog.js';
 import { fetchUserFeedback } from './lib/feedback.js';
+import { fetchDashboardNominationUpdates } from './lib/dashboard.js';
 import { reportError } from './lib/errorReporter.js';
 import { getSupabaseClient, isSupabaseConfigured } from './lib/supabase.js';
 import {
@@ -623,6 +624,19 @@ export default function App() {
   const handleNominationsLoaded = useCallback((updates) => {
     setCommunityNominations(updates);
   }, []);
+
+  useEffect(() => {
+    if (!isAuthReady || !supabase) return;
+    let cancelled = false;
+    fetchDashboardNominationUpdates(supabase, null)
+      .then((data) => {
+        if (!cancelled) setCommunityNominations(data);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [isAuthReady, supabase, nominationRefreshToken]);
 
   const handleFeedbackSaved = useCallback((videoId, { rating, note }) => {
     if (!videoId) return;
@@ -1856,6 +1870,11 @@ export default function App() {
       return enrichedNominationList;
     } else if (activePlaylistView.type === 'support') {
       return enrichedSupportList;
+    } else if (activePlaylistView.type === 'custom-playlist') {
+      return (
+        customPlaylists.find((p) => p.id === activePlaylistView.id)?.videos ||
+        []
+      );
     } else if (activePlaylistView.type === 'community-playlist') {
       return activePlaylistView.videos || [];
     }
@@ -1868,6 +1887,7 @@ export default function App() {
     enrichedNominationList,
     enrichedSupportList,
     displayPlaylist,
+    customPlaylists,
   ]);
 
   const playingTracks = useMemo(() => {
@@ -1916,6 +1936,11 @@ export default function App() {
       return enrichedNominationList;
     } else if (playingPlaylistView.type === 'support') {
       return enrichedSupportList;
+    } else if (playingPlaylistView.type === 'custom-playlist') {
+      return (
+        customPlaylists.find((p) => p.id === playingPlaylistView.id)?.videos ||
+        []
+      );
     } else if (playingPlaylistView.type === 'community-playlist') {
       return playingPlaylistView.videos || [];
     }
@@ -1928,6 +1953,7 @@ export default function App() {
     enrichedNominationList,
     enrichedSupportList,
     displayPlaylist,
+    customPlaylists,
   ]);
 
   const currentDisplayIndex = useMemo(() => {
@@ -2220,11 +2246,45 @@ export default function App() {
           ...unresolvedNominationEntries,
         ];
 
+        // Merge custom playlists: DB is the source of truth for resolved tracks,
+        // but JSONB preserves videos that never got a trackId (e.g. queue-only tracks).
+        // For each DB playlist, append any JSONB videos with the same id that are
+        // absent from the DB version.  New playlists that exist only in JSONB (not
+        // yet flushed to DB) are appended wholesale.
+        const latestJsonbCustomPlaylists =
+          persistedQueue.playerState?.customPlaylists ??
+          normalizedState.customPlaylists ??
+          [];
+        const dbCustomPlaylistIds = new Set(
+          enrichedDbState.customPlaylists.map((p) => p.id),
+        );
+        const mergedCustomPlaylists = enrichedDbState.customPlaylists.map(
+          (dbPl) => {
+            const jsonbPl = latestJsonbCustomPlaylists.find(
+              (p) => p.id === dbPl.id,
+            );
+            if (!jsonbPl) return dbPl;
+            const dbVideoIds = new Set(dbPl.videos.map((v) => v.videoId));
+            const unresolvedVideos = jsonbPl.videos.filter(
+              (v) => !v.trackId && !dbVideoIds.has(v.videoId),
+            );
+            return unresolvedVideos.length
+              ? { ...dbPl, videos: [...dbPl.videos, ...unresolvedVideos] }
+              : dbPl;
+          },
+        );
+        // Append any playlists that exist in JSONB but not yet in the DB
+        for (const jsonbPl of latestJsonbCustomPlaylists) {
+          if (!dbCustomPlaylistIds.has(jsonbPl.id)) {
+            mergedCustomPlaylists.push(jsonbPl);
+          }
+        }
+
         const baseHydratedState = normalizePersistedPlayerState({
           ...normalizedState,
           ...(persistedQueue.playerState || {}),
           playlist: enrichedDbState.playlist,
-          customPlaylists: enrichedDbState.customPlaylists,
+          customPlaylists: mergedCustomPlaylists,
           supportList: enrichedDbState.supportList,
           nominationList: mergedNominationList,
           listenedStatusById: normalizedState.listenedStatusById,
@@ -2253,8 +2313,20 @@ export default function App() {
           hydratedState.nominationList ?? null;
         lastSyncedSupportListRef.current = hydratedState.supportList ?? null;
         lastSyncedPlaylistRef.current = hydratedState.playlist ?? null;
-        lastSyncedCustomPlaylistsRef.current =
-          hydratedState.customPlaylists ?? null;
+        // If JSONB had playlists/tracks not yet in the DB, point the ref at the
+        // DB-only snapshot so the next sync sees a diff and re-saves them.
+        const hasUnsyncedCustomData =
+          mergedCustomPlaylists.length !==
+            enrichedDbState.customPlaylists.length ||
+          mergedCustomPlaylists.some((pl) => {
+            const dbPl = enrichedDbState.customPlaylists.find(
+              (p) => p.id === pl.id,
+            );
+            return !dbPl || pl.videos.length !== dbPl.videos.length;
+          });
+        lastSyncedCustomPlaylistsRef.current = hasUnsyncedCustomData
+          ? enrichedDbState.customPlaylists
+          : (hydratedState.customPlaylists ?? null);
         const pendingGuestImportState = pendingGuestImportStateRef.current;
         pendingGuestImportStateRef.current = null;
 
@@ -3570,7 +3642,12 @@ export default function App() {
       setActivePlaylistView(view);
       setPlayingPlaylistView(view);
       if (meta?.id)
-        setLastCommunityPlaylist({ id: meta.id, name: meta.name, videos });
+        setLastCommunityPlaylist({
+          id: meta.id,
+          name: meta.name,
+          videos,
+          type: 'community-playlist',
+        });
       if (!transientVideo) {
         transientResumeVideoIdRef.current = currentVideoIdRef.current;
       }
@@ -3662,51 +3739,57 @@ export default function App() {
   );
 
   const handlePlayExplorerList = useCallback(
-    (id) => {
+    (id, startVideoId = null) => {
       if (id.startsWith('peer-')) {
         handlePlayCommunityList(id.replace('peer-', ''));
       } else if (id === 'nominations') {
         if (nominationList.length === 0) return;
         setActivePlaylistView({ type: 'nominations' });
         setPlayingPlaylistView({ type: 'nominations' });
-        const videoId = nominationList[0].videoId;
+        const startNom =
+          (startVideoId &&
+            nominationList.find((v) => v.videoId === startVideoId)) ||
+          nominationList[0];
         if (!transientVideo) {
           transientResumeVideoIdRef.current = currentVideoIdRef.current;
         }
-        setTransientVideo({
-          ...nominationList[0],
-          source: 'nominations-view',
-        });
+        setTransientVideo({ ...startNom, source: 'nominations-view' });
         setCurrentVideoId(null);
-        markVideoStarted(videoId);
+        markVideoStarted(startNom.videoId);
         setIsPlaying(true);
       } else if (id === 'support') {
         if (supportList.length === 0) return;
         setActivePlaylistView({ type: 'support' });
         setPlayingPlaylistView({ type: 'support' });
-        const videoId = supportList[0].videoId;
+        const startSup =
+          (startVideoId &&
+            supportList.find((v) => v.videoId === startVideoId)) ||
+          supportList[0];
         if (!transientVideo) {
           transientResumeVideoIdRef.current = currentVideoIdRef.current;
         }
-        setTransientVideo({
-          ...supportList[0],
-          source: 'support-view',
-        });
+        setTransientVideo({ ...startSup, source: 'support-view' });
         setCurrentVideoId(null);
-        markVideoStarted(videoId);
+        markVideoStarted(startSup.videoId);
         setIsPlaying(true);
       } else if (id === 'current' || id === 'personal') {
         if (playlist.length === 0) return;
         setActivePlaylistView({ type: 'personal' });
         setPlayingPlaylistView({ type: 'personal' });
-        goToVideo(playlist[0].videoId, true);
+        const targetVideoId =
+          startVideoId && playlist.some((v) => v.videoId === startVideoId)
+            ? startVideoId
+            : playlist[0].videoId;
+        goToVideo(targetVideoId, true);
       } else {
         const customPlaylist = customPlaylists.find((p) => p.id === id);
         if (!customPlaylist || customPlaylist.videos.length === 0) return;
         const { videos } = customPlaylist;
+        const startVideo =
+          (startVideoId && videos.find((v) => v.videoId === startVideoId)) ||
+          videos[0];
         const view = {
-          type: 'community-playlist',
-          videos,
+          type: 'custom-playlist',
           name: customPlaylist.name,
           id: customPlaylist.id,
         };
@@ -3715,14 +3798,14 @@ export default function App() {
         setLastCommunityPlaylist({
           id: customPlaylist.id,
           name: customPlaylist.name,
-          videos,
+          type: 'custom-playlist',
         });
         if (!transientVideo) {
           transientResumeVideoIdRef.current = currentVideoIdRef.current;
         }
-        setTransientVideo({ ...videos[0], source: 'community-playlist' });
+        setTransientVideo({ ...startVideo, source: 'community-playlist' });
         setCurrentVideoId(null);
-        markVideoStarted(videos[0].videoId);
+        markVideoStarted(startVideo.videoId);
         setIsPlaying(true);
       }
     },
@@ -5046,6 +5129,12 @@ export default function App() {
       }
       return playlistName;
     }
+    if (playingPlaylistView.type === 'custom-playlist') {
+      const customPlaylist = customPlaylists.find(
+        (p) => p.id === playingPlaylistView.id,
+      );
+      return customPlaylist?.name || 'My Playlist';
+    }
     return 'My Queue';
   }, [
     isPlayingFromList,
@@ -5638,6 +5727,14 @@ export default function App() {
                   handleReorderNominationList(newTracks);
                 } else if (activePlaylistView.type === 'support') {
                   handleReorderSupportList(newTracks);
+                } else if (activePlaylistView.type === 'custom-playlist') {
+                  setCustomPlaylists((prev) =>
+                    prev.map((p) =>
+                      p.id === activePlaylistView.id
+                        ? { ...p, videos: newTracks }
+                        : p,
+                    ),
+                  );
                 } else {
                   handleReorderPlaylist(newTracks);
                 }
@@ -5655,7 +5752,25 @@ export default function App() {
                   showRemove: false,
                 })
               }
-              onRemoveFromPlaylist={handleRemoveFromPlaylist}
+              onRemoveFromPlaylist={(videoIdsOrId) => {
+                if (activePlaylistView.type === 'custom-playlist') {
+                  const ids = new Set(
+                    Array.isArray(videoIdsOrId) ? videoIdsOrId : [videoIdsOrId],
+                  );
+                  setCustomPlaylists((prev) =>
+                    prev.map((p) =>
+                      p.id === activePlaylistView.id
+                        ? {
+                            ...p,
+                            videos: p.videos.filter((v) => !ids.has(v.videoId)),
+                          }
+                        : p,
+                    ),
+                  );
+                } else {
+                  handleRemoveFromPlaylist(videoIdsOrId);
+                }
+              }}
               onAddDirectItems={handleQueueFromSupportList}
               retiredVideoIds={retiredVideoIds}
               pendingMetadataCount={tracksNeedingMetadata.length}
@@ -5673,7 +5788,7 @@ export default function App() {
               onShowComments={handleShowComments}
               supabase={supabase}
               lastCommunityPlaylist={lastCommunityPlaylist}
-              onPlayCommunityPlaylist={handlePlayCommunityPlaylist}
+              onPlayCustomPlaylist={handlePlayExplorerList}
               onNavigateToCommunityPlaylists={
                 handleNavigateToCommunityPlaylists
               }

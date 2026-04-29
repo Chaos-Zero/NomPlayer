@@ -1159,7 +1159,14 @@ export async function syncCustomPlaylists(supabase, userId, customPlaylists) {
       .select('id')
       .single();
 
-    if (plError) continue;
+    if (plError) {
+      console.error(
+        'syncCustomPlaylists: failed to upsert playlist',
+        pl.name,
+        plError,
+      );
+      continue;
+    }
     playlistId = upsertedPl.id;
     // ensure local object gets the actual UUID if it didn't have one
     if (!isUuid) {

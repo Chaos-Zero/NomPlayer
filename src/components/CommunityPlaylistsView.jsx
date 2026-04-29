@@ -171,6 +171,7 @@ export function CommunityPlaylistsView({
   const [userSearch, setUserSearch] = useState('');
   const [sortBy, setSortBy] = useState('newest');
   const [featuredSeed, setFeaturedSeed] = useState(Math.random());
+  const authUserId = authUser?.id ?? null;
 
   const fetchPlaylists = useCallback(async () => {
     setIsLoading(true);
@@ -183,8 +184,8 @@ export function CommunityPlaylistsView({
         .eq('is_active_queue', false)
         .order('created_at', { ascending: false });
 
-      if (authUser?.id) {
-        query = query.or(`is_public.eq.true,user_id.eq.${authUser.id}`);
+      if (authUserId) {
+        query = query.or(`is_public.eq.true,user_id.eq.${authUserId}`);
       } else {
         query = query.eq('is_public', true);
       }
@@ -246,7 +247,7 @@ export function CommunityPlaylistsView({
     } finally {
       setIsLoading(false);
     }
-  }, [supabase, authUser, onShowToast]);
+  }, [supabase, authUserId, onShowToast]);
 
   useEffect(() => {
     if (!supabase) return;

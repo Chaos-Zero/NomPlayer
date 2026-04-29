@@ -435,7 +435,7 @@ export default function PlaylistSidebar({
   onShowComments,
   supabase = null,
   lastCommunityPlaylist = null,
-  onPlayCommunityPlaylist,
+  onPlayCustomPlaylist,
   onNavigateToCommunityPlaylists,
   customPlaylists,
   onUpdateCustomPlaylists,
@@ -443,7 +443,7 @@ export default function PlaylistSidebar({
 }) {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
-  const [sidebarPlaylists, setSidebarPlaylists] = useState([]);
+  const [sidebarPlaylists, setSidebarPlaylists] = useState(null);
   const [playlistsExpanded, setPlaylistsExpanded] = useState(false);
   const [playlistLoadingId, setPlaylistLoadingId] = useState(null);
   const sensors = useSensors(
@@ -491,10 +491,12 @@ export default function PlaylistSidebar({
     [playlist, selectedIdSet],
   );
 
+  const isReadOnlyView = activePlaylistView.type === 'community-playlist';
   const canReorder =
     !selectionMode &&
     (!isShuffleEnabled || showOriginalOrder) &&
-    !isSortingByRating;
+    !isSortingByRating &&
+    !isReadOnlyView;
   useEffect(() => {
     setSelectionMode(false);
     setSelectedIds([]);
@@ -573,30 +575,47 @@ export default function PlaylistSidebar({
     };
   }, [isDropdownOpen]);
 
+  // Reset cache when auth changes so the next dropdown open fetches fresh data
   useEffect(() => {
-    if (!isDropdownOpen || !supabase || sidebarPlaylists.length > 0) return;
+    setSidebarPlaylists(null);
+  }, [authUser?.id]);
+
+  useEffect(() => {
+    // null = not yet fetched; array (even empty) = already fetched, don't retry
+    if (!isDropdownOpen || !supabase || sidebarPlaylists !== null) return;
     let cancelled = false;
-    supabase
+    let query = supabase
       .from('user_playlists')
       .select('id, name, created_at, user_playlist_tracks(count)')
       .eq('is_active_queue', false)
-      .eq('is_public', true)
       .order('created_at', { ascending: false })
-      .limit(20)
-      .then(({ data }) => {
-        if (cancelled) return;
-        setSidebarPlaylists(
-          (data || []).map((pl) => ({
-            id: pl.id,
-            name: pl.name,
-            trackCount: Number(pl.user_playlist_tracks?.[0]?.count ?? 0),
-          })),
-        );
-      });
+      .limit(20);
+
+    if (authUser?.id) {
+      query = query.or(`is_public.eq.true,user_id.eq.${authUser.id}`);
+    } else {
+      query = query.eq('is_public', true);
+    }
+
+    query.then(({ data, error }) => {
+      if (cancelled) return;
+      if (error) {
+        console.error('Sidebar playlist fetch error:', error);
+        setSidebarPlaylists([]);
+        return;
+      }
+      setSidebarPlaylists(
+        (data || []).map((pl) => ({
+          id: pl.id,
+          name: pl.name,
+          trackCount: Number(pl.user_playlist_tracks?.[0]?.count ?? 0),
+        })),
+      );
+    });
     return () => {
       cancelled = true;
     };
-  }, [isDropdownOpen, supabase, sidebarPlaylists.length]);
+  }, [isDropdownOpen, supabase, sidebarPlaylists, authUser?.id]);
 
   useEffect(() => {
     if (!isDropdownOpen) setPlaylistsExpanded(false);
@@ -713,7 +732,8 @@ export default function PlaylistSidebar({
     const isNominationsView = activePlaylistView.type === 'nominations';
     const isSupportView = activePlaylistView.type === 'support';
     const isCommunityPlaylistView =
-      activePlaylistView.type === 'community-playlist';
+      activePlaylistView.type === 'community-playlist' ||
+      activePlaylistView.type === 'custom-playlist';
 
     const activeUser = isCommunityView
       ? communityNominations.find((u) => u.userId === activePlaylistView.userId)
@@ -852,12 +872,18 @@ export default function PlaylistSidebar({
                       aria-selected={isCommunityPlaylistView}
                       onClick={() => {
                         if (lastCommunityPlaylist) {
-                          onSwitchView({
-                            type: 'community-playlist',
-                            videos: lastCommunityPlaylist.videos,
-                            name: lastCommunityPlaylist.name,
-                            id: lastCommunityPlaylist.id,
-                          });
+                          if (
+                            lastCommunityPlaylist.type === 'custom-playlist'
+                          ) {
+                            onPlayCustomPlaylist?.(lastCommunityPlaylist.id);
+                          } else {
+                            onSwitchView({
+                              type: 'community-playlist',
+                              videos: lastCommunityPlaylist.videos,
+                              name: lastCommunityPlaylist.name,
+                              id: lastCommunityPlaylist.id,
+                            });
+                          }
                         } else {
                           onNavigateToCommunityPlaylists?.();
                         }
@@ -878,7 +904,12 @@ export default function PlaylistSidebar({
                         </span>
                         {isCommunityPlaylistView && (
                           <span className="community-option-count">
-                            {activePlaylistView.videos?.length ?? 0} tracks
+                            {activePlaylistView.type === 'custom-playlist'
+                              ? (customPlaylists?.find(
+                                  (p) => p.id === activePlaylistView.id,
+                                )?.videos?.length ?? 0)
+                              : (activePlaylistView.videos?.length ?? 0)}{' '}
+                            tracks
                           </span>
                         )}
                       </div>
@@ -952,7 +983,7 @@ export default function PlaylistSidebar({
                     </div>
                   </button>
 
-                  {sidebarPlaylists.length === 0 && (
+                  {sidebarPlaylists === null && (
                     <div
                       className="community-option-count"
                       style={{ padding: '8px 16px' }}
@@ -961,20 +992,47 @@ export default function PlaylistSidebar({
                     </div>
                   )}
 
-                  {sidebarPlaylists.map((pl) => (
+                  {sidebarPlaylists !== null &&
+                    sidebarPlaylists.length === 0 && (
+                      <div
+                        className="community-option-count"
+                        style={{
+                          padding: '8px 16px',
+                          color: 'var(--text-muted)',
+                        }}
+                      >
+                        No playlists found
+                      </div>
+                    )}
+
+                  {(sidebarPlaylists || []).map((pl) => (
                     <button
                       key={pl.id}
                       className={`community-option${isCommunityPlaylistView && activePlaylistView.id === pl.id ? ' selected' : ''}`}
                       disabled={playlistLoadingId === pl.id}
                       onClick={async () => {
+                        const isOwn = customPlaylists?.some(
+                          (p) => p.id === pl.id,
+                        );
+                        if (isOwn) {
+                          onSwitchView({
+                            type: 'custom-playlist',
+                            name: pl.name,
+                            id: pl.id,
+                          });
+                          setIsDropdownOpen(false);
+                          return;
+                        }
                         if (!supabase) return;
                         setPlaylistLoadingId(pl.id);
                         try {
                           const videos = await fetchPlaylistTracks(pl.id);
                           if (videos.length) {
-                            onPlayCommunityPlaylist?.(videos, {
-                              id: pl.id,
+                            onSwitchView({
+                              type: 'community-playlist',
+                              videos,
                               name: pl.name,
+                              id: pl.id,
                             });
                           }
                         } finally {
@@ -1347,21 +1405,23 @@ export default function PlaylistSidebar({
           >
             Select all
           </button>
-          <button
-            className="fav-panel-action-btn selection-accent"
-            type="button"
-            onClick={() => {
-              if (!selectedVideos.length) return;
-              const removedIds = selectedVideos.map((video) => video.videoId);
-              setSelectedIds([]);
-              onRemoveFromPlaylist(removedIds);
-            }}
-            disabled={selectedVideos.length === 0}
-          >
-            {activePlaylistView.type === 'personal'
-              ? 'Remove from Queue'
-              : 'Remove from List'}
-          </button>
+          {!isReadOnlyView && (
+            <button
+              className="fav-panel-action-btn selection-accent"
+              type="button"
+              onClick={() => {
+                if (!selectedVideos.length) return;
+                const removedIds = selectedVideos.map((video) => video.videoId);
+                setSelectedIds([]);
+                onRemoveFromPlaylist(removedIds);
+              }}
+              disabled={selectedVideos.length === 0}
+            >
+              {activePlaylistView.type === 'personal'
+                ? 'Remove from Queue'
+                : 'Remove from List'}
+            </button>
+          )}
         </div>
       )}
       {!isCollapsed && (
@@ -1567,7 +1627,7 @@ export default function PlaylistSidebar({
               to Queue
             </button>
           )}
-          {activePlaylistView.type !== 'community' && (
+          {!isReadOnlyView && activePlaylistView.type !== 'community' && (
             <>
               {authUser && (
                 <button

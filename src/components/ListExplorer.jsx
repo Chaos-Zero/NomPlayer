@@ -790,10 +790,7 @@ function ListExplorerColumn({
                     </option>
                   ))}
                 </select>
-                <ChevronDownIcon
-                  className="playlist-selector-chevron"
-                  onClick={() => playlistSelectRef.current?.click()}
-                />
+                <ChevronDownIcon className="playlist-selector-chevron" />
               </div>
             </div>
           ) : (
@@ -1401,6 +1398,8 @@ export default function ListExplorer({
   const [remoteTrackData, setRemoteTrackData] = useState(null);
   const [dragButton, setDragButton] = useState(0);
   const gridRef = useRef(null);
+  const hasAutoOpenedCustomPlaylists = useRef(false);
+  const [showCustomPlaylists, setShowCustomPlaylists] = useState(false);
 
   // Initialize active custom playlist if not set
   useEffect(() => {
@@ -1408,6 +1407,17 @@ export default function ListExplorer({
       setActiveCustomPlaylistId(customPlaylists[0].id);
     }
   }, [customPlaylists, activeCustomPlaylistId]);
+
+  // Auto-show custom playlists column on first hydration (login or first create)
+  useEffect(() => {
+    if (
+      !hasAutoOpenedCustomPlaylists.current &&
+      (customPlaylists?.length || 0) > 0
+    ) {
+      hasAutoOpenedCustomPlaylists.current = true;
+      setShowCustomPlaylists(true);
+    }
+  }, [customPlaylists]);
 
   // Reset selection when switching views
   useEffect(() => {
@@ -1911,6 +1921,17 @@ export default function ListExplorer({
         video.videoId,
         col?.videos ?? [video],
       );
+    } else if (
+      sourceListId === 'nominations' ||
+      sourceListId === 'support' ||
+      sourceListId === 'current'
+    ) {
+      onPlayExplorerList(sourceListId, video.videoId);
+    } else if (
+      activeCustomPlaylistId &&
+      sourceListId === activeCustomPlaylistId
+    ) {
+      onPlayExplorerList(activeCustomPlaylistId, video.videoId);
     } else {
       onPlayNow(video);
     }
@@ -2092,7 +2113,6 @@ export default function ListExplorer({
   };
 
   const [showCurrentPlaylist, setShowCurrentPlaylist] = useState(true);
-  const [showCustomPlaylists, setShowCustomPlaylists] = useState(false);
 
   // Find the currently selected track object from ALL visible lists
   const selectedTrack = useMemo(() => {
@@ -2674,7 +2694,9 @@ export default function ListExplorer({
                   isFocused={focusedListId === 'nominations'}
                   onFocus={() => setFocusedListId('nominations')}
                   onUnfocus={() => setFocusedListId(null)}
-                  onPlayNow={onPlayNow}
+                  onPlayNow={(video) =>
+                    onPlayExplorerList('nominations', video.videoId)
+                  }
                   colorVar="--accent"
                   userToggle={
                     authUser?.profile
@@ -2719,7 +2741,9 @@ export default function ListExplorer({
                   isFocused={focusedListId === 'support'}
                   onFocus={() => setFocusedListId('support')}
                   onUnfocus={() => setFocusedListId(null)}
-                  onPlayNow={onPlayNow}
+                  onPlayNow={(video) =>
+                    onPlayExplorerList('support', video.videoId)
+                  }
                   colorVar="--support-orange"
                   onUpdateComment={(videoId, comment) =>
                     handleUpdateComment('support', videoId, comment)
@@ -2755,7 +2779,9 @@ export default function ListExplorer({
                     isFocused={focusedListId === 'current'}
                     onFocus={() => setFocusedListId('current')}
                     onUnfocus={() => setFocusedListId(null)}
-                    onPlayNow={onPlayNow}
+                    onPlayNow={(video) =>
+                      onPlayExplorerList('current', video.videoId)
+                    }
                     colorVar="--playlist-white"
                     onUpdateComment={(videoId, comment) =>
                       handleUpdateComment('current', videoId, comment)
@@ -2870,7 +2896,9 @@ export default function ListExplorer({
                     isFocused={focusedListId === activeCustomPlaylist.id}
                     onFocus={() => setFocusedListId(activeCustomPlaylist.id)}
                     onUnfocus={() => setFocusedListId(null)}
-                    onPlayNow={onPlayNow}
+                    onPlayNow={(video) =>
+                      onPlayExplorerList(activeCustomPlaylist.id, video.videoId)
+                    }
                     colorVar="--custom-blue"
                     onUpdateComment={(videoId, comment) =>
                       handleUpdateComment(

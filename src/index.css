@@ -10962,9 +10962,9 @@ body.is-resizing .resize-handle {
 }
 
 .list-explorer-playlist-selector-wrapper {
+  position: relative;
   display: flex;
   align-items: center;
-  gap: 4px;
   min-width: 0;
 }
 
@@ -10975,6 +10975,7 @@ body.is-resizing .resize-handle {
   font-weight: 700;
   color: var(--text-primary);
   padding: 0;
+  padding-right: 22px;
   cursor: pointer;
   outline: none;
   appearance: none;
@@ -10988,15 +10989,13 @@ body.is-resizing .resize-handle {
 }
 
 .playlist-selector-chevron {
+  position: absolute;
+  right: 0;
   width: 18px;
   height: 18px;
   flex-shrink: 0;
   opacity: 0.5;
-  cursor: pointer;
-}
-
-.playlist-selector-chevron:hover {
-  opacity: 0.9;
+  pointer-events: none;
 }
 
 .list-explorer-column-btn.danger:hover {
