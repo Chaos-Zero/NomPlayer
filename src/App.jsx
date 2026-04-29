@@ -3591,13 +3591,15 @@ export default function App() {
     (userId, startVideoId, nominations) => {
       let communityUser = communityNominations.find((u) => u.userId === userId);
 
-      if (!communityUser && nominations?.length > 0) {
+      if (nominations?.length > 0) {
         communityUser = { userId, nominations };
-        setCommunityNominations((prev) =>
-          prev.some((u) => u.userId === userId)
-            ? prev
-            : [...prev, communityUser],
-        );
+        setCommunityNominations((prev) => {
+          const exists = prev.some((u) => u.userId === userId);
+          if (exists) {
+            return prev.map((u) => (u.userId === userId ? communityUser : u));
+          }
+          return [...prev, communityUser];
+        });
       }
 
       if (!communityUser || communityUser.nominations.length === 0) return;

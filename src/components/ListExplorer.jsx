@@ -1447,8 +1447,7 @@ export default function ListExplorer({
     const fetchPeerLists = async () => {
       if (!supabase) return;
       const { data, error } = await supabase.rpc(
-        'get_dashboard_nomination_lists',
-        { limit_count: 20 },
+        'get_community_nominations_catalog',
       );
       if (!error && data) {
         setAllPeerLists(data);
