@@ -1,7 +1,376 @@
 {
-  "exportedAt": "2026-04-18T01:52:57.188Z",
-  "totalCount": 4,
+  "exportedAt": "2026-04-30T08:03:33.486Z",
+  "totalCount": 6,
   "users": [
+    {
+      "user_id": "4e4a8c44-6dd3-43d7-8057-8d09a396d98e",
+      "username": "dc:azuarc",
+      "avatar_url": "https://cdn.discordapp.com/avatars/165663829135458305/0c6fd993b2868794b13ac011d4c1d74a.png",
+      "gamefaqs_username": "azuarc",
+      "updated_at": "2026-04-29T18:32:09.435816+00:00",
+      "nominations": [
+        {
+          "title": "Chrono Trigger - Schala’s Theme",
+          "trackId": "cc942f94-a198-4a5f-b2e7-6b5c748885df",
+          "videoId": "bQ6kaNcsw4Q",
+          "gameTitle": "Chrono Trigger",
+          "trackTitle": "Schala’s Theme",
+          "channelTitle": null,
+          "displayTitle": "Chrono Trigger - Schala’s Theme"
+        },
+        {
+          "title": "Silver Surfer - Stage 1",
+          "trackId": "5a0a51a3-5494-4fcb-93ae-434d12327203",
+          "videoId": "BGNSHNf-nlU",
+          "gameTitle": "Silver Surfer",
+          "trackTitle": "Stage 1",
+          "channelTitle": null,
+          "displayTitle": "Silver Surfer - Stage 1"
+        },
+        {
+          "title": "Lost Odyssey - Dark Saint",
+          "trackId": "1c301823-13fb-4129-93e1-29ad7203b2de",
+          "videoId": "nI3tq4AP5E4",
+          "gameTitle": "Lost Odyssey",
+          "trackTitle": "Dark Saint",
+          "channelTitle": null,
+          "displayTitle": "Lost Odyssey - Dark Saint"
+        },
+        {
+          "title": "One Must Fall 2097 - Menu",
+          "trackId": "b604a995-e171-446c-810c-da1807cf13bd",
+          "videoId": "i0FNUDLdT4A",
+          "gameTitle": "One Must Fall 2097",
+          "trackTitle": "Menu",
+          "channelTitle": null,
+          "displayTitle": "One Must Fall 2097 - Menu"
+        },
+        {
+          "title": "Guilty Gear X - Awe of She",
+          "trackId": "2b876601-bf94-413f-8da9-1481b5b01410",
+          "videoId": "u9LtKHiVRCw",
+          "gameTitle": "Guilty Gear X",
+          "trackTitle": "Awe of She",
+          "channelTitle": null,
+          "displayTitle": "Guilty Gear X - Awe of She"
+        },
+        {
+          "title": "Danganronpa: Tripper Happy Havoc - Discussion -HOPE VS DESPAIR-",
+          "trackId": "b9ed05b6-f71c-4d62-a90d-b498071c6483",
+          "videoId": "MtrNyKRbGe4",
+          "gameTitle": "Danganronpa: Tripper Happy Havoc",
+          "trackTitle": "Discussion -HOPE VS DESPAIR-",
+          "channelTitle": null,
+          "displayTitle": "Danganronpa: Tripper Happy Havoc - Discussion -HOPE VS DESPAIR-"
+        },
+        {
+          "title": "The Wizard of Oz: Beyond the Yellow Brick Road - RIZ-ZOAWD!",
+          "trackId": "1a8f88db-1bab-47dc-9557-e88f7326eb5e",
+          "videoId": "3guEs9C8Jj4",
+          "gameTitle": "The Wizard of Oz: Beyond the Yellow Brick Road",
+          "trackTitle": "RIZ-ZOAWD!",
+          "channelTitle": null,
+          "displayTitle": "The Wizard of Oz: Beyond the Yellow Brick Road - RIZ-ZOAWD!"
+        },
+        {
+          "title": "Dynasty Warriors Online - Steal a March",
+          "trackId": "ddc9394a-d69d-4319-8a95-62d36b9ce102",
+          "videoId": "spgFAlPlfIA",
+          "gameTitle": "Dynasty Warriors Online",
+          "trackTitle": "Steal a March",
+          "channelTitle": null,
+          "displayTitle": "Dynasty Warriors Online - Steal a March"
+        },
+        {
+          "title": "Shantae & The Pirate's Curse - We Love Burning Town",
+          "trackId": "ea3483cc-0edc-4d2c-a83b-a5d39e059e64",
+          "videoId": "mcMtC5ZMnEE",
+          "gameTitle": "Shantae & The Pirate's Curse",
+          "trackTitle": "We Love Burning Town",
+          "channelTitle": null,
+          "displayTitle": "Shantae & The Pirate's Curse - We Love Burning Town"
+        },
+        {
+          "title": "The Incredible Machine: Even More Contraptions - Progressive Rock",
+          "trackId": "5fa82b04-7785-4565-bd3e-cc2ea9ef6eca",
+          "videoId": "Q_QV3lfib_8",
+          "gameTitle": "The Incredible Machine: Even More Contraptions",
+          "trackTitle": "Progressive Rock",
+          "channelTitle": null,
+          "displayTitle": "The Incredible Machine: Even More Contraptions - Progressive Rock"
+        },
+        {
+          "title": "Donkey Kong Country - Ice Cave Chant",
+          "trackId": "8b46152c-d025-465f-8d80-65cecb0cec9e",
+          "videoId": "iEOYy4_3ciA",
+          "gameTitle": "Donkey Kong Country",
+          "trackTitle": "Ice Cave Chant",
+          "channelTitle": null,
+          "displayTitle": "Donkey Kong Country - Ice Cave Chant"
+        },
+        {
+          "title": "Killer Instinct - Inferno",
+          "trackId": "b1ab343b-979a-4295-b66f-30f403a4229b",
+          "videoId": "-awT54iKr30",
+          "gameTitle": "Killer Instinct",
+          "trackTitle": "Inferno",
+          "channelTitle": null,
+          "displayTitle": "Killer Instinct - Inferno"
+        },
+        {
+          "title": "Pyre - In the Flame",
+          "trackId": "79015c55-3526-4d8a-881b-a956f27f6f55",
+          "videoId": "TAWmSzN7Uf8",
+          "gameTitle": "Pyre",
+          "trackTitle": "In the Flame",
+          "channelTitle": null,
+          "displayTitle": "Pyre - In the Flame"
+        },
+        {
+          "title": "War of Brains - FEEL the POWER in YOUR SOUL",
+          "trackId": "b80a2786-81e4-49a4-b71a-797a417b854d",
+          "videoId": "p8efRFhEcuQ",
+          "gameTitle": "War of Brains",
+          "trackTitle": "FEEL the POWER in YOUR SOUL",
+          "channelTitle": null,
+          "displayTitle": "War of Brains - FEEL the POWER in YOUR SOUL"
+        },
+        {
+          "title": "Pokemon Mystery Dungeon: Explorers of Sky - Vast Ice Mountain Peak",
+          "trackId": "2479938d-8efc-4cbc-80c5-6be47b4e6180",
+          "videoId": "hIXGRb7Gb7E",
+          "gameTitle": "Pokemon Mystery Dungeon: Explorers of Sky",
+          "trackTitle": "Vast Ice Mountain Peak",
+          "channelTitle": null,
+          "displayTitle": "Pokemon Mystery Dungeon: Explorers of Sky - Vast Ice Mountain Peak"
+        },
+        {
+          "title": "Guacamelee! 2 - Los Manglares",
+          "trackId": "d6634f30-b99f-483c-96de-46e294fa42ba",
+          "videoId": "0eVirfGyPCA",
+          "gameTitle": "Guacamelee! 2",
+          "trackTitle": "Los Manglares",
+          "channelTitle": null,
+          "displayTitle": "Guacamelee! 2 - Los Manglares"
+        },
+        {
+          "title": "UNBEATABLE - WORN OUT TAPES",
+          "trackId": "8b11bbde-8071-4593-9ace-fec2a12ecb7d",
+          "videoId": "mJLB7SRGgFc",
+          "gameTitle": "UNBEATABLE",
+          "trackTitle": "WORN OUT TAPES",
+          "channelTitle": null,
+          "displayTitle": "UNBEATABLE - WORN OUT TAPES"
+        },
+        {
+          "title": "Genshin Impact - Across Dimming Asterisms",
+          "trackId": "e3fe3339-821a-4c61-9342-db9d3f0c20c6",
+          "videoId": "YvLZzUcyDWY",
+          "gameTitle": "Genshin Impact",
+          "trackTitle": "Across Dimming Asterisms",
+          "channelTitle": null,
+          "displayTitle": "Genshin Impact - Across Dimming Asterisms"
+        },
+        {
+          "title": "Zenless Zone Zero - DAMIDAMI",
+          "trackId": "0d131fab-26b2-4c61-8620-4c81119cd552",
+          "videoId": "vlrN8Mso-6Y",
+          "gameTitle": "Zenless Zone Zero",
+          "trackTitle": "DAMIDAMI",
+          "channelTitle": null,
+          "displayTitle": "Zenless Zone Zero - DAMIDAMI"
+        },
+        {
+          "title": "Tyrian - Rock Garden",
+          "trackId": "ad99dd64-6976-42af-8a68-8fe6b7dcaa51",
+          "videoId": "6WQ-XbrYdr0",
+          "gameTitle": "Tyrian",
+          "trackTitle": "Rock Garden",
+          "channelTitle": null,
+          "displayTitle": "Tyrian - Rock Garden"
+        }
+      ]
+    },
+    {
+      "user_id": "523994cd-b9bf-45e6-8724-eabebefb0845",
+      "username": "dc:mapleviolet",
+      "avatar_url": "https://cdn.discordapp.com/avatars/229471882833821697/3cb85d436ae4520370449debe260d04b.png",
+      "gamefaqs_username": null,
+      "updated_at": "2026-04-19T22:53:48.775085+00:00",
+      "nominations": [
+        {
+          "title": "UNBEATABLE - PROPER RHYTHM (ALL THERE IS TO IT)",
+          "trackId": "e7420a3d-fd69-4e66-acbd-f558964b9df5",
+          "videoId": "V_6VneLNeKk",
+          "gameTitle": "UNBEATABLE",
+          "trackTitle": "PROPER RHYTHM (ALL THERE IS TO IT)",
+          "channelTitle": "VideoGameGut5",
+          "displayTitle": "UNBEATABLE - PROPER RHYTHM (ALL THERE IS TO IT)"
+        },
+        {
+          "title": "Skate Story - UNARCHIVER",
+          "trackId": "edcd67e0-56b0-4cfb-8f29-5f82eaa8e70a",
+          "videoId": "1vI_xrmc8gE",
+          "gameTitle": "Skate Story",
+          "trackTitle": "UNARCHIVER",
+          "channelTitle": "Blood Cultures",
+          "displayTitle": "Skate Story - UNARCHIVER"
+        },
+        {
+          "title": "Air - Tori no Uta",
+          "trackId": "44a5d217-636c-4ff6-a487-094f65acc1e3",
+          "videoId": "7mZlRSAUSsU",
+          "gameTitle": "Air",
+          "trackTitle": "Tori no Uta",
+          "channelTitle": "Lia - Topic",
+          "displayTitle": "Air - Tori no Uta"
+        },
+        {
+          "title": "Yakuza: Like a Dragon - Receive You (The Hyperactive)",
+          "trackId": "b6ef4e52-20e9-4ee1-9871-4b00ff061acc",
+          "videoId": "UkAz5YFw_x8",
+          "gameTitle": "Yakuza: Like a Dragon",
+          "trackTitle": "Receive You (The Hyperactive)",
+          "channelTitle": "SEGA SOUND TEAM - Topic",
+          "displayTitle": "Yakuza: Like a Dragon - Receive You (The Hyperactive)"
+        },
+        {
+          "title": "Heaven's Vault - Before the Fall",
+          "trackId": "bd9009f9-2dfe-4e05-8c49-076bd704e6ca",
+          "videoId": "xoeipOhjw6U",
+          "gameTitle": "Heaven's Vault",
+          "trackTitle": "Before the Fall",
+          "channelTitle": "ignus",
+          "displayTitle": "Heaven's Vault - Before the Fall"
+        },
+        {
+          "title": "Opus Magnum - Traditions",
+          "trackId": "a22d99d3-caf6-44e6-84e6-c3bbef682664",
+          "videoId": "KP5XbpPVcN4",
+          "gameTitle": "Opus Magnum",
+          "trackTitle": "Traditions",
+          "channelTitle": "Matthew S. Burns - Topic",
+          "displayTitle": "Opus Magnum - Traditions"
+        },
+        {
+          "title": "Airport Tycoon 3 - Menu Theme",
+          "trackId": "15bac686-dca3-494e-b681-d6eb28018811",
+          "videoId": "3WZd3XgdR2g",
+          "gameTitle": "Airport Tycoon 3",
+          "trackTitle": "Menu Theme",
+          "channelTitle": "SD Archives Part 3",
+          "displayTitle": "Airport Tycoon 3 - Menu Theme"
+        },
+        {
+          "title": "Granblue Fantasy - Colossus Ira Omega",
+          "trackId": "3f5c1074-3ec3-4880-94bd-8ee2b6b90ec3",
+          "videoId": "Qu1mPjBE7DQ",
+          "gameTitle": "Granblue Fantasy",
+          "trackTitle": "Colossus Ira Omega",
+          "channelTitle": "Tsutomu Narita - Topic",
+          "displayTitle": "Granblue Fantasy - Colossus Ira Omega"
+        },
+        {
+          "title": "Ace Combat 4 - Blockade",
+          "trackId": "628bcb34-7f12-4179-adde-2e6dac35c793",
+          "videoId": "haEoo0RHu-Q",
+          "gameTitle": "Ace Combat 4",
+          "trackTitle": "Blockade",
+          "channelTitle": "Ace Combat Fan",
+          "displayTitle": "Ace Combat 4 - Blockade"
+        },
+        {
+          "title": "Code Violet - Where the Lost Prevail",
+          "trackId": "ee935813-61ef-4ef5-8e52-5433942814f3",
+          "videoId": "KyCj4l2VH5c",
+          "gameTitle": "Code Violet",
+          "trackTitle": "Where the Lost Prevail",
+          "channelTitle": "KEVIN",
+          "displayTitle": "Code Violet - Where the Lost Prevail"
+        },
+        {
+          "title": "Machinarium - The Bottom",
+          "trackId": "89ba3ef4-4912-42e6-b245-d4a31cf7948a",
+          "videoId": "hkwGEfO_Ou4",
+          "gameTitle": "Machinarium",
+          "trackTitle": "The Bottom",
+          "channelTitle": "Floex",
+          "displayTitle": "Machinarium - The Bottom"
+        },
+        {
+          "title": "Even The Ocean - Dreamdram Canyon Power Plant",
+          "trackId": "62c087a7-ff41-4b79-95b0-37017b7494b7",
+          "videoId": "ik0m1OX6g-M",
+          "gameTitle": "Even The Ocean",
+          "trackTitle": "Dreamdram Canyon Power Plant",
+          "channelTitle": "ANALGESIC PRODUCTIONS",
+          "displayTitle": "Even The Ocean - Dreamdram Canyon Power Plant"
+        },
+        {
+          "title": "Rabbit and Steel - Rondo for the Witch's Messenger",
+          "trackId": "b876fe65-cc21-4d30-b0b6-bfa71029a081",
+          "videoId": "3CC0yWuzz2I",
+          "gameTitle": "Rabbit and Steel",
+          "trackTitle": "Rondo for the Witch's Messenger",
+          "channelTitle": "steelplus (はがね)",
+          "displayTitle": "Rabbit and Steel - Rondo for the Witch's Messenger"
+        },
+        {
+          "title": "Star Ocean 2 - Field of Expel",
+          "trackId": "1a00ad01-8465-4367-9eb6-ba3bb330f287",
+          "videoId": "DyHDYuPMWy0",
+          "gameTitle": "Star Ocean 2",
+          "trackTitle": "Field of Expel",
+          "channelTitle": "Motoi Sakuraba - Topic",
+          "displayTitle": "Star Ocean 2 - Field of Expel"
+        },
+        {
+          "title": "The Legend of Sword and Fairy 7 - Together Always",
+          "trackId": "b6b3dd88-3bcf-4e8a-8f67-df657ee65c7c",
+          "videoId": "vntnSiOAyj8",
+          "gameTitle": "The Legend of Sword and Fairy 7",
+          "trackTitle": "Together Always",
+          "channelTitle": null,
+          "displayTitle": "The Legend of Sword and Fairy 7 - Together Always"
+        },
+        {
+          "title": "Angeline Era - A Sudajii's Shade, Noon Sky Drifting By",
+          "trackId": "1433455e-85d4-483b-9787-f3fd62bfab20",
+          "videoId": "TQp-yWnSi84",
+          "gameTitle": "Angeline Era",
+          "trackTitle": "A Sudajii's Shade, Noon Sky Drifting By",
+          "channelTitle": null,
+          "displayTitle": "Angeline Era - A Sudajii's Shade, Noon Sky Drifting By"
+        },
+        {
+          "title": "Like a Dragon: Kenzan! - baile con la mariposa",
+          "trackId": "f69e9774-9e62-4a2f-afd8-e53ed247b7be",
+          "videoId": "QIwJfVwqOcQ",
+          "gameTitle": "Like a Dragon: Kenzan!",
+          "trackTitle": "baile con la mariposa",
+          "channelTitle": null,
+          "displayTitle": "Like a Dragon: Kenzan! - baile con la mariposa"
+        }
+      ]
+    },
+    {
+      "user_id": "5c970f3d-8c61-4a59-b58d-40abf97ba0b3",
+      "username": "dc:sergiocornaga",
+      "avatar_url": "https://cdn.discordapp.com/avatars/155633396234715136/b2662f64cdbaaa0399e95c272f929e40.png",
+      "gamefaqs_username": "sergiocornaga",
+      "updated_at": "2026-04-19T11:27:13.680096+00:00",
+      "nominations": [
+        {
+          "title": "Moon Child (Amiga) - Title Theme",
+          "trackId": "bb5a1d3d-6d14-46b6-bd10-c83fc4b9f4e3",
+          "videoId": "ha-iv_TOJ3g",
+          "gameTitle": "Moon Child (Amiga)",
+          "trackTitle": "Title Theme",
+          "channelTitle": null,
+          "displayTitle": "Moon Child (Amiga) - Title Theme"
+        }
+      ]
+    },
     {
       "user_id": "e63d2f90-9be3-4f22-9f10-76cc496817b4",
       "username": "dc:Chaeix",
@@ -296,168 +665,6 @@
           "trackTitle": "Fall 'N' Roll",
           "channelTitle": "Jukio Kallio - Topic",
           "displayTitle": "Fall Guys - Fall 'N' Roll"
-        }
-      ]
-    },
-    {
-      "user_id": "4e4a8c44-6dd3-43d7-8057-8d09a396d98e",
-      "username": "dc:azuarc",
-      "avatar_url": "https://cdn.discordapp.com/avatars/165663829135458305/0c6fd993b2868794b13ac011d4c1d74a.png",
-      "gamefaqs_username": null,
-      "updated_at": "2026-04-15T12:58:25.680543+00:00",
-      "nominations": [
-        {
-          "title": "Chrono Trigger - Schala’s Theme",
-          "trackId": "cc942f94-a198-4a5f-b2e7-6b5c748885df",
-          "videoId": "bQ6kaNcsw4Q",
-          "gameTitle": "Chrono Trigger",
-          "trackTitle": "Schala’s Theme",
-          "channelTitle": null,
-          "displayTitle": "Chrono Trigger - Schala’s Theme"
-        },
-        {
-          "title": "Silver Surfer - Stage 1",
-          "trackId": "5a0a51a3-5494-4fcb-93ae-434d12327203",
-          "videoId": "BGNSHNf-nlU",
-          "gameTitle": "Silver Surfer",
-          "trackTitle": "Stage 1",
-          "channelTitle": null,
-          "displayTitle": "Silver Surfer - Stage 1"
-        },
-        {
-          "title": "Lost Odyssey - Dark Saint",
-          "trackId": "1c301823-13fb-4129-93e1-29ad7203b2de",
-          "videoId": "nI3tq4AP5E4",
-          "gameTitle": "Lost Odyssey",
-          "trackTitle": "Dark Saint",
-          "channelTitle": null,
-          "displayTitle": "Lost Odyssey - Dark Saint"
-        },
-        {
-          "title": "Guilty Gear X - Awe of She",
-          "trackId": "2b876601-bf94-413f-8da9-1481b5b01410",
-          "videoId": "u9LtKHiVRCw",
-          "gameTitle": "Guilty Gear X",
-          "trackTitle": "Awe of She",
-          "channelTitle": null,
-          "displayTitle": "Guilty Gear X - Awe of She"
-        },
-        {
-          "title": "World of Goo - Red Carpet Extend-o-Matic",
-          "trackId": "2c94478c-4dcf-47b3-8bfa-d413023ffc1b",
-          "videoId": "HwmxrIwetyU",
-          "gameTitle": "World of Goo",
-          "trackTitle": "Red Carpet Extend-o-Matic",
-          "channelTitle": "Rickkity-T",
-          "displayTitle": "World of Goo - Red Carpet Extend-o-Matic"
-        },
-        {
-          "title": "Danganronpa: Tripper Happy Havoc - Discussion -HOPE VS DESPAIR-",
-          "trackId": "b9ed05b6-f71c-4d62-a90d-b498071c6483",
-          "videoId": "MtrNyKRbGe4",
-          "gameTitle": "Danganronpa: Tripper Happy Havoc",
-          "trackTitle": "Discussion -HOPE VS DESPAIR-",
-          "channelTitle": null,
-          "displayTitle": "Danganronpa: Tripper Happy Havoc - Discussion -HOPE VS DESPAIR-"
-        },
-        {
-          "title": "Tyrian - Rock Garden",
-          "trackId": "ad99dd64-6976-42af-8a68-8fe6b7dcaa51",
-          "videoId": "6WQ-XbrYdr0",
-          "gameTitle": "Tyrian",
-          "trackTitle": "Rock Garden",
-          "channelTitle": null,
-          "displayTitle": "Tyrian - Rock Garden"
-        },
-        {
-          "title": "Shantae & The Pirate's Curse - We Love Burning Town",
-          "trackId": "ea3483cc-0edc-4d2c-a83b-a5d39e059e64",
-          "videoId": "mcMtC5ZMnEE",
-          "gameTitle": "Shantae & The Pirate's Curse",
-          "trackTitle": "We Love Burning Town",
-          "channelTitle": null,
-          "displayTitle": "Shantae & The Pirate's Curse - We Love Burning Town"
-        },
-        {
-          "title": "The Incredible Machine: Even More Contraptions - Progressive Rock",
-          "trackId": "5fa82b04-7785-4565-bd3e-cc2ea9ef6eca",
-          "videoId": "Q_QV3lfib_8",
-          "gameTitle": "The Incredible Machine: Even More Contraptions",
-          "trackTitle": "Progressive Rock",
-          "channelTitle": null,
-          "displayTitle": "The Incredible Machine: Even More Contraptions - Progressive Rock"
-        },
-        {
-          "title": "Donkey Kong Country - Ice Cave Chant",
-          "trackId": "8b46152c-d025-465f-8d80-65cecb0cec9e",
-          "videoId": "iEOYy4_3ciA",
-          "gameTitle": "Donkey Kong Country",
-          "trackTitle": "Ice Cave Chant",
-          "channelTitle": null,
-          "displayTitle": "Donkey Kong Country - Ice Cave Chant"
-        },
-        {
-          "title": "Killer Instinct - Inferno",
-          "trackId": "b1ab343b-979a-4295-b66f-30f403a4229b",
-          "videoId": "-awT54iKr30",
-          "gameTitle": "Killer Instinct",
-          "trackTitle": "Inferno",
-          "channelTitle": null,
-          "displayTitle": "Killer Instinct - Inferno"
-        },
-        {
-          "title": "Pyre - In the Flame",
-          "trackId": "79015c55-3526-4d8a-881b-a956f27f6f55",
-          "videoId": "TAWmSzN7Uf8",
-          "gameTitle": "Pyre",
-          "trackTitle": "In the Flame",
-          "channelTitle": null,
-          "displayTitle": "Pyre - In the Flame"
-        },
-        {
-          "title": "War of Brains - FEEL the POWER in YOUR SOUL",
-          "trackId": "b80a2786-81e4-49a4-b71a-797a417b854d",
-          "videoId": "p8efRFhEcuQ",
-          "gameTitle": "War of Brains",
-          "trackTitle": "FEEL the POWER in YOUR SOUL",
-          "channelTitle": null,
-          "displayTitle": "War of Brains - FEEL the POWER in YOUR SOUL"
-        },
-        {
-          "title": "Pokemon Mystery Dungeon: Explorers of Sky - Vast Ice Mountain Peak",
-          "trackId": "2479938d-8efc-4cbc-80c5-6be47b4e6180",
-          "videoId": "hIXGRb7Gb7E",
-          "gameTitle": "Pokemon Mystery Dungeon: Explorers of Sky",
-          "trackTitle": "Vast Ice Mountain Peak",
-          "channelTitle": null,
-          "displayTitle": "Pokemon Mystery Dungeon: Explorers of Sky - Vast Ice Mountain Peak"
-        },
-        {
-          "title": "Guacamelee! 2 - Los Manglares",
-          "trackId": "d6634f30-b99f-483c-96de-46e294fa42ba",
-          "videoId": "0eVirfGyPCA",
-          "gameTitle": "Guacamelee! 2",
-          "trackTitle": "Los Manglares",
-          "channelTitle": null,
-          "displayTitle": "Guacamelee! 2 - Los Manglares"
-        },
-        {
-          "title": "UNBEATABLE - WORN OUT TAPES",
-          "trackId": "8b11bbde-8071-4593-9ace-fec2a12ecb7d",
-          "videoId": "mJLB7SRGgFc",
-          "gameTitle": "UNBEATABLE",
-          "trackTitle": "WORN OUT TAPES",
-          "channelTitle": null,
-          "displayTitle": "UNBEATABLE - WORN OUT TAPES"
-        },
-        {
-          "title": "Genshin Impact - Across Dimming Asterisms",
-          "trackId": "e3fe3339-821a-4c61-9342-db9d3f0c20c6",
-          "videoId": "YvLZzUcyDWY",
-          "gameTitle": "Genshin Impact",
-          "trackTitle": "Across Dimming Asterisms",
-          "channelTitle": null,
-          "displayTitle": "Genshin Impact - Across Dimming Asterisms"
         }
       ]
     },
