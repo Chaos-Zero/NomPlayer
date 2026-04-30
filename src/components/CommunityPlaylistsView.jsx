@@ -1,6 +1,13 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, {
+  useState,
+  useEffect,
+  useMemo,
+  useCallback,
+  useRef,
+} from 'react';
 import { getDisplayProfileName } from '../lib/playerState.js';
 import { SearchIcon } from './Icons.jsx';
+import PrivacyToggle from './PrivacyToggle.jsx';
 
 function PlaySvg() {
   return (
@@ -92,11 +99,23 @@ function SortControls({ sortBy, onChange }) {
   );
 }
 
-function PlaylistCard({ playlist, onLoad, onAdd, loadingId, isOwn }) {
+function PlaylistCard({
+  playlist,
+  onLoad,
+  onAdd,
+  onSelect,
+  onTogglePrivacy,
+  loadingId,
+  isOwn,
+}) {
   const busy = loadingId === playlist.id;
   const isPrivate = isOwn && !playlist.is_public;
   return (
-    <div className="cpl-card">
+    <div
+      className="cpl-card"
+      onClick={() => onSelect?.(playlist)}
+      style={{ cursor: 'pointer' }}
+    >
       <div className="cpl-card-cover">
         {playlist.firstThumbnail ? (
           <img
@@ -115,7 +134,10 @@ function PlaylistCard({ playlist, onLoad, onAdd, loadingId, isOwn }) {
         <div className="cpl-card-overlay">
           <button
             className="cpl-play-btn"
-            onClick={() => onLoad(playlist)}
+            onClick={(e) => {
+              e.stopPropagation();
+              onLoad(playlist);
+            }}
             disabled={busy}
             title="Play Playlist"
           >
@@ -139,19 +161,220 @@ function PlaylistCard({ playlist, onLoad, onAdd, loadingId, isOwn }) {
         <div className="cpl-card-actions">
           <button
             className="cpl-action-btn cpl-action-primary"
-            onClick={() => onLoad(playlist)}
+            onClick={(e) => {
+              e.stopPropagation();
+              onLoad(playlist);
+            }}
             disabled={busy}
           >
             {busy ? '…' : 'Play'}
           </button>
           <button
             className="cpl-action-btn"
-            onClick={() => onAdd(playlist)}
+            onClick={(e) => {
+              e.stopPropagation();
+              onAdd(playlist);
+            }}
             disabled={busy}
           >
             Add
           </button>
+          {isOwn && onTogglePrivacy && (
+            <div
+              style={{ marginLeft: 'auto' }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <PrivacyToggle
+                isPublic={playlist.is_public}
+                onToggle={(newIsPublic) =>
+                  onTogglePrivacy(playlist.id, newIsPublic)
+                }
+              />
+            </div>
+          )}
         </div>
+      </div>
+    </div>
+  );
+}
+
+function CommunityPlaylistPanel({
+  playlist,
+  tracks,
+  isLoading,
+  onClose,
+  onPlay,
+  onAdd,
+  onContextMenu,
+  isOwner,
+  onRemoveTrack,
+}) {
+  const fullTitle = playlist?.name || '';
+  const gameTitle = playlist
+    ? getDisplayProfileName(playlist.profile?.username)
+    : '';
+
+  return (
+    <div className={`list-explorer-info-panel ${playlist ? 'is-open' : ''}`}>
+      <div className="list-explorer-info-content-wrapper">
+        {playlist && (
+          <>
+            <div className="list-explorer-info-header">
+              <button
+                className="list-explorer-info-close"
+                onClick={onClose}
+                title="Deselect playlist"
+              >
+                ✕
+              </button>
+              <div className="list-explorer-info-hero">
+                {playlist.firstThumbnail ? (
+                  <img
+                    src={playlist.firstThumbnail}
+                    alt=""
+                    className="list-explorer-info-img"
+                    style={{ display: 'block' }}
+                  />
+                ) : (
+                  <div
+                    className="list-explorer-info-img"
+                    style={{
+                      display: 'block',
+                      background: playlistGradient(playlist.id),
+                    }}
+                  />
+                )}
+                <div className="list-explorer-info-titles">
+                  <div className="list-explorer-info-title-group">
+                    <p className="list-explorer-info-game">{gameTitle}</p>
+                    <span className="list-explorer-info-separator"> - </span>
+                    <h2
+                      className="list-explorer-info-song"
+                      style={{ fontSize: '1.4em' }}
+                    >
+                      {fullTitle}
+                    </h2>
+                  </div>
+                  <span className="list-explorer-info-vgmc-badge">
+                    {playlist.trackCount} tracks
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div className="list-explorer-info-content">
+              <section
+                className="list-explorer-info-section community"
+                style={{ padding: '0 20px 20px' }}
+              >
+                <div
+                  className="cpl-featured-actions"
+                  style={{ marginBottom: 20, display: 'flex', gap: 8 }}
+                >
+                  <button
+                    className="btn btn-primary"
+                    onClick={() => onPlay(playlist, tracks)}
+                    style={{ flex: 1 }}
+                  >
+                    Play Playlist
+                  </button>
+                  <button
+                    className="btn"
+                    onClick={() => onAdd(playlist, tracks)}
+                    style={{ flex: 1 }}
+                  >
+                    Add to My Queue
+                  </button>
+                </div>
+
+                <div
+                  className="cpl-track-list"
+                  style={{ display: 'flex', flexDirection: 'column', gap: 4 }}
+                >
+                  {isLoading ? (
+                    <p className="list-explorer-info-loading">
+                      Loading tracks...
+                    </p>
+                  ) : tracks.length === 0 ? (
+                    <p className="list-explorer-info-empty">No tracks yet.</p>
+                  ) : (
+                    tracks.map((t, i) => (
+                      <div
+                        key={i}
+                        className="cpl-track-item"
+                        style={{
+                          display: 'flex',
+                          gap: 12,
+                          padding: '8px 12px',
+                          alignItems: 'center',
+                          borderRadius: 6,
+                          transition: 'background 0.2s',
+                          cursor: 'pointer',
+                        }}
+                        onDoubleClick={() =>
+                          onPlay(playlist, tracks, t.videoId || t.id)
+                        }
+                        onContextMenu={(e) =>
+                          onContextMenu?.(e, t, {
+                            sourceListId: 'community-playlist',
+                            isOwner,
+                            onRemove: onRemoveTrack
+                              ? () => onRemoveTrack(t.id)
+                              : undefined,
+                          })
+                        }
+                      >
+                        <img
+                          src={t.thumbnail}
+                          alt=""
+                          style={{
+                            borderRadius: 4,
+                            width: 72,
+                            height: 40,
+                            objectFit: 'cover',
+                            flexShrink: 0,
+                          }}
+                        />
+                        <div
+                          style={{
+                            overflow: 'hidden',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: 2,
+                          }}
+                        >
+                          <span
+                            style={{
+                              fontSize: 14,
+                              fontWeight: 500,
+                              color: '#fff',
+                              whiteSpace: 'nowrap',
+                              textOverflow: 'ellipsis',
+                              overflow: 'hidden',
+                            }}
+                          >
+                            {t.trackTitle || t.displayTitle}
+                          </span>
+                          <span
+                            style={{
+                              fontSize: 12,
+                              color: 'var(--text-muted, #9ca3af)',
+                              whiteSpace: 'nowrap',
+                              textOverflow: 'ellipsis',
+                              overflow: 'hidden',
+                            }}
+                          >
+                            {t.gameTitle || t.channelTitle}
+                          </span>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </section>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
@@ -163,6 +386,11 @@ export function CommunityPlaylistsView({
   onPlayPlaylist,
   onAddToPlaylist,
   onShowToast,
+  onSelectionChange,
+  onContextMenu,
+  lastMetadataUpdateBatch,
+  customPlaylists,
+  onUpdateCustomPlaylists,
 }) {
   const [playlists, setPlaylists] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -172,6 +400,14 @@ export function CommunityPlaylistsView({
   const [sortBy, setSortBy] = useState('newest');
   const [featuredSeed, setFeaturedSeed] = useState(Math.random());
   const authUserId = authUser?.id ?? null;
+
+  const [selectedPlaylist, setSelectedPlaylist] = useState(null);
+  const [selectedPlaylistTracks, setSelectedPlaylistTracks] = useState([]);
+  const [isLoadingPanel, setIsLoadingPanel] = useState(false);
+
+  useEffect(() => {
+    onSelectionChange?.(!!selectedPlaylist);
+  }, [selectedPlaylist, onSelectionChange]);
 
   const fetchPlaylists = useCallback(async () => {
     setIsLoading(true);
@@ -254,6 +490,46 @@ export function CommunityPlaylistsView({
     fetchPlaylists();
   }, [supabase, fetchPlaylists]);
 
+  const lastAppliedBatchRef = useRef(null);
+  useEffect(() => {
+    if (
+      !lastMetadataUpdateBatch ||
+      lastMetadataUpdateBatch === lastAppliedBatchRef.current ||
+      !selectedPlaylistTracks.length
+    )
+      return;
+    lastAppliedBatchRef.current = lastMetadataUpdateBatch;
+
+    const updateMap = new Map();
+    for (const u of lastMetadataUpdateBatch) {
+      updateMap.set(u.oldVideoId || u.videoId, u);
+      if (u.trackId) {
+        updateMap.set(u.trackId, u);
+      }
+    }
+
+    setSelectedPlaylistTracks((prev) => {
+      let changed = false;
+      const next = prev.map((t) => {
+        const up = updateMap.get(t.videoId) || updateMap.get(t.trackId);
+        if (!up) return t;
+        changed = true;
+        return {
+          ...t,
+          videoId: up.videoId || t.videoId,
+          trackId: up.trackId || t.trackId,
+          trackTitle:
+            up.trackTitle !== undefined ? up.trackTitle : t.trackTitle,
+          gameTitle: up.gameTitle !== undefined ? up.gameTitle : t.gameTitle,
+          title: up.title || t.title,
+          thumbnail: up.thumbnail || t.thumbnail,
+          channelTitle: up.channelTitle || t.channelTitle,
+        };
+      });
+      return changed ? next : prev;
+    });
+  }, [lastMetadataUpdateBatch, selectedPlaylistTracks.length]);
+
   useEffect(() => {
     setFeaturedSeed(Math.random());
   }, [selectedUserId]);
@@ -295,11 +571,99 @@ export function CommunityPlaylistsView({
           thumbnail:
             src.cached_thumbnail_url ||
             `https://i.ytimg.com/vi/${src.external_id}/mqdefault.jpg`,
+          gameTitle: track.canonical_game_title,
+          trackTitle: track.canonical_track_title,
           comment: '',
           addedAt: new Date().toISOString(),
         };
       })
       .filter(Boolean);
+  }
+
+  async function handleSelectPlaylist(playlist) {
+    if (selectedPlaylist?.id === playlist.id) return;
+    setSelectedPlaylist(playlist);
+    setIsLoadingPanel(true);
+    try {
+      const tracks = await fetchTracks(playlist.id);
+      setSelectedPlaylistTracks(tracks);
+    } catch (err) {
+      console.error(err);
+      onShowToast?.('Failed to load playlist tracks');
+    } finally {
+      setIsLoadingPanel(false);
+    }
+  }
+
+  async function handleTogglePrivacy(playlistId, isPublic) {
+    try {
+      const { error } = await supabase
+        .from('user_playlists')
+        .update({ is_public: isPublic })
+        .eq('id', playlistId);
+      if (error) throw error;
+      setPlaylists((prev) =>
+        prev.map((pl) =>
+          pl.id === playlistId ? { ...pl, is_public: isPublic } : pl,
+        ),
+      );
+      if (selectedPlaylist?.id === playlistId) {
+        setSelectedPlaylist((prev) => ({ ...prev, is_public: isPublic }));
+      }
+
+      if (onUpdateCustomPlaylists && customPlaylists) {
+        onUpdateCustomPlaylists(
+          customPlaylists.map((pl) =>
+            pl.id === playlistId ? { ...pl, is_public: isPublic } : pl,
+          ),
+        );
+      }
+    } catch (err) {
+      console.error(err);
+      onShowToast?.('Failed to update playlist privacy');
+    }
+  }
+
+  function handleClosePanel() {
+    setSelectedPlaylist(null);
+  }
+
+  async function handleRemoveFromPanel(trackId) {
+    if (!selectedPlaylist) return;
+    try {
+      const { error } = await supabase
+        .from('user_playlist_tracks')
+        .delete()
+        .eq('id', trackId);
+      if (error) throw error;
+      setSelectedPlaylistTracks((prev) => prev.filter((t) => t.id !== trackId));
+      onShowToast?.('Track removed from playlist');
+    } catch (err) {
+      console.error(err);
+      onShowToast?.('Failed to remove track');
+    }
+  }
+
+  function handlePanelPlay(playlist, tracks, startVideoId = null) {
+    if (!tracks.length) {
+      onShowToast?.('This playlist has no tracks yet');
+      return;
+    }
+    onPlayPlaylist?.(tracks, {
+      id: playlist.id,
+      name: playlist.name,
+      startVideoId,
+    });
+    onShowToast?.(`Playing "${playlist.name}" — ${tracks.length} tracks`);
+  }
+
+  function handlePanelAdd(playlist, tracks) {
+    if (!tracks.length) {
+      onShowToast?.('This playlist has no tracks yet');
+      return;
+    }
+    onAddToPlaylist(tracks);
+    onShowToast?.(`Added ${tracks.length} tracks to your queue`);
   }
 
   async function handleLoad(playlist) {
@@ -500,7 +864,11 @@ export function CommunityPlaylistsView({
               </div>
 
               {featured && (
-                <div className="cpl-featured-card">
+                <div
+                  className="cpl-featured-card"
+                  onClick={() => handleSelectPlaylist(featured)}
+                  style={{ cursor: 'pointer' }}
+                >
                   <div className="cpl-featured-cover">
                     {featured.firstThumbnail ? (
                       <img
@@ -545,14 +913,20 @@ export function CommunityPlaylistsView({
                     <div className="cpl-featured-actions">
                       <button
                         className="cpl-action-btn cpl-action-primary"
-                        onClick={() => handleLoad(featured)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleLoad(featured);
+                        }}
                         disabled={loadingId === featured.id}
                       >
                         {loadingId === featured.id ? '…' : 'Play Playlist'}
                       </button>
                       <button
                         className="cpl-action-btn"
-                        onClick={() => handleAdd(featured)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleAdd(featured);
+                        }}
                         disabled={loadingId === featured.id}
                       >
                         Add to My Queue
@@ -577,8 +951,8 @@ export function CommunityPlaylistsView({
                       <button
                         key={pl.id}
                         className="cpl-new-card"
-                        onClick={() => handleLoad(pl)}
-                        title={`Load "${pl.name}"`}
+                        onClick={() => handleSelectPlaylist(pl)}
+                        title={`View "${pl.name}"`}
                       >
                         <div className="cpl-new-cover">
                           {pl.firstThumbnail ? (
@@ -640,8 +1014,10 @@ export function CommunityPlaylistsView({
                     <PlaylistCard
                       key={pl.id}
                       playlist={pl}
+                      onSelect={handleSelectPlaylist}
                       onLoad={handleLoad}
                       onAdd={handleAdd}
+                      onTogglePrivacy={handleTogglePrivacy}
                       loadingId={loadingId}
                       isOwn={pl.user_id === authUser?.id}
                     />
@@ -654,7 +1030,11 @@ export function CommunityPlaylistsView({
           /* ── User / Featured view ─────────────────────────────────────── */
           <>
             {featured && (
-              <div className="cpl-spotlight">
+              <div
+                className="cpl-spotlight"
+                onClick={() => handleSelectPlaylist(featured)}
+                style={{ cursor: 'pointer' }}
+              >
                 <div className="cpl-spotlight-left">
                   <div className="cpl-spotlight-meta">
                     <span className="cpl-spin-badge">
@@ -680,14 +1060,20 @@ export function CommunityPlaylistsView({
                   <div className="cpl-spotlight-actions">
                     <button
                       className="cpl-action-btn cpl-action-primary"
-                      onClick={() => handleLoad(featured)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleLoad(featured);
+                      }}
                       disabled={loadingId === featured.id}
                     >
                       {loadingId === featured.id ? '…' : 'Load into queue'}
                     </button>
                     <button
                       className="cpl-action-btn"
-                      onClick={() => handleAdd(featured)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleAdd(featured);
+                      }}
                       disabled={loadingId === featured.id}
                     >
                       Add to My Queue
@@ -739,8 +1125,10 @@ export function CommunityPlaylistsView({
                     <PlaylistCard
                       key={pl.id}
                       playlist={pl}
+                      onSelect={handleSelectPlaylist}
                       onLoad={handleLoad}
                       onAdd={handleAdd}
+                      onTogglePrivacy={handleTogglePrivacy}
                       loadingId={loadingId}
                       isOwn={pl.user_id === authUser?.id}
                     />
@@ -751,6 +1139,22 @@ export function CommunityPlaylistsView({
           </>
         )}
       </div>
+
+      <CommunityPlaylistPanel
+        playlist={selectedPlaylist}
+        tracks={selectedPlaylistTracks}
+        isLoading={isLoadingPanel}
+        onClose={handleClosePanel}
+        onPlay={handlePanelPlay}
+        onAdd={handlePanelAdd}
+        onContextMenu={onContextMenu}
+        isOwner={selectedPlaylist?.user_id === authUser?.id}
+        onRemoveTrack={
+          selectedPlaylist?.user_id === authUser?.id
+            ? handleRemoveFromPanel
+            : null
+        }
+      />
     </div>
   );
 }

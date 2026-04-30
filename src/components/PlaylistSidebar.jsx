@@ -19,6 +19,7 @@ import { ContextMenuPortal } from './ContextMenuPortal';
 import CustomPlaylistSubmenu from './CustomPlaylistSubmenu.jsx';
 import CollectionAdder from './CollectionAdder.jsx';
 import ExportIcon from './ExportIcon.jsx';
+import PrivacyToggle from './PrivacyToggle.jsx';
 import YouTubeIcon from './YouTubeIcon.jsx';
 import ScrollingText from './ScrollingText.jsx';
 import useMediaQuery from '../hooks/useMediaQuery.js';
@@ -442,6 +443,25 @@ export default function PlaylistSidebar({
   onShowToast,
 }) {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+
+  const handleTogglePrivacy = async (playlistId, isPublic) => {
+    if (!supabase) return;
+    try {
+      const { error } = await supabase
+        .from('user_playlists')
+        .update({ is_public: isPublic })
+        .eq('id', playlistId);
+      if (error) throw error;
+      onUpdateCustomPlaylists?.(
+        (customPlaylists || []).map((p) =>
+          p.id === playlistId ? { ...p, is_public: isPublic } : p,
+        ),
+      );
+    } catch (err) {
+      console.error(err);
+      onShowToast?.('Failed to update playlist privacy');
+    }
+  };
   const dropdownRef = useRef(null);
   const [sidebarPlaylists, setSidebarPlaylists] = useState(null);
   const [playlistsExpanded, setPlaylistsExpanded] = useState(false);
@@ -1114,21 +1134,36 @@ export default function PlaylistSidebar({
           )}
           {playlist.length > 0 && (
             <>
-              <button
-                className="fav-panel-action-btn icon-only"
-                type="button"
-                onClick={() =>
-                  onExport?.(
-                    selectionMode && selectedVideos.length > 0
-                      ? selectedVideos
-                      : playlist,
-                  )
-                }
-                title="Export for VGMC"
-                aria-label="Export for VGMC"
-              >
-                <ExportIcon />
-              </button>
+              {activePlaylistView.type === 'custom-playlist' ? (
+                <div style={{ marginLeft: 8, marginRight: 8, display: 'flex' }}>
+                  <PrivacyToggle
+                    isPublic={
+                      customPlaylists?.find(
+                        (p) => p.id === activePlaylistView.id,
+                      )?.is_public
+                    }
+                    onToggle={(val) =>
+                      handleTogglePrivacy(activePlaylistView.id, val)
+                    }
+                  />
+                </div>
+              ) : (
+                <button
+                  className="fav-panel-action-btn icon-only"
+                  type="button"
+                  onClick={() =>
+                    onExport?.(
+                      selectionMode && selectedVideos.length > 0
+                        ? selectedVideos
+                        : playlist,
+                    )
+                  }
+                  title="Export for VGMC"
+                  aria-label="Export for VGMC"
+                >
+                  <ExportIcon />
+                </button>
+              )}
               <button
                 className="fav-panel-action-btn icon-only"
                 type="button"

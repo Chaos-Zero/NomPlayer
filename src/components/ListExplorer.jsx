@@ -38,6 +38,7 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { PointerSensor as CorePointerSensor } from '@dnd-kit/core';
+import PrivacyToggle from './PrivacyToggle.jsx';
 import { SortableSupportItem, SupportItem } from './FavouritesPanel.jsx';
 import { DotLottieReact } from '@lottiefiles/dotlottie-react';
 import {
@@ -623,6 +624,7 @@ function TrackInfoPanel({
 function SortableListExplorerCard({
   sortableId,
   video,
+  index,
   isSelected,
   onSelect,
   onContextMenu,
@@ -682,6 +684,7 @@ function SortableListExplorerCard({
         </div>
         <div className="list-explorer-card-main">
           <SupportItem
+            orderNumber={index !== undefined ? index + 1 : undefined}
             video={video}
             onRemove={isReadOnly ? null : () => onRemove(video.videoId)}
             onDoubleQueue={() => onPlayNow(video)}
@@ -729,6 +732,8 @@ function ListExplorerColumn({
   globalActivityByVideoId = null,
   onPlayExplorerList = null,
   userToggle = null,
+  isPublic = false,
+  onTogglePrivacy = null,
 }) {
   const [addUrl, setAddUrl] = useState('');
   const playlistSelectRef = useRef(null);
@@ -808,7 +813,7 @@ function ListExplorerColumn({
           {isCustom && subtitle && (
             <span className="list-explorer-column-subtitle">{subtitle}</span>
           )}
-          {isCustom && onRename && (
+          {isCustom && onRename && !isReadOnly && (
             <button
               className="list-explorer-column-btn"
               onClick={() => onRename(activePlaylistId)}
@@ -817,7 +822,7 @@ function ListExplorerColumn({
               <PencilIcon />
             </button>
           )}
-          {isCustom && onRemovePlaylist && (
+          {isCustom && onRemovePlaylist && !isReadOnly && (
             <button
               className="list-explorer-column-btn danger"
               onClick={() => onRemovePlaylist(activePlaylistId)}
@@ -972,20 +977,35 @@ function ListExplorerColumn({
           </SortableContext>
         </div>
 
-        {onAddByUrl && (
-          <form className="list-explorer-quick-add" onSubmit={handleAdd}>
-            <input
-              type="text"
-              placeholder="Paste YouTube link to add track..."
-              value={addUrl}
-              onChange={(ev) => setAddUrl(ev.target.value)}
-            />
-            <button type="submit" title="Add track">
-              <svg viewBox="0 0 20 20" fill="currentColor">
-                <path d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5v-4.5Z" />
-              </svg>
-            </button>
-          </form>
+        {onAddByUrl && !isReadOnly && (
+          <div
+            className="list-explorer-quick-add-row"
+            style={{ display: 'flex', gap: 8, alignItems: 'center' }}
+          >
+            {onTogglePrivacy && !isReadOnly && (
+              <PrivacyToggle
+                isPublic={isPublic}
+                onToggle={(val) => onTogglePrivacy(activePlaylistId, val)}
+              />
+            )}
+            <form
+              className="list-explorer-quick-add"
+              onSubmit={handleAdd}
+              style={{ flex: 1 }}
+            >
+              <input
+                type="text"
+                placeholder="Paste YouTube link to add track..."
+                value={addUrl}
+                onChange={(ev) => setAddUrl(ev.target.value)}
+              />
+              <button type="submit" title="Add track">
+                <svg viewBox="0 0 20 20" fill="currentColor">
+                  <path d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5v-4.5Z" />
+                </svg>
+              </button>
+            </form>
+          </div>
         )}
       </div>
     </div>
@@ -1362,6 +1382,7 @@ export default function ListExplorer({
   onUpdateMetadata,
   onExport,
   onSavePlaylist,
+  lastMetadataUpdateBatch,
   onOpenSupportDropdown,
   onPlayExplorerList,
   onPlayCommunityListFromTrack,
@@ -1376,6 +1397,7 @@ export default function ListExplorer({
   const [focusedListId, setFocusedListId] = useState(null);
   const [activeCustomPlaylistId, setActiveCustomPlaylistId] = useState(null);
   const [selectedTrackId, setSelectedTrackId] = useState(null);
+  const [hasCommunitySelection, setHasCommunitySelection] = useState(false);
   const [selectedColumnId, setSelectedColumnId] = useState(null);
   const [isEditingInfo, setIsEditingInfo] = useState(false);
   const [globalActivityByVideoId, setGlobalActivityByVideoId] = useState(
@@ -1401,7 +1423,7 @@ export default function ListExplorer({
   const hasAutoOpenedCustomPlaylists = useRef(false);
   const [showCustomPlaylists, setShowCustomPlaylists] = useState(false);
 
-  // Initialize active custom playlist if not set
+  // Set the first active custom playlist on load if none selected
   useEffect(() => {
     if (!activeCustomPlaylistId && (customPlaylists?.length || 0) > 0) {
       setActiveCustomPlaylistId(customPlaylists[0].id);
@@ -1427,11 +1449,8 @@ export default function ListExplorer({
   }, [explorerView]);
 
   const activeCustomPlaylist = useMemo(() => {
-    if (!customPlaylists) return null;
     return (
-      customPlaylists.find((pl) => pl.id === activeCustomPlaylistId) ||
-      customPlaylists[0] ||
-      null
+      customPlaylists.find((pl) => pl.id === activeCustomPlaylistId) || null
     );
   }, [customPlaylists, activeCustomPlaylistId]);
 
@@ -1844,32 +1863,43 @@ export default function ListExplorer({
   const [newPlaylistName, setNewPlaylistName] = useState('');
   const newPlaylistInputRef = useRef(null);
 
-  const handleContextMenu = (e, video) => {
+  const handleContextMenu = (e, video, options = {}) => {
     // Suppress context menu if currently dragging (especially for right-click drag)
     if (activeVideo) {
       e.preventDefault();
       return;
     }
     e.preventDefault();
+
+    const explicitSourceListId = options?.sourceListId;
+    const isOwner = options?.isOwner;
+    const onRemove = options?.onRemove;
+
     // Determine which list this video belongs to
-    let sourceListId = activeCustomPlaylistId;
-    if (nominationList.some((v) => v.videoId === video.videoId))
-      sourceListId = 'nominations';
-    else if (supportList.some((v) => v.videoId === video.videoId))
-      sourceListId = 'support';
-    else if (playlist.some((v) => v.videoId === video.videoId))
-      sourceListId = 'current';
-    else if (
-      peerColumns.some((pl) =>
-        pl.videos?.some((v) => v.videoId === video.videoId),
+    let sourceListId = explicitSourceListId;
+    if (!sourceListId) {
+      sourceListId = activeCustomPlaylistId;
+      if (nominationList.some((v) => v.videoId === video.videoId))
+        sourceListId = 'nominations';
+      else if (supportList.some((v) => v.videoId === video.videoId))
+        sourceListId = 'support';
+      else if (playlist.some((v) => v.videoId === video.videoId))
+        sourceListId = 'current';
+      else if (
+        peerColumns.some((pl) =>
+          pl.videos?.some((v) => v.videoId === video.videoId),
+        )
       )
-    )
-      sourceListId = 'peer';
+        sourceListId = 'peer';
+    }
+
     setContextMenu({
       x: e.clientX,
       y: e.clientY,
       video,
       sourceListId,
+      isOwner,
+      onRemove,
     });
   };
 
@@ -2052,6 +2082,14 @@ export default function ListExplorer({
     );
     if (focusedListId === deleteDialog.id) setFocusedListId(null);
     setDeleteDialog(null);
+  };
+
+  const handleToggleCustomPlaylistPrivacy = (id, isPublic) => {
+    onUpdateCustomPlaylists(
+      customPlaylists.map((p) =>
+        p.id === id ? { ...p, is_public: isPublic } : p,
+      ),
+    );
   };
 
   const handleAddByUrl = async (id, url) => {
@@ -2459,7 +2497,7 @@ export default function ListExplorer({
 
   return (
     <div
-      className={`list-explorer-container ${focusedListId ? 'has-focused' : ''} ${selectedTrackId && explorerView === 'lists' ? 'has-selection' : ''}`}
+      className={`list-explorer-container ${focusedListId ? 'has-focused' : ''} ${(selectedTrackId && explorerView === 'lists') || hasCommunitySelection ? 'has-selection' : ''}`}
     >
       <div className="list-explorer-header">
         <div className="list-explorer-title-group">
@@ -2926,6 +2964,8 @@ export default function ListExplorer({
                     onAddAll={() =>
                       handleAddAllToCurrent(activeCustomPlaylist.videos)
                     }
+                    isPublic={activeCustomPlaylist.is_public}
+                    onTogglePrivacy={handleToggleCustomPlaylistPrivacy}
                     onRemove={(videoId) => {
                       onUpdateCustomPlaylists(
                         customPlaylists.map((p) =>
@@ -2986,7 +3026,10 @@ export default function ListExplorer({
                 <CommunityPlaylistsView
                   supabase={supabase}
                   authUser={authUser}
+                  onSelectionChange={setHasCommunitySelection}
                   onPlayPlaylist={onPlayCommunityPlaylist}
+                  onContextMenu={handleContextMenu}
+                  lastMetadataUpdateBatch={lastMetadataUpdateBatch}
                   onAddToPlaylist={(videos) => {
                     const existing = new Set(playlist.map((v) => v.videoId));
                     onUpdatePlaylist([
@@ -2995,6 +3038,8 @@ export default function ListExplorer({
                     ]);
                   }}
                   onShowToast={onShowToast}
+                  customPlaylists={customPlaylists}
+                  onUpdateCustomPlaylists={onUpdateCustomPlaylists}
                 />
               </Motion.div>
             )}
@@ -3124,7 +3169,6 @@ export default function ListExplorer({
             )}
 
             <div className="context-menu-divider" />
-
             <button
               className="database-context-menu-item"
               onClick={() => {
@@ -3137,20 +3181,27 @@ export default function ListExplorer({
             </button>
 
             {contextMenu.sourceListId !== 'nominations' &&
-              contextMenu.sourceListId !== 'peer' && (
+              contextMenu.sourceListId !== 'peer' &&
+              (contextMenu.sourceListId !== 'community-playlist' ||
+                contextMenu.isOwner) && (
                 <>
                   <div className="context-menu-divider" />
                   <button
                     className="database-context-menu-item danger"
                     onClick={() => {
-                      handleRemoveTrack(
-                        contextMenu.sourceListId,
-                        contextMenu.video.videoId,
-                      );
+                      if (contextMenu.onRemove) {
+                        contextMenu.onRemove(contextMenu.video);
+                      } else {
+                        handleRemoveTrack(
+                          contextMenu.sourceListId,
+                          contextMenu.video.videoId,
+                        );
+                      }
+                      closeContextMenu();
                     }}
                   >
                     <TrashIcon />
-                    <span>Remove from List</span>
+                    <span>Remove from list</span>
                   </button>
                 </>
               )}

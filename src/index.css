@@ -6382,12 +6382,12 @@ button.playlist-search-indicator:hover {
 }
 
 .list-entry-number {
-  width: 28px;
+  width: 20px;
   flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  color: var(--text-muted);
+  color: var(--text-secondary);
   font-size: 11px;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
@@ -6397,7 +6397,7 @@ button.playlist-search-indicator:hover {
 .playlist-item.active .list-entry-number,
 .playlist-item.flash .list-entry-number,
 .fav-item:hover .list-entry-number {
-  color: var(--text-secondary);
+  color: var(--text-primary);
 }
 
 .playlist-item:hover {
@@ -6451,6 +6451,31 @@ button.playlist-search-indicator:hover {
   object-fit: cover;
   background: var(--bg-glass);
   flex-shrink: 0;
+}
+
+.playlist-thumb-play-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  color: white;
+}
+
+.playlist-thumb-wrapper:hover .playlist-thumb-play-overlay {
+  opacity: 1;
+}
+
+.playlist-thumb-play-overlay svg {
+  width: 20px;
+  height: 20px;
+  fill: currentColor;
 }
 
 .playlist-thumb-placeholder {
@@ -11160,7 +11185,7 @@ body.is-resizing .resize-handle {
 
 .list-explorer-card-main {
   flex: 1;
-  padding: 8px;
+  padding: 8px 8px 8px 4px;
   min-width: 0;
   position: relative;
   /* Base for absolute positioning */
@@ -14846,4 +14871,71 @@ body.is-resizing .resize-handle {
   .cpl-spotlight-cover {
     display: none;
   }
+}
+
+.list-explorer-container.has-selection .cpl-layout {
+  margin-right: 420px;
+}
+
+.cpl-track-item:hover {
+  background: rgba(255, 255, 255, 0.05) !important;
+}
+
+/* Privacy Toggle */
+.privacy-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.privacy-toggle:hover:not(:disabled) {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.privacy-toggle:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.privacy-toggle-track {
+  width: 28px;
+  height: 16px;
+  background: var(--bg-higher);
+  border-radius: 10px;
+  position: relative;
+  transition: background 0.3s ease;
+}
+
+.privacy-toggle.is-public .privacy-toggle-track {
+  background: var(--accent);
+}
+
+.privacy-toggle-thumb {
+  width: 12px;
+  height: 12px;
+  background: #fff;
+  border-radius: 50%;
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.privacy-toggle.is-public .privacy-toggle-thumb {
+  transform: translateX(12px);
+}
+
+.privacy-toggle-label {
+  min-width: 45px;
+  text-align: left;
 }

@@ -74,6 +74,8 @@ import {
   getFullCatalog,
   getCachedCatalog,
   mapTrackCatalogEntryToVideo,
+  mergeTracks,
+  findTrackInCatalog,
 } from './lib/trackCatalog.js';
 import { fetchUserFeedback } from './lib/feedback.js';
 import { fetchDashboardNominationUpdates } from './lib/dashboard.js';
@@ -2656,6 +2658,12 @@ export default function App() {
     setSupportList((prev) => prev.map(transform));
     setNominationList((prev) => prev.map(transform));
     setPlaylist((prev) => prev.map(transform));
+    setCustomPlaylists((prev) =>
+      prev.map((pl) => ({
+        ...pl,
+        videos: (pl.videos || []).map(transform),
+      })),
+    );
     patchCatalogCache(Object.values(updatesMap));
   }, []);
 
@@ -3651,9 +3659,13 @@ export default function App() {
       if (!transientVideo) {
         transientResumeVideoIdRef.current = currentVideoIdRef.current;
       }
-      setTransientVideo({ ...videos[0], source: 'community-playlist' });
+      const startVideo = meta?.startVideoId
+        ? videos.find((v) => (v.videoId || v.id) === meta.startVideoId) ||
+          videos[0]
+        : videos[0];
+      setTransientVideo({ ...startVideo, source: 'community-playlist' });
       setCurrentVideoId(null);
-      markVideoStarted(videos[0].videoId);
+      markVideoStarted(startVideo.videoId || startVideo.id);
       setIsPlaying(true);
     },
     [currentVideoIdRef, markVideoStarted, transientVideo],
@@ -4534,6 +4546,37 @@ export default function App() {
 
           // 4. Call internal RPC for VGMC metadata (now handle YouTube title/thumb too)
           const savePromises = updatesWithYouTubeMeta.map(async (update) => {
+            if (update.hasChangedId && update.trackId) {
+              const existingTrackWithUrl = await findTrackInCatalog(
+                supabase,
+                update.videoId,
+              );
+              if (
+                existingTrackWithUrl &&
+                existingTrackWithUrl.trackId !== update.trackId
+              ) {
+                console.log(
+                  'handleSaveTrackMetadata: Conflict detected, merging tracks to prevent data loss',
+                  {
+                    target: update.trackId,
+                    source: existingTrackWithUrl.trackId,
+                  },
+                );
+                await mergeTracks(
+                  supabase,
+                  {
+                    trackId: update.trackId,
+                    gameTitle: update.gameTitle,
+                    trackTitle: update.trackTitle,
+                    sourceUrl: update.currentUrl,
+                  },
+                  [existingTrackWithUrl],
+                  update,
+                );
+                return update.trackId;
+              }
+            }
+
             const { data: trackId, error } = await supabase.rpc(
               'import_vgmc_catalog_row',
               {
