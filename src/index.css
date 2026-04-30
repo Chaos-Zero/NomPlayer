@@ -10534,49 +10534,228 @@ body.is-resizing .resize-handle {
     margin-right 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-/* View Selector Dropdown */
-.list-explorer-view-selector-shell {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
+/* ── np-dd: NomPlayer custom dropdown ──────────────────────────────────── */
+.np-dd {
+  position: relative;
+  display: inline-block;
 }
 
-.list-explorer-view-selector {
-  appearance: none;
+.np-dd-full {
+  width: 100%;
+  max-width: 320px;
+}
+
+.np-dd-trigger {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 12px;
   background: var(--bg-surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
   color: var(--text-primary);
   font-family: inherit;
   font-size: 14px;
-  font-weight: 600;
-  padding: 6px 32px 6px 12px;
   cursor: pointer;
-  outline: none;
+  width: 100%;
+  text-align: left;
   transition: all var(--transition);
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='currentColor'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 10px center;
-  background-size: 16px;
-  width: fit-content;
+  outline: none;
 }
 
-.list-explorer-view-selector:hover {
+.np-dd-trigger:hover,
+.np-dd.open .np-dd-trigger {
   border-color: var(--accent);
   background-color: var(--bg-glass-hover);
   box-shadow: 0 0 15px var(--accent-dim);
 }
 
-.list-explorer-view-selector option {
-  background: var(--bg-surface);
-  color: var(--text-primary);
+.np-dd-t-icon {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--accent);
 }
 
-.list-explorer-view-indicator {
-  font-size: 12px;
+.np-dd-t-icon svg {
+  width: 20px;
+  height: 20px;
+}
+
+.np-dd-t-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  flex: 1;
+  min-width: 0;
+}
+
+.np-dd-t-ctx {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
   color: var(--text-muted);
-  font-weight: 500;
-  opacity: 0.8;
+  line-height: 1;
+}
+
+.np-dd-t-val {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.np-dd-chevron {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  color: var(--text-muted);
+  transition: transform 0.2s ease;
+  display: flex;
+  align-items: center;
+}
+
+.np-dd-chevron svg {
+  width: 16px;
+  height: 16px;
+}
+
+.np-dd.open .np-dd-chevron {
+  transform: rotate(180deg);
+}
+
+.np-dd-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  min-width: 100%;
+  width: max-content;
+  max-width: 340px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  z-index: 200;
+  padding: 6px;
+  display: none;
+  animation: np-dd-enter 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes np-dd-enter {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.np-dd.open .np-dd-menu {
+  display: block;
+}
+
+.np-dd-group-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  padding: 4px 10px 2px;
+  font-weight: 600;
+}
+
+.np-dd-divider {
+  height: 1px;
+  background: var(--border);
+  margin: 4px 0;
+}
+
+.np-dd-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: calc(var(--radius-md) - 2px);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.np-dd-item:hover {
+  background: var(--bg-glass-hover);
+}
+
+.np-dd-item.sel {
+  background: var(--accent-dim);
+}
+
+.np-dd-i-icon {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+}
+
+.np-dd-item.sel .np-dd-i-icon {
+  color: var(--accent);
+}
+
+.np-dd-i-icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+.np-dd-i-body {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  flex: 1;
+  min-width: 0;
+}
+
+.np-dd-i-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  line-height: 1.2;
+}
+
+.np-dd-i-sub {
+  font-size: 11px;
+  color: var(--text-muted);
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.np-dd-i-check {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  color: var(--accent);
+  opacity: 0;
+  transition: opacity 0.15s;
+  display: flex;
+  align-items: center;
+}
+
+.np-dd-i-check svg {
+  width: 16px;
+  height: 16px;
+}
+
+.np-dd-item.sel .np-dd-i-check {
+  opacity: 1;
 }
 
 /* Comments View Styling (Unified with Columns) */
@@ -10608,6 +10787,30 @@ body.is-resizing .resize-handle {
   min-height: 0;
   max-width: 850px;
   height: 100%;
+}
+
+/* Guest view: single column fills available width */
+.list-explorer-grid.comments-mode-guest {
+  grid-template-columns: 1fr;
+}
+
+.list-explorer-grid.comments-mode-guest .list-explorer-column {
+  max-width: 720px;
+}
+
+.comments-guest-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 12px;
+  padding: 10px 14px;
+  border-radius: var(--radius-sm);
+  background: var(--accent-dim);
+  border: 1px solid rgba(124, 58, 237, 0.22);
+  font:
+    600 12px 'Inter',
+    sans-serif;
+  color: var(--accent-light);
 }
 
 .list-explorer-column-header-actions {
@@ -14780,69 +14983,149 @@ body.is-resizing .resize-handle {
 
 /* ── Light mode overrides ─────────────────────────── */
 
-[data-theme='light'] .cpl-sidebar {
-  background: rgba(248, 250, 252, 0.6);
+/* Sidebar: slate-100 tint so it reads as a distinct panel */
+.theme-light .cpl-sidebar {
+  background: #f1f5f9;
+  border-right-color: #e2e8f0;
 }
 
-[data-theme='light'] .cpl-sidebar-search {
-  background: rgba(15, 23, 42, 0.04);
+.theme-light .cpl-sidebar-head {
+  background: #f1f5f9;
+  border-bottom-color: #e2e8f0;
 }
 
-[data-theme='light'] .cpl-hero-band {
+.theme-light .cpl-sidebar-search {
+  background: rgba(15, 23, 42, 0.05);
+  border-color: #e2e8f0;
+}
+
+.theme-light .cpl-user-row:hover {
+  background: rgba(15, 23, 42, 0.05);
+  border-color: #e2e8f0;
+}
+
+.theme-light .cpl-user-row.active {
+  background: rgba(124, 58, 237, 0.1);
+  border-color: rgba(124, 58, 237, 0.28);
+}
+
+/* Hero band: lavender-to-white gradient, readable border */
+.theme-light .cpl-hero-band {
   background:
     radial-gradient(
       circle at 80% 30%,
-      rgba(124, 58, 237, 0.1),
+      rgba(124, 58, 237, 0.12),
       transparent 52%
     ),
     radial-gradient(
       circle at 10% 80%,
-      rgba(56, 189, 248, 0.07),
+      rgba(56, 189, 248, 0.08),
       transparent 52%
     ),
-    linear-gradient(
-      180deg,
-      rgba(240, 240, 255, 0.98),
-      rgba(248, 250, 252, 0.96)
-    );
+    linear-gradient(180deg, #ede9fe, #f8fafc);
+  border-bottom: 1px solid #e2e8f0;
 }
 
-[data-theme='light'] .cpl-featured-card {
-  background: rgba(255, 255, 255, 0.92);
-  border-color: rgba(0, 0, 0, 0.1);
-}
-
-[data-theme='light'] .cpl-spotlight {
-  background: linear-gradient(
-    145deg,
-    rgba(124, 58, 237, 0.08),
-    rgba(224, 231, 255, 0.6)
-  );
-}
-
-[data-theme='light'] .cpl-card {
-  background: #fff;
-  border-color: rgba(0, 0, 0, 0.08);
-}
-
-[data-theme='light'] .cpl-action-btn {
-  background: rgba(255, 255, 255, 0.9);
-  border-color: rgba(0, 0, 0, 0.15);
-  color: var(--text-primary);
-}
-
-[data-theme='light'] .cpl-new-card {
-  background: #fff;
-}
-
-[data-theme='light'] .cpl-user-row.active {
-  background: rgba(124, 58, 237, 0.08);
-}
-
-[data-theme='light'] .cpl-hero-title {
+/* Hero title: dark gradient so clip text is legible */
+.theme-light .cpl-hero-title {
   background: linear-gradient(135deg, #1e1b4b 0%, #7c3aed 50%, #0369a1 100%);
   -webkit-background-clip: text;
   background-clip: text;
+}
+
+/* Stat values: hardcoded #fff → dark text */
+.theme-light .cpl-stat-val {
+  color: #1e1b4b;
+}
+
+/* Featured card: white with shadow for elevation */
+.theme-light .cpl-featured-card {
+  background: #fff;
+  border-color: #e2e8f0;
+  box-shadow:
+    0 20px 50px rgba(15, 23, 42, 0.08),
+    0 4px 12px rgba(124, 58, 237, 0.07);
+}
+
+/* Spin / featured badge: purple tint instead of sky-blue */
+.theme-light .cpl-spin-badge {
+  background: rgba(124, 58, 237, 0.1);
+  border-color: rgba(124, 58, 237, 0.3);
+  color: #6d28d9;
+}
+
+.theme-light .cpl-spin-dot {
+  background: #7c3aed;
+}
+
+/* Action buttons: plain white with slate border */
+.theme-light .cpl-action-btn {
+  background: #fff;
+  border-color: #e2e8f0;
+  color: var(--text-primary);
+}
+
+.theme-light .cpl-action-btn:hover {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+}
+
+/* Spotlight banner: lavender gradient */
+.theme-light .cpl-spotlight {
+  background: linear-gradient(145deg, #ede9fe, #f5f3ff 42%, #f8fafc);
+  border-bottom: 1px solid #e2e8f0;
+  box-shadow: none;
+}
+
+.theme-light .cpl-spotlight::before {
+  background: linear-gradient(180deg, #7c3aed, rgba(124, 58, 237, 0));
+}
+
+.theme-light .cpl-spotlight-count {
+  background: rgba(124, 58, 237, 0.08);
+  border-color: rgba(124, 58, 237, 0.22);
+  color: #4c1d95;
+}
+
+.theme-light .cpl-spotlight-cover {
+  border-left-color: #e2e8f0;
+}
+
+/* Grid cards: white tiles with real shadow so they lift off the bg */
+.theme-light .cpl-card {
+  background: #fff;
+  border-color: #e2e8f0;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.06);
+}
+
+.theme-light .cpl-card:hover {
+  border-color: rgba(124, 58, 237, 0.32);
+  box-shadow:
+    0 10px 28px rgba(15, 23, 42, 0.1),
+    0 4px 8px rgba(124, 58, 237, 0.08);
+}
+
+/* New-this-week cards */
+.theme-light .cpl-new-card {
+  background: #fff;
+  border-color: #e2e8f0;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.05);
+}
+
+.theme-light .cpl-new-card:hover {
+  border-color: rgba(124, 58, 237, 0.32);
+}
+
+/* Sort buttons active state */
+.theme-light .cpl-sort-btn.on {
+  background: rgba(124, 58, 237, 0.08);
+  border-color: rgba(124, 58, 237, 0.32);
+  color: #6d28d9;
+}
+
+/* Track item row hover in detail panel */
+.theme-light .cpl-track-item:hover {
+  background: rgba(15, 23, 42, 0.05) !important;
 }
 
 /* ── Responsive (narrower explorer) ──────────────── */
@@ -14878,7 +15161,7 @@ body.is-resizing .resize-handle {
 }
 
 .cpl-track-item:hover {
-  background: rgba(255, 255, 255, 0.05) !important;
+  background: var(--bg-glass-hover) !important;
 }
 
 /* Privacy Toggle */

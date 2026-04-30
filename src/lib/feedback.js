@@ -107,6 +107,31 @@ export async function deleteUserFeedback(supabase, userId, trackId) {
   }
 }
 
+export async function fetchRecentComments(supabase, limit = 20) {
+  if (!supabase) return [];
+  const { data } = await supabase
+    .from('track_user_feedback')
+    .select(
+      `
+      rating,
+      note,
+      updated_at,
+      user_id,
+      profiles (username, avatar_url),
+      tracks (
+        id,
+        canonical_game_title,
+        canonical_track_title,
+        track_sources (external_id)
+      )
+    `,
+    )
+    .not('note', 'is', null)
+    .order('updated_at', { ascending: false })
+    .limit(limit);
+  return data || [];
+}
+
 export async function fetchDetailedUserActivity(
   supabase,
   userId,

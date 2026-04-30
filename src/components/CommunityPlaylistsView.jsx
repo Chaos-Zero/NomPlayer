@@ -1045,7 +1045,7 @@ export function CommunityPlaylistsView({
                       {featured.trackCount} tracks
                     </span>
                   </div>
-                  <div className="cpl-spotlight-name">"{featured.name}"</div>
+                  <div className="cpl-spotlight-name">{featured.name}</div>
                   <div className="cpl-spotlight-creator">
                     <CplAvatar
                       username={featured.profile?.username}

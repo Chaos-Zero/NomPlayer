@@ -1117,7 +1117,7 @@ export default function HomePage({
       },
       {
         icon: <PlaylistPlusIcon />,
-        label: 'View Playlist',
+        label: 'View Queue',
         onClick: onOpenPlaylist,
         className: 'dashboard-action-btn-secondary',
       },

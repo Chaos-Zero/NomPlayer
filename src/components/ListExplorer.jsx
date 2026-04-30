@@ -17,8 +17,10 @@ import {
   upsertUserFeedback,
   deleteUserFeedback,
   fetchDetailedUserActivity,
+  fetchRecentComments,
 } from '../lib/feedback.js';
 import { motion as Motion, AnimatePresence } from 'framer-motion';
+import ViewSelectorDropdown from './ViewSelectorDropdown.jsx';
 import {
   DndContext,
   closestCenter,
@@ -1015,6 +1017,7 @@ function ListExplorerColumn({
 function CommentsView({
   data,
   isLoading,
+  authUser,
   onSelectTrack,
   onEditTrack,
   onDeleteFeedback,
@@ -1258,6 +1261,42 @@ function CommentsView({
       </Motion.div>
     );
   };
+
+  if (!authUser) {
+    return (
+      <div className="list-explorer-grid comments-mode comments-mode-guest">
+        <div
+          className="list-explorer-column"
+          style={{ '--column-accent': 'var(--accent)' }}
+        >
+          <div className="list-explorer-column-header">
+            <div className="list-explorer-column-title-group">
+              <div className="list-explorer-column-title-row">
+                <h3>Recent Comments</h3>
+                <span className="list-explorer-column-subtitle">
+                  {highlightGroups.length} tracks
+                </span>
+              </div>
+            </div>
+          </div>
+          <div className="list-explorer-column-content">
+            <div className="comments-guest-banner">
+              <span>Sign in to leave your own ratings and comments</span>
+            </div>
+            <div className="list-explorer-list">
+              {highlightGroups.length > 0 ? (
+                highlightGroups.map((g) => renderGroupedCard(g, false))
+              ) : (
+                <div className="list-explorer-list-empty">
+                  <span>No community comments yet.</span>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="list-explorer-grid comments-mode">
@@ -2465,10 +2504,15 @@ export default function ListExplorer({
   // Fetch user activity data when view switches to comments or on mount
   useEffect(() => {
     const fetchActivity = async () => {
-      if (!supabase || !authUser?.id) return;
+      if (!supabase) return;
       setIsLoadingActivity(true);
       try {
-        // Collect track IDs from nominations and support list for peer feedback lookup
+        if (!authUser?.id) {
+          const highlights = await fetchRecentComments(supabase, 20);
+          setActivityData({ personal: [], peer: [], highlights });
+          return;
+        }
+
         const nominatedTrackIds = (nominationListRef.current || [])
           .map((v) => v.trackId || v.id)
           .filter((id) => id && /^[0-9a-f-]{36}$/i.test(id));
@@ -2502,24 +2546,10 @@ export default function ListExplorer({
       <div className="list-explorer-header">
         <div className="list-explorer-title-group">
           <h1>List Explorer</h1>
-          <div className="list-explorer-view-selector-shell">
-            <select
-              className="list-explorer-view-selector"
-              value={explorerView}
-              onChange={(e) => setExplorerView(e.target.value)}
-            >
-              <option value="lists">Manage Lists</option>
-              <option value="comments">View Comments & Ratings</option>
-              <option value="community-playlists">Community Playlists</option>
-            </select>
-            <div className="list-explorer-view-indicator">
-              {explorerView === 'lists'
-                ? 'Manage your lists and see community nominations'
-                : explorerView === 'comments'
-                  ? 'Your feedback and community interactions'
-                  : 'Browse and load public playlists from other users'}
-            </div>
-          </div>
+          <ViewSelectorDropdown
+            value={explorerView}
+            onChange={setExplorerView}
+          />
         </div>
         <div className="list-explorer-global-actions">
           {explorerView === 'lists' && (
@@ -3000,6 +3030,7 @@ export default function ListExplorer({
                 <CommentsView
                   data={activityData}
                   isLoading={isLoadingActivity}
+                  authUser={authUser}
                   onSelectTrack={(track) => {
                     setSelectedTrackId(
                       track.videoId || track.video_id || track.id,
