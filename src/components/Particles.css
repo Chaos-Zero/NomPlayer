@@ -1,0 +1,15 @@
+.particles-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+/* The OGL canvas must sit as an absolute overlay so it doesn't push the
+   container to a non-zero intrinsic height before resize() fires. */
+.particles-container canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100% !important;
+  height: 100% !important;
+}

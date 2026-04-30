@@ -43,8 +43,554 @@ import { AnimatedGridPattern } from './AnimatedGridPattern.jsx';
 import TextType from './TextType.jsx';
 import Dock from './Dock.jsx';
 import CustomPlaylistSubmenu from './CustomPlaylistSubmenu.jsx';
+import Particles from './Particles.jsx';
 
 const DASHBOARD_REFRESH_LIMIT = 8;
+const HOME_CPL_PAGE_SIZE = 12;
+
+const HOME_CPL_GRADIENTS = [
+  ['#7c3aed', '#3b1d6e'],
+  ['#0ea5e9', '#1d4ed8'],
+  ['#f59e0b', '#92400e'],
+  ['#10b981', '#0ea5e9'],
+  ['#ec4899', '#7c3aed'],
+  ['#ef4444', '#7c3aed'],
+  ['#6366f1', '#ec4899'],
+  ['#f472b6', '#f59e0b'],
+  ['#1d4ed8', '#10b981'],
+  ['#38bdf8', '#7c3aed'],
+];
+
+function homeCplGradient(id = '') {
+  const num = parseInt(id.replace(/-/g, '').slice(0, 8), 16) || 0;
+  const [a, b] = HOME_CPL_GRADIENTS[Math.abs(num) % HOME_CPL_GRADIENTS.length];
+  return `linear-gradient(135deg, ${a}, ${b})`;
+}
+
+function homeCplTimeAgo(dateStr) {
+  const d = (Date.now() - new Date(dateStr).getTime()) / 86400000;
+  if (d < 1) return 'today';
+  if (d < 2) return '1d ago';
+  if (d < 7) return `${Math.floor(d)}d ago`;
+  if (d < 30) return `${Math.floor(d / 7)}w ago`;
+  return `${Math.floor(d / 30)}mo ago`;
+}
+
+async function fetchHomeCplPage(supabase, authUserId, page) {
+  let query = supabase
+    .from('user_playlists')
+    .select(
+      'id, name, is_public, created_at, user_id, user_playlist_tracks(count)',
+    )
+    .eq('is_active_queue', false)
+    .order('created_at', { ascending: false })
+    .range(page * HOME_CPL_PAGE_SIZE, (page + 1) * HOME_CPL_PAGE_SIZE - 1);
+
+  if (authUserId) {
+    query = query.or(`is_public.eq.true,user_id.eq.${authUserId}`);
+  } else {
+    query = query.eq('is_public', true);
+  }
+
+  const { data: rawPls, error } = await query;
+  if (error) throw error;
+
+  const playlistIds = (rawPls || []).map((p) => p.id);
+  const userIds = [...new Set((rawPls || []).map((p) => p.user_id))];
+  let profileMap = {};
+  let thumbnailMap = {};
+
+  await Promise.all([
+    userIds.length > 0 &&
+      supabase
+        .from('profiles')
+        .select('id, username, avatar_url')
+        .in('id', userIds)
+        .then(({ data }) => {
+          (data || []).forEach((p) => {
+            profileMap[p.id] = p;
+          });
+        }),
+    playlistIds.length > 0 &&
+      supabase
+        .from('user_playlist_tracks')
+        .select(
+          'playlist_id, order_index, tracks(track_sources(external_id, cached_thumbnail_url, is_primary))',
+        )
+        .in('playlist_id', playlistIds)
+        .order('order_index', { ascending: true })
+        .then(({ data }) => {
+          for (const pt of data || []) {
+            if (thumbnailMap[pt.playlist_id]) continue;
+            const src =
+              pt.tracks?.track_sources?.find((s) => s.is_primary) ??
+              pt.tracks?.track_sources?.[0];
+            if (src) {
+              thumbnailMap[pt.playlist_id] =
+                src.cached_thumbnail_url ||
+                `https://i.ytimg.com/vi/${src.external_id}/mqdefault.jpg`;
+            }
+          }
+        }),
+  ]);
+
+  return (rawPls || []).map((pl) => ({
+    ...pl,
+    trackCount: Number(pl.user_playlist_tracks?.[0]?.count ?? 0),
+    profile: profileMap[pl.user_id] || null,
+    firstThumbnail: thumbnailMap[pl.id] || null,
+  }));
+}
+
+async function fetchHomeCplTracks(supabase, playlistId) {
+  const { data, error } = await supabase
+    .from('user_playlist_tracks')
+    .select(
+      `order_index, track_id,
+       tracks (
+         id, canonical_game_title, canonical_track_title,
+         track_sources (
+           external_id, cached_title, cached_channel_title,
+           cached_thumbnail_url, is_primary
+         )
+       )`,
+    )
+    .eq('playlist_id', playlistId)
+    .order('order_index');
+  if (error) throw error;
+  return (data || [])
+    .map((pt) => {
+      const track = pt.tracks;
+      const src =
+        track?.track_sources?.find((s) => s.is_primary) ??
+        track?.track_sources?.[0];
+      if (!src) return null;
+      return {
+        videoId: src.external_id,
+        trackId: pt.track_id,
+        title:
+          src.cached_title ||
+          [track.canonical_game_title, track.canonical_track_title]
+            .filter(Boolean)
+            .join(' – '),
+        displayTitle:
+          track.canonical_track_title || src.cached_title || src.external_id,
+        channelTitle: src.cached_channel_title || 'YouTube',
+        thumbnail:
+          src.cached_thumbnail_url ||
+          `https://i.ytimg.com/vi/${src.external_id}/mqdefault.jpg`,
+        gameTitle: track.canonical_game_title,
+        trackTitle: track.canonical_track_title,
+        comment: '',
+        addedAt: new Date().toISOString(),
+      };
+    })
+    .filter(Boolean);
+}
+
+const HOME_CPL_CARD_WIDTH = 175;
+const HOME_CPL_CARD_GAP = 12;
+
+function HomeCommunityPlaylistsStrip({
+  supabase,
+  authUser,
+  onPlayPlaylist,
+  onAddToPlaylist,
+  onShowToast,
+  isAuthReady,
+}) {
+  const [playlists, setPlaylists] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [page, setPage] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
+  const [isFetchingMore, setIsFetchingMore] = useState(false);
+  const [pageIndex, setPageIndex] = useState(0);
+  const [pageSize, setPageSize] = useState(6);
+  const [selectedPlaylist, setSelectedPlaylist] = useState(null);
+  const [selectedTracks, setSelectedTracks] = useState([]);
+  const [isLoadingPanel, setIsLoadingPanel] = useState(false);
+  const [loadingId, setLoadingId] = useState(null);
+  const gridRef = useRef(null);
+  const authUserId = authUser?.id ?? null;
+
+  useEffect(() => {
+    if (!isAuthReady || !supabase) return;
+    let isActive = true;
+    setIsLoading(true);
+    fetchHomeCplPage(supabase, authUserId, 0)
+      .then((data) => {
+        if (!isActive) return;
+        setPlaylists(data);
+        setHasMore(data.length === HOME_CPL_PAGE_SIZE);
+        setPage(1);
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (isActive) setIsLoading(false);
+      });
+    return () => {
+      isActive = false;
+    };
+  }, [supabase, authUserId, isAuthReady]);
+
+  // Recalculate how many cards fit when the grid container resizes
+  useEffect(() => {
+    const el = gridRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(() => {
+      const w = el.clientWidth;
+      const size = Math.max(
+        2,
+        Math.floor(
+          (w + HOME_CPL_CARD_GAP) / (HOME_CPL_CARD_WIDTH + HOME_CPL_CARD_GAP),
+        ),
+      );
+      setPageSize((prev) => {
+        if (prev !== size) setPageIndex(0); // reset to first page on resize
+        return size;
+      });
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  const loadMore = useCallback(async () => {
+    if (isFetchingMore || !hasMore || !supabase) return;
+    setIsFetchingMore(true);
+    try {
+      const data = await fetchHomeCplPage(supabase, authUserId, page);
+      setPlaylists((prev) => {
+        const existingIds = new Set(prev.map((p) => p.id));
+        return [...prev, ...data.filter((p) => !existingIds.has(p.id))];
+      });
+      setHasMore(data.length === HOME_CPL_PAGE_SIZE);
+      setPage((p) => p + 1);
+    } catch {
+      // Intentionally silent - error is handled implicitly or doesn't require UI feedback here
+    } finally {
+      setIsFetchingMore(false);
+    }
+  }, [supabase, authUserId, page, hasMore, isFetchingMore]);
+
+  const canGoBack = pageIndex > 0;
+  const canGoForward = pageIndex + pageSize < playlists.length || hasMore;
+
+  async function handleNextPage() {
+    const nextIndex = pageIndex + pageSize;
+    if (nextIndex < playlists.length) {
+      setPageIndex(nextIndex);
+    } else if (hasMore) {
+      await loadMore();
+      setPageIndex(nextIndex);
+    }
+  }
+
+  function handlePrevPage() {
+    setPageIndex(Math.max(0, pageIndex - pageSize));
+  }
+
+  async function handleSelectPlaylist(playlist) {
+    if (selectedPlaylist?.id === playlist.id) {
+      setSelectedPlaylist(null);
+      return;
+    }
+    setSelectedPlaylist(playlist);
+    setSelectedTracks([]);
+    setIsLoadingPanel(true);
+    try {
+      const tracks = await fetchHomeCplTracks(supabase, playlist.id);
+      setSelectedTracks(tracks);
+    } catch {
+      onShowToast?.('Failed to load playlist tracks');
+    } finally {
+      setIsLoadingPanel(false);
+    }
+  }
+
+  async function handlePlay(playlist) {
+    setLoadingId(playlist.id);
+    try {
+      const tracks =
+        selectedTracks.length && selectedPlaylist?.id === playlist.id
+          ? selectedTracks
+          : await fetchHomeCplTracks(supabase, playlist.id);
+      if (!tracks.length) {
+        onShowToast?.('This playlist has no tracks');
+        return;
+      }
+      if (onPlayPlaylist) {
+        onPlayPlaylist(tracks, {
+          id: playlist.id,
+          name: playlist.name,
+          autoplay: true,
+        });
+      } else {
+        onAddToPlaylist(tracks);
+      }
+      onShowToast?.(`Playing "${playlist.name}" — ${tracks.length} tracks`);
+    } catch {
+      onShowToast?.('Failed to load playlist');
+    } finally {
+      setLoadingId(null);
+    }
+  }
+
+  async function handleAdd(playlist) {
+    setLoadingId(playlist.id);
+    try {
+      const tracks =
+        selectedTracks.length && selectedPlaylist?.id === playlist.id
+          ? selectedTracks
+          : await fetchHomeCplTracks(supabase, playlist.id);
+      if (!tracks.length) {
+        onShowToast?.('This playlist has no tracks');
+        return;
+      }
+      onAddToPlaylist(tracks);
+      onShowToast?.(`Added ${tracks.length} tracks to your queue`);
+    } catch {
+      onShowToast?.('Failed to load playlist');
+    } finally {
+      setLoadingId(null);
+    }
+  }
+
+  if (isLoading) {
+    return (
+      <div className="home-cpl-loading">
+        <div className="hero-loader-spinner" aria-label="Loading playlists" />
+      </div>
+    );
+  }
+
+  if (!playlists.length) {
+    return (
+      <div className="home-cpl-empty">No public community playlists yet.</div>
+    );
+  }
+
+  const visiblePlaylists = playlists.slice(pageIndex, pageIndex + pageSize);
+
+  return (
+    <div className="home-cpl-content">
+      <div className="home-cpl-page-wrapper">
+        <button
+          className="home-cpl-nav-btn"
+          onClick={handlePrevPage}
+          disabled={!canGoBack}
+          style={{ visibility: canGoBack ? 'visible' : 'hidden' }}
+          aria-label="Previous playlists"
+          type="button"
+        >
+          <svg
+            viewBox="0 0 20 20"
+            fill="currentColor"
+            width="18"
+            height="18"
+            aria-hidden
+          >
+            <path d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" />
+          </svg>
+        </button>
+
+        <div
+          ref={gridRef}
+          className="home-cpl-page"
+          style={{ gridTemplateColumns: `repeat(${pageSize}, 1fr)` }}
+        >
+          {visiblePlaylists.map((pl) => (
+            <button
+              key={pl.id}
+              className={`cpl-new-card home-cpl-new-card${selectedPlaylist?.id === pl.id ? ' home-cpl-card-selected' : ''}`}
+              onClick={() => handleSelectPlaylist(pl)}
+              title={`View "${pl.name}"`}
+            >
+              <div className="cpl-new-cover">
+                {pl.firstThumbnail ? (
+                  <img
+                    src={pl.firstThumbnail}
+                    alt=""
+                    style={{
+                      width: '100%',
+                      height: '100%',
+                      objectFit: 'cover',
+                    }}
+                  />
+                ) : (
+                  <div
+                    style={{
+                      width: '100%',
+                      height: '100%',
+                      background: homeCplGradient(pl.id),
+                    }}
+                  />
+                )}
+                <span className="cpl-track-badge cpl-track-badge-sm">
+                  {pl.trackCount}
+                </span>
+              </div>
+              <div className="cpl-new-body">
+                <div className="cpl-new-name">{pl.name}</div>
+                <div className="cpl-new-meta">
+                  <div
+                    className="cpl-avatar cpl-avatar-xs"
+                    style={
+                      pl.profile?.avatar_url
+                        ? {}
+                        : { background: homeCplGradient(pl.user_id || '') }
+                    }
+                    aria-hidden
+                  >
+                    {pl.profile?.avatar_url ? (
+                      <img
+                        src={pl.profile.avatar_url}
+                        alt=""
+                        style={{
+                          width: '100%',
+                          height: '100%',
+                          objectFit: 'cover',
+                          borderRadius: 'inherit',
+                        }}
+                      />
+                    ) : (
+                      (getDisplayProfileName(pl.profile?.username) || '?')
+                        .slice(0, 2)
+                        .toUpperCase()
+                    )}
+                  </div>
+                  <span>
+                    {getDisplayProfileName(pl.profile?.username)} ·{' '}
+                    {homeCplTimeAgo(pl.created_at)}
+                  </span>
+                </div>
+              </div>
+            </button>
+          ))}
+          {isFetchingMore && (
+            <div className="home-cpl-page-loading-slot">
+              <div
+                className="hero-loader-spinner"
+                style={{ width: 20, height: 20 }}
+              />
+            </div>
+          )}
+        </div>
+
+        <button
+          className="home-cpl-nav-btn"
+          onClick={handleNextPage}
+          disabled={!canGoForward || isFetchingMore}
+          style={{ visibility: canGoForward ? 'visible' : 'hidden' }}
+          aria-label="Next playlists"
+          type="button"
+        >
+          <svg
+            viewBox="0 0 20 20"
+            fill="currentColor"
+            width="18"
+            height="18"
+            aria-hidden
+          >
+            <path d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" />
+          </svg>
+        </button>
+      </div>
+
+      {selectedPlaylist && (
+        <div className="home-cpl-panel">
+          <div className="home-cpl-panel-cover">
+            {selectedPlaylist.firstThumbnail ? (
+              <img
+                src={selectedPlaylist.firstThumbnail}
+                alt=""
+                className="home-cpl-panel-cover-img"
+              />
+            ) : (
+              <div
+                className="home-cpl-panel-cover-img"
+                style={{ background: homeCplGradient(selectedPlaylist.id) }}
+              />
+            )}
+          </div>
+          <div className="home-cpl-panel-info">
+            <div className="home-cpl-panel-header">
+              <div>
+                <div className="home-cpl-panel-name">
+                  {selectedPlaylist.name}
+                </div>
+                <div className="home-cpl-panel-meta">
+                  by {getDisplayProfileName(selectedPlaylist.profile?.username)}{' '}
+                  · {selectedPlaylist.trackCount} tracks ·{' '}
+                  {homeCplTimeAgo(selectedPlaylist.created_at)}
+                </div>
+              </div>
+              <button
+                className="home-cpl-panel-close"
+                onClick={() => setSelectedPlaylist(null)}
+                aria-label="Close playlist panel"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="home-cpl-panel-actions">
+              <button
+                className="dashboard-action-btn"
+                onClick={() => handlePlay(selectedPlaylist)}
+                disabled={loadingId === selectedPlaylist.id}
+                type="button"
+              >
+                {loadingId === selectedPlaylist.id ? '…' : 'Play Playlist'}
+              </button>
+              <button
+                className="dashboard-action-btn dashboard-action-btn-muted"
+                onClick={() => handleAdd(selectedPlaylist)}
+                disabled={loadingId === selectedPlaylist.id}
+                type="button"
+              >
+                Add to Queue
+              </button>
+            </div>
+            {isLoadingPanel ? (
+              <div className="home-cpl-panel-loading">
+                <div
+                  className="hero-loader-spinner"
+                  style={{ width: 18, height: 18 }}
+                />
+                <span>Loading tracks…</span>
+              </div>
+            ) : selectedTracks.length > 0 ? (
+              <div className="home-cpl-panel-tracks">
+                {selectedTracks.slice(0, 8).map((t, i) => (
+                  <div key={i} className="home-cpl-panel-track">
+                    <img
+                      src={t.thumbnail}
+                      alt=""
+                      className="home-cpl-panel-track-thumb"
+                      loading="lazy"
+                    />
+                    <div className="home-cpl-panel-track-info">
+                      <span className="home-cpl-panel-track-title">
+                        {t.trackTitle || t.displayTitle}
+                      </span>
+                      <span className="home-cpl-panel-track-game">
+                        {t.gameTitle || t.channelTitle}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+                {selectedTracks.length > 8 && (
+                  <div className="home-cpl-panel-track-more">
+                    +{selectedTracks.length - 8} more tracks
+                  </div>
+                )}
+              </div>
+            ) : null}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 const MOBILE_DASHBOARD_COLLAPSE_DEFAULTS = {
   overview: false,
@@ -68,12 +614,14 @@ function DashboardSection({
   isCollapsed = false,
   onToggleCollapse = null,
   summary = '',
+  backgroundContent = null,
 }) {
   return (
     <section
       className={`dashboard-section-feed ${className}`}
       aria-label={title}
     >
+      {backgroundContent}
       <div className="dashboard-pane-shell">
         <div className="dashboard-pane-header">
           <div className="dashboard-pane-heading">
@@ -903,9 +1451,11 @@ export default function HomePage({
   listenedStatusById = {},
   onAddToPlaylist,
   onPlayNow,
+  onPlayPlaylist,
   onShowComments,
   onNavigateToPlayer,
   onNavigateToExplorer,
+  onNavigateToCommunityPlaylists,
   onNavigateToExplorerComments,
   onNavigateToDatabase,
   onOpenPlaylist,
@@ -2324,6 +2874,48 @@ export default function HomePage({
               </div>
             </>
           )}
+        </DashboardSection>
+
+        <DashboardSection
+          title="Community Playlists"
+          eyebrow="Browse"
+          className="dashboard-section-community-playlists"
+          actions={
+            <button
+              className="dashboard-action-btn dashboard-action-btn-muted"
+              type="button"
+              onClick={onNavigateToCommunityPlaylists}
+            >
+              View All
+            </button>
+          }
+          backgroundContent={
+            <div className="home-cpl-particles-bg" aria-hidden>
+              <Particles
+                particleColors={['#ffffff', '#fff8f0', '#ffeedd']}
+                particleCount={200}
+                particleSpread={9}
+                speed={0.05}
+                particleBaseSize={90}
+                cameraFov={50}
+                cameraDistance={20}
+                moveParticlesOnHover
+                particleHoverFactor={0.25}
+                alphaParticles
+                disableRotation={false}
+                pixelRatio={1}
+              />
+            </div>
+          }
+        >
+          <HomeCommunityPlaylistsStrip
+            supabase={supabase}
+            authUser={authUser}
+            onPlayPlaylist={onPlayPlaylist}
+            onAddToPlaylist={onAddToPlaylist}
+            onShowToast={onShowToast}
+            isAuthReady={isAuthReady}
+          />
         </DashboardSection>
 
         <DashboardSection

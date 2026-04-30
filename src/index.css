@@ -11537,10 +11537,6 @@ body.is-resizing .resize-handle {
   pointer-events: none;
 }
 
-.main-content.has-persistent-player .list-explorer-info-panel {
-  bottom: var(--player-footer-total-h);
-}
-
 .list-explorer-info-panel.is-open {
   transform: translateX(0);
   opacity: 1;
@@ -14610,6 +14606,284 @@ body.is-resizing .resize-handle {
     500 11px 'Inter',
     sans-serif;
   color: var(--text-muted);
+}
+
+/* ── Home page Community Playlists strip ──────────── */
+
+.dashboard-section-community-playlists {
+  min-height: auto;
+  position: relative;
+  /* Pull the section into both gaps so the orange background fills them */
+  margin-top: -48px;
+  margin-bottom: -48px;
+  background: linear-gradient(
+    180deg,
+    rgba(251, 146, 60, 0.08) 0%,
+    rgba(249, 115, 22, 0.07) 50%,
+    rgba(251, 146, 60, 0.06) 100%
+  );
+}
+
+.dashboard-section-community-playlists .dashboard-pane-shell {
+  gap: 12px;
+  position: relative;
+  z-index: 1;
+  /* Compensate for the -48px negative margins: 48px restores original gap,
+     16px is the desired inner breathing room from each edge */
+  padding-top: 64px;
+  padding-bottom: 64px;
+}
+
+.home-cpl-particles-bg {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  overflow: hidden;
+}
+
+/* Stronger orange field in light mode + invert particles to dark dots */
+.theme-light .dashboard-section-community-playlists {
+  background: linear-gradient(
+    180deg,
+    rgba(251, 146, 60, 0.28) 0%,
+    rgba(249, 115, 22, 0.22) 50%,
+    rgba(251, 146, 60, 0.2) 100%
+  );
+}
+
+.theme-light .home-cpl-particles-bg {
+  filter: invert(1);
+}
+
+.home-cpl-content {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.home-cpl-page-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.home-cpl-page {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  gap: 12px;
+  padding: 4px 2px 10px;
+}
+
+.home-cpl-nav-btn {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(15, 15, 22, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #fff;
+  transition:
+    background 0.15s,
+    border-color 0.15s,
+    opacity 0.15s;
+}
+
+.home-cpl-nav-btn:hover:not(:disabled) {
+  background: rgba(30, 30, 42, 0.96);
+  border-color: rgba(251, 146, 60, 0.4);
+}
+
+.home-cpl-nav-btn:disabled {
+  cursor: default;
+}
+
+.home-cpl-page-loading-slot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.home-cpl-new-card {
+  width: auto;
+  transition:
+    border-color var(--transition),
+    transform var(--transition),
+    box-shadow var(--transition);
+}
+
+.home-cpl-card-selected {
+  border-color: rgba(251, 146, 60, 0.6) !important;
+  box-shadow: 0 0 0 2px rgba(251, 146, 60, 0.18);
+}
+
+.home-cpl-loading,
+.home-cpl-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 0;
+  gap: 10px;
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+/* ── Panel ──────────────────────────────────────────── */
+
+.home-cpl-panel {
+  display: grid;
+  grid-template-columns: 120px 1fr;
+  gap: 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+  padding-top: 14px;
+  animation: home-cpl-panel-in 0.18s ease;
+}
+
+@keyframes home-cpl-panel-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.home-cpl-panel-cover-img {
+  width: 120px;
+  height: 80px;
+  object-fit: cover;
+  border-radius: 8px;
+  display: block;
+}
+
+.home-cpl-panel-info {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+
+.home-cpl-panel-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.home-cpl-panel-name {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.home-cpl-panel-meta {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.home-cpl-panel-close {
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 14px;
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 4px;
+  line-height: 1;
+}
+
+.home-cpl-panel-close:hover {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.home-cpl-panel-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.home-cpl-panel-loading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.home-cpl-panel-tracks {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 200px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+
+.home-cpl-panel-track {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 6px;
+  border-radius: 6px;
+}
+
+.home-cpl-panel-track:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.home-cpl-panel-track-thumb {
+  width: 56px;
+  height: 32px;
+  object-fit: cover;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.home-cpl-panel-track-info {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.home-cpl-panel-track-title {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.home-cpl-panel-track-game {
+  font-size: 11px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.home-cpl-panel-track-more {
+  font-size: 12px;
+  color: var(--text-muted);
+  padding: 4px 6px;
+  font-style: italic;
 }
 
 /* ── Track count badge ────────────────────────────── */

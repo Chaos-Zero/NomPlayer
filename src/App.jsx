@@ -5628,6 +5628,7 @@ export default function App() {
               isFeedbackPanelOpen={isFeedbackPanelOpen}
               onAddToPlaylist={handleQueueFromSupportList}
               onPlayNow={handlePlayNowFromSupportList}
+              onPlayPlaylist={handlePlayCommunityPlaylist}
               onToggleSupport={handleToggleSupportFromPlaylist}
               onToggleNomination={handleToggleNominationFromPlaylist}
               onOpenSupportDropdown={(video, position) =>
@@ -5641,6 +5642,9 @@ export default function App() {
               onShowComments={handleShowComments}
               onNavigateToPlayer={handleNavigateToPlayer}
               onNavigateToExplorer={handleNavigateToExplorer}
+              onNavigateToCommunityPlaylists={
+                handleNavigateToCommunityPlaylists
+              }
               onNavigateToExplorerComments={handleNavigateToExplorerComments}
               onNavigateToDatabase={handleNavigateToDatabase}
               onOpenPlaylist={handleTogglePlaylist}
