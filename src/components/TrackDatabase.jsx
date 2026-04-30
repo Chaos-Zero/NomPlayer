@@ -21,6 +21,7 @@ import {
   deleteUserFeedback,
 } from '../lib/feedback.js';
 import DuplicateReviewModal from './DuplicateReviewModal.jsx';
+import CustomPlaylistSubmenu from './CustomPlaylistSubmenu.jsx';
 import { DotLottieReact } from '@lottiefiles/dotlottie-react';
 import useMediaQuery from '../hooks/useMediaQuery.js';
 import { useVirtualizer } from '@tanstack/react-virtual';
@@ -516,6 +517,8 @@ export default function TrackDatabase({
   onAddToPlaylist,
   onPlayNow,
   onShowToast,
+  customPlaylists,
+  onUpdateCustomPlaylists,
   onRefreshFeedback,
   listenedStatusById = {},
   hasPlayer = false,
@@ -1041,10 +1044,10 @@ export default function TrackDatabase({
             className="btn btn-playback add-queue"
             disabled={!selectedTrack}
             onClick={() => onAddToPlaylist?.([selectedTrack])}
-            title="Add to Playlist"
+            title="Add to Queue"
           >
             <PlaylistPlusIcon />{' '}
-            <span className="responsive-label">Add to Playlist</span>
+            <span className="responsive-label">Add to Queue</span>
           </button>
           <button
             className="btn btn-playback btn-merge"
@@ -1365,8 +1368,17 @@ export default function TrackDatabase({
               setContextMenu(null);
             }}
           >
-            <PlaylistPlusIcon /> Add to Playlist
+            <PlaylistPlusIcon /> Add to Queue
           </button>
+
+          <CustomPlaylistSubmenu
+            videos={[contextMenu.track]}
+            customPlaylists={customPlaylists}
+            onUpdateCustomPlaylists={onUpdateCustomPlaylists}
+            onShowToast={onShowToast}
+            onClose={() => setContextMenu(null)}
+            itemClassName="database-context-menu-item"
+          />
 
           {authUser && (
             <>

@@ -102,10 +102,10 @@ describe('PlaylistSidebar', () => {
 
     fireEvent.contextMenu(screen.getByLabelText('Play Alpha'));
     fireEvent.pointerDown(
-      screen.getByRole('menuitem', { name: 'Remove from Playlist' }),
+      screen.getByRole('menuitem', { name: 'Remove from Queue' }),
     );
     fireEvent.click(
-      screen.getByRole('menuitem', { name: 'Remove from Playlist' }),
+      screen.getByRole('menuitem', { name: 'Remove from Queue' }),
     );
     expect(props.onRemoveFromPlaylist).toHaveBeenCalledWith(video.videoId);
   });
@@ -203,7 +203,7 @@ describe('PlaylistSidebar', () => {
     const headerMain = container.querySelector('.sidebar-header-main');
     const headerActions = container.querySelector('.sidebar-header-actions');
 
-    expect(headerMain).toHaveTextContent('Playlist');
+    expect(headerMain).toHaveTextContent('Queue');
     expect(headerMain).toHaveTextContent('1 video');
     expect(headerActions?.children).toHaveLength(3);
     expect(screen.getByRole('button', { name: 'Select' })).toBeInTheDocument();
@@ -226,7 +226,7 @@ describe('PlaylistSidebar', () => {
       ],
     });
 
-    fireEvent.click(screen.getByRole('button', { name: 'Shuffle playlist' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Shuffle queue' }));
     expect(props.onShuffle).toHaveBeenCalledTimes(1);
 
     fireEvent.click(screen.getByRole('button', { name: 'Preview mode' }));
@@ -305,7 +305,7 @@ describe('PlaylistSidebar', () => {
     renderSidebar();
 
     expect(
-      screen.getByRole('button', { name: 'Add to playlist' }),
+      screen.getByRole('button', { name: 'Add to queue' }),
     ).toBeInTheDocument();
   });
 
@@ -355,7 +355,7 @@ describe('PlaylistSidebar', () => {
       screen.getByRole('button', { name: 'Expand playlist' }),
     ).toBeInTheDocument();
     expect(
-      screen.queryByRole('button', { name: 'Shuffle playlist' }),
+      screen.queryByRole('button', { name: 'Shuffle queue' }),
     ).not.toBeInTheDocument();
     expect(screen.queryByLabelText('Play Alpha')).not.toBeInTheDocument();
 
@@ -403,13 +403,27 @@ describe('PlaylistSidebar', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Select' }));
     fireEvent.click(screen.getByRole('button', { name: 'Select all' }));
-    fireEvent.click(
-      screen.getByRole('button', { name: 'Remove from Playlist' }),
-    );
+    fireEvent.click(screen.getByRole('button', { name: 'Remove from Queue' }));
 
     expect(props.onRemoveFromPlaylist).toHaveBeenCalledWith([
       'alpha1234567',
       'beta12345678',
     ]);
+  });
+
+  it('renders CustomPlaylistSubmenu inside the context menu', () => {
+    const mockPlaylists = [{ id: 'p1', name: 'My Mix', videos: [] }];
+    renderSidebar({
+      customPlaylists: mockPlaylists,
+      onUpdateCustomPlaylists: vi.fn(),
+    });
+
+    // Open context menu for the track
+    fireEvent.contextMenu(screen.getByLabelText('Play Alpha'));
+
+    // The CustomPlaylistSubmenu should render its toggle button
+    expect(
+      screen.getByRole('button', { name: /Add to Custom Playlist/i }),
+    ).toBeInTheDocument();
   });
 });

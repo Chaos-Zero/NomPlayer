@@ -52,7 +52,7 @@ describe('NominationUpdateCard', () => {
 
     // Check action buttons
     expect(screen.getByTitle(/View comments|No comments yet/)).toBeDefined();
-    expect(screen.getByTitle('Add to current playlist')).toBeDefined();
+    expect(screen.getByTitle('Add to Queue')).toBeDefined();
     expect(screen.getByTitle('Play now')).toBeDefined();
   });
 
@@ -67,7 +67,7 @@ describe('NominationUpdateCard', () => {
       />,
     );
 
-    const addBtn = screen.getByTitle('Add to current playlist');
+    const addBtn = screen.getByTitle('Add to Queue');
     fireEvent.click(addBtn);
 
     expect(onAddTrack).toHaveBeenCalledWith([

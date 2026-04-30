@@ -17,6 +17,7 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import { ContextMenuPortal } from './ContextMenuPortal';
 import CollectionAdder from './CollectionAdder.jsx';
+import CustomPlaylistSubmenu from './CustomPlaylistSubmenu.jsx';
 import ExportIcon from './ExportIcon.jsx';
 import YouTubeIcon from './YouTubeIcon.jsx';
 import {
@@ -116,23 +117,52 @@ export function SupportItem({
         </div>
       )}
 
-      {video.thumbnail && !imgError ? (
-        <img
-          className="playlist-thumb"
-          src={video.thumbnail}
-          alt=""
-          loading="lazy"
-          onError={() => setImgError(true)}
-          style={{ width: 64, height: 36 }}
-        />
-      ) : (
-        <div
-          className="playlist-thumb-placeholder"
-          style={{ width: 64, height: 36, fontSize: 14 }}
-        >
-          ▶
+      <div
+        className="playlist-thumb-wrapper"
+        style={{
+          position: 'relative',
+          width: 64,
+          height: 36,
+          flexShrink: 0,
+          cursor: 'pointer',
+          borderRadius: 4,
+          overflow: 'hidden',
+        }}
+        onClick={(e) => {
+          e.stopPropagation();
+          if (!selectionMode) {
+            onDoubleQueue(video);
+          }
+        }}
+      >
+        {video.thumbnail && !imgError ? (
+          <img
+            className="playlist-thumb"
+            src={video.thumbnail}
+            alt=""
+            loading="lazy"
+            onError={() => setImgError(true)}
+            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+          />
+        ) : (
+          <div
+            className="playlist-thumb-placeholder"
+            style={{
+              width: '100%',
+              height: '100%',
+              fontSize: 14,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            ▶
+          </div>
+        )}
+        <div className="playlist-thumb-play-overlay">
+          <PlayIcon />
         </div>
-      )}
+      </div>
 
       <div
         className="playlist-item-info"
@@ -424,6 +454,8 @@ export default function FavouritesPanel({
   onPlayList,
   globalActivityByVideoId = new Map(),
   onShowComments,
+  customPlaylists,
+  onUpdateCustomPlaylists,
 }) {
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -942,6 +974,14 @@ export default function FavouritesPanel({
             >
               Add to Current Playlist
             </button>
+            <CustomPlaylistSubmenu
+              videos={contextMenu.videos}
+              customPlaylists={customPlaylists}
+              onUpdateCustomPlaylists={onUpdateCustomPlaylists}
+              onShowToast={showToast}
+              onClose={() => setContextMenu(null)}
+              itemClassName="support-context-menu-item"
+            />
             <div className="context-menu-divider" />
             {tone !== 'nomination' && (
               <button

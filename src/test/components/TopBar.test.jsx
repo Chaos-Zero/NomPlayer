@@ -94,21 +94,19 @@ describe('TopBar', () => {
   });
 
   function openLoader() {
-    fireEvent.click(screen.getByRole('button', { name: 'Add to playlist' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Add to queue' }));
     return screen.getByRole('textbox');
   }
 
   it('opens and closes the add-to-playlist input shell', () => {
     renderTopBar();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Add to playlist' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Add to queue' }));
     expect(screen.getByRole('button', { name: 'Load' })).toBeInTheDocument();
 
-    fireEvent.click(
-      screen.getByRole('button', { name: 'Close add to playlist' }),
-    );
+    fireEvent.click(screen.getByRole('button', { name: 'Close add to queue' }));
     expect(
-      screen.getByRole('button', { name: 'Add to playlist' }),
+      screen.getByRole('button', { name: 'Add to queue' }),
     ).toBeInTheDocument();
   });
 
@@ -146,7 +144,7 @@ describe('TopBar', () => {
     renderTopBar();
 
     expect(
-      screen.getByRole('button', { name: 'Shuffle playlist' }),
+      screen.getByRole('button', { name: 'Shuffle queue' }),
     ).toBeInTheDocument();
     expect(
       screen.getByRole('button', { name: 'Preview mode' }),
@@ -164,7 +162,7 @@ describe('TopBar', () => {
 
     expect(screen.getByRole('searchbox')).toBeInTheDocument();
     expect(
-      screen.queryByRole('button', { name: 'Add to playlist' }),
+      screen.queryByRole('button', { name: 'Add to queue' }),
     ).not.toBeInTheDocument();
   });
 
@@ -275,7 +273,7 @@ describe('TopBar', () => {
       name: /Gamma Game - Skyline/i,
     });
     fireEvent.contextMenu(result);
-    fireEvent.click(screen.getByRole('menuitem', { name: 'Add to Playlist' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Add to Queue' }));
 
     expect(onAddCatalogToPlaylist).toHaveBeenCalledWith([
       {
@@ -302,7 +300,7 @@ describe('TopBar', () => {
     renderTopBar();
 
     expect(
-      screen.queryByRole('button', { name: 'Shuffle playlist' }),
+      screen.queryByRole('button', { name: 'Shuffle queue' }),
     ).not.toBeInTheDocument();
     expect(
       screen.queryByRole('button', { name: 'Preview mode' }),

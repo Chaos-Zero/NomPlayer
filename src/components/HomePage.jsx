@@ -42,6 +42,7 @@ import {
 import { AnimatedGridPattern } from './AnimatedGridPattern.jsx';
 import TextType from './TextType.jsx';
 import Dock from './Dock.jsx';
+import CustomPlaylistSubmenu from './CustomPlaylistSubmenu.jsx';
 
 const DASHBOARD_REFRESH_LIMIT = 8;
 
@@ -274,7 +275,7 @@ export function NominationUpdateCard({
               e.stopPropagation();
               onAddTrack([resolveTrack(video)]);
             }}
-            title="Add to current playlist"
+            title="Add to Queue"
           >
             <PlaylistPlusIcon size={20} />
           </button>
@@ -928,6 +929,8 @@ export default function HomePage({
   nominationList = [],
   onNominationsLoaded = null,
   nominationRefreshToken = 0,
+  customPlaylists,
+  onUpdateCustomPlaylists,
 }) {
   const isMobileLayout = useMediaQuery('(max-width: 960px)');
   const [nominationUpdates, setNominationUpdates] = useState([]);
@@ -1617,7 +1620,7 @@ export default function HomePage({
       const resolved = videos.map((v) => resolveTrack(v));
       onAddToPlaylist?.(resolved);
       onShowToast?.(
-        `${resolved.length} ${resolved.length === 1 ? 'song' : 'songs'} added to playlist`,
+        `${resolved.length} ${resolved.length === 1 ? 'song' : 'songs'} added to queue`,
       );
     },
     [onAddToPlaylist, onShowToast, resolveTrack],
@@ -1642,7 +1645,7 @@ export default function HomePage({
     (update) => {
       const resolved = update.nominations.map((v) => resolveTrack(v));
       onAddToPlaylist?.(resolved);
-      onShowToast?.(`Added all ${resolved.length} songs to playlist`);
+      onShowToast?.(`Added all ${resolved.length} songs to queue`);
     },
     [onAddToPlaylist, onShowToast, resolveTrack],
   );
@@ -1654,14 +1657,14 @@ export default function HomePage({
       );
 
       if (unplaced.length === 0) {
-        onShowToast?.('All songs from this list are already in your playlist');
+        onShowToast?.('All songs from this list are already in your queue');
         return;
       }
 
       const resolved = unplaced.map((v) => resolveTrack(v));
       onAddToPlaylist?.(resolved);
       onShowToast?.(
-        `Added ${resolved.length} new ${resolved.length === 1 ? 'song' : 'songs'} to playlist`,
+        `Added ${resolved.length} new ${resolved.length === 1 ? 'song' : 'songs'} to queue`,
       );
     },
     [currentPlaylistIds, onAddToPlaylist, onShowToast, resolveTrack],
@@ -1789,7 +1792,7 @@ export default function HomePage({
         onPlayNow?.(resolved);
       } else if (action === 'add') {
         onAddToPlaylist?.([resolved]);
-        onShowToast?.('Added to playlist');
+        onShowToast?.('Added to queue');
       } else if (action === 'support') {
         const videoId = candidate.videoId;
         if (!supportStatusById[videoId]?.isSupported) {
@@ -2078,7 +2081,7 @@ export default function HomePage({
                         )
                       }
                     >
-                      Add to Playlist
+                      Add to Queue
                     </button>
                     <button
                       className="dashboard-action-btn dashboard-action-btn-muted"
@@ -2190,7 +2193,7 @@ export default function HomePage({
                         handleAddDiscoveryCandidate(prospectiveFallbackTrack)
                       }
                     >
-                      Add to Playlist
+                      Add to Queue
                     </button>
                     <button
                       className="dashboard-action-btn dashboard-action-btn-muted"
@@ -2393,8 +2396,16 @@ export default function HomePage({
               )
             }
           >
-            <span>Add to Playlist</span>
+            <span>Add to Queue</span>
           </button>
+          <CustomPlaylistSubmenu
+            videos={[discoveryContextMenu.candidate]}
+            customPlaylists={customPlaylists}
+            onUpdateCustomPlaylists={onUpdateCustomPlaylists}
+            onShowToast={onShowToast}
+            onClose={() => setDiscoveryContextMenu(null)}
+            itemClassName="playlist-context-menu-item"
+          />
           <div className="context-menu-divider" />
           {!(
             supportStatusById[discoveryContextMenu.candidate.videoId]
@@ -2499,8 +2510,16 @@ export default function HomePage({
               )
             }
           >
-            <span>Add to Playlist</span>
+            <span>Add to Queue</span>
           </button>
+          <CustomPlaylistSubmenu
+            videos={[nominationContextMenu.video]}
+            customPlaylists={customPlaylists}
+            onUpdateCustomPlaylists={onUpdateCustomPlaylists}
+            onShowToast={onShowToast}
+            onClose={() => setNominationContextMenu(null)}
+            itemClassName="playlist-context-menu-item"
+          />
           <div className="context-menu-divider" />
           <button
             className={`playlist-context-menu-item ${

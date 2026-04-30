@@ -214,7 +214,7 @@ export default function ListeningHistoryDialog({
                         <button
                           className="history-item-queue-btn"
                           type="button"
-                          title="Add to playlist"
+                          title="Add to queue"
                           onClick={(e) => handleAddToPlaylist(e, item)}
                         >
                           <PlaylistPlusIcon />
@@ -268,7 +268,7 @@ export default function ListeningHistoryDialog({
                         <button
                           className="history-item-queue-btn"
                           type="button"
-                          title="Add to playlist"
+                          title="Add to queue"
                           onClick={(e) => handleAddToPlaylist(e, item)}
                         >
                           <PlaylistPlusIcon />

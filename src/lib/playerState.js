@@ -161,6 +161,7 @@ export function normalizePersistedPlayerState(
                 ? pl.id
                 : `pl-${Math.random().toString(36).slice(2, 11)}`,
             name: typeof pl.name === 'string' ? pl.name : 'Untitled Playlist',
+            is_public: pl.is_public === true,
             videos: normalizeVideoList(pl.videos),
           }))
           .filter((pl) => pl.videos.length >= 0)
@@ -1146,6 +1147,7 @@ export async function syncCustomPlaylists(supabase, userId, customPlaylists) {
       user_id: userId,
       name: pl.name || 'Untitled Playlist',
       is_active_queue: false,
+      is_public: pl.is_public === true,
     };
     if (playlistId) {
       playlistData.id = playlistId;
@@ -1157,7 +1159,14 @@ export async function syncCustomPlaylists(supabase, userId, customPlaylists) {
       .select('id')
       .single();
 
-    if (plError) continue;
+    if (plError) {
+      console.error(
+        'syncCustomPlaylists: failed to upsert playlist',
+        pl.name,
+        plError,
+      );
+      continue;
+    }
     playlistId = upsertedPl.id;
     // ensure local object gets the actual UUID if it didn't have one
     if (!isUuid) {

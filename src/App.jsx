@@ -74,8 +74,11 @@ import {
   getFullCatalog,
   getCachedCatalog,
   mapTrackCatalogEntryToVideo,
+  mergeTracks,
+  findTrackInCatalog,
 } from './lib/trackCatalog.js';
 import { fetchUserFeedback } from './lib/feedback.js';
+import { fetchDashboardNominationUpdates } from './lib/dashboard.js';
 import { reportError } from './lib/errorReporter.js';
 import { getSupabaseClient, isSupabaseConfigured } from './lib/supabase.js';
 import {
@@ -223,6 +226,7 @@ function createAccountPersistedPlayerState(state) {
     showOriginalOrder: state?.showOriginalOrder,
     supportList: state?.supportList,
     nominationList: state?.nominationList,
+    customPlaylists: state?.customPlaylists,
     transientVideo: state?.transientVideo,
   });
 }
@@ -622,6 +626,19 @@ export default function App() {
   const handleNominationsLoaded = useCallback((updates) => {
     setCommunityNominations(updates);
   }, []);
+
+  useEffect(() => {
+    if (!isAuthReady || !supabase) return;
+    let cancelled = false;
+    fetchDashboardNominationUpdates(supabase, null)
+      .then((data) => {
+        if (!cancelled) setCommunityNominations(data);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [isAuthReady, supabase, nominationRefreshToken]);
 
   const handleFeedbackSaved = useCallback((videoId, { rating, note }) => {
     if (!videoId) return;
@@ -1855,6 +1872,13 @@ export default function App() {
       return enrichedNominationList;
     } else if (activePlaylistView.type === 'support') {
       return enrichedSupportList;
+    } else if (activePlaylistView.type === 'custom-playlist') {
+      return (
+        customPlaylists.find((p) => p.id === activePlaylistView.id)?.videos ||
+        []
+      );
+    } else if (activePlaylistView.type === 'community-playlist') {
+      return activePlaylistView.videos || [];
     }
     return displayPlaylist;
   }, [
@@ -1865,6 +1889,7 @@ export default function App() {
     enrichedNominationList,
     enrichedSupportList,
     displayPlaylist,
+    customPlaylists,
   ]);
 
   const playingTracks = useMemo(() => {
@@ -1913,6 +1938,13 @@ export default function App() {
       return enrichedNominationList;
     } else if (playingPlaylistView.type === 'support') {
       return enrichedSupportList;
+    } else if (playingPlaylistView.type === 'custom-playlist') {
+      return (
+        customPlaylists.find((p) => p.id === playingPlaylistView.id)?.videos ||
+        []
+      );
+    } else if (playingPlaylistView.type === 'community-playlist') {
+      return playingPlaylistView.videos || [];
     }
     return displayPlaylist;
   }, [
@@ -1923,6 +1955,7 @@ export default function App() {
     enrichedNominationList,
     enrichedSupportList,
     displayPlaylist,
+    customPlaylists,
   ]);
 
   const currentDisplayIndex = useMemo(() => {
@@ -2215,11 +2248,45 @@ export default function App() {
           ...unresolvedNominationEntries,
         ];
 
+        // Merge custom playlists: DB is the source of truth for resolved tracks,
+        // but JSONB preserves videos that never got a trackId (e.g. queue-only tracks).
+        // For each DB playlist, append any JSONB videos with the same id that are
+        // absent from the DB version.  New playlists that exist only in JSONB (not
+        // yet flushed to DB) are appended wholesale.
+        const latestJsonbCustomPlaylists =
+          persistedQueue.playerState?.customPlaylists ??
+          normalizedState.customPlaylists ??
+          [];
+        const dbCustomPlaylistIds = new Set(
+          enrichedDbState.customPlaylists.map((p) => p.id),
+        );
+        const mergedCustomPlaylists = enrichedDbState.customPlaylists.map(
+          (dbPl) => {
+            const jsonbPl = latestJsonbCustomPlaylists.find(
+              (p) => p.id === dbPl.id,
+            );
+            if (!jsonbPl) return dbPl;
+            const dbVideoIds = new Set(dbPl.videos.map((v) => v.videoId));
+            const unresolvedVideos = jsonbPl.videos.filter(
+              (v) => !v.trackId && !dbVideoIds.has(v.videoId),
+            );
+            return unresolvedVideos.length
+              ? { ...dbPl, videos: [...dbPl.videos, ...unresolvedVideos] }
+              : dbPl;
+          },
+        );
+        // Append any playlists that exist in JSONB but not yet in the DB
+        for (const jsonbPl of latestJsonbCustomPlaylists) {
+          if (!dbCustomPlaylistIds.has(jsonbPl.id)) {
+            mergedCustomPlaylists.push(jsonbPl);
+          }
+        }
+
         const baseHydratedState = normalizePersistedPlayerState({
           ...normalizedState,
           ...(persistedQueue.playerState || {}),
           playlist: enrichedDbState.playlist,
-          customPlaylists: enrichedDbState.customPlaylists,
+          customPlaylists: mergedCustomPlaylists,
           supportList: enrichedDbState.supportList,
           nominationList: mergedNominationList,
           listenedStatusById: normalizedState.listenedStatusById,
@@ -2248,8 +2315,20 @@ export default function App() {
           hydratedState.nominationList ?? null;
         lastSyncedSupportListRef.current = hydratedState.supportList ?? null;
         lastSyncedPlaylistRef.current = hydratedState.playlist ?? null;
-        lastSyncedCustomPlaylistsRef.current =
-          hydratedState.customPlaylists ?? null;
+        // If JSONB had playlists/tracks not yet in the DB, point the ref at the
+        // DB-only snapshot so the next sync sees a diff and re-saves them.
+        const hasUnsyncedCustomData =
+          mergedCustomPlaylists.length !==
+            enrichedDbState.customPlaylists.length ||
+          mergedCustomPlaylists.some((pl) => {
+            const dbPl = enrichedDbState.customPlaylists.find(
+              (p) => p.id === pl.id,
+            );
+            return !dbPl || pl.videos.length !== dbPl.videos.length;
+          });
+        lastSyncedCustomPlaylistsRef.current = hasUnsyncedCustomData
+          ? enrichedDbState.customPlaylists
+          : (hydratedState.customPlaylists ?? null);
         const pendingGuestImportState = pendingGuestImportStateRef.current;
         pendingGuestImportStateRef.current = null;
 
@@ -2579,6 +2658,12 @@ export default function App() {
     setSupportList((prev) => prev.map(transform));
     setNominationList((prev) => prev.map(transform));
     setPlaylist((prev) => prev.map(transform));
+    setCustomPlaylists((prev) =>
+      prev.map((pl) => ({
+        ...pl,
+        videos: (pl.videos || []).map(transform),
+      })),
+    );
     patchCatalogCache(Object.values(updatesMap));
   }, []);
 
@@ -3553,6 +3638,39 @@ export default function App() {
     ],
   );
 
+  const handlePlayCommunityPlaylist = useCallback(
+    (videos, meta) => {
+      if (!videos.length) return;
+      const view = {
+        type: 'community-playlist',
+        videos,
+        name: meta?.name,
+        id: meta?.id,
+      };
+      setActivePlaylistView(view);
+      setPlayingPlaylistView(view);
+      if (meta?.id)
+        setLastCommunityPlaylist({
+          id: meta.id,
+          name: meta.name,
+          videos,
+          type: 'community-playlist',
+        });
+      if (!transientVideo) {
+        transientResumeVideoIdRef.current = currentVideoIdRef.current;
+      }
+      const startVideo = meta?.startVideoId
+        ? videos.find((v) => (v.videoId || v.id) === meta.startVideoId) ||
+          videos[0]
+        : videos[0];
+      setTransientVideo({ ...startVideo, source: 'community-playlist' });
+      setCurrentVideoId(null);
+      markVideoStarted(startVideo.videoId || startVideo.id);
+      setIsPlaying(true);
+    },
+    [currentVideoIdRef, markVideoStarted, transientVideo],
+  );
+
   const handlePlayCommunityList = useCallback(
     (userId) => {
       const communityUser = communityNominations.find(
@@ -3590,13 +3708,15 @@ export default function App() {
     (userId, startVideoId, nominations) => {
       let communityUser = communityNominations.find((u) => u.userId === userId);
 
-      if (!communityUser && nominations?.length > 0) {
+      if (nominations?.length > 0) {
         communityUser = { userId, nominations };
-        setCommunityNominations((prev) =>
-          prev.some((u) => u.userId === userId)
-            ? prev
-            : [...prev, communityUser],
-        );
+        setCommunityNominations((prev) => {
+          const exists = prev.some((u) => u.userId === userId);
+          if (exists) {
+            return prev.map((u) => (u.userId === userId ? communityUser : u));
+          }
+          return [...prev, communityUser];
+        });
       }
 
       if (!communityUser || communityUser.nominations.length === 0) return;
@@ -3631,44 +3751,74 @@ export default function App() {
   );
 
   const handlePlayExplorerList = useCallback(
-    (id) => {
+    (id, startVideoId = null) => {
       if (id.startsWith('peer-')) {
         handlePlayCommunityList(id.replace('peer-', ''));
       } else if (id === 'nominations') {
         if (nominationList.length === 0) return;
         setActivePlaylistView({ type: 'nominations' });
         setPlayingPlaylistView({ type: 'nominations' });
-        const videoId = nominationList[0].videoId;
+        const startNom =
+          (startVideoId &&
+            nominationList.find((v) => v.videoId === startVideoId)) ||
+          nominationList[0];
         if (!transientVideo) {
           transientResumeVideoIdRef.current = currentVideoIdRef.current;
         }
-        setTransientVideo({
-          ...nominationList[0],
-          source: 'nominations-view',
-        });
+        setTransientVideo({ ...startNom, source: 'nominations-view' });
         setCurrentVideoId(null);
-        markVideoStarted(videoId);
+        markVideoStarted(startNom.videoId);
         setIsPlaying(true);
       } else if (id === 'support') {
         if (supportList.length === 0) return;
         setActivePlaylistView({ type: 'support' });
         setPlayingPlaylistView({ type: 'support' });
-        const videoId = supportList[0].videoId;
+        const startSup =
+          (startVideoId &&
+            supportList.find((v) => v.videoId === startVideoId)) ||
+          supportList[0];
         if (!transientVideo) {
           transientResumeVideoIdRef.current = currentVideoIdRef.current;
         }
-        setTransientVideo({
-          ...supportList[0],
-          source: 'support-view',
-        });
+        setTransientVideo({ ...startSup, source: 'support-view' });
         setCurrentVideoId(null);
-        markVideoStarted(videoId);
+        markVideoStarted(startSup.videoId);
         setIsPlaying(true);
       } else if (id === 'current' || id === 'personal') {
         if (playlist.length === 0) return;
         setActivePlaylistView({ type: 'personal' });
         setPlayingPlaylistView({ type: 'personal' });
-        goToVideo(playlist[0].videoId, true);
+        const targetVideoId =
+          startVideoId && playlist.some((v) => v.videoId === startVideoId)
+            ? startVideoId
+            : playlist[0].videoId;
+        goToVideo(targetVideoId, true);
+      } else {
+        const customPlaylist = customPlaylists.find((p) => p.id === id);
+        if (!customPlaylist || customPlaylist.videos.length === 0) return;
+        const { videos } = customPlaylist;
+        const startVideo =
+          (startVideoId && videos.find((v) => v.videoId === startVideoId)) ||
+          videos[0];
+        const view = {
+          type: 'custom-playlist',
+          name: customPlaylist.name,
+          id: customPlaylist.id,
+        };
+        setActivePlaylistView(view);
+        setPlayingPlaylistView(view);
+        setLastCommunityPlaylist({
+          id: customPlaylist.id,
+          name: customPlaylist.name,
+          type: 'custom-playlist',
+        });
+        if (!transientVideo) {
+          transientResumeVideoIdRef.current = currentVideoIdRef.current;
+        }
+        setTransientVideo({ ...startVideo, source: 'community-playlist' });
+        setCurrentVideoId(null);
+        markVideoStarted(startVideo.videoId);
+        setIsPlaying(true);
       }
     },
     [
@@ -3676,6 +3826,7 @@ export default function App() {
       nominationList,
       supportList,
       playlist,
+      customPlaylists,
       goToVideo,
       currentVideoIdRef,
       markVideoStarted,
@@ -3719,7 +3870,8 @@ export default function App() {
     if (
       transientVideo?.source === 'community-view' ||
       transientVideo?.source === 'nominations-view' ||
-      transientVideo?.source === 'support-view'
+      transientVideo?.source === 'support-view' ||
+      transientVideo?.source === 'community-playlist'
     ) {
       const currentIndex = playingTracks.findIndex(
         (v) => v.videoId === transientVideo.videoId,
@@ -3766,7 +3918,8 @@ export default function App() {
     if (
       transientVideo?.source === 'community-view' ||
       transientVideo?.source === 'nominations-view' ||
-      transientVideo?.source === 'support-view'
+      transientVideo?.source === 'support-view' ||
+      transientVideo?.source === 'community-playlist'
     ) {
       const currentIndex = playingTracks.findIndex(
         (v) => v.videoId === transientVideo.videoId,
@@ -3829,7 +3982,8 @@ export default function App() {
       if (
         transientVideo.source === 'community-view' ||
         transientVideo.source === 'nominations-view' ||
-        transientVideo.source === 'support-view'
+        transientVideo.source === 'support-view' ||
+        transientVideo.source === 'community-playlist'
       ) {
         const currentIndex = playingTracks.findIndex(
           (v) => v.videoId === transientVideo.videoId,
@@ -4392,6 +4546,37 @@ export default function App() {
 
           // 4. Call internal RPC for VGMC metadata (now handle YouTube title/thumb too)
           const savePromises = updatesWithYouTubeMeta.map(async (update) => {
+            if (update.hasChangedId && update.trackId) {
+              const existingTrackWithUrl = await findTrackInCatalog(
+                supabase,
+                update.videoId,
+              );
+              if (
+                existingTrackWithUrl &&
+                existingTrackWithUrl.trackId !== update.trackId
+              ) {
+                console.log(
+                  'handleSaveTrackMetadata: Conflict detected, merging tracks to prevent data loss',
+                  {
+                    target: update.trackId,
+                    source: existingTrackWithUrl.trackId,
+                  },
+                );
+                await mergeTracks(
+                  supabase,
+                  {
+                    trackId: update.trackId,
+                    gameTitle: update.gameTitle,
+                    trackTitle: update.trackTitle,
+                    sourceUrl: update.currentUrl,
+                  },
+                  [existingTrackWithUrl],
+                  update,
+                );
+                return update.trackId;
+              }
+            }
+
             const { data: trackId, error } = await supabase.rpc(
               'import_vgmc_catalog_row',
               {
@@ -4957,7 +5142,9 @@ export default function App() {
 
   // True when playing from a named list; false for one-off "play now" transients.
   const isPlayingFromList =
-    !transientVideo || transientVideo.source?.endsWith('-view') === true;
+    !transientVideo ||
+    transientVideo.source?.endsWith('-view') === true ||
+    transientVideo.source === 'community-playlist';
 
   const playingListLabel = useMemo(() => {
     if (!isPlayingFromList) return null;
@@ -4974,8 +5161,31 @@ export default function App() {
         ? `${displayName}'s Nominations`
         : 'Community Nominations';
     }
-    return 'My Playlist';
-  }, [isPlayingFromList, playingPlaylistView, communityNominations]);
+    if (playingPlaylistView.type === 'community-playlist') {
+      const playlistName = playingPlaylistView.name || 'Playlist';
+      const isOwnPlaylist = customPlaylists.some(
+        (p) => p.id === playingPlaylistView.id,
+      );
+      if (isOwnPlaylist && userProfile?.username) {
+        const displayName = getDisplayProfileName(userProfile.username);
+        return `${displayName}'s ${playlistName}`;
+      }
+      return playlistName;
+    }
+    if (playingPlaylistView.type === 'custom-playlist') {
+      const customPlaylist = customPlaylists.find(
+        (p) => p.id === playingPlaylistView.id,
+      );
+      return customPlaylist?.name || 'My Playlist';
+    }
+    return 'My Queue';
+  }, [
+    isPlayingFromList,
+    playingPlaylistView,
+    communityNominations,
+    customPlaylists,
+    userProfile,
+  ]);
 
   // activePlaylistView is already set to the correct type when a list plays,
   // so we only need to open/uncollapse the sidebar here.
@@ -4993,6 +5203,12 @@ export default function App() {
   }, [handleNavigate]);
 
   const [explorerInitialView, setExplorerInitialView] = useState('lists');
+  const [lastCommunityPlaylist, setLastCommunityPlaylist] = useState(null);
+
+  const handleNavigateToCommunityPlaylists = useCallback(() => {
+    setExplorerInitialView('community-playlists');
+    handleNavigate('listExplorer');
+  }, [handleNavigate]);
 
   const handleNavigateToExplorer = useCallback(() => {
     setExplorerInitialView('lists');
@@ -5150,7 +5366,7 @@ export default function App() {
                 title={
                   isShuffleAvailable
                     ? 'Shuffle'
-                    : 'Play from My Playlist to use shuffle'
+                    : 'Play from My Queue to use shuffle'
                 }
                 disabled={!isShuffleAvailable}
               >
@@ -5213,8 +5429,8 @@ export default function App() {
               className={`btn btn-icon add-to-playlist-btn detached-footer-add-btn${isCurrentVideoInPlaylist ? ' hidden' : ''}`}
               type="button"
               onClick={() => handleQueueFromSupportList([currentVideo])}
-              aria-label="Add to current playlist"
-              title="Add to current playlist"
+              aria-label="Add to Queue"
+              title="Add to Queue"
               disabled={!currentVideo}
             >
               <PlaylistPlusIcon />
@@ -5391,6 +5607,9 @@ export default function App() {
           }
           onExport={handleOpenExportModal}
           onSavePlaylist={handleCreateYTPlaylist}
+          customPlaylists={customPlaylists}
+          onUpdateCustomPlaylists={setCustomPlaylists}
+          onShowToast={(msg) => showDefaultAppToast(msg, 'dashboard')}
         />
 
         <main
@@ -5439,6 +5658,8 @@ export default function App() {
               nominationList={nominationList}
               onNominationsLoaded={handleNominationsLoaded}
               nominationRefreshToken={nominationRefreshToken}
+              customPlaylists={customPlaylists}
+              onUpdateCustomPlaylists={setCustomPlaylists}
             />
           )}
 
@@ -5467,6 +5688,8 @@ export default function App() {
                   dbCacheRef.current = { tracks, selectedVideoId };
                 }}
                 onFeedbackSaved={handleFeedbackSaved}
+                customPlaylists={customPlaylists}
+                onUpdateCustomPlaylists={setCustomPlaylists}
               />
             </Suspense>
           )}
@@ -5503,6 +5726,7 @@ export default function App() {
               onSavePlaylist={handleCreateYTPlaylist}
               onPlayExplorerList={handlePlayExplorerList}
               onPlayCommunityListFromTrack={handlePlayCommunityListFromTrack}
+              onPlayCommunityPlaylist={handlePlayCommunityPlaylist}
               catalogTrackByVideoId={catalogTrackByVideoId}
               initialView={explorerInitialView}
               onRefreshFeedback={refreshUserFeedback}
@@ -5546,6 +5770,14 @@ export default function App() {
                   handleReorderNominationList(newTracks);
                 } else if (activePlaylistView.type === 'support') {
                   handleReorderSupportList(newTracks);
+                } else if (activePlaylistView.type === 'custom-playlist') {
+                  setCustomPlaylists((prev) =>
+                    prev.map((p) =>
+                      p.id === activePlaylistView.id
+                        ? { ...p, videos: newTracks }
+                        : p,
+                    ),
+                  );
                 } else {
                   handleReorderPlaylist(newTracks);
                 }
@@ -5563,7 +5795,25 @@ export default function App() {
                   showRemove: false,
                 })
               }
-              onRemoveFromPlaylist={handleRemoveFromPlaylist}
+              onRemoveFromPlaylist={(videoIdsOrId) => {
+                if (activePlaylistView.type === 'custom-playlist') {
+                  const ids = new Set(
+                    Array.isArray(videoIdsOrId) ? videoIdsOrId : [videoIdsOrId],
+                  );
+                  setCustomPlaylists((prev) =>
+                    prev.map((p) =>
+                      p.id === activePlaylistView.id
+                        ? {
+                            ...p,
+                            videos: p.videos.filter((v) => !ids.has(v.videoId)),
+                          }
+                        : p,
+                    ),
+                  );
+                } else {
+                  handleRemoveFromPlaylist(videoIdsOrId);
+                }
+              }}
               onAddDirectItems={handleQueueFromSupportList}
               retiredVideoIds={retiredVideoIds}
               pendingMetadataCount={tracksNeedingMetadata.length}
@@ -5579,6 +5829,15 @@ export default function App() {
               communityNominations={communityNominations}
               globalActivityByVideoId={globalActivityByVideoId}
               onShowComments={handleShowComments}
+              supabase={supabase}
+              lastCommunityPlaylist={lastCommunityPlaylist}
+              onPlayCustomPlaylist={handlePlayExplorerList}
+              onNavigateToCommunityPlaylists={
+                handleNavigateToCommunityPlaylists
+              }
+              customPlaylists={customPlaylists}
+              onUpdateCustomPlaylists={setCustomPlaylists}
+              onShowToast={(msg) => showDefaultAppToast(msg, 'dashboard')}
             />
             {!effectivePlaylistCollapsed && apiKeyMissing && (
               <div className="api-key-notice">
@@ -5663,6 +5922,8 @@ export default function App() {
           onPlayList={() => handlePlayExplorerList('support')}
           globalActivityByVideoId={globalActivityByVideoId}
           onShowComments={handleShowComments}
+          customPlaylists={customPlaylists}
+          onUpdateCustomPlaylists={setCustomPlaylists}
         />
       )}
 
@@ -5702,6 +5963,8 @@ export default function App() {
           highlightAdd={isAddNominationHighlighted}
           globalActivityByVideoId={globalActivityByVideoId}
           onShowComments={handleShowComments}
+          customPlaylists={customPlaylists}
+          onUpdateCustomPlaylists={setCustomPlaylists}
         />
       )}
 
