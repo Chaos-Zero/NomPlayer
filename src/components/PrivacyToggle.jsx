@@ -9,6 +9,8 @@ export default function PrivacyToggle({ isPublic, onToggle, disabled }) {
     setLoading(true);
     try {
       await onToggle(!isPublic);
+    } catch (error) {
+      console.error(error);
     } finally {
       setLoading(false);
     }
