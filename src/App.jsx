@@ -3663,10 +3663,12 @@ export default function App() {
         ? videos.find((v) => (v.videoId || v.id) === meta.startVideoId) ||
           videos[0]
         : videos[0];
-      setTransientVideo({ ...startVideo, source: 'community-playlist' });
+      setTransientVideo({ ...startVideo, source: 'community-playlist-view' });
       setCurrentVideoId(null);
-      markVideoStarted(startVideo.videoId || startVideo.id);
-      setIsPlaying(true);
+      if (meta?.autoplay) {
+        markVideoStarted(startVideo.videoId || startVideo.id);
+        setIsPlaying(true);
+      }
     },
     [currentVideoIdRef, markVideoStarted, transientVideo],
   );
@@ -3751,7 +3753,26 @@ export default function App() {
   );
 
   const handlePlayExplorerList = useCallback(
-    (id, startVideoId = null) => {
+    (
+      id,
+      prefetchedVideos = null,
+      prefetchedName = null,
+      startVideoId = null,
+    ) => {
+      // If an actual video array is provided (from the sidebar community playlist picker),
+      // delegate directly to the community playlist handler.
+      if (Array.isArray(prefetchedVideos) && prefetchedVideos.length > 0) {
+        handlePlayCommunityPlaylist(prefetchedVideos, {
+          id,
+          name: prefetchedName,
+        });
+        return;
+      }
+
+      // Legacy callers pass startVideoId as the second argument (a string).
+      const resolvedStartVideoId =
+        typeof prefetchedVideos === 'string' ? prefetchedVideos : startVideoId;
+
       if (id.startsWith('peer-')) {
         handlePlayCommunityList(id.replace('peer-', ''));
       } else if (id === 'nominations') {
@@ -3759,8 +3780,8 @@ export default function App() {
         setActivePlaylistView({ type: 'nominations' });
         setPlayingPlaylistView({ type: 'nominations' });
         const startNom =
-          (startVideoId &&
-            nominationList.find((v) => v.videoId === startVideoId)) ||
+          (resolvedStartVideoId &&
+            nominationList.find((v) => v.videoId === resolvedStartVideoId)) ||
           nominationList[0];
         if (!transientVideo) {
           transientResumeVideoIdRef.current = currentVideoIdRef.current;
@@ -3774,8 +3795,8 @@ export default function App() {
         setActivePlaylistView({ type: 'support' });
         setPlayingPlaylistView({ type: 'support' });
         const startSup =
-          (startVideoId &&
-            supportList.find((v) => v.videoId === startVideoId)) ||
+          (resolvedStartVideoId &&
+            supportList.find((v) => v.videoId === resolvedStartVideoId)) ||
           supportList[0];
         if (!transientVideo) {
           transientResumeVideoIdRef.current = currentVideoIdRef.current;
@@ -3789,8 +3810,9 @@ export default function App() {
         setActivePlaylistView({ type: 'personal' });
         setPlayingPlaylistView({ type: 'personal' });
         const targetVideoId =
-          startVideoId && playlist.some((v) => v.videoId === startVideoId)
-            ? startVideoId
+          resolvedStartVideoId &&
+          playlist.some((v) => v.videoId === resolvedStartVideoId)
+            ? resolvedStartVideoId
             : playlist[0].videoId;
         goToVideo(targetVideoId, true);
       } else {
@@ -3798,7 +3820,8 @@ export default function App() {
         if (!customPlaylist || customPlaylist.videos.length === 0) return;
         const { videos } = customPlaylist;
         const startVideo =
-          (startVideoId && videos.find((v) => v.videoId === startVideoId)) ||
+          (resolvedStartVideoId &&
+            videos.find((v) => v.videoId === resolvedStartVideoId)) ||
           videos[0];
         const view = {
           type: 'custom-playlist',
@@ -3815,13 +3838,14 @@ export default function App() {
         if (!transientVideo) {
           transientResumeVideoIdRef.current = currentVideoIdRef.current;
         }
-        setTransientVideo({ ...startVideo, source: 'community-playlist' });
+        setTransientVideo({ ...startVideo, source: 'custom-playlist-view' });
         setCurrentVideoId(null);
         markVideoStarted(startVideo.videoId);
         setIsPlaying(true);
       }
     },
     [
+      handlePlayCommunityPlaylist,
       handlePlayCommunityList,
       nominationList,
       supportList,
@@ -3868,9 +3892,7 @@ export default function App() {
 
   const handlePrev = useCallback(() => {
     if (
-      transientVideo?.source === 'community-view' ||
-      transientVideo?.source === 'nominations-view' ||
-      transientVideo?.source === 'support-view' ||
+      transientVideo?.source?.endsWith('-view') ||
       transientVideo?.source === 'community-playlist'
     ) {
       const currentIndex = playingTracks.findIndex(
@@ -3916,9 +3938,7 @@ export default function App() {
 
   const handleNext = useCallback(() => {
     if (
-      transientVideo?.source === 'community-view' ||
-      transientVideo?.source === 'nominations-view' ||
-      transientVideo?.source === 'support-view' ||
+      transientVideo?.source?.endsWith('-view') ||
       transientVideo?.source === 'community-playlist'
     ) {
       const currentIndex = playingTracks.findIndex(
@@ -3980,9 +4000,7 @@ export default function App() {
 
       // Check if we can advance within the community view
       if (
-        transientVideo.source === 'community-view' ||
-        transientVideo.source === 'nominations-view' ||
-        transientVideo.source === 'support-view' ||
+        transientVideo.source?.endsWith('-view') ||
         transientVideo.source === 'community-playlist'
       ) {
         const currentIndex = playingTracks.findIndex(

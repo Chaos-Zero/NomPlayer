@@ -1035,11 +1035,9 @@ export default function PlaylistSidebar({
                           (p) => p.id === pl.id,
                         );
                         if (isOwn) {
-                          onSwitchView({
-                            type: 'custom-playlist',
-                            name: pl.name,
-                            id: pl.id,
-                          });
+                          // Own playlist: play it via onPlayCustomPlaylist so
+                          // both activePlaylistView AND playingPlaylistView are updated.
+                          onPlayCustomPlaylist?.(pl.id);
                           setIsDropdownOpen(false);
                           return;
                         }
@@ -1048,12 +1046,16 @@ export default function PlaylistSidebar({
                         try {
                           const videos = await fetchPlaylistTracks(pl.id);
                           if (videos.length) {
-                            onSwitchView({
+                            // Community playlist: switch the view AND start playback.
+                            const view = {
                               type: 'community-playlist',
                               videos,
                               name: pl.name,
                               id: pl.id,
-                            });
+                            };
+                            onSwitchView(view);
+                            // Also trigger actual playback through the community play handler.
+                            onPlayCustomPlaylist?.(pl.id, videos, pl.name);
                           }
                         } finally {
                           setPlaylistLoadingId(null);
