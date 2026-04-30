@@ -1115,6 +1115,13 @@ export async function saveActiveQueue(
 }
 
 export async function syncCustomPlaylists(supabase, userId, customPlaylists) {
+  // Safety guard: never delete DB playlists if the incoming list is empty.
+  // An empty array is ambiguous — it could mean state hasn't loaded yet.
+  // We only run the deletion diff when there's at least one playlist to compare against.
+  if (!customPlaylists || customPlaylists.length === 0) {
+    return customPlaylists;
+  }
+
   // First, fetch existing custom playlists to see what to delete
   const { data: existingPls, error: fetchError } = await supabase
     .from('user_playlists')

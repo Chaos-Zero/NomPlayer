@@ -412,22 +412,6 @@ export function CommunityPlaylistsView({
   const fetchPlaylists = useCallback(async () => {
     setIsLoading(true);
     try {
-      console.log('[CommunityPlaylists] Fetching. authUserId=', authUserId);
-
-      // DIAGNOSTIC: see ALL playlists without is_active_queue filter
-      const { data: diagAll } = await supabase
-        .from('user_playlists')
-        .select('id, name, is_public, is_active_queue, user_id');
-      console.log(
-        '[CommunityPlaylists] DIAG - ALL playlists (no filter):',
-        diagAll?.map((p) => ({
-          name: p.name,
-          is_public: p.is_public,
-          is_active_queue: p.is_active_queue,
-          mine: p.user_id === authUserId,
-        })),
-      );
-
       let query = supabase
         .from('user_playlists')
         .select(
@@ -443,11 +427,6 @@ export function CommunityPlaylistsView({
       }
 
       const { data: rawPls, error: plErr } = await query;
-      console.log('[CommunityPlaylists] Raw result:', {
-        count: rawPls?.length,
-        error: plErr,
-        rows: rawPls,
-      });
       if (plErr) throw plErr;
 
       const playlistIds = (rawPls || []).map((p) => p.id);
