@@ -653,6 +653,7 @@ export function CommunityPlaylistsView({
       id: playlist.id,
       name: playlist.name,
       startVideoId,
+      autoplay: true,
     });
     onShowToast?.(`Playing "${playlist.name}" — ${tracks.length} tracks`);
   }
@@ -674,7 +675,11 @@ export function CommunityPlaylistsView({
         onShowToast?.('This playlist has no tracks yet');
         return;
       }
-      onPlayPlaylist?.(videos, { id: playlist.id, name: playlist.name });
+      onPlayPlaylist?.(videos, {
+        id: playlist.id,
+        name: playlist.name,
+        autoplay: true,
+      });
       onShowToast?.(`Playing "${playlist.name}" — ${videos.length} tracks`);
     } catch {
       onShowToast?.('Failed to load playlist');

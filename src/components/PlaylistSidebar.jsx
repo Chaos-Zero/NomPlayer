@@ -1046,16 +1046,13 @@ export default function PlaylistSidebar({
                         try {
                           const videos = await fetchPlaylistTracks(pl.id);
                           if (videos.length) {
-                            // Community playlist: switch the view AND start playback.
-                            const view = {
+                            // Community playlist: load into view only, don't start playback.
+                            onSwitchView({
                               type: 'community-playlist',
                               videos,
                               name: pl.name,
                               id: pl.id,
-                            };
-                            onSwitchView(view);
-                            // Also trigger actual playback through the community play handler.
-                            onPlayCustomPlaylist?.(pl.id, videos, pl.name);
+                            });
                           }
                         } finally {
                           setPlaylistLoadingId(null);

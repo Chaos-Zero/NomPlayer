@@ -3753,25 +3753,8 @@ export default function App() {
   );
 
   const handlePlayExplorerList = useCallback(
-    (
-      id,
-      prefetchedVideos = null,
-      prefetchedName = null,
-      startVideoId = null,
-    ) => {
-      // If an actual video array is provided (from the sidebar community playlist picker),
-      // delegate directly to the community playlist handler.
-      if (Array.isArray(prefetchedVideos) && prefetchedVideos.length > 0) {
-        handlePlayCommunityPlaylist(prefetchedVideos, {
-          id,
-          name: prefetchedName,
-        });
-        return;
-      }
-
-      // Legacy callers pass startVideoId as the second argument (a string).
-      const resolvedStartVideoId =
-        typeof prefetchedVideos === 'string' ? prefetchedVideos : startVideoId;
+    (id, startVideoId = null) => {
+      const resolvedStartVideoId = startVideoId;
 
       if (id.startsWith('peer-')) {
         handlePlayCommunityList(id.replace('peer-', ''));
@@ -3845,7 +3828,6 @@ export default function App() {
       }
     },
     [
-      handlePlayCommunityPlaylist,
       handlePlayCommunityList,
       nominationList,
       supportList,
