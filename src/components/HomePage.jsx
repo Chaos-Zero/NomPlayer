@@ -43,8 +43,6 @@ import { AnimatedGridPattern } from './AnimatedGridPattern.jsx';
 import TextType from './TextType.jsx';
 import Dock from './Dock.jsx';
 import CustomPlaylistSubmenu from './CustomPlaylistSubmenu.jsx';
-import Particles from './Particles.jsx';
-
 const DASHBOARD_REFRESH_LIMIT = 8;
 const HOME_CPL_PAGE_SIZE = 12;
 
@@ -119,6 +117,7 @@ async function fetchHomeCplPage(supabase, authUserId, page) {
         )
         .in('playlist_id', playlistIds)
         .order('order_index', { ascending: true })
+        .limit(playlistIds.length * 5)
         .then(({ data }) => {
           for (const pt of data || []) {
             if (thumbnailMap[pt.playlist_id]) continue;
@@ -2963,24 +2962,6 @@ export default function HomePage({
             >
               View All
             </button>
-          }
-          backgroundContent={
-            <div className="home-cpl-particles-bg" aria-hidden>
-              <Particles
-                particleColors={['#ffffff', '#fff8f0', '#ffeedd']}
-                particleCount={200}
-                particleSpread={9}
-                speed={0.05}
-                particleBaseSize={90}
-                cameraFov={50}
-                cameraDistance={20}
-                moveParticlesOnHover
-                particleHoverFactor={0.25}
-                alphaParticles
-                disableRotation={false}
-                pixelRatio={1}
-              />
-            </div>
           }
         >
           <HomeCommunityPlaylistsStrip
