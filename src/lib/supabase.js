@@ -23,6 +23,11 @@ export function getSupabaseClient() {
         detectSessionInUrl: true,
       },
     });
+    // Kick off auth initialization immediately so GoTrueClient's internal
+    // initializePromise is set before React's first effect runs. Without this,
+    // React Strict Mode's double-mount causes two competing lock acquisitions
+    // because each onAuthStateChange call triggers its own _initialize() + lock.
+    supabaseClient.auth.getSession().catch(() => {});
   }
 
   return supabaseClient;

@@ -2431,18 +2431,12 @@ export default function App() {
 
     let isActive = true;
 
-    async function loadSession() {
-      try {
-        const {
-          data: { session },
-          error,
-        } = await supabase.auth.getSession();
-
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'INITIAL_SESSION') {
         if (!isActive) return;
-        if (error) throw error;
-
         setAuthSession(session);
-
         if (session?.user) {
           setIsUserHydrated(false);
           setIsAuthReady(true);
@@ -2451,20 +2445,8 @@ export default function App() {
           setUserProfile(null);
           setIsAuthReady(true);
         }
-      } catch (error) {
-        if (!isActive) return;
-        reportError('Restore session', error);
-        setAuthError('Database error. Failed to restore your session.');
-        setIsAuthReady(true);
+        return;
       }
-    }
-
-    loadSession();
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'INITIAL_SESSION') return;
 
       setAuthSession(session);
 

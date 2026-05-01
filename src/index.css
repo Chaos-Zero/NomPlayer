@@ -14629,9 +14629,9 @@ body.is-resizing .resize-handle {
   position: relative;
   z-index: 1;
   /* Compensate for the -48px negative margins: 48px restores original gap,
-     16px is the desired inner breathing room from each edge */
-  padding-top: 64px;
-  padding-bottom: 64px;
+     4px is the desired inner breathing room from each edge */
+  padding-top: 52px;
+  padding-bottom: 52px;
 }
 
 /* Stronger orange field in light mode */
@@ -14653,6 +14653,12 @@ body.is-resizing .resize-handle {
   50% {
     opacity: 1;
   }
+}
+
+.dashboard-section-community-playlists {
+  box-shadow:
+    inset 0 18px 32px -8px rgba(0, 0, 0, 0.45),
+    inset 0 -18px 32px -8px rgba(0, 0, 0, 0.45);
 }
 
 .dashboard-section-community-playlists::before {
@@ -14677,6 +14683,10 @@ body.is-resizing .resize-handle {
     100% 100%,
     100% 100%,
     26px 26px;
+  background-position:
+    0 0,
+    0 0,
+    0 var(--cpl-parallax-offset, 0px);
   animation: cpl-bg-breathe 7s ease-in-out infinite;
 }
 

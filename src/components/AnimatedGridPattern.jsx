@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useId, useRef, useState } from 'react';
-import { motion } from 'framer-motion';
 import { cn } from '../lib/utils';
 
 export function AnimatedGridPattern({
@@ -17,82 +16,41 @@ export function AnimatedGridPattern({
 }) {
   const id = useId();
   const containerRef = useRef(null);
-  const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
   const [squares, setSquares] = useState([]);
 
   const getPos = useCallback(
-    (w, h) => {
-      return [
-        Math.floor((Math.random() * (w || dimensions.width)) / width),
-        Math.floor((Math.random() * (h || dimensions.height)) / height),
-      ];
-    },
-    [dimensions.height, dimensions.width, height, width],
+    (w, h) => [
+      Math.floor((Math.random() * w) / width),
+      Math.floor((Math.random() * h) / height),
+    ],
+    [height, width],
   );
 
   const generateSquares = useCallback(
-    (count, w, h) => {
-      return Array.from({ length: count }, (_, i) => ({
+    (count, w, h) =>
+      Array.from({ length: count }, (_, i) => ({
         id: i,
         pos: getPos(w, h),
-        iteration: 0,
-      }));
-    },
+        delay: i * 0.1,
+      })),
     [getPos],
   );
 
-  const updateSquarePosition = useCallback(
-    (squareId) => {
-      setSquares((currentSquares) => {
-        const current = currentSquares[squareId];
-        if (!current || current.id !== squareId) return currentSquares;
-
-        const nextSquares = currentSquares.slice();
-        nextSquares[squareId] = {
-          ...current,
-          pos: getPos(dimensions.width, dimensions.height),
-          iteration: current.iteration + 1,
-        };
-
-        return nextSquares;
-      });
-    },
-    [dimensions.height, dimensions.width, getPos],
-  );
-
-  // Initialization of squares is handled in ResizeObserver to avoid cascading renders
-
   useEffect(() => {
     const element = containerRef.current;
-    let resizeObserver = null;
-
-    if (element) {
-      resizeObserver = new ResizeObserver((entries) => {
-        for (const entry of entries) {
-          const nextWidth = entry.contentRect.width;
-          const nextHeight = entry.contentRect.height;
-          setDimensions((currentDimensions) => {
-            if (
-              currentDimensions.width === nextWidth &&
-              currentDimensions.height === nextHeight
-            ) {
-              return currentDimensions;
-            }
-            return { width: nextWidth, height: nextHeight };
-          });
-          setSquares(generateSquares(numSquares, nextWidth, nextHeight));
-        }
-      });
-
-      resizeObserver.observe(element);
-    }
-
-    return () => {
-      if (resizeObserver) {
-        resizeObserver.disconnect();
+    if (!element) return;
+    const ro = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const { width: w, height: h } = entry.contentRect;
+        setSquares(generateSquares(numSquares, w, h));
       }
-    };
+    });
+    ro.observe(element);
+    return () => ro.disconnect();
   }, [generateSquares, numSquares]);
+
+  // CSS animation duration for a full fade-in → hold → fade-out → pause cycle
+  const cycleDuration = duration * 2 + repeatDelay;
 
   return (
     <svg
@@ -120,34 +78,33 @@ export function AnimatedGridPattern({
             className="hero-grid-pattern-path"
           />
         </pattern>
+        <style>{`
+          @keyframes grid-square-pulse-${id} {
+            0%, 100% { opacity: 0; }
+            ${(duration / cycleDuration) * 50}%, ${100 - (duration / cycleDuration) * 50}% {
+              opacity: ${maxOpacity};
+            }
+          }
+        `}</style>
       </defs>
       <rect width="100%" height="100%" fill={`url(#${id})`} />
       <svg x={x} y={y} className="overflow-visible">
-        {squares.map(({ pos: [squareX, squareY], id, iteration }, index) => {
-          const MotionRect = motion.rect;
-          return (
-            <MotionRect
-              initial={{ opacity: 0 }}
-              animate={{ opacity: maxOpacity }}
-              transition={{
-                duration,
-                repeat: 1,
-                delay: index * 0.1,
-                repeatType: 'reverse',
-                repeatDelay,
-              }}
-              onAnimationComplete={() => updateSquarePosition(id)}
-              key={`${id}-${iteration}`}
-              width={width - 1}
-              height={height - 1}
-              x={squareX * width + 1}
-              y={squareY * height + 1}
-              fill="currentColor"
-              strokeWidth="0"
-              className="hero-grid-animated-square"
-            />
-          );
-        })}
+        {squares.map(({ pos: [squareX, squareY], id: sqId, delay }) => (
+          <rect
+            key={sqId}
+            width={width - 1}
+            height={height - 1}
+            x={squareX * width + 1}
+            y={squareY * height + 1}
+            fill="currentColor"
+            strokeWidth="0"
+            className="hero-grid-animated-square"
+            style={{
+              animation: `grid-square-pulse-${id} ${cycleDuration}s ease-in-out ${delay}s infinite`,
+              opacity: 0,
+            }}
+          />
+        ))}
       </svg>
     </svg>
   );
