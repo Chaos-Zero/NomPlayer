@@ -14618,9 +14618,9 @@ body.is-resizing .resize-handle {
   margin-bottom: -48px;
   background: linear-gradient(
     180deg,
-    rgba(251, 146, 60, 0.08) 0%,
-    rgba(249, 115, 22, 0.07) 50%,
-    rgba(251, 146, 60, 0.06) 100%
+    rgba(251, 146, 60, 0.22) 0%,
+    rgba(249, 115, 22, 0.18) 50%,
+    rgba(251, 146, 60, 0.16) 100%
   );
 }
 
@@ -14629,31 +14629,84 @@ body.is-resizing .resize-handle {
   position: relative;
   z-index: 1;
   /* Compensate for the -48px negative margins: 48px restores original gap,
-     16px is the desired inner breathing room from each edge */
-  padding-top: 64px;
-  padding-bottom: 64px;
+     4px is the desired inner breathing room from each edge */
+  padding-top: 52px;
+  padding-bottom: 52px;
 }
 
-.home-cpl-particles-bg {
+/* Stronger orange field in light mode */
+.theme-light .dashboard-section-community-playlists {
+  background: linear-gradient(
+    180deg,
+    rgba(251, 146, 60, 0.48) 0%,
+    rgba(249, 115, 22, 0.42) 50%,
+    rgba(251, 146, 60, 0.38) 100%
+  );
+}
+
+/* CSS-only dot grid + soft glow — replaces the WebGL particles */
+@keyframes cpl-bg-breathe {
+  0%,
+  100% {
+    opacity: 0.75;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.dashboard-section-community-playlists {
+  box-shadow:
+    inset 0 18px 32px -8px rgba(0, 0, 0, 0.45),
+    inset 0 -18px 32px -8px rgba(0, 0, 0, 0.45);
+}
+
+.dashboard-section-community-playlists::before {
+  content: '';
   position: absolute;
   inset: 0;
   pointer-events: none;
   z-index: 0;
-  overflow: hidden;
+  background-image:
+    radial-gradient(
+      ellipse 60% 80% at 20% 50%,
+      rgba(251, 146, 60, 0.3) 0%,
+      transparent 70%
+    ),
+    radial-gradient(
+      ellipse 50% 70% at 80% 40%,
+      rgba(249, 115, 22, 0.22) 0%,
+      transparent 70%
+    ),
+    radial-gradient(circle, rgba(251, 146, 60, 0.35) 1px, transparent 1px);
+  background-size:
+    100% 100%,
+    100% 100%,
+    26px 26px;
+  background-position:
+    0 0,
+    0 0,
+    0 var(--cpl-parallax-offset, 0px);
+  animation: cpl-bg-breathe 7s ease-in-out infinite;
 }
 
-/* Stronger orange field in light mode + invert particles to dark dots */
-.theme-light .dashboard-section-community-playlists {
-  background: linear-gradient(
-    180deg,
-    rgba(251, 146, 60, 0.28) 0%,
-    rgba(249, 115, 22, 0.22) 50%,
-    rgba(251, 146, 60, 0.2) 100%
-  );
-}
-
-.theme-light .home-cpl-particles-bg {
-  filter: invert(1);
+.theme-light .dashboard-section-community-playlists::before {
+  background-image:
+    radial-gradient(
+      ellipse 60% 80% at 20% 50%,
+      rgba(251, 146, 60, 0.45) 0%,
+      transparent 70%
+    ),
+    radial-gradient(
+      ellipse 50% 70% at 80% 40%,
+      rgba(249, 115, 22, 0.35) 0%,
+      transparent 70%
+    ),
+    radial-gradient(circle, rgba(180, 80, 0, 0.38) 1px, transparent 1px);
+  background-size:
+    100% 100%,
+    100% 100%,
+    26px 26px;
 }
 
 .home-cpl-content {

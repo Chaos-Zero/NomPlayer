@@ -112,6 +112,7 @@ const Particles = ({
       dpr: pixelRatio,
       depth: false,
       alpha: true,
+      powerPreference: 'low-power',
     });
     const gl = renderer.gl;
     container.appendChild(gl.canvas);
@@ -121,8 +122,8 @@ const Particles = ({
     camera.position.set(0, 0, cameraDistance);
 
     const resize = () => {
-      const width = container.clientWidth;
-      const height = container.clientHeight;
+      const width = Math.min(container.clientWidth, 1280);
+      const height = Math.min(container.clientHeight, 480);
       if (width === 0 || height === 0) return;
       renderer.setSize(width, height);
       camera.perspective({ aspect: gl.canvas.width / gl.canvas.height });

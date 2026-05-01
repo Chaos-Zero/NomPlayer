@@ -14,11 +14,7 @@ import useMediaQuery from '../hooks/useMediaQuery.js';
 import ScrollingText from './ScrollingText.jsx';
 import TrackCatalogSearch from './TrackCatalogSearch.jsx';
 import { MenuIcon } from './SiteNavigation.jsx';
-import {
-  lastSearchQuery,
-  lastSearchResults,
-  lastSearchError,
-} from '../utils/searchPersistence.js';
+import { lastSearchQuery } from '../utils/searchPersistence.js';
 import UserMenu from './UserMenu.jsx';
 import FeedbackDialog from './FeedbackDialog.jsx';
 import {
@@ -99,14 +95,8 @@ export default function TopBar({
   const [mobileDetachedPlayerVars, setMobileDetachedPlayerVars] = useState({});
   const [error, setError] = useState('');
   const [isCatalogSearchOpen, setIsCatalogSearchOpen] = useState(false);
-  const [mobileSearchQuery, setMobileSearchQuery] = useState(
-    lastSearchQuery || '',
-  );
-  const [mobileSearchResults, setMobileSearchResults] = useState(
-    lastSearchResults || [],
-  );
-  const [mobileSearchError, setMobileSearchError] = useState(
-    lastSearchError || '',
+  const [mobileHasQuery, setMobileHasQuery] = useState(
+    Boolean(lastSearchQuery),
   );
   const topbarRef = useRef(null);
   const mobileShellRef = useRef(null);
@@ -640,7 +630,7 @@ export default function TopBar({
     <div className="mobile-header-actions">
       {supabase && (
         <button
-          className={`btn btn-icon mobile-search-toggle${isCatalogSearchOpen ? ' active' : ''}${mobileSearchQuery ? ' with-query' : ''}`}
+          className={`btn btn-icon mobile-search-toggle${isCatalogSearchOpen ? ' active' : ''}${mobileHasQuery ? ' with-query' : ''}`}
           type="button"
           onClick={() => setIsCatalogSearchOpen(true)}
           aria-label="Toggle catalog search"
@@ -729,12 +719,7 @@ export default function TopBar({
               onShowToast={onShowToast}
               className="mobile-header-catalog-search"
               autoFocus={isCatalogSearchOpen}
-              value={mobileSearchQuery}
-              onValueChange={setMobileSearchQuery}
-              results={mobileSearchResults}
-              onResultsChange={setMobileSearchResults}
-              error={mobileSearchError}
-              onErrorChange={setMobileSearchError}
+              onHasQueryChange={setMobileHasQuery}
             />
             <button
               className="mobile-search-close-btn"

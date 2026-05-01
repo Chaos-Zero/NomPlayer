@@ -1067,6 +1067,8 @@ export default function TrackDatabase({
               placeholder="Search games and tracks..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
+              autoComplete="off"
+              spellCheck="false"
             />
             <button
               className="search-indicator"

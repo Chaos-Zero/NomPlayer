@@ -43,8 +43,6 @@ import { AnimatedGridPattern } from './AnimatedGridPattern.jsx';
 import TextType from './TextType.jsx';
 import Dock from './Dock.jsx';
 import CustomPlaylistSubmenu from './CustomPlaylistSubmenu.jsx';
-import Particles from './Particles.jsx';
-
 const DASHBOARD_REFRESH_LIMIT = 8;
 const HOME_CPL_PAGE_SIZE = 12;
 
@@ -119,6 +117,7 @@ async function fetchHomeCplPage(supabase, authUserId, page) {
         )
         .in('playlist_id', playlistIds)
         .order('order_index', { ascending: true })
+        .limit(playlistIds.length * 5)
         .then(({ data }) => {
           for (const pt of data || []) {
             if (thumbnailMap[pt.playlist_id]) continue;
@@ -188,7 +187,7 @@ async function fetchHomeCplTracks(supabase, playlistId) {
     .filter(Boolean);
 }
 
-const HOME_CPL_CARD_WIDTH = 175;
+const HOME_CPL_CARD_WIDTH = 280;
 const HOME_CPL_CARD_GAP = 12;
 
 function HomeCommunityPlaylistsStrip({
@@ -507,30 +506,6 @@ function HomeCommunityPlaylistsStrip({
                       {getDisplayProfileName(pl.profile?.username)} ·{' '}
                       {homeCplTimeAgo(pl.created_at)}
                     </span>
-                  </div>
-                  <div className="home-cpl-card-actions">
-                    <button
-                      className="home-cpl-card-action-btn home-cpl-card-action-btn-play"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handlePlay(pl);
-                      }}
-                      type="button"
-                      disabled={loadingId === pl.id}
-                    >
-                      Play
-                    </button>
-                    <button
-                      className="home-cpl-card-action-btn"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleAdd(pl);
-                      }}
-                      type="button"
-                      disabled={loadingId === pl.id}
-                    >
-                      Add
-                    </button>
                   </div>
                 </div>
               </div>
@@ -1605,6 +1580,21 @@ export default function HomePage({
       isActive = false;
     };
   }, [nominationRefreshToken, supabase, onNominationsLoaded]);
+
+  useEffect(() => {
+    const section = document.querySelector(
+      '.dashboard-section-community-playlists',
+    );
+    if (!section) return;
+    function update() {
+      const rect = section.getBoundingClientRect();
+      const progress = rect.top / window.innerHeight;
+      section.style.setProperty('--cpl-parallax-offset', `${progress * 24}px`);
+    }
+    update();
+    window.addEventListener('scroll', update, { passive: true });
+    return () => window.removeEventListener('scroll', update);
+  }, []);
 
   const [unplacedFallbackTracks, setUnplacedFallbackTracks] = useState([]);
   const [persistentDiscoveryItems, setPersistentDiscoveryItems] = useState([]);
@@ -2963,24 +2953,6 @@ export default function HomePage({
             >
               View All
             </button>
-          }
-          backgroundContent={
-            <div className="home-cpl-particles-bg" aria-hidden>
-              <Particles
-                particleColors={['#ffffff', '#fff8f0', '#ffeedd']}
-                particleCount={200}
-                particleSpread={9}
-                speed={0.05}
-                particleBaseSize={90}
-                cameraFov={50}
-                cameraDistance={20}
-                moveParticlesOnHover
-                particleHoverFactor={0.25}
-                alphaParticles
-                disableRotation={false}
-                pixelRatio={1}
-              />
-            </div>
           }
         >
           <HomeCommunityPlaylistsStrip
