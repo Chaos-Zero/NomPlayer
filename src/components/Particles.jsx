@@ -231,6 +231,7 @@ const Particles = ({
         container.removeEventListener('mousemove', handleMouseMove);
       }
       cancelAnimationFrame(animationFrameId);
+      gl.getExtension('WEBGL_lose_context')?.loseContext();
       if (container.contains(gl.canvas)) {
         container.removeChild(gl.canvas);
       }

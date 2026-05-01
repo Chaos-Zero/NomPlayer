@@ -335,6 +335,20 @@ function HomeCommunityPlaylistsStrip({
     }
   }
 
+  function handlePlayFromTrack(track) {
+    if (!selectedPlaylist || !selectedTracks.length) return;
+    if (onPlayPlaylist) {
+      onPlayPlaylist(selectedTracks, {
+        id: selectedPlaylist.id,
+        name: selectedPlaylist.name,
+        autoplay: true,
+        startVideoId: track.videoId,
+      });
+    } else {
+      onAddToPlaylist(selectedTracks);
+    }
+  }
+
   async function handleAdd(playlist) {
     setLoadingId(playlist.id);
     try {
@@ -373,219 +387,280 @@ function HomeCommunityPlaylistsStrip({
 
   return (
     <div className="home-cpl-content">
-      <div className="home-cpl-page-wrapper">
-        <button
-          className="home-cpl-nav-btn"
-          onClick={handlePrevPage}
-          disabled={!canGoBack}
-          style={{ visibility: canGoBack ? 'visible' : 'hidden' }}
-          aria-label="Previous playlists"
-          type="button"
-        >
-          <svg
-            viewBox="0 0 20 20"
-            fill="currentColor"
-            width="18"
-            height="18"
-            aria-hidden
+      <div className="home-cpl-main">
+        <div className="home-cpl-page-wrapper">
+          <button
+            className="home-cpl-nav-btn"
+            onClick={handlePrevPage}
+            disabled={!canGoBack}
+            style={{ visibility: canGoBack ? 'visible' : 'hidden' }}
+            aria-label="Previous playlists"
+            type="button"
           >
-            <path d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" />
-          </svg>
-        </button>
-
-        <div
-          ref={gridRef}
-          className="home-cpl-page"
-          style={{ gridTemplateColumns: `repeat(${pageSize}, 1fr)` }}
-        >
-          {visiblePlaylists.map((pl) => (
-            <button
-              key={pl.id}
-              className={`cpl-new-card home-cpl-new-card${selectedPlaylist?.id === pl.id ? ' home-cpl-card-selected' : ''}`}
-              onClick={() => handleSelectPlaylist(pl)}
-              title={`View "${pl.name}"`}
+            <svg
+              viewBox="0 0 20 20"
+              fill="currentColor"
+              width="18"
+              height="18"
+              aria-hidden
             >
-              <div className="cpl-new-cover">
-                {pl.firstThumbnail ? (
-                  <img
-                    src={pl.firstThumbnail}
-                    alt=""
-                    style={{
-                      width: '100%',
-                      height: '100%',
-                      objectFit: 'cover',
+              <path d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" />
+            </svg>
+          </button>
+
+          <div
+            ref={gridRef}
+            className="home-cpl-page"
+            style={{ gridTemplateColumns: `repeat(${pageSize}, 1fr)` }}
+          >
+            {visiblePlaylists.map((pl) => (
+              <div
+                key={pl.id}
+                className={`cpl-new-card home-cpl-new-card${selectedPlaylist?.id === pl.id ? ' home-cpl-card-selected' : ''}`}
+                onClick={() => handleSelectPlaylist(pl)}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => e.key === 'Enter' && handleSelectPlaylist(pl)}
+                title={`View "${pl.name}"`}
+              >
+                <div className="cpl-new-cover">
+                  {pl.firstThumbnail ? (
+                    <img
+                      src={pl.firstThumbnail}
+                      alt=""
+                      style={{
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'cover',
+                      }}
+                    />
+                  ) : (
+                    <div
+                      style={{
+                        width: '100%',
+                        height: '100%',
+                        background: homeCplGradient(pl.id),
+                      }}
+                    />
+                  )}
+                  <span className="cpl-track-badge cpl-track-badge-sm">
+                    {pl.trackCount}
+                  </span>
+                  <button
+                    className="home-cpl-card-play-btn"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handlePlay(pl);
                     }}
-                  />
-                ) : (
-                  <div
-                    style={{
-                      width: '100%',
-                      height: '100%',
-                      background: homeCplGradient(pl.id),
-                    }}
-                  />
-                )}
-                <span className="cpl-track-badge cpl-track-badge-sm">
-                  {pl.trackCount}
-                </span>
-              </div>
-              <div className="cpl-new-body">
-                <div className="cpl-new-name">{pl.name}</div>
-                <div className="cpl-new-meta">
-                  <div
-                    className="cpl-avatar cpl-avatar-xs"
-                    style={
-                      pl.profile?.avatar_url
-                        ? {}
-                        : { background: homeCplGradient(pl.user_id || '') }
-                    }
-                    aria-hidden
+                    aria-label={`Play ${pl.name}`}
+                    type="button"
+                    disabled={loadingId === pl.id}
                   >
-                    {pl.profile?.avatar_url ? (
-                      <img
-                        src={pl.profile.avatar_url}
-                        alt=""
-                        style={{
-                          width: '100%',
-                          height: '100%',
-                          objectFit: 'cover',
-                          borderRadius: 'inherit',
-                        }}
+                    {loadingId === pl.id ? (
+                      <div
+                        className="hero-loader-spinner"
+                        style={{ width: 14, height: 14 }}
                       />
                     ) : (
-                      (getDisplayProfileName(pl.profile?.username) || '?')
-                        .slice(0, 2)
-                        .toUpperCase()
+                      <svg
+                        viewBox="0 0 20 20"
+                        fill="currentColor"
+                        width="14"
+                        height="14"
+                        aria-hidden
+                      >
+                        <path d="M6.3 2.841A1.5 1.5 0 004 4.11v11.78a1.5 1.5 0 002.3 1.269l9.344-5.89a1.5 1.5 0 000-2.538L6.3 2.84z" />
+                      </svg>
                     )}
+                  </button>
+                </div>
+                <div className="cpl-new-body">
+                  <div className="cpl-new-name">{pl.name}</div>
+                  <div className="cpl-new-meta">
+                    <div
+                      className="cpl-avatar cpl-avatar-xs"
+                      style={
+                        pl.profile?.avatar_url
+                          ? {}
+                          : { background: homeCplGradient(pl.user_id || '') }
+                      }
+                      aria-hidden
+                    >
+                      {pl.profile?.avatar_url ? (
+                        <img
+                          src={pl.profile.avatar_url}
+                          alt=""
+                          style={{
+                            width: '100%',
+                            height: '100%',
+                            objectFit: 'cover',
+                            borderRadius: 'inherit',
+                          }}
+                        />
+                      ) : (
+                        (getDisplayProfileName(pl.profile?.username) || '?')
+                          .slice(0, 2)
+                          .toUpperCase()
+                      )}
+                    </div>
+                    <span>
+                      {getDisplayProfileName(pl.profile?.username)} ·{' '}
+                      {homeCplTimeAgo(pl.created_at)}
+                    </span>
                   </div>
-                  <span>
-                    {getDisplayProfileName(pl.profile?.username)} ·{' '}
-                    {homeCplTimeAgo(pl.created_at)}
-                  </span>
+                  <div className="home-cpl-card-actions">
+                    <button
+                      className="home-cpl-card-action-btn home-cpl-card-action-btn-play"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handlePlay(pl);
+                      }}
+                      type="button"
+                      disabled={loadingId === pl.id}
+                    >
+                      Play
+                    </button>
+                    <button
+                      className="home-cpl-card-action-btn"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleAdd(pl);
+                      }}
+                      type="button"
+                      disabled={loadingId === pl.id}
+                    >
+                      Add
+                    </button>
+                  </div>
                 </div>
               </div>
-            </button>
-          ))}
-          {isFetchingMore && (
-            <div className="home-cpl-page-loading-slot">
-              <div
-                className="hero-loader-spinner"
-                style={{ width: 20, height: 20 }}
-              />
-            </div>
-          )}
-        </div>
+            ))}
+            {isFetchingMore && (
+              <div className="home-cpl-page-loading-slot">
+                <div
+                  className="hero-loader-spinner"
+                  style={{ width: 20, height: 20 }}
+                />
+              </div>
+            )}
+          </div>
 
-        <button
-          className="home-cpl-nav-btn"
-          onClick={handleNextPage}
-          disabled={!canGoForward || isFetchingMore}
-          style={{ visibility: canGoForward ? 'visible' : 'hidden' }}
-          aria-label="Next playlists"
-          type="button"
-        >
-          <svg
-            viewBox="0 0 20 20"
-            fill="currentColor"
-            width="18"
-            height="18"
-            aria-hidden
+          <button
+            className="home-cpl-nav-btn"
+            onClick={handleNextPage}
+            disabled={!canGoForward || isFetchingMore}
+            style={{ visibility: canGoForward ? 'visible' : 'hidden' }}
+            aria-label="Next playlists"
+            type="button"
           >
-            <path d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" />
-          </svg>
-        </button>
+            <svg
+              viewBox="0 0 20 20"
+              fill="currentColor"
+              width="18"
+              height="18"
+              aria-hidden
+            >
+              <path d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" />
+            </svg>
+          </button>
+        </div>
       </div>
 
       {selectedPlaylist && (
-        <div className="home-cpl-panel">
-          <div className="home-cpl-panel-cover">
-            {selectedPlaylist.firstThumbnail ? (
-              <img
-                src={selectedPlaylist.firstThumbnail}
-                alt=""
-                className="home-cpl-panel-cover-img"
-              />
-            ) : (
+        <div className="home-cpl-side-panel">
+          <div className="home-cpl-panel-header">
+            <button
+              className="home-cpl-panel-close"
+              onClick={() => setSelectedPlaylist(null)}
+              aria-label="Close playlist panel"
+              type="button"
+            >
+              ✕
+            </button>
+            <p className="home-cpl-panel-header-creator">
+              by {getDisplayProfileName(selectedPlaylist.profile?.username)}
+            </p>
+            <h3 className="home-cpl-panel-header-name">
+              {selectedPlaylist.name}
+            </h3>
+            <span className="home-cpl-panel-hero-badge">
+              {selectedPlaylist.trackCount} tracks
+            </span>
+          </div>
+          <div className="home-cpl-panel-actions">
+            <button
+              className="btn btn-primary"
+              onClick={() => handlePlay(selectedPlaylist)}
+              disabled={loadingId === selectedPlaylist.id}
+              type="button"
+              style={{ flex: 1 }}
+            >
+              {loadingId === selectedPlaylist.id ? '…' : 'Play Playlist'}
+            </button>
+            <button
+              className="btn"
+              onClick={() => handleAdd(selectedPlaylist)}
+              disabled={loadingId === selectedPlaylist.id}
+              type="button"
+              style={{ flex: 1 }}
+            >
+              Add to Queue
+            </button>
+          </div>
+          {isLoadingPanel ? (
+            <div className="home-cpl-panel-loading">
               <div
-                className="home-cpl-panel-cover-img"
-                style={{ background: homeCplGradient(selectedPlaylist.id) }}
+                className="hero-loader-spinner"
+                style={{ width: 18, height: 18 }}
               />
-            )}
-          </div>
-          <div className="home-cpl-panel-info">
-            <div className="home-cpl-panel-header">
-              <div>
-                <div className="home-cpl-panel-name">
-                  {selectedPlaylist.name}
-                </div>
-                <div className="home-cpl-panel-meta">
-                  by {getDisplayProfileName(selectedPlaylist.profile?.username)}{' '}
-                  · {selectedPlaylist.trackCount} tracks ·{' '}
-                  {homeCplTimeAgo(selectedPlaylist.created_at)}
-                </div>
-              </div>
-              <button
-                className="home-cpl-panel-close"
-                onClick={() => setSelectedPlaylist(null)}
-                aria-label="Close playlist panel"
-              >
-                ✕
-              </button>
+              <span>Loading tracks…</span>
             </div>
-            <div className="home-cpl-panel-actions">
-              <button
-                className="dashboard-action-btn"
-                onClick={() => handlePlay(selectedPlaylist)}
-                disabled={loadingId === selectedPlaylist.id}
-                type="button"
-              >
-                {loadingId === selectedPlaylist.id ? '…' : 'Play Playlist'}
-              </button>
-              <button
-                className="dashboard-action-btn dashboard-action-btn-muted"
-                onClick={() => handleAdd(selectedPlaylist)}
-                disabled={loadingId === selectedPlaylist.id}
-                type="button"
-              >
-                Add to Queue
-              </button>
-            </div>
-            {isLoadingPanel ? (
-              <div className="home-cpl-panel-loading">
+          ) : selectedTracks.length > 0 ? (
+            <div className="home-cpl-panel-tracks">
+              {selectedTracks.map((t, i) => (
                 <div
-                  className="hero-loader-spinner"
-                  style={{ width: 18, height: 18 }}
-                />
-                <span>Loading tracks…</span>
-              </div>
-            ) : selectedTracks.length > 0 ? (
-              <div className="home-cpl-panel-tracks">
-                {selectedTracks.slice(0, 8).map((t, i) => (
-                  <div key={i} className="home-cpl-panel-track">
-                    <img
-                      src={t.thumbnail}
-                      alt=""
-                      className="home-cpl-panel-track-thumb"
-                      loading="lazy"
-                    />
-                    <div className="home-cpl-panel-track-info">
-                      <span className="home-cpl-panel-track-title">
-                        {t.trackTitle || t.displayTitle}
-                      </span>
-                      <span className="home-cpl-panel-track-game">
-                        {t.gameTitle || t.channelTitle}
-                      </span>
+                  key={i}
+                  className="home-cpl-panel-track"
+                  onDoubleClick={() => handlePlayFromTrack(t)}
+                  title="Double-click to play from here"
+                >
+                  {t.thumbnail ? (
+                    <div className="home-cpl-panel-track-thumb-wrap">
+                      <img
+                        src={t.thumbnail}
+                        alt=""
+                        className="home-cpl-panel-track-thumb"
+                      />
+                      <button
+                        className="home-cpl-panel-track-play-btn"
+                        onClick={() => handlePlayFromTrack(t)}
+                        aria-label={`Play from ${t.trackTitle || t.displayTitle}`}
+                        type="button"
+                      >
+                        <svg
+                          viewBox="0 0 20 20"
+                          fill="currentColor"
+                          width="10"
+                          height="10"
+                          aria-hidden
+                        >
+                          <path d="M6.3 2.841A1.5 1.5 0 004 4.11v11.78a1.5 1.5 0 002.3 1.269l9.344-5.89a1.5 1.5 0 000-2.538L6.3 2.84z" />
+                        </svg>
+                      </button>
                     </div>
+                  ) : null}
+                  <div className="home-cpl-panel-track-info">
+                    <span className="home-cpl-panel-track-title">
+                      {t.trackTitle || t.displayTitle}
+                    </span>
+                    <span className="home-cpl-panel-track-game">
+                      {t.gameTitle || t.channelTitle}
+                    </span>
                   </div>
-                ))}
-                {selectedTracks.length > 8 && (
-                  <div className="home-cpl-panel-track-more">
-                    +{selectedTracks.length - 8} more tracks
-                  </div>
-                )}
-              </div>
-            ) : null}
-          </div>
+                </div>
+              ))}
+            </div>
+          ) : null}
         </div>
       )}
     </div>
