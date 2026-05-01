@@ -54,11 +54,13 @@ export default function TrackCatalogSearch({
   onResultsChange,
   error: externalError,
   onErrorChange,
+  onHasQueryChange,
   autoFocus,
 }) {
   const [localQuery, setLocalQuery] = useState(lastSearchQuery);
   const query = value !== undefined ? value : localQuery;
   const setQuery = onValueChange || setLocalQuery;
+  const prevHasQueryRef = useRef(Boolean(lastSearchQuery));
 
   const [localResults, setLocalResults] = useState(lastSearchResults);
   const results =
@@ -207,6 +209,11 @@ export default function TrackCatalogSearch({
             if (nextQuery.trim().length < 2) {
               setResults([]);
               setSettledQuery('');
+            }
+            const hasQuery = Boolean(nextQuery);
+            if (hasQuery !== prevHasQueryRef.current) {
+              prevHasQueryRef.current = hasQuery;
+              onHasQueryChange?.(hasQuery);
             }
           }}
           onKeyDown={(event) => {
