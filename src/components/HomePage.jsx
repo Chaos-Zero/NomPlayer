@@ -1817,6 +1817,27 @@ export default function HomePage({
     [currentPlaylist],
   );
 
+  // Clear fastSpotlightCandidate once user state loads if it fails the same
+  // filters applied to discoveryCandidates (it was picked from the static snapshot
+  // before listened status, playlist, or auth were available).
+  useEffect(() => {
+    if (!fastSpotlightCandidate) return;
+    const { videoId, nominators } = fastSpotlightCandidate;
+    if (
+      currentPlaylistIds.has(videoId) ||
+      listenedStatusById[videoId] === 'complete' ||
+      listenedStatusById[videoId] === 'partial' ||
+      (authUser?.id && nominators?.some((n) => n.userId === authUser.id))
+    ) {
+      setFastSpotlightCandidate(null);
+    }
+  }, [
+    fastSpotlightCandidate,
+    currentPlaylistIds,
+    listenedStatusById,
+    authUser?.id,
+  ]);
+
   const visibleNominationUpdates = useMemo(() => {
     if (isHidingOwnNominations) {
       return mergedNominationUpdates.filter(
@@ -1980,6 +2001,7 @@ export default function HomePage({
         tournaments: track.tournaments ?? [],
       }))
       .filter((item) => {
+        if (currentPlaylistIds.has(item.videoId)) return false;
         const status = listenedStatusById[item.videoId];
         return !status || (status !== 'complete' && status !== 'partial');
       });
@@ -2016,12 +2038,22 @@ export default function HomePage({
     listenedStatusById,
   ]);
 
+  const activeDiscoveryItems = useMemo(
+    () =>
+      persistentDiscoveryItems.filter((item) => {
+        if (currentPlaylistIds.has(item.videoId)) return false;
+        const status = listenedStatusById[item.videoId];
+        return !status || (status !== 'complete' && status !== 'partial');
+      }),
+    [persistentDiscoveryItems, listenedStatusById, currentPlaylistIds],
+  );
+
   const spotlightPool = useMemo(
     () =>
-      persistentDiscoveryItems.length > 0
-        ? persistentDiscoveryItems.filter((item) => !item.isFallback)
+      activeDiscoveryItems.length > 0
+        ? activeDiscoveryItems.filter((item) => !item.isFallback)
         : discoveryCandidates,
-    [persistentDiscoveryItems, discoveryCandidates],
+    [activeDiscoveryItems, discoveryCandidates],
   );
 
   // Pin the first spotlight pool entry as the featured one; re-pin when the
@@ -2150,7 +2182,10 @@ export default function HomePage({
             return;
           }
 
-          const excludeIds = Object.keys(listenedStatusById || {});
+          const excludeIds = [
+            ...Object.keys(listenedStatusById || {}),
+            ...currentPlaylistIds,
+          ];
           const unplacedTrack = await fetchRandomUnplacedVgmcTrack(
             supabase,
             excludeIds,
@@ -2993,14 +3028,14 @@ export default function HomePage({
           onToggleCollapse={() => toggleMobileSection('discover')}
           summary={sectionSummaries.discover}
         >
-          {persistentDiscoveryItems.length === 0 ? (
+          {activeDiscoveryItems.length === 0 ? (
             <DashboardMessage>
               You are caught up for now. When more nomination lists appear, new
               discovery picks will show here.
             </DashboardMessage>
           ) : (
             <DiscoveryMarqueeGrid>
-              {persistentDiscoveryItems.map((candidate) => (
+              {activeDiscoveryItems.map((candidate) => (
                 <DiscoveryGridItem
                   key={candidate.videoId}
                   candidate={candidate}
