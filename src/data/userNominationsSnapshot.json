@@ -1,7 +1,187 @@
 {
-  "exportedAt": "2026-05-01T12:47:52.796Z",
-  "totalCount": 7,
+  "exportedAt": "2026-05-02T02:23:01.479Z",
+  "totalCount": 8,
   "users": [
+    {
+      "user_id": "018e71e8-6cc8-43c2-8f50-3fd2f7c52fca",
+      "username": "dc:ten8097",
+      "avatar_url": "https://cdn.discordapp.com/avatars/764127786607968287/f60e9d1db34a0f9870ebd7c22042d234.png",
+      "gamefaqs_username": null,
+      "updated_at": "2026-05-01T20:26:13.066469+00:00",
+      "nominations": [
+        {
+          "title": "King of Fighters ’99 - Tears",
+          "trackId": "94aa603e-326f-480b-bfb3-d7c0a0bdce1c",
+          "videoId": "jBSGxhqWctA",
+          "gameTitle": "King of Fighters ’99",
+          "trackTitle": "Tears",
+          "channelTitle": "SNK SOUND TEAM - Topic",
+          "displayTitle": "King of Fighters ’99 - Tears"
+        },
+        {
+          "title": "Advance Wars: Days of Ruin - Mr. Bear/Cold-Hearted Doll/Penny's Theme",
+          "trackId": "f087403a-bf81-409d-a306-d2305372db4b",
+          "videoId": "zO5WDOkpEtI",
+          "gameTitle": "Advance Wars: Days of Ruin",
+          "trackTitle": "Mr. Bear/Cold-Hearted Doll/Penny's Theme",
+          "channelTitle": "BlackfireMagnum",
+          "displayTitle": "Advance Wars: Days of Ruin - Mr. Bear/Cold-Hearted Doll/Penny's Theme"
+        },
+        {
+          "title": "beatmania IIDX 10th Style - No Doubt Get Loud",
+          "trackId": "54538589-88f4-4a3f-9760-167c582a250c",
+          "videoId": "VhmaF7tMWO8",
+          "gameTitle": "beatmania IIDX 10th Style",
+          "trackTitle": "No Doubt Get Loud",
+          "channelTitle": "Best of IIDX animations",
+          "displayTitle": "beatmania IIDX 10th Style - No Doubt Get Loud"
+        },
+        {
+          "title": "FAR AWAY",
+          "trackId": "8c32ff9c-0952-45bb-a731-eaa54f2b5637",
+          "videoId": "Hzy74YocTIs",
+          "gameTitle": null,
+          "trackTitle": null,
+          "channelTitle": "Nana Tanimura - Topic",
+          "displayTitle": "FAR AWAY"
+        },
+        {
+          "title": "Marvel vs. Capcom 3: Fate of Two Worlds - Theme of Taskmaster",
+          "trackId": "21144c3f-8e3e-4db2-b044-10a374c8bae9",
+          "videoId": "PHZWZ7RzE-U",
+          "gameTitle": "Marvel vs. Capcom 3: Fate of Two Worlds",
+          "trackTitle": "Theme of Taskmaster",
+          "channelTitle": "Doopliss",
+          "displayTitle": "Marvel vs. Capcom 3: Fate of Two Worlds - Theme of Taskmaster"
+        },
+        {
+          "title": "Trample Machine (Ending)",
+          "trackId": "1988b594-8976-4c73-a3ab-b3b4d240ca77",
+          "videoId": "77lgyiuAkPw",
+          "gameTitle": null,
+          "trackTitle": null,
+          "channelTitle": "NecroTheatre2",
+          "displayTitle": "Trample Machine (Ending)"
+        },
+        {
+          "title": "31   watch out!",
+          "trackId": "6b753235-00c0-43c6-bcf1-7fc29d77e39f",
+          "videoId": "xS0Lro9iW8A",
+          "gameTitle": null,
+          "trackTitle": null,
+          "channelTitle": "Robo",
+          "displayTitle": "31   watch out!"
+        },
+        {
+          "title": "神、ノゾム世界と箱庭幻想",
+          "trackId": "32882521-0f16-4e4a-8338-5d5e6bb71db0",
+          "videoId": "nPE3laf26H8",
+          "gameTitle": null,
+          "trackTitle": null,
+          "channelTitle": "Yōsei Teikoku - Topic",
+          "displayTitle": "神、ノゾム世界と箱庭幻想"
+        },
+        {
+          "title": "Yume Nikki Gensou ~ Return to Reality",
+          "trackId": "b3bd5427-3965-4ad1-8f58-c45866b7fe60",
+          "videoId": "AAj8WXXtIRQ",
+          "gameTitle": null,
+          "trackTitle": null,
+          "channelTitle": "Burn Angel",
+          "displayTitle": "Yume Nikki Gensou ~ Return to Reality"
+        },
+        {
+          "title": "Find the blue",
+          "trackId": "08fdbbce-10b0-4a8e-9ccf-065b4dae66e4",
+          "videoId": "K9hEJZ5T4Ws",
+          "gameTitle": null,
+          "trackTitle": null,
+          "channelTitle": "ITO Kanako - Topic",
+          "displayTitle": "Find the blue"
+        },
+        {
+          "title": "Black Knight 2000 - Main Theme",
+          "trackId": "47cea2c4-60cb-41d6-8009-9714082d1ffd",
+          "videoId": "FASUZRYs0fM",
+          "gameTitle": "Black Knight 2000",
+          "trackTitle": "Main Theme",
+          "channelTitle": "VGM Hall of Fame",
+          "displayTitle": "Black Knight 2000 - Main Theme"
+        },
+        {
+          "title": "Double Dragon Neon OST - Track 4 - City Streets 2 (Mango Tango)",
+          "trackId": "e8723dde-47c6-4aa0-a4cb-d08aea22457f",
+          "videoId": "lUMhCA8iRls",
+          "gameTitle": null,
+          "trackTitle": null,
+          "channelTitle": "Seneloide",
+          "displayTitle": "Double Dragon Neon OST - Track 4 - City Streets 2 (Mango Tango)"
+        },
+        {
+          "title": "「Vocal/Music」古代祐三＆sasakure.UK - Tsuigeki no IGNITH feat. riya(eufonius)",
+          "trackId": "91ab23f2-53c1-4726-89c4-2a318ef3a72e",
+          "videoId": "suE19Al3S3o",
+          "gameTitle": null,
+          "trackTitle": null,
+          "channelTitle": "RynerRyn",
+          "displayTitle": "「Vocal/Music」古代祐三＆sasakure.UK - Tsuigeki no IGNITH feat. riya(eufonius)"
+        },
+        {
+          "title": "Ice vs. Morimori Atsushi - RE:UNION -Duo Blade Against-",
+          "trackId": "2af2bccc-3fdc-47e7-83a6-00130f148407",
+          "videoId": "KrmOKzFMQAA",
+          "gameTitle": null,
+          "trackTitle": null,
+          "channelTitle": "モリモリあつし / 非可逆リズム",
+          "displayTitle": "Ice vs. Morimori Atsushi - RE:UNION -Duo Blade Against-"
+        },
+        {
+          "title": "Looney Tunes: Sheep Raider - Track 7",
+          "trackId": "f6f0fdfa-28d2-4d22-8338-046a08f433a3",
+          "videoId": "wwidcxa3fmY",
+          "gameTitle": "Looney Tunes: Sheep Raider",
+          "trackTitle": "Track 7",
+          "channelTitle": "YouTube",
+          "displayTitle": "Looney Tunes: Sheep Raider - Track 7"
+        },
+        {
+          "title": "Library of Ruina - Angela",
+          "trackId": "320eb2a0-a543-42d0-9680-ebf525cac571",
+          "videoId": "YV1uwUziZqQ",
+          "gameTitle": "Library of Ruina",
+          "trackTitle": "Angela",
+          "channelTitle": "산우",
+          "displayTitle": "Library of Ruina - Angela"
+        },
+        {
+          "title": "Origin : 星の記憶",
+          "trackId": "1e4ce122-459e-4d62-94bf-ef563b45c461",
+          "videoId": "vdT-uEWwEv8",
+          "gameTitle": null,
+          "trackTitle": null,
+          "channelTitle": "Tatsuya Koyama - Topic",
+          "displayTitle": "Origin : 星の記憶"
+        },
+        {
+          "title": "Mega Man Network Transmission - Zero Gravity Area (StarMan's Stage)",
+          "trackId": "d608d3ba-a28c-40d8-8ca1-4b2cdf0c6d37",
+          "videoId": "bylo5iC6kkY",
+          "gameTitle": "Mega Man Network Transmission",
+          "trackTitle": "Zero Gravity Area (StarMan's Stage)",
+          "channelTitle": "Frygoon",
+          "displayTitle": "Mega Man Network Transmission - Zero Gravity Area (StarMan's Stage)"
+        },
+        {
+          "title": "DJMAX RESPECT V - Misty Er'A ~One Day~",
+          "trackId": "19b38b3a-2fba-4103-8b5e-d76bf8698e4e",
+          "videoId": "TavpytwkgPg",
+          "gameTitle": "DJMAX RESPECT V",
+          "trackTitle": "Misty Er'A ~One Day~",
+          "channelTitle": "Mycin.T - Topic",
+          "displayTitle": "DJMAX RESPECT V - Misty Er'A ~One Day~"
+        }
+      ]
+    },
     {
       "user_id": "0cd5abff-9c4d-47b7-90f4-d0482144ee8a",
       "username": "dc:acireexists",
@@ -15,7 +195,7 @@
           "videoId": "Ed-lHZqYIt8",
           "gameTitle": "Sonic Rush",
           "trackTitle": "Wrapped in Black",
-          "channelTitle": null,
+          "channelTitle": "Sonic's Mixtapes",
           "displayTitle": "Sonic Rush - Wrapped in Black"
         },
         {
@@ -24,7 +204,7 @@
           "videoId": "IVb08Dp1zLo",
           "gameTitle": "Mario Kart World",
           "trackTitle": "Rainbow Road",
-          "channelTitle": null,
+          "channelTitle": "SupraDarky",
           "displayTitle": "Mario Kart World - Rainbow Road"
         },
         {
@@ -33,7 +213,7 @@
           "videoId": "VRYs-QfdToc",
           "gameTitle": "Minecraft",
           "trackTitle": "Dreiton",
-          "channelTitle": null,
+          "channelTitle": "C418 - Topic",
           "displayTitle": "Minecraft - Dreiton"
         },
         {
@@ -42,7 +222,7 @@
           "videoId": "6hIrbIo01qk",
           "gameTitle": "beatmania IIDX 29 CastHour",
           "trackTitle": "Nocturnal 2097 (Long Version)",
-          "channelTitle": null,
+          "channelTitle": "StyleK226",
           "displayTitle": "beatmania IIDX 29 CastHour - Nocturnal 2097 (Long Version)"
         },
         {
@@ -51,7 +231,7 @@
           "videoId": "NOlfXpHX56A",
           "gameTitle": "Risk of Rain 2: Alloyed Collective",
           "trackTitle": "We'll Rain Together",
-          "channelTitle": null,
+          "channelTitle": "Stavros Markonis",
           "displayTitle": "Risk of Rain 2: Alloyed Collective - We'll Rain Together"
         },
         {
@@ -60,7 +240,7 @@
           "videoId": "Eexl6s4Nbts",
           "gameTitle": "Clannad",
           "trackTitle": "Snowfield",
-          "channelTitle": null,
+          "channelTitle": "VISUAL ARTS / Key - Topic",
           "displayTitle": "Clannad - Snowfield"
         },
         {
@@ -69,7 +249,7 @@
           "videoId": "ycyWkb6Zmak",
           "gameTitle": "The Legend of Heroes: Trails to Azure",
           "trackTitle": "The Azure Arbitrator",
-          "channelTitle": null,
+          "channelTitle": "Falcom Sound Team jdk - Topic",
           "displayTitle": "The Legend of Heroes: Trails to Azure - The Azure Arbitrator"
         },
         {
@@ -78,7 +258,7 @@
           "videoId": "JiSjrTFPm2M",
           "gameTitle": "Marvel's Guardians of the Galaxy",
           "trackTitle": "The Darkness Inside",
-          "channelTitle": null,
+          "channelTitle": "Star-Lord Band - Topic",
           "displayTitle": "Marvel's Guardians of the Galaxy - The Darkness Inside"
         },
         {
@@ -87,7 +267,7 @@
           "videoId": "HqqySYvxH4w",
           "gameTitle": "DISSIDIA 012 [duodecim] FINAL FANTASY",
           "trackTitle": "「God in Fire」",
-          "channelTitle": null,
+          "channelTitle": "Takeharu Ishimoto - Topic",
           "displayTitle": "DISSIDIA 012 [duodecim] FINAL FANTASY - 「God in Fire」"
         },
         {
@@ -96,7 +276,7 @@
           "videoId": "tF_4kmMgKoQ",
           "gameTitle": "Pizza Tower",
           "trackTitle": "Thousand March",
-          "channelTitle": null,
+          "channelTitle": "Mr. Sauceman - Topic",
           "displayTitle": "Pizza Tower - Thousand March"
         }
       ]
@@ -123,7 +303,7 @@
           "videoId": "BGNSHNf-nlU",
           "gameTitle": "Silver Surfer",
           "trackTitle": "Stage 1",
-          "channelTitle": null,
+          "channelTitle": "explod2A03",
           "displayTitle": "Silver Surfer - Stage 1"
         },
         {
@@ -132,7 +312,7 @@
           "videoId": "i0FNUDLdT4A",
           "gameTitle": "One Must Fall 2097",
           "trackTitle": "Menu",
-          "channelTitle": null,
+          "channelTitle": "Teppica",
           "displayTitle": "One Must Fall 2097 - Menu"
         },
         {
@@ -141,7 +321,7 @@
           "videoId": "nI3tq4AP5E4",
           "gameTitle": "Lost Odyssey",
           "trackTitle": "Dark Saint",
-          "channelTitle": null,
+          "channelTitle": "Kog",
           "displayTitle": "Lost Odyssey - Dark Saint"
         },
         {
@@ -150,7 +330,7 @@
           "videoId": "u9LtKHiVRCw",
           "gameTitle": "Guilty Gear X",
           "trackTitle": "Awe of She",
-          "channelTitle": null,
+          "channelTitle": "shinryuu10901",
           "displayTitle": "Guilty Gear X - Awe of She"
         },
         {
@@ -159,7 +339,7 @@
           "videoId": "MtrNyKRbGe4",
           "gameTitle": "Danganronpa: Tripper Happy Havoc",
           "trackTitle": "Discussion -HOPE VS DESPAIR-",
-          "channelTitle": null,
+          "channelTitle": "Masafumi Takada - Topic",
           "displayTitle": "Danganronpa: Tripper Happy Havoc - Discussion -HOPE VS DESPAIR-"
         },
         {
@@ -168,7 +348,7 @@
           "videoId": "3guEs9C8Jj4",
           "gameTitle": "The Wizard of Oz: Beyond the Yellow Brick Road",
           "trackTitle": "RIZ-ZOAWD!",
-          "channelTitle": null,
+          "channelTitle": "sleeping0dragon",
           "displayTitle": "The Wizard of Oz: Beyond the Yellow Brick Road - RIZ-ZOAWD!"
         },
         {
@@ -177,7 +357,7 @@
           "videoId": "spgFAlPlfIA",
           "gameTitle": "Dynasty Warriors Online",
           "trackTitle": "Steal a March",
-          "channelTitle": null,
+          "channelTitle": "Lord Raviel",
           "displayTitle": "Dynasty Warriors Online - Steal a March"
         },
         {
@@ -186,7 +366,7 @@
           "videoId": "mcMtC5ZMnEE",
           "gameTitle": "Shantae & The Pirate's Curse",
           "trackTitle": "We Love Burning Town",
-          "channelTitle": null,
+          "channelTitle": "M D",
           "displayTitle": "Shantae & The Pirate's Curse - We Love Burning Town"
         },
         {
@@ -195,7 +375,7 @@
           "videoId": "Q_QV3lfib_8",
           "gameTitle": "The Incredible Machine: Even More Contraptions",
           "trackTitle": "Progressive Rock",
-          "channelTitle": null,
+          "channelTitle": "1ucasvb",
           "displayTitle": "The Incredible Machine: Even More Contraptions - Progressive Rock"
         },
         {
@@ -204,7 +384,7 @@
           "videoId": "iEOYy4_3ciA",
           "gameTitle": "Donkey Kong Country",
           "trackTitle": "Ice Cave Chant",
-          "channelTitle": null,
+          "channelTitle": "Joe's VGM Party",
           "displayTitle": "Donkey Kong Country - Ice Cave Chant"
         },
         {
@@ -213,7 +393,7 @@
           "videoId": "-awT54iKr30",
           "gameTitle": "Killer Instinct",
           "trackTitle": "Inferno",
-          "channelTitle": null,
+          "channelTitle": "Mick Gordon - Topic",
           "displayTitle": "Killer Instinct - Inferno"
         },
         {
@@ -222,7 +402,7 @@
           "videoId": "TAWmSzN7Uf8",
           "gameTitle": "Pyre",
           "trackTitle": "In the Flame",
-          "channelTitle": null,
+          "channelTitle": "Supergiant Games",
           "displayTitle": "Pyre - In the Flame"
         },
         {
@@ -231,7 +411,7 @@
           "videoId": "p8efRFhEcuQ",
           "gameTitle": "War of Brains",
           "trackTitle": "FEEL the POWER in YOUR SOUL",
-          "channelTitle": null,
+          "channelTitle": "FUNKY UNCLE",
           "displayTitle": "War of Brains - FEEL the POWER in YOUR SOUL"
         },
         {
@@ -240,7 +420,7 @@
           "videoId": "hIXGRb7Gb7E",
           "gameTitle": "Pokemon Mystery Dungeon: Explorers of Sky",
           "trackTitle": "Vast Ice Mountain Peak",
-          "channelTitle": null,
+          "channelTitle": "dialga328",
           "displayTitle": "Pokemon Mystery Dungeon: Explorers of Sky - Vast Ice Mountain Peak"
         },
         {
@@ -249,7 +429,7 @@
           "videoId": "0eVirfGyPCA",
           "gameTitle": "Guacamelee! 2",
           "trackTitle": "Los Manglares",
-          "channelTitle": null,
+          "channelTitle": "Rom Di Prisco - Topic",
           "displayTitle": "Guacamelee! 2 - Los Manglares"
         },
         {
@@ -258,7 +438,7 @@
           "videoId": "mJLB7SRGgFc",
           "gameTitle": "UNBEATABLE",
           "trackTitle": "WORN OUT TAPES",
-          "channelTitle": null,
+          "channelTitle": "D-CELL",
           "displayTitle": "UNBEATABLE - WORN OUT TAPES"
         },
         {
@@ -267,7 +447,7 @@
           "videoId": "YvLZzUcyDWY",
           "gameTitle": "Genshin Impact",
           "trackTitle": "Across Dimming Asterisms",
-          "channelTitle": null,
+          "channelTitle": "HOYO-MiX - Topic",
           "displayTitle": "Genshin Impact - Across Dimming Asterisms"
         },
         {
@@ -276,7 +456,7 @@
           "videoId": "vlrN8Mso-6Y",
           "gameTitle": "Zenless Zone Zero",
           "trackTitle": "DAMIDAMI",
-          "channelTitle": null,
+          "channelTitle": "Sihan - Topic",
           "displayTitle": "Zenless Zone Zero - DAMIDAMI"
         },
         {
@@ -285,7 +465,7 @@
           "videoId": "6WQ-XbrYdr0",
           "gameTitle": "Tyrian",
           "trackTitle": "Rock Garden",
-          "channelTitle": null,
+          "channelTitle": "dada78641",
           "displayTitle": "Tyrian - Rock Garden"
         }
       ]
@@ -429,7 +609,7 @@
           "videoId": "vntnSiOAyj8",
           "gameTitle": "The Legend of Sword and Fairy 7",
           "trackTitle": "Together Always",
-          "channelTitle": null,
+          "channelTitle": "Mew OST",
           "displayTitle": "The Legend of Sword and Fairy 7 - Together Always"
         },
         {
@@ -438,7 +618,7 @@
           "videoId": "TQp-yWnSi84",
           "gameTitle": "Angeline Era",
           "trackTitle": "A Sudajii's Shade, Noon Sky Drifting By",
-          "channelTitle": null,
+          "channelTitle": "Melos Han-Tani - Topic",
           "displayTitle": "Angeline Era - A Sudajii's Shade, Noon Sky Drifting By"
         },
         {
@@ -447,7 +627,7 @@
           "videoId": "QIwJfVwqOcQ",
           "gameTitle": "Like a Dragon: Kenzan!",
           "trackTitle": "baile con la mariposa",
-          "channelTitle": null,
+          "channelTitle": "SEGA SOUND TEAM - Topic",
           "displayTitle": "Like a Dragon: Kenzan! - baile con la mariposa"
         }
       ]
@@ -465,7 +645,7 @@
           "videoId": "ha-iv_TOJ3g",
           "gameTitle": "Moon Child (Amiga)",
           "trackTitle": "Title Theme",
-          "channelTitle": null,
+          "channelTitle": "the ida deerz dump",
           "displayTitle": "Moon Child (Amiga) - Title Theme"
         }
       ]
@@ -672,7 +852,7 @@
           "videoId": "qfSRCzeiQ0I",
           "gameTitle": "Hyper Light Breaker",
           "trackTitle": "Apocalyptic Blues Paean",
-          "channelTitle": null,
+          "channelTitle": "Scraic",
           "displayTitle": "Hyper Light Breaker - Apocalyptic Blues Paean"
         },
         {
@@ -708,7 +888,7 @@
           "videoId": "BbQgK8DIK3M",
           "gameTitle": "The Legend of Zelda: The Minish Cap",
           "trackTitle": "Minish Village",
-          "channelTitle": null,
+          "channelTitle": "Cha Chingo Christiano",
           "displayTitle": "The Legend of Zelda: The Minish Cap - Minish Village"
         },
         {
@@ -717,7 +897,7 @@
           "videoId": "TZ9x6FP8BNw",
           "gameTitle": "Astro Bot",
           "trackTitle": "Marine Serene",
-          "channelTitle": null,
+          "channelTitle": "Scraic",
           "displayTitle": "Astro Bot - Marine Serene"
         },
         {
@@ -744,7 +924,7 @@
           "videoId": "YljDiA_Rp1Q",
           "gameTitle": "Swarmlake",
           "trackTitle": "Swarmlake (Original Game Soundtrack)",
-          "channelTitle": null,
+          "channelTitle": "Singto Conley",
           "displayTitle": "Swarmlake - Swarmlake (Original Game Soundtrack)"
         },
         {
@@ -780,7 +960,7 @@
           "videoId": "nK-TlD5Tflk",
           "gameTitle": "Mewgenics",
           "trackTitle": "Flush",
-          "channelTitle": null,
+          "channelTitle": "Ridiculon - Topic",
           "displayTitle": "Mewgenics - Flush"
         },
         {
@@ -789,7 +969,7 @@
           "videoId": "Gz0fAz9n_Os",
           "gameTitle": "Plok",
           "trackTitle": "Beach",
-          "channelTitle": null,
+          "channelTitle": "Otouto72",
           "displayTitle": "Plok - Beach"
         },
         {
@@ -798,7 +978,7 @@
           "videoId": "xodQ-iwwv_E",
           "gameTitle": "Touhou Danmaku Kagura Phantasia Lost",
           "trackTitle": "Can't Look Away",
-          "channelTitle": null,
+          "channelTitle": "FELT",
           "displayTitle": "Touhou Danmaku Kagura Phantasia Lost - Can't Look Away"
         },
         {
@@ -807,7 +987,7 @@
           "videoId": "0ZVFAkdRMRY",
           "gameTitle": "Unbeatable",
           "trackTitle": "SQUARE UP",
-          "channelTitle": null,
+          "channelTitle": "Jamie Paige / JamieP",
           "displayTitle": "Unbeatable - SQUARE UP"
         },
         {
@@ -816,7 +996,7 @@
           "videoId": "DOnr8T7mb4g",
           "gameTitle": "Once Upon A KATAMARI",
           "trackTitle": "YangYang",
-          "channelTitle": null,
+          "channelTitle": "Daoko - Topic",
           "displayTitle": "Once Upon A KATAMARI - YangYang"
         },
         {
@@ -825,7 +1005,7 @@
           "videoId": "oBGNIZ-KL90",
           "gameTitle": "Ar Nosurge: Ode to an Unborn Star",
           "trackTitle": "em-pyei-n vari-fen jang",
-          "channelTitle": null,
+          "channelTitle": "MyraSlokov",
           "displayTitle": "Ar Nosurge: Ode to an Unborn Star - em-pyei-n vari-fen jang"
         },
         {
@@ -834,7 +1014,7 @@
           "videoId": "tvSlzzXpZEQ",
           "gameTitle": "Pokemon Legends: Z-A",
           "trackTitle": "Jacinthe Battle",
-          "channelTitle": null,
+          "channelTitle": "Pokeli",
           "displayTitle": "Pokemon Legends: Z-A - Jacinthe Battle"
         },
         {
@@ -843,7 +1023,7 @@
           "videoId": "D00hlkW0u3U",
           "gameTitle": "WACCA Reverse",
           "trackTitle": "Can I Friend You On Bassbook ? Lol",
-          "channelTitle": null,
+          "channelTitle": "ななひら / Nanahira",
           "displayTitle": "WACCA Reverse - Can I Friend You On Bassbook ? Lol"
         },
         {
@@ -852,7 +1032,7 @@
           "videoId": "PHhHFN3SlcA",
           "gameTitle": "Sakura no Uta -Sakura no Mori no Ue o Mau-",
           "trackTitle": "Sakura no Uta",
-          "channelTitle": null,
+          "channelTitle": "videogames?",
           "displayTitle": "Sakura no Uta -Sakura no Mori no Ue o Mau- - Sakura no Uta"
         },
         {
@@ -861,7 +1041,7 @@
           "videoId": "v-8Tb6m2OvI",
           "gameTitle": "Uncanny Cat Golf",
           "trackTitle": "Unending Uncanny",
-          "channelTitle": null,
+          "channelTitle": "SlappyHappy2000",
           "displayTitle": "Uncanny Cat Golf - Unending Uncanny"
         },
         {
@@ -870,7 +1050,7 @@
           "videoId": "zZBmFF1KIDs",
           "gameTitle": "Alan Wake 2",
           "trackTitle": "Dark Ocean Summoning",
-          "channelTitle": null,
+          "channelTitle": "Old Gods of Asgard - Topic",
           "displayTitle": "Alan Wake 2 - Dark Ocean Summoning"
         },
         {
@@ -879,7 +1059,7 @@
           "videoId": "Y-NjZp7Aurg",
           "gameTitle": "Guitar Hero 2",
           "trackTitle": "Jordan",
-          "channelTitle": null,
+          "channelTitle": "Sharpshooter92",
           "displayTitle": "Guitar Hero 2 - Jordan"
         },
         {
@@ -888,7 +1068,7 @@
           "videoId": "HXZZ4KosCVI",
           "gameTitle": "Ar Tonelico 2",
           "trackTitle": "HOMURA",
-          "channelTitle": null,
+          "channelTitle": "ZaMaBa",
           "displayTitle": "Ar Tonelico 2 - HOMURA"
         },
         {
@@ -897,7 +1077,7 @@
           "videoId": "tofxHl0UArM",
           "gameTitle": "Project Sekai",
           "trackTitle": "Lagtrain",
-          "channelTitle": null,
+          "channelTitle": "Yan☆",
           "displayTitle": "Project Sekai - Lagtrain"
         },
         {
@@ -906,7 +1086,7 @@
           "videoId": "EGXPAoyP_cg",
           "gameTitle": "Risk of Rain 2",
           "trackTitle": "The Rain Formerly Known as Purple",
-          "channelTitle": null,
+          "channelTitle": "Chris Christodoulou",
           "displayTitle": "Risk of Rain 2 - The Rain Formerly Known as Purple"
         },
         {
@@ -915,7 +1095,7 @@
           "videoId": "kqXI9epy5TM",
           "gameTitle": "Uncharted Waters",
           "trackTitle": "Southern Twilight ~ Dance on the Cape of Good Hope",
-          "channelTitle": null,
+          "channelTitle": "maxGALACTICA",
           "displayTitle": "Uncharted Waters - Southern Twilight ~ Dance on the Cape of Good Hope"
         },
         {
@@ -924,7 +1104,7 @@
           "videoId": "7AlClgTR3BY",
           "gameTitle": "Drakengard 3",
           "trackTitle": "Aethervox",
-          "channelTitle": null,
+          "channelTitle": "Keiichi Okabe - Topic",
           "displayTitle": "Drakengard 3 - Aethervox"
         },
         {
@@ -933,7 +1113,7 @@
           "videoId": "_N4QKSzIouU",
           "gameTitle": "Phantasy Star Online EPISODE 2",
           "trackTitle": "World With Me",
-          "channelTitle": null,
+          "channelTitle": "SEGA SOUND TEAM - Topic",
           "displayTitle": "Phantasy Star Online EPISODE 2 - World With Me"
         },
         {
@@ -942,7 +1122,7 @@
           "videoId": "fZqGDAedHRI",
           "gameTitle": "Xenosaga III",
           "trackTitle": "hepatica (Kos-Mos)",
-          "channelTitle": null,
+          "channelTitle": "Yuki Kajiura - Topic",
           "displayTitle": "Xenosaga III - hepatica (Kos-Mos)"
         },
         {
@@ -951,7 +1131,7 @@
           "videoId": "FnWmoa9WkjU",
           "gameTitle": "Yu Yu Hakusho: Makyou Touitsusen",
           "trackTitle": "Mountain Peak",
-          "channelTitle": null,
+          "channelTitle": "Vloud Leonhart",
           "displayTitle": "Yu Yu Hakusho: Makyou Touitsusen - Mountain Peak"
         }
       ]
