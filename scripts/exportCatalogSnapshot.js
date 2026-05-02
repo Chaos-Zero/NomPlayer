@@ -70,6 +70,31 @@ async function exportCatalog() {
 
   console.log(`Finished fetching! Total tracks: ${allData.length}`);
 
+  // Merge community stats so runtime clients skip the track_stats_summary query
+  // for snapshot tracks (only delta tracks will need a targeted stats fetch).
+  console.log('Fetching track_stats_summary to embed into snapshot...');
+  const { data: statsData, error: statsError } = await supabase
+    .from('track_stats_summary')
+    .select('track_id, total_comments, average_rating');
+
+  if (statsError) {
+    console.warn(
+      'Warning: Could not fetch track_stats_summary:',
+      statsError.message,
+    );
+  } else {
+    const statsMap = {};
+    for (const s of statsData) statsMap[s.track_id] = s;
+    for (const track of allData) {
+      const s = statsMap[track.track_id];
+      if (s) {
+        track.total_comments = s.total_comments;
+        track.average_rating = s.average_rating;
+      }
+    }
+    console.log(`Embedded stats for ${Object.keys(statsMap).length} tracks.`);
+  }
+
   const payload = {
     exportedAt: snapshotTime,
     totalCount: allData.length,

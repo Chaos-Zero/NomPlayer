@@ -113,22 +113,32 @@ export async function getFastSpotlightCandidate() {
   return candidates[randomIndex];
 }
 
+let _rawNominationsCache = null;
+let _nominationsCacheAt = 0;
+const NOMINATIONS_TTL_MS = 90_000;
+
+async function fetchRawNominationsCatalog(supabase) {
+  const now = Date.now();
+  if (_rawNominationsCache && now - _nominationsCacheAt < NOMINATIONS_TTL_MS) {
+    return _rawNominationsCache;
+  }
+  const { data, error } = await supabase.rpc(
+    'get_community_nominations_catalog',
+  );
+  if (error) throw error;
+  _rawNominationsCache = Array.isArray(data) ? data : [];
+  _nominationsCacheAt = now;
+  return _rawNominationsCache;
+}
+
 export async function fetchDashboardNominationUpdates(
   supabase,
   limitCount = null,
 ) {
   if (!supabase) return [];
 
-  const { data, error } = await supabase.rpc(
-    'get_community_nominations_catalog',
-  );
-
-  if (error) {
-    throw error;
-  }
-
-  const rows = Array.isArray(data) ? data : [];
-  const normalized = rows
+  const raw = await fetchRawNominationsCatalog(supabase);
+  const normalized = raw
     .map(normalizeNominationDashboardUpdate)
     .filter(Boolean);
 
@@ -137,6 +147,11 @@ export async function fetchDashboardNominationUpdates(
   }
 
   return normalized;
+}
+
+export async function fetchRawCommunityNominations(supabase) {
+  if (!supabase) return [];
+  return fetchRawNominationsCatalog(supabase);
 }
 
 export function buildDiscoveryCandidates(

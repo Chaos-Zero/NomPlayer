@@ -12,6 +12,7 @@ import {
   deriveProfileAvatarUrl,
 } from '../lib/playerState.js';
 import { ingestYouTubeTrackSources } from '../lib/trackCatalog.js';
+import { fetchRawCommunityNominations } from '../lib/dashboard.js';
 import {
   fetchCommunityFeedback,
   upsertUserFeedback,
@@ -1513,11 +1514,11 @@ export default function ListExplorer({
   useEffect(() => {
     const fetchPeerLists = async () => {
       if (!supabase) return;
-      const { data, error } = await supabase.rpc(
-        'get_community_nominations_catalog',
-      );
-      if (!error && data) {
-        setAllPeerLists(data);
+      try {
+        const raw = await fetchRawCommunityNominations(supabase);
+        setAllPeerLists(raw);
+      } catch {
+        // non-critical; peer lists remain empty
       }
     };
     fetchPeerLists();

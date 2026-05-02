@@ -181,6 +181,18 @@ function normalizeTrackCatalogEntry(entry) {
         : entry.avgRating != null
           ? Number(entry.avgRating)
           : null,
+    totalComments:
+      entry.total_comments != null
+        ? Number(entry.total_comments)
+        : entry.totalComments != null
+          ? Number(entry.totalComments)
+          : 0,
+    averageRating:
+      entry.average_rating != null
+        ? Number(entry.average_rating)
+        : entry.averageRating != null
+          ? Number(entry.averageRating)
+          : null,
     tournaments,
   };
 }
@@ -508,6 +520,7 @@ export async function findTrackInCatalog(supabase, videoId) {
 let memoryCatalog = null;
 let activeCatalogPromise = null;
 let catalogStatsLoaded = false;
+let deltaTrackIds = new Set();
 
 export async function getFullCatalog(supabase) {
   if (memoryCatalog) return memoryCatalog;
@@ -540,7 +553,14 @@ export async function getFullCatalog(supabase) {
         const [deltaRes, deletionRes, supportStatsRes] = await Promise.all([
           supabase
             .from('track_catalog')
-            .select('*')
+            .select(
+              `track_id, game_title, track_title, display_title, is_retired,
+               retired_by_tournament_name, source_external_id, source_url,
+               submitted_url, source_title, source_channel_title,
+               source_thumbnail_url, tournaments, support_count_1,
+               support_count_2, support_count_3, comment_count, avg_rating,
+               has_result, tournament_count, updated_at`,
+            )
             .gt('updated_at', exportedAt),
           supabase
             .from('track_deletions')
@@ -569,7 +589,11 @@ export async function getFullCatalog(supabase) {
         const supportStatsList = supportStatsRes.data || [];
         for (const s of supportStatsList) supportStatsMap[s.track_id] = s;
         for (const d of deletionRes.data || []) deletedIds.add(d.track_id);
-        for (const t of deltaTracks) deltaMap[t.track_id] = t;
+        deltaTrackIds = new Set();
+        for (const t of deltaTracks) {
+          deltaMap[t.track_id] = t;
+          deltaTrackIds.add(t.track_id);
+        }
       }
 
       let patchCount = 0;
@@ -639,15 +663,21 @@ export function getCachedCatalog() {
 export function clearCatalogCache() {
   memoryCatalog = null;
   catalogStatsLoaded = false;
+  deltaTrackIds = new Set();
 }
 
 export async function loadCatalogStatsIfNeeded(supabase) {
   if (!supabase || catalogStatsLoaded || !memoryCatalog) return;
   catalogStatsLoaded = true;
 
+  // Snapshot tracks already have stats embedded; only fetch for delta tracks
+  // (those updated since the last snapshot export).
+  if (deltaTrackIds.size === 0) return;
+
   const { data, error } = await supabase
     .from('track_stats_summary')
-    .select('track_id, total_comments, average_rating');
+    .select('track_id, total_comments, average_rating')
+    .in('track_id', [...deltaTrackIds]);
 
   if (error || !data) return;
 
@@ -1160,7 +1190,7 @@ export async function mergeTracks(
     for (const sourceId of sourceIds) {
       const { data: appearances, error: fetchError } = await supabase
         .from('track_tournament_appearances')
-        .select('*')
+        .select('track_id, tournament_id, updated_at')
         .eq('track_id', sourceId);
 
       if (!fetchError && appearances) {
@@ -1261,7 +1291,14 @@ export async function fetchRandomUnplacedVgmcTrack(
       const randomOffset = Math.max(0, Math.floor(Math.random() * count) - 5);
       const { data, error } = await supabase
         .from('track_catalog')
-        .select('*')
+        .select(
+          `track_id, game_title, track_title, display_title, is_retired,
+           retired_by_tournament_name, source_external_id, source_url,
+           submitted_url, source_title, source_channel_title,
+           source_thumbnail_url, tournaments, support_count_1,
+           support_count_2, support_count_3, comment_count, avg_rating,
+           has_result, tournament_count`,
+        )
         .not('tournaments', 'eq', '[]')
         .eq('has_result', false)
         .range(randomOffset, randomOffset + 20);
