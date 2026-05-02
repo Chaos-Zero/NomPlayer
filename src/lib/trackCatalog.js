@@ -1272,51 +1272,18 @@ export async function fetchRandomUnplacedVgmcTrack(
   if (!supabase) return null;
 
   try {
-    // 1. Get the total count of unplaced tracks
-    const { count, error: countError } = await supabase
-      .from('track_catalog')
-      .select('*', { count: 'exact', head: true })
-      .not('tournaments', 'eq', '[]')
-      .eq('has_result', false);
+    const { data, error } = await supabase.rpc(
+      'get_random_unplaced_vgmc_track',
+      { exclude_video_ids: excludeVideoIds },
+    );
 
-    if (countError || !count) {
-      console.warn('Could not fetch count for random spotlight:', countError);
+    if (error) {
+      console.warn('Could not fetch random spotlight:', error);
       return null;
     }
 
-    // 2. Try a few random offsets to find a candidate that isn't excluded
-    // We fetch a small batch (10 tracks) at a random offset to increase chances of finding an unlistened track
-    const maxAttempts = 3;
-    for (let i = 0; i < maxAttempts; i++) {
-      const randomOffset = Math.max(0, Math.floor(Math.random() * count) - 5);
-      const { data, error } = await supabase
-        .from('track_catalog')
-        .select(
-          `track_id, game_title, track_title, display_title, is_retired,
-           retired_by_tournament_name, source_external_id, source_url,
-           submitted_url, source_title, source_channel_title,
-           source_thumbnail_url, tournaments, support_count_1,
-           support_count_2, support_count_3, comment_count, avg_rating,
-           has_result, tournament_count`,
-        )
-        .not('tournaments', 'eq', '[]')
-        .eq('has_result', false)
-        .range(randomOffset, randomOffset + 20);
-
-      if (error || !data || data.length === 0) continue;
-
-      const candidates = data.filter((entry) => {
-        const vid = entry.source_external_id || entry.videoId;
-        return vid && !excludeVideoIds.includes(vid);
-      });
-
-      if (candidates.length > 0) {
-        // Pick a random candidate from the filtered batch
-        const finalPick =
-          candidates[Math.floor(Math.random() * candidates.length)];
-        return normalizeTrackCatalogEntry(finalPick);
-      }
-    }
+    const row = Array.isArray(data) ? data[0] : data;
+    return row ? normalizeTrackCatalogEntry(row) : null;
   } catch (err) {
     console.error('Error during random track fetch:', err);
   }

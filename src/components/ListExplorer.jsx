@@ -1535,7 +1535,6 @@ export default function ListExplorer({
           .from('track_user_feedback')
           .select(
             `
-            note,
             tracks!inner (
               track_sources (
                 external_id
@@ -1543,7 +1542,9 @@ export default function ListExplorer({
             )
           `,
           )
-          .not('note', 'is', null);
+          .not('note', 'is', null)
+          .order('updated_at', { ascending: false })
+          .limit(500);
 
         if (authUser?.id) {
           query = query.neq('user_id', authUser.id);
@@ -1553,14 +1554,12 @@ export default function ListExplorer({
         if (!error && data) {
           const activity = new Map();
           data.forEach((d) => {
-            if (d.note && d.note.trim().length > 0) {
-              const sources = d.tracks?.track_sources || [];
-              sources.forEach((s) => {
-                if (s.external_id) {
-                  activity.set(s.external_id, 'commented');
-                }
-              });
-            }
+            const sources = d.tracks?.track_sources || [];
+            sources.forEach((s) => {
+              if (s.external_id) {
+                activity.set(s.external_id, 'commented');
+              }
+            });
           });
           setGlobalActivityByVideoId(activity);
         }

@@ -1,13 +1,12 @@
 import { checkContent } from '../utils/profanityFilter.js';
+import { getCachedCatalog } from './trackCatalog.js';
 
 export async function fetchUserFeedback(supabase, userId) {
   if (!supabase || !userId) return {};
 
   const { data, error } = await supabase
     .from('track_user_feedback')
-    .select(
-      'track_id, rating, note, tracks(track_sources(external_id, is_primary))',
-    )
+    .select('track_id, rating, note')
     .eq('user_id', userId);
 
   if (error) {
@@ -15,16 +14,16 @@ export async function fetchUserFeedback(supabase, userId) {
     return {};
   }
 
+  const catalog = getCachedCatalog();
+  const trackIdToVideoId = catalog
+    ? new Map(catalog.map((t) => [t.trackId, t.videoId]))
+    : new Map();
+
   return (data || []).reduce((acc, item) => {
-    const primarySource = item.tracks?.track_sources?.find((s) => s.is_primary);
-    const videoId =
-      primarySource?.external_id ??
-      item.tracks?.track_sources?.[0]?.external_id ??
-      null;
     acc[item.track_id] = {
       rating: item.rating,
       note: item.note,
-      videoId,
+      videoId: trackIdToVideoId.get(item.track_id) ?? null,
     };
     return acc;
   }, {});
@@ -137,130 +136,21 @@ export async function fetchDetailedUserActivity(
   userId,
   nominatedTrackIds = [],
 ) {
-  if (!supabase || !userId) return { personal: [], peer: [] };
+  if (!supabase || !userId) return { personal: [], peer: [], highlights: [] };
 
-  // Fetch personal feedback with track info
-  const { data: personalData, error: personalError } = await supabase
-    .from('track_user_feedback')
-    .select(
-      `
-      rating,
-      note,
-      updated_at,
-      tracks (
-        id,
-        canonical_game_title,
-        canonical_track_title,
-        track_sources (external_id)
-      )
-    `,
-    )
-    .eq('user_id', userId)
-    .order('updated_at', { ascending: false });
+  const { data, error } = await supabase.rpc('get_user_activity_summary', {
+    req_user_id: userId,
+    nominated_track_ids: nominatedTrackIds,
+  });
 
-  if (personalError) {
-    console.error('Error fetching personal feedback:', personalError);
+  if (error) {
+    console.error('Error fetching user activity:', error);
+    return { personal: [], peer: [], highlights: [] };
   }
-
-  // Fetch peer feedback on user's nominated tracks
-  let peerData = [];
-  if (nominatedTrackIds.length > 0) {
-    const { data, error: peerError } = await supabase
-      .from('track_user_feedback')
-      .select(
-        `
-        rating,
-        note,
-        updated_at,
-        user_id,
-        profiles (
-          username,
-          avatar_url
-        ),
-        tracks (
-          id,
-          canonical_game_title,
-          canonical_track_title,
-          track_sources (external_id)
-        )
-      `,
-      )
-      .in('track_id', nominatedTrackIds)
-      .neq('user_id', userId)
-      .order('updated_at', { ascending: false });
-
-    if (peerError) {
-      console.error('Error fetching peer feedback:', peerError);
-    } else {
-      peerData = data || [];
-    }
-  }
-
-  // Fetch some general community highlights (last 10 comments globally)
-  const { data: globalData } = await supabase
-    .from('track_user_feedback')
-    .select(
-      `
-      rating,
-      note,
-      updated_at,
-      user_id,
-      profiles (
-        username,
-        avatar_url
-      ),
-      tracks (
-        id,
-        canonical_game_title,
-        canonical_track_title,
-        track_sources (external_id)
-      )
-    `,
-    )
-    .not('note', 'is', null)
-    .neq('user_id', userId)
-    .order('updated_at', { ascending: false })
-    .limit(10);
-
-  // Fetch support status for all feedback records (Personal, Peer, Highlights)
-  const allFeedback = [
-    ...(personalData || []),
-    ...(peerData || []),
-    ...(globalData || []),
-  ];
-
-  const userIds = [...new Set(allFeedback.map((f) => f.user_id || userId))];
-  const trackIds = [
-    ...new Set(allFeedback.map((f) => f.tracks?.id || f.track_id)),
-  ].filter(Boolean);
-
-  let supportMap = new Map();
-  if (userIds.length > 0 && trackIds.length > 0) {
-    const { data: supports } = await supabase
-      .from('track_supports')
-      .select('user_id, track_id, level')
-      .in('user_id', userIds)
-      .in('track_id', trackIds);
-
-    if (supports) {
-      supports.forEach((s) => {
-        supportMap.set(`${s.user_id}:${s.track_id}`, s.level);
-      });
-    }
-  }
-
-  const attachSupport = (f, uId) => {
-    const level = supportMap.get(`${uId}:${f.tracks?.id || f.track_id}`);
-    return {
-      ...f,
-      isSupported: !!level,
-      supportLevel: level,
-    };
-  };
 
   return {
-    personal: (personalData || []).map((f) => attachSupport(f, userId)),
-    peer: (peerData || []).map((f) => attachSupport(f, f.user_id)),
-    highlights: (globalData || []).map((f) => attachSupport(f, f.user_id)),
+    personal: data?.personal || [],
+    peer: data?.peer || [],
+    highlights: data?.highlights || [],
   };
 }
