@@ -1210,6 +1210,16 @@ function DiscoveryGridItem({ candidate, metadata, onPlayNow, onContextMenu }) {
 
   const { supportCount1, supportCount2, supportCount3 } = metadata || {};
 
+  const tournaments = metadata?.tournaments || candidate?.tournaments || [];
+  const seqNums = [
+    ...new Set(
+      tournaments
+        .map((t) => t.sequenceNumber || t.sequence_number)
+        .filter((n) => Number.isInteger(n)),
+    ),
+  ].sort((a, b) => a - b);
+  const vgmcLabel = seqNums.length > 0 ? `VGMC ${seqNums.join(', ')}` : 'New';
+
   return (
     <div
       className="discovery-grid-card-wrapper"
@@ -1236,6 +1246,12 @@ function DiscoveryGridItem({ candidate, metadata, onPlayNow, onContextMenu }) {
             </div>
 
             <div className="discovery-card-bottom">
+              <div className="discovery-card-badge-row">
+                <span className="discovery-vgmc-badge">{vgmcLabel}</span>
+                {candidate.nominationCount >= 1 && (
+                  <span className="discovery-nom-badge">Nom</span>
+                )}
+              </div>
               <div className="discovery-card-support-row">
                 {candidate.nominationCount > 1 && (
                   <div
@@ -1541,7 +1557,7 @@ export default function HomePage({
     if (!authUser || nominationList.length === 0) return null;
     return {
       userId: authUser.id,
-      username: userProfile?.username || authUser.email || 'You',
+      username: userProfile?.username || 'You',
       gamefaqsUsername: userProfile?.gamefaqs_username ?? null,
       avatarUrl: userProfile?.avatar_url ?? null,
       updatedAt: null,
@@ -1961,6 +1977,7 @@ export default function HomePage({
         gameTitle: track.gameTitle,
         trackTitle: track.trackTitle,
         displayTitle: track.displayTitle,
+        tournaments: track.tournaments ?? [],
       }))
       .filter((item) => {
         const status = listenedStatusById[item.videoId];

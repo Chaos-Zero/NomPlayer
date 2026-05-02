@@ -845,10 +845,11 @@ export default function App() {
   );
 
   useEffect(() => {
-    if (nominationList.length > 0 && authUser?.id) {
-      syncCatalogForNominationVideos(nominationList);
-    }
-  }, [nominationList, authUser?.id, syncCatalogForNominationVideos]);
+    if (!supabase || !authUser?.id || nominationList.length === 0) return;
+    const missing = nominationList.filter((v) => !v.trackId);
+    if (missing.length === 0) return;
+    syncCatalogForNominationVideos(missing);
+  }, [nominationList, authUser?.id, syncCatalogForNominationVideos, supabase]);
 
   useEffect(() => {
     if (!supabase || !authUser?.id || supportList.length === 0) return;
@@ -1346,6 +1347,7 @@ export default function App() {
         supportCount3: summary.supportCount3 ?? 0,
         isRetired: Boolean(summary.isRetired),
         retiredByTournamentName: summary.retiredByTournamentName ?? '',
+        tournaments: summary.tournaments ?? [],
       };
     }
 

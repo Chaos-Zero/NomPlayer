@@ -27,6 +27,7 @@ dist-ssr
 .env
 
 # Local scratch data / generated imports
+scratch/
 tmp/
 public/loading_icon.json
 public/NomPlayer_crumb1.png
