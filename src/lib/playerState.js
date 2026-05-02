@@ -1180,18 +1180,25 @@ export async function syncCustomPlaylists(supabase, userId, customPlaylists) {
       pl.id = playlistId;
     }
 
-    await supabase
-      .from('user_playlist_tracks')
-      .delete()
-      .eq('playlist_id', playlistId);
-
-    const tracksToInsert = (pl.videos || [])
+    const allVideos = pl.videos || [];
+    const tracksToInsert = allVideos
       .filter((v) => v.trackId != null)
       .map((v, i) => ({
         playlist_id: playlistId,
         track_id: v.trackId,
         order_index: i,
       }));
+
+    // Skip if videos exist but none have trackIds yet — catalog hasn't loaded,
+    // so we can't distinguish "empty" from "not yet resolved". Avoids wiping tracks.
+    if (allVideos.length > 0 && tracksToInsert.length === 0) {
+      continue;
+    }
+
+    await supabase
+      .from('user_playlist_tracks')
+      .delete()
+      .eq('playlist_id', playlistId);
 
     if (tracksToInsert.length > 0) {
       await supabase.from('user_playlist_tracks').insert(tracksToInsert);
