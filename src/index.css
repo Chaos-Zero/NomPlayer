@@ -1641,9 +1641,9 @@ body {
 }
 
 .discovery-nom-badge {
-  background: rgba(56, 189, 248, 0.15);
-  color: #38bdf8;
-  border-color: rgba(56, 189, 248, 0.35);
+  background: rgba(251, 146, 60, 0.15);
+  color: #fb923c;
+  border-color: rgba(251, 146, 60, 0.35);
 }
 
 .discovery-card-title {
