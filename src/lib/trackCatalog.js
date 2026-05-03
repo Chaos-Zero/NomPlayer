@@ -146,11 +146,11 @@ function normalizeTrackCatalogEntry(entry) {
           ? entry.sourceThumbnailUrl
           : '',
     sourceUrl:
-      typeof entry.source_url === 'string'
+      typeof entry.source_url === 'string' && entry.source_url
         ? entry.source_url
-        : typeof entry.sourceUrl === 'string'
+        : typeof entry.sourceUrl === 'string' && entry.sourceUrl
           ? entry.sourceUrl
-          : '',
+          : `https://www.youtube.com/watch?v=${videoId}`,
     submittedUrl:
       typeof entry.submitted_url === 'string'
         ? entry.submitted_url

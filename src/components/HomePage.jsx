@@ -745,6 +745,186 @@ function DashboardAvatar({ update }) {
   );
 }
 
+function nominationTimeAgo(dateStr) {
+  if (!dateStr) return null;
+  const d = (Date.now() - new Date(dateStr).getTime()) / 86400000;
+  if (d < 1) return 'today';
+  if (d < 2) return '1d ago';
+  if (d < 7) return `${Math.floor(d)}d ago`;
+  if (d < 30) return `${Math.floor(d / 7)}w ago`;
+  return `${Math.floor(d / 30)}mo ago`;
+}
+
+function NominatorGridCard({ update, isSelected, onSelect }) {
+  const displayName = getDisplayProfileName(update.username, '?');
+  const trackCount = update.nominations?.length || 0;
+  const updatedStr = nominationTimeAgo(update.updatedAt);
+
+  return (
+    <button
+      className={`nom-grid-card${isSelected ? ' selected' : ''}`}
+      onClick={() => onSelect(update)}
+      title={`${displayName}'s nominations — ${trackCount} tracks`}
+    >
+      <div className="nom-grid-card-avatar">
+        {update.avatarUrl ? (
+          <img src={update.avatarUrl} alt="" className="nom-grid-card-img" />
+        ) : (
+          <span className="nom-grid-card-initials">
+            {displayName.slice(0, 1).toUpperCase()}
+          </span>
+        )}
+      </div>
+      <div className="nom-grid-card-name">{displayName}</div>
+      <div className="nom-grid-card-meta">
+        <span>
+          {trackCount} {trackCount === 1 ? 'track' : 'tracks'}
+        </span>
+        {updatedStr && (
+          <span className="nom-grid-card-updated">{updatedStr}</span>
+        )}
+      </div>
+    </button>
+  );
+}
+
+function NominatorInfoPanel({
+  update,
+  metadataById,
+  onClose,
+  onPlayTrack,
+  onAddWholeList,
+  resolveTrack,
+}) {
+  const isOpen = !!update;
+  const displayName = update ? getDisplayProfileName(update.username, '?') : '';
+  const nominations = update?.nominations || [];
+
+  return (
+    <div
+      className={`list-explorer-info-panel nom-info-panel${isOpen ? ' is-open' : ''}`}
+    >
+      <div className="list-explorer-info-content-wrapper">
+        {update && (
+          <>
+            <div className="list-explorer-info-header nom-info-panel-header">
+              <button
+                className="list-explorer-info-close"
+                onClick={onClose}
+                title="Close"
+              >
+                ✕
+              </button>
+              <div className="nom-info-user-row">
+                <DashboardAvatar update={update} />
+                <div className="nom-info-user-details">
+                  <div className="nom-info-user-name">{displayName}</div>
+                  <div className="nom-info-user-count">
+                    {nominations.length} nomination
+                    {nominations.length !== 1 ? 's' : ''}
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="list-explorer-info-content" style={{ gap: 0 }}>
+              <section style={{ padding: '12px 16px 20px' }}>
+                <div style={{ marginBottom: 10, display: 'flex', gap: 8 }}>
+                  <button
+                    className="btn btn-primary"
+                    onClick={() => onAddWholeList(update)}
+                    style={{ flex: 1 }}
+                  >
+                    Add All to Queue
+                  </button>
+                </div>
+                <div
+                  style={{ display: 'flex', flexDirection: 'column', gap: 2 }}
+                >
+                  {nominations.map((video) => {
+                    const meta = metadataById[video.videoId];
+                    const trackTitle =
+                      meta?.trackTitle || video.trackTitle || video.title;
+                    const gameTitle = meta?.gameTitle || video.gameTitle;
+                    const thumb =
+                      meta?.sourceThumbnailUrl ||
+                      video.thumbnail ||
+                      `https://i.ytimg.com/vi/${video.videoId}/mqdefault.jpg`;
+                    return (
+                      <div
+                        key={video.videoId}
+                        className="cpl-track-item"
+                        style={{
+                          display: 'flex',
+                          gap: 10,
+                          padding: '7px 10px',
+                          alignItems: 'center',
+                          borderRadius: 6,
+                          cursor: 'pointer',
+                          transition: 'background 0.15s',
+                        }}
+                        onDoubleClick={() =>
+                          onPlayTrack(resolveTrack(video), update)
+                        }
+                        title="Double-click to play"
+                      >
+                        <img
+                          src={thumb}
+                          alt=""
+                          style={{
+                            borderRadius: 4,
+                            width: 64,
+                            height: 36,
+                            objectFit: 'cover',
+                            flexShrink: 0,
+                          }}
+                        />
+                        <div
+                          style={{
+                            overflow: 'hidden',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: 2,
+                          }}
+                        >
+                          <span
+                            style={{
+                              fontSize: 13,
+                              fontWeight: 500,
+                              color: 'var(--text-primary)',
+                              whiteSpace: 'nowrap',
+                              textOverflow: 'ellipsis',
+                              overflow: 'hidden',
+                            }}
+                          >
+                            {trackTitle}
+                          </span>
+                          {gameTitle && (
+                            <span
+                              style={{
+                                fontSize: 11,
+                                color: 'var(--text-muted, #9ca3af)',
+                                whiteSpace: 'nowrap',
+                                textOverflow: 'ellipsis',
+                                overflow: 'hidden',
+                              }}
+                            >
+                              {gameTitle}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </section>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function NominationEmptyCard() {
   return (
     <article className="dashboard-update-card dashboard-update-card-empty">
@@ -1630,6 +1810,8 @@ export default function HomePage({
   const [discoveryContextMenu, setDiscoveryContextMenu] = useState(null);
   const [nominationContextMenu, setNominationContextMenu] = useState(null);
   const [isHidingOwnNominations, setIsHidingOwnNominations] = useState(false);
+  const [isNominationGridView, setIsNominationGridView] = useState(false);
+  const [selectedGridUpdate, setSelectedGridUpdate] = useState(null);
   const lastAppliedBatchRef = useRef(null);
 
   // Patch discovery items when metadata is saved (handles both title changes and URL/videoId changes)
@@ -2893,44 +3075,84 @@ export default function HomePage({
           onToggleCollapse={() => toggleMobileSection('nominations')}
           summary={sectionSummaries.nominations}
           actions={
-            authUser && (
+            <div className="nom-section-actions">
+              {authUser && (
+                <button
+                  className={`dashboard-nominations-user-toggle ${
+                    isHidingOwnNominations ? 'is-hiding' : ''
+                  }`}
+                  type="button"
+                  onClick={() =>
+                    setIsHidingOwnNominations(!isHidingOwnNominations)
+                  }
+                  title={
+                    isHidingOwnNominations
+                      ? 'Show your nominations'
+                      : 'Hide your nominations'
+                  }
+                >
+                  {userProfile?.avatar_url ||
+                  authUser?.user_metadata?.avatar_url ? (
+                    <img
+                      className="dashboard-nominations-user-avatar"
+                      src={
+                        userProfile?.avatar_url ||
+                        authUser?.user_metadata?.avatar_url
+                      }
+                      alt=""
+                    />
+                  ) : (
+                    <div className="dashboard-nominations-user-avatar-placeholder">
+                      {(
+                        userProfile?.username ||
+                        authUser?.user_metadata?.username ||
+                        'U'
+                      )
+                        .slice(0, 1)
+                        .toUpperCase()}
+                    </div>
+                  )}
+                </button>
+              )}
               <button
-                className={`dashboard-nominations-user-toggle ${
-                  isHidingOwnNominations ? 'is-hiding' : ''
-                }`}
+                className={`nom-view-toggle-btn${isNominationGridView ? ' active' : ''}`}
                 type="button"
-                onClick={() =>
-                  setIsHidingOwnNominations(!isHidingOwnNominations)
-                }
+                onClick={() => {
+                  if (isNominationGridView) {
+                    setIsNominationGridView(false);
+                    setSelectedGridUpdate(null);
+                  } else {
+                    setIsNominationGridView(true);
+                    setExpandedUserId(null);
+                  }
+                }}
                 title={
-                  isHidingOwnNominations
-                    ? 'Show your nominations'
-                    : 'Hide your nominations'
+                  isNominationGridView
+                    ? 'Switch to carousel view'
+                    : 'Switch to grid view'
                 }
               >
-                {userProfile?.avatar_url ||
-                authUser?.user_metadata?.avatar_url ? (
-                  <img
-                    className="dashboard-nominations-user-avatar"
-                    src={
-                      userProfile?.avatar_url ||
-                      authUser?.user_metadata?.avatar_url
-                    }
-                    alt=""
-                  />
+                {isNominationGridView ? (
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    aria-hidden
+                  >
+                    <rect x="3" y="3" width="18" height="18" rx="2" />
+                    <line x1="3" y1="9" x2="21" y2="9" />
+                    <line x1="3" y1="15" x2="21" y2="15" />
+                    <line x1="9" y1="9" x2="9" y2="21" />
+                    <line x1="15" y1="9" x2="15" y2="21" />
+                  </svg>
                 ) : (
-                  <div className="dashboard-nominations-user-avatar-placeholder">
-                    {(
-                      userProfile?.username ||
-                      authUser?.user_metadata?.username ||
-                      'U'
-                    )
-                      .slice(0, 1)
-                      .toUpperCase()}
-                  </div>
+                  <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+                    <path d="M3 3h7v7H3V3zm0 11h7v7H3v-7zm11-11h7v7h-7V3zm0 11h7v7h-7v-7z" />
+                  </svg>
                 )}
               </button>
-            )
+            </div>
           }
         >
           {isDashboardLoading ? (
@@ -2947,6 +3169,31 @@ export default function HomePage({
               <NominationEmptyCard />
               <NominationEmptyCard />
               <NominationEmptyCard />
+            </div>
+          ) : isNominationGridView ? (
+            <div className="nom-grid-wrapper animate-fade-in">
+              <div className="nom-grid">
+                {visibleNominationUpdates.map((update) => (
+                  <NominatorGridCard
+                    key={update.userId}
+                    update={update}
+                    isSelected={selectedGridUpdate?.userId === update.userId}
+                    onSelect={(u) =>
+                      setSelectedGridUpdate(
+                        selectedGridUpdate?.userId === u.userId ? null : u,
+                      )
+                    }
+                  />
+                ))}
+              </div>
+              <NominatorInfoPanel
+                update={selectedGridUpdate}
+                metadataById={mergedMetadata}
+                onClose={() => setSelectedGridUpdate(null)}
+                onPlayTrack={handlePlayDiscoveryCandidate}
+                onAddWholeList={handleAddWholeList}
+                resolveTrack={resolveTrack}
+              />
             </div>
           ) : (
             <>
