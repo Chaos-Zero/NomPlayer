@@ -794,6 +794,7 @@ function NominatorInfoPanel({
   onClose,
   onPlayTrack,
   onAddWholeList,
+  onPlayWholeList,
   resolveTrack,
 }) {
   const isOpen = !!update;
@@ -801,21 +802,12 @@ function NominatorInfoPanel({
   const nominations = update?.nominations || [];
 
   return (
-    <div
-      className={`list-explorer-info-panel nom-info-panel${isOpen ? ' is-open' : ''}`}
-    >
-      <div className="list-explorer-info-content-wrapper">
+    <div className={`nom-side-panel${isOpen ? ' is-open' : ''}`}>
+      <div className="nom-side-panel-inner">
         {update && (
           <>
-            <div className="list-explorer-info-header nom-info-panel-header">
-              <button
-                className="list-explorer-info-close"
-                onClick={onClose}
-                title="Close"
-              >
-                ✕
-              </button>
-              <div className="nom-info-user-row">
+            <div className="nom-side-panel-header">
+              <div className="nom-side-panel-user">
                 <DashboardAvatar update={update} />
                 <div className="nom-info-user-details">
                   <div className="nom-info-user-name">{displayName}</div>
@@ -825,98 +817,59 @@ function NominatorInfoPanel({
                   </div>
                 </div>
               </div>
+              <button
+                className="nom-side-panel-close"
+                onClick={onClose}
+                title="Close"
+              >
+                ✕
+              </button>
             </div>
-            <div className="list-explorer-info-content" style={{ gap: 0 }}>
-              <section style={{ padding: '12px 16px 20px' }}>
-                <div style={{ marginBottom: 10, display: 'flex', gap: 8 }}>
-                  <button
-                    className="btn btn-primary"
-                    onClick={() => onAddWholeList(update)}
-                    style={{ flex: 1 }}
+            <div className="nom-side-panel-actions">
+              <button
+                className="btn btn-primary"
+                onClick={() => onPlayWholeList(update)}
+                style={{ flex: 1 }}
+              >
+                Play
+              </button>
+              <button
+                className="btn"
+                onClick={() => onAddWholeList(update)}
+                style={{ flex: 1 }}
+              >
+                Add to Queue
+              </button>
+            </div>
+            <div className="nom-side-panel-tracks">
+              {nominations.map((video) => {
+                const meta = metadataById[video.videoId];
+                const trackTitle =
+                  meta?.trackTitle || video.trackTitle || video.title;
+                const gameTitle = meta?.gameTitle || video.gameTitle;
+                const thumb =
+                  meta?.sourceThumbnailUrl ||
+                  video.thumbnail ||
+                  `https://i.ytimg.com/vi/${video.videoId}/mqdefault.jpg`;
+                return (
+                  <div
+                    key={video.videoId}
+                    className="nom-track-row"
+                    onDoubleClick={() =>
+                      onPlayTrack(resolveTrack(video), update)
+                    }
+                    title="Double-click to play"
                   >
-                    Add All to Queue
-                  </button>
-                </div>
-                <div
-                  style={{ display: 'flex', flexDirection: 'column', gap: 2 }}
-                >
-                  {nominations.map((video) => {
-                    const meta = metadataById[video.videoId];
-                    const trackTitle =
-                      meta?.trackTitle || video.trackTitle || video.title;
-                    const gameTitle = meta?.gameTitle || video.gameTitle;
-                    const thumb =
-                      meta?.sourceThumbnailUrl ||
-                      video.thumbnail ||
-                      `https://i.ytimg.com/vi/${video.videoId}/mqdefault.jpg`;
-                    return (
-                      <div
-                        key={video.videoId}
-                        className="cpl-track-item"
-                        style={{
-                          display: 'flex',
-                          gap: 10,
-                          padding: '7px 10px',
-                          alignItems: 'center',
-                          borderRadius: 6,
-                          cursor: 'pointer',
-                          transition: 'background 0.15s',
-                        }}
-                        onDoubleClick={() =>
-                          onPlayTrack(resolveTrack(video), update)
-                        }
-                        title="Double-click to play"
-                      >
-                        <img
-                          src={thumb}
-                          alt=""
-                          style={{
-                            borderRadius: 4,
-                            width: 64,
-                            height: 36,
-                            objectFit: 'cover',
-                            flexShrink: 0,
-                          }}
-                        />
-                        <div
-                          style={{
-                            overflow: 'hidden',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            gap: 2,
-                          }}
-                        >
-                          <span
-                            style={{
-                              fontSize: 13,
-                              fontWeight: 500,
-                              color: 'var(--text-primary)',
-                              whiteSpace: 'nowrap',
-                              textOverflow: 'ellipsis',
-                              overflow: 'hidden',
-                            }}
-                          >
-                            {trackTitle}
-                          </span>
-                          {gameTitle && (
-                            <span
-                              style={{
-                                fontSize: 11,
-                                color: 'var(--text-muted, #9ca3af)',
-                                whiteSpace: 'nowrap',
-                                textOverflow: 'ellipsis',
-                                overflow: 'hidden',
-                              }}
-                            >
-                              {gameTitle}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </section>
+                    <img src={thumb} alt="" className="nom-track-thumb" />
+                    <div className="nom-track-info">
+                      <span className="nom-track-title">{trackTitle}</span>
+                      {gameTitle && (
+                        <span className="nom-track-game">{gameTitle}</span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </>
         )}
@@ -3076,6 +3029,46 @@ export default function HomePage({
           summary={sectionSummaries.nominations}
           actions={
             <div className="nom-section-actions">
+              <button
+                className="nom-view-toggle-btn"
+                type="button"
+                onClick={() => {
+                  if (isNominationGridView) {
+                    setIsNominationGridView(false);
+                    setSelectedGridUpdate(null);
+                  } else {
+                    setIsNominationGridView(true);
+                    setExpandedUserId(null);
+                  }
+                }}
+                title={
+                  isNominationGridView
+                    ? 'Switch to carousel view'
+                    : 'Switch to grid view'
+                }
+              >
+                {isNominationGridView ? (
+                  /* carousel icon — shown when in grid mode */
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    aria-hidden
+                  >
+                    <rect x="3" y="4" width="18" height="16" rx="2" />
+                    <line x1="7" y1="4" x2="7" y2="20" />
+                    <line x1="17" y1="4" x2="17" y2="20" />
+                    <polyline points="1,12 3,10 3,14" />
+                    <polyline points="23,12 21,10 21,14" />
+                  </svg>
+                ) : (
+                  /* grid icon — shown when in carousel mode */
+                  <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+                    <path d="M3 3h7v7H3V3zm0 11h7v7H3v-7zm11-11h7v7h-7V3zm0 11h7v7h-7v-7z" />
+                  </svg>
+                )}
+              </button>
               {authUser && (
                 <button
                   className={`dashboard-nominations-user-toggle ${
@@ -3114,44 +3107,6 @@ export default function HomePage({
                   )}
                 </button>
               )}
-              <button
-                className={`nom-view-toggle-btn${isNominationGridView ? ' active' : ''}`}
-                type="button"
-                onClick={() => {
-                  if (isNominationGridView) {
-                    setIsNominationGridView(false);
-                    setSelectedGridUpdate(null);
-                  } else {
-                    setIsNominationGridView(true);
-                    setExpandedUserId(null);
-                  }
-                }}
-                title={
-                  isNominationGridView
-                    ? 'Switch to carousel view'
-                    : 'Switch to grid view'
-                }
-              >
-                {isNominationGridView ? (
-                  <svg
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    aria-hidden
-                  >
-                    <rect x="3" y="3" width="18" height="18" rx="2" />
-                    <line x1="3" y1="9" x2="21" y2="9" />
-                    <line x1="3" y1="15" x2="21" y2="15" />
-                    <line x1="9" y1="9" x2="9" y2="21" />
-                    <line x1="15" y1="9" x2="15" y2="21" />
-                  </svg>
-                ) : (
-                  <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden>
-                    <path d="M3 3h7v7H3V3zm0 11h7v7H3v-7zm11-11h7v7h-7V3zm0 11h7v7h-7v-7z" />
-                  </svg>
-                )}
-              </button>
             </div>
           }
         >
@@ -3172,19 +3127,30 @@ export default function HomePage({
             </div>
           ) : isNominationGridView ? (
             <div className="nom-grid-wrapper animate-fade-in">
-              <div className="nom-grid">
-                {visibleNominationUpdates.map((update) => (
-                  <NominatorGridCard
-                    key={update.userId}
-                    update={update}
-                    isSelected={selectedGridUpdate?.userId === update.userId}
-                    onSelect={(u) =>
-                      setSelectedGridUpdate(
-                        selectedGridUpdate?.userId === u.userId ? null : u,
-                      )
-                    }
-                  />
-                ))}
+              <div className="nom-grid-scroll-area">
+                <div className="nom-grid">
+                  {[...visibleNominationUpdates]
+                    .sort((a, b) => {
+                      if (!a.updatedAt && !b.updatedAt) return 0;
+                      if (!a.updatedAt) return 1;
+                      if (!b.updatedAt) return -1;
+                      return new Date(b.updatedAt) - new Date(a.updatedAt);
+                    })
+                    .map((update) => (
+                      <NominatorGridCard
+                        key={update.userId}
+                        update={update}
+                        isSelected={
+                          selectedGridUpdate?.userId === update.userId
+                        }
+                        onSelect={(u) =>
+                          setSelectedGridUpdate(
+                            selectedGridUpdate?.userId === u.userId ? null : u,
+                          )
+                        }
+                      />
+                    ))}
+                </div>
               </div>
               <NominatorInfoPanel
                 update={selectedGridUpdate}
@@ -3192,6 +3158,18 @@ export default function HomePage({
                 onClose={() => setSelectedGridUpdate(null)}
                 onPlayTrack={handlePlayDiscoveryCandidate}
                 onAddWholeList={handleAddWholeList}
+                onPlayWholeList={(u) => {
+                  if (
+                    u.nominations.length > 0 &&
+                    onPlayCommunityListFromTrack
+                  ) {
+                    onPlayCommunityListFromTrack(
+                      u.userId,
+                      u.nominations[0].videoId,
+                      u.nominations,
+                    );
+                  }
+                }}
                 resolveTrack={resolveTrack}
               />
             </div>

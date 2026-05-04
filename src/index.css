@@ -15749,7 +15749,10 @@ body.is-resizing .resize-handle {
   background: transparent;
   color: var(--text-muted);
   cursor: pointer;
-  transition: all var(--transition, 0.2s);
+  transition:
+    border-color var(--transition, 0.2s),
+    color var(--transition, 0.2s),
+    background var(--transition, 0.2s);
   padding: 0;
   flex-shrink: 0;
 }
@@ -15759,33 +15762,42 @@ body.is-resizing .resize-handle {
   height: 15px;
 }
 
-.nom-view-toggle-btn:hover,
-.nom-view-toggle-btn.active {
+.nom-view-toggle-btn:hover {
   border-color: var(--accent);
   color: var(--accent);
   background: rgba(139, 92, 246, 0.1);
 }
 
+/* ── Grid layout wrapper ──────────────────────────── */
+
 .nom-grid-wrapper {
-  position: relative;
+  display: flex;
+  height: 600px;
   overflow: hidden;
-  min-height: 400px;
+}
+
+.nom-grid-scroll-area {
+  flex: 1;
+  overflow-y: auto;
+  min-width: 0;
 }
 
 .nom-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-  gap: 10px;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 12px;
   padding: 16px 20px;
 }
+
+/* ── Nominator cards ──────────────────────────────── */
 
 .nom-grid-card {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
-  padding: 14px 10px;
-  border-radius: 12px;
+  gap: 10px;
+  padding: 18px 12px 14px;
+  border-radius: 14px;
   background: var(--bg-surface);
   border: 1px solid var(--border);
   cursor: pointer;
@@ -15813,8 +15825,8 @@ body.is-resizing .resize-handle {
 }
 
 .nom-grid-card-avatar {
-  width: 48px;
-  height: 48px;
+  width: 56px;
+  height: 56px;
   border-radius: 50%;
   overflow: hidden;
   background: linear-gradient(135deg, #7c3aed, #3b1d6e);
@@ -15831,14 +15843,14 @@ body.is-resizing .resize-handle {
 }
 
 .nom-grid-card-initials {
-  font-size: 18px;
+  font-size: 20px;
   font-weight: 700;
   color: #fff;
   line-height: 1;
 }
 
 .nom-grid-card-name {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
   color: var(--text-primary);
   white-space: nowrap;
@@ -15860,45 +15872,70 @@ body.is-resizing .resize-handle {
   opacity: 0.7;
 }
 
-/* ── Nominator info panel ──────────────────────────── */
+/* ── Nominator side panel ─────────────────────────── */
 
-.nom-info-panel {
-  width: 380px;
+.nom-side-panel {
+  width: 0;
+  min-width: 0;
+  overflow: hidden;
+  flex-shrink: 0;
+  border-left: 1px solid transparent;
+  background: var(--bg-surface);
+  display: flex;
+  flex-direction: column;
+  transition:
+    width 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 0.3s ease;
 }
 
-.nom-info-panel .list-explorer-info-content-wrapper {
-  width: 380px;
-  min-width: 380px;
+.nom-side-panel.is-open {
+  width: 360px;
+  border-left-color: var(--border);
 }
 
-.nom-info-panel-header {
-  padding-bottom: 12px;
+.nom-side-panel-inner {
+  width: 360px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
-.nom-info-user-row {
+.nom-side-panel-header {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 20px 20px 8px;
+  justify-content: space-between;
+  padding: 16px 14px 12px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  gap: 8px;
 }
 
-.nom-info-user-row .dashboard-avatar {
-  width: 44px;
-  height: 44px;
+.nom-side-panel-user {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  flex: 1;
+}
+
+.nom-side-panel-user .dashboard-avatar {
+  width: 42px;
+  height: 42px;
   border-radius: 50%;
-  font-size: 18px;
+  font-size: 16px;
   flex-shrink: 0;
 }
 
 .nom-info-user-details {
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 2px;
   min-width: 0;
 }
 
 .nom-info-user-name {
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 700;
   color: var(--text-primary);
   white-space: nowrap;
@@ -15909,6 +15946,118 @@ body.is-resizing .resize-handle {
 .nom-info-user-count {
   font-size: 12px;
   color: var(--text-muted);
+}
+
+.nom-side-panel-close {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(0, 0, 0, 0.35);
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 13px;
+  flex-shrink: 0;
+  transition: all var(--transition, 0.2s);
+}
+
+.nom-side-panel-close:hover {
+  background: var(--error, #ef4444);
+  color: #fff;
+  transform: rotate(90deg);
+}
+
+.nom-side-panel-actions {
+  display: flex;
+  gap: 8px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.nom-side-panel-tracks {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.nom-track-row {
+  display: flex;
+  gap: 10px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  align-items: center;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.nom-track-row:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.theme-light .nom-track-row:hover {
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.nom-track-thumb {
+  width: 64px;
+  height: 36px;
+  border-radius: 4px;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.nom-track-info {
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+.nom-track-title {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.nom-track-game {
+  font-size: 11px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Mobile grid adjustments */
+@media (max-width: 960px) {
+  .nom-grid-wrapper {
+    height: 420px;
+  }
+
+  .nom-grid {
+    grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+    gap: 8px;
+    padding: 12px 14px;
+  }
+
+  .nom-side-panel.is-open {
+    width: 280px;
+  }
+
+  .nom-side-panel-inner {
+    width: 280px;
+  }
 }
 
 .cpl-track-item:hover {
