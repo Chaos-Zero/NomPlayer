@@ -182,6 +182,8 @@ function TrackInfoPanel({
   onSaveFeedback,
   onDeleteFeedback,
   userProfile,
+  columnId = null,
+  customPlaylists = [],
 }) {
   const [supportersMenu, setSupportersMenu] = useState(null);
   const personalFeedback = useMemo(() => {
@@ -287,7 +289,24 @@ function TrackInfoPanel({
   }, [track, communityData.tournaments]);
 
   const vgmcStatus = (() => {
-    if (!trackTournaments.length) return 'New to VGMC';
+    if (!trackTournaments.length) {
+      // If selected from a custom playlist, use that name
+      if (
+        columnId &&
+        ![
+          'nominations',
+          'support',
+          'current',
+          'new-nominations',
+          'database',
+        ].includes(columnId) &&
+        !columnId.startsWith('peer-')
+      ) {
+        const pl = customPlaylists?.find((p) => p.id === columnId);
+        if (pl) return `Added in Playlist ${pl.name}`;
+      }
+      return 'New to VGMC';
+    }
     const seq =
       trackTournaments[0].sequenceNumber ?? trackTournaments[0].sequence_number;
     return seq != null ? `VGMC ${seq}` : 'New to VGMC';
@@ -2718,6 +2737,8 @@ export default function ListExplorer({
           }}
           authUser={authUser}
           userProfile={userProfile}
+          columnId={selectedColumnId}
+          customPlaylists={customPlaylists}
           onUpdateComment={(videoId, comment) =>
             handleUpdateComment(
               selectedTrackId ? findListId(selectedTrackId) : null,

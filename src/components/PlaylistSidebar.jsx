@@ -678,6 +678,8 @@ export default function PlaylistSidebar({
             thumbnail:
               src.cached_thumbnail_url ||
               `https://i.ytimg.com/vi/${src.external_id}/mqdefault.jpg`,
+            gameTitle: track.canonical_game_title,
+            trackTitle: track.canonical_track_title,
             comment: '',
             addedAt: new Date().toISOString(),
           };
@@ -693,6 +695,8 @@ export default function PlaylistSidebar({
             thumbnail:
               pt.cached_thumbnail ||
               `https://i.ytimg.com/vi/${pt.youtube_video_id}/mqdefault.jpg`,
+            gameTitle: '',
+            trackTitle: '',
             comment: '',
             addedAt: new Date().toISOString(),
           };
