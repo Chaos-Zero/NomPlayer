@@ -15307,6 +15307,20 @@ body.is-resizing .resize-handle {
   margin-top: auto;
   padding-top: 4px;
 }
+.cpl-delete-btn {
+  opacity: 0;
+  pointer-events: none;
+  color: var(--danger) !important;
+  border-color: rgba(239, 68, 68, 0.2) !important;
+}
+.cpl-card:hover .cpl-delete-btn {
+  opacity: 1;
+  pointer-events: auto;
+}
+.cpl-delete-btn:hover {
+  background: rgba(239, 68, 68, 0.1) !important;
+  border-color: rgba(239, 68, 68, 0.4) !important;
+}
 
 /* ── Action buttons ───────────────────────────────── */
 

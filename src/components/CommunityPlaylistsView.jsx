@@ -7,9 +7,10 @@ import React, {
 } from 'react';
 import { getDisplayProfileName } from '../lib/playerState.js';
 import { getYouTubeThumbnailUrl } from '../utils/youtube.js';
-import { SearchIcon } from './Icons.jsx';
+import { SearchIcon, TrashIcon } from './Icons.jsx';
 import PrivacyToggle from './PrivacyToggle.jsx';
 import CreatePlaylistDialog from './CreatePlaylistDialog.jsx';
+import DeletePlaylistConfirmDialog from './DeletePlaylistConfirmDialog.jsx';
 
 function PlaySvg() {
   return (
@@ -107,6 +108,7 @@ function PlaylistCard({
   onAdd,
   onSelect,
   onTogglePrivacy,
+  onDelete,
   loadingId,
   isOwn,
 }) {
@@ -181,17 +183,33 @@ function PlaylistCard({
           >
             Add
           </button>
-          {isOwn && onTogglePrivacy && (
+          {isOwn && (
             <div
-              style={{ marginLeft: 'auto' }}
+              style={{
+                marginLeft: 'auto',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+              }}
               onClick={(e) => e.stopPropagation()}
             >
-              <PrivacyToggle
-                isPublic={playlist.is_public}
-                onToggle={(newIsPublic) =>
-                  onTogglePrivacy(playlist.id, newIsPublic)
-                }
-              />
+              {onDelete && (
+                <button
+                  className="cpl-action-btn cpl-delete-btn"
+                  onClick={() => onDelete(playlist)}
+                  title="Delete Playlist"
+                >
+                  <TrashIcon />
+                </button>
+              )}
+              {onTogglePrivacy && (
+                <PrivacyToggle
+                  isPublic={playlist.is_public}
+                  onToggle={(newIsPublic) =>
+                    onTogglePrivacy(playlist.id, newIsPublic)
+                  }
+                />
+              )}
             </div>
           )}
         </div>
@@ -407,6 +425,8 @@ export function CommunityPlaylistsView({
   const [selectedPlaylist, setSelectedPlaylist] = useState(null);
   const [selectedPlaylistTracks, setSelectedPlaylistTracks] = useState([]);
   const [isLoadingPanel, setIsLoadingPanel] = useState(false);
+  const [playlistToDelete, setPlaylistToDelete] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     onSelectionChange?.(!!selectedPlaylist);
@@ -651,6 +671,40 @@ export function CommunityPlaylistsView({
     } catch (err) {
       console.error(err);
       onShowToast?.('Failed to update playlist privacy');
+    }
+  }
+  async function handleDeletePlaylist(playlist) {
+    setPlaylistToDelete(playlist);
+  }
+
+  async function handleConfirmDelete() {
+    if (!playlistToDelete) return;
+    setIsDeleting(true);
+    try {
+      const { error } = await supabase
+        .from('user_playlists')
+        .delete()
+        .eq('id', playlistToDelete.id);
+      if (error) throw error;
+
+      setPlaylists((prev) => prev.filter((p) => p.id !== playlistToDelete.id));
+      onShowToast?.(`Deleted "${playlistToDelete.name}"`);
+
+      if (selectedPlaylist?.id === playlistToDelete.id) {
+        setSelectedPlaylist(null);
+      }
+
+      if (onUpdateCustomPlaylists && customPlaylists) {
+        onUpdateCustomPlaylists(
+          customPlaylists.filter((p) => p.id !== playlistToDelete.id),
+        );
+      }
+      setPlaylistToDelete(null);
+    } catch (err) {
+      console.error(err);
+      onShowToast?.('Failed to delete playlist');
+    } finally {
+      setIsDeleting(false);
     }
   }
 
@@ -1053,6 +1107,7 @@ export function CommunityPlaylistsView({
                       onLoad={handleLoad}
                       onAdd={handleAdd}
                       onTogglePrivacy={handleTogglePrivacy}
+                      onDelete={handleDeletePlaylist}
                       loadingId={loadingId}
                       isOwn={pl.user_id === authUser?.id}
                     />
@@ -1164,6 +1219,7 @@ export function CommunityPlaylistsView({
                       onLoad={handleLoad}
                       onAdd={handleAdd}
                       onTogglePrivacy={handleTogglePrivacy}
+                      onDelete={handleDeletePlaylist}
                       loadingId={loadingId}
                       isOwn={pl.user_id === authUser?.id}
                     />
@@ -1224,6 +1280,14 @@ export function CommunityPlaylistsView({
           onCancel={() => setShowCreateDialog(false)}
         />
       )}
+
+      <DeletePlaylistConfirmDialog
+        isOpen={!!playlistToDelete}
+        isSubmitting={isDeleting}
+        playlistName={playlistToDelete?.name || ''}
+        onClose={() => setPlaylistToDelete(null)}
+        onConfirm={handleConfirmDelete}
+      />
     </div>
   );
 }

@@ -61,6 +61,7 @@ import YouTubeIcon from './YouTubeIcon.jsx';
 import { CommunityPlaylistsView } from './CommunityPlaylistsView.jsx';
 import AllFeedbackView from './AllFeedbackView.jsx';
 import CreatePlaylistDialog from './CreatePlaylistDialog.jsx';
+import DeletePlaylistConfirmDialog from './DeletePlaylistConfirmDialog.jsx';
 import {
   parseYouTubeInput,
   fetchPlaylistItems,
@@ -2144,23 +2145,35 @@ export default function ListExplorer({
     setDeleteDialog({ id, name: pl.name });
   };
 
-  const confirmDelete = () => {
+  const confirmDelete = async () => {
     if (!deleteDialog) return;
     const { id } = deleteDialog;
-    onUpdateCustomPlaylists(customPlaylists.filter((p) => p.id !== id));
-    if (focusedListId === id) setFocusedListId(null);
-    setDeleteDialog(null);
-    // Delete directly from DB — syncCustomPlaylists skips when the resulting
-    // list is empty (safety guard), so this is the only reliable path when
-    // deleting the last playlist.
-    if (supabase && /^[0-9a-f-]{36}$/i.test(id)) {
-      supabase
-        .from('user_playlists')
-        .delete()
-        .eq('id', id)
-        .then(({ error }) => {
-          if (error) console.error('Failed to delete playlist from DB', error);
-        });
+    try {
+      // Find remaining playlists
+      const remaining = customPlaylists.filter((p) => p.id !== id);
+      onUpdateCustomPlaylists(remaining);
+
+      if (focusedListId === id) setFocusedListId(null);
+      if (activeCustomPlaylistId === id) {
+        if (remaining.length > 0) {
+          setActiveCustomPlaylistId(remaining[0].id);
+        } else {
+          setActiveCustomPlaylistId(null);
+          setShowCustomPlaylists(false);
+        }
+      }
+
+      setDeleteDialog(null);
+
+      if (supabase && /^[0-9a-f-]{36}$/i.test(id)) {
+        const { error } = await supabase
+          .from('user_playlists')
+          .delete()
+          .eq('id', id);
+        if (error) throw error;
+      }
+    } catch (err) {
+      console.error('Delete error:', err);
     }
   };
 
@@ -3454,57 +3467,12 @@ export default function ListExplorer({
           document.getElementById('modal-root'),
         )}
 
-      {deleteDialog &&
-        createPortal(
-          <div
-            className="modal-backdrop"
-            onClick={(e) => {
-              if (e.target === e.currentTarget) setDeleteDialog(null);
-            }}
-          >
-            <div
-              className="modal-card delete-account-dialog"
-              style={{ maxWidth: 400 }}
-            >
-              <div className="modal-header">
-                <h2>Delete Playlist</h2>
-                <button
-                  className="btn-close"
-                  onClick={() => setDeleteDialog(null)}
-                  aria-label="Close"
-                >
-                  ✕
-                </button>
-              </div>
-              <div
-                className="delete-dialog-body"
-                style={{ padding: '0 24px 24px' }}
-              >
-                <p>
-                  Are you sure you want to delete{' '}
-                  <strong>&ldquo;{deleteDialog.name}&rdquo;</strong>? This
-                  cannot be undone.
-                </p>
-                <div
-                  style={{
-                    display: 'flex',
-                    gap: 8,
-                    justifyContent: 'flex-end',
-                    marginTop: 20,
-                  }}
-                >
-                  <button className="btn" onClick={() => setDeleteDialog(null)}>
-                    Cancel
-                  </button>
-                  <button className="btn btn-danger" onClick={confirmDelete}>
-                    Delete
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>,
-          document.getElementById('modal-root'),
-        )}
+      <DeletePlaylistConfirmDialog
+        isOpen={!!deleteDialog}
+        playlistName={deleteDialog?.name || ''}
+        onClose={() => setDeleteDialog(null)}
+        onConfirm={confirmDelete}
+      />
 
       {showCreatePlaylistDialog && (
         <CreatePlaylistDialog
