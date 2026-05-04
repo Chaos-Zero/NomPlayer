@@ -2167,6 +2167,7 @@ export default function HomePage({
     // 5. Commit to persistent state
     setPersistentDiscoveryItems(uniquePool.slice(0, 44));
   }, [
+    currentPlaylistIds,
     discoveryCandidates,
     unplacedFallbackTracks,
     persistentDiscoveryItems.length,
@@ -2353,6 +2354,7 @@ export default function HomePage({
   }, [
     supabase,
     listenedStatusById,
+    currentPlaylistIds,
     isAuthReady,
     isDashboardLoading,
     prospectiveFallbackTrack,
