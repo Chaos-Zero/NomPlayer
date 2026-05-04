@@ -17,9 +17,9 @@ BEGIN
     AND id NOT IN (SELECT track_id FROM public.track_nominations)
     -- GUARD: also check new relational playlists table
     AND id NOT IN (SELECT track_id FROM public.user_playlist_tracks WHERE track_id IS NOT NULL)
-    -- GUARD: also check listen history and feedback (matching v5 safety)
-    AND id NOT IN (SELECT track_id FROM public.track_user_listen_history)
-    AND id NOT IN (SELECT track_id FROM public.track_user_feedback)
+    -- GUARD: also check listen history and feedback (NOT EXISTS avoids the NOT IN/NULL gotcha)
+    AND NOT EXISTS (SELECT 1 FROM public.track_user_listen_history WHERE track_id = public.tracks.id)
+    AND NOT EXISTS (SELECT 1 FROM public.track_user_feedback WHERE track_id = public.tracks.id)
     AND NOT EXISTS (
       SELECT 1
       FROM public.user_player_states ups
