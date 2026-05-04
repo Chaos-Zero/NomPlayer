@@ -2149,6 +2149,14 @@ export default function ListExplorer({
     if (!deleteDialog) return;
     const { id } = deleteDialog;
     try {
+      if (supabase && authUser) {
+        const { error } = await supabase
+          .from('user_playlists')
+          .delete()
+          .eq('id', id);
+        if (error) throw error;
+      }
+
       // Find remaining playlists
       const remaining = customPlaylists.filter((p) => p.id !== id);
       onUpdateCustomPlaylists(remaining);
@@ -2164,16 +2172,10 @@ export default function ListExplorer({
       }
 
       setDeleteDialog(null);
-
-      if (supabase && /^[0-9a-f-]{36}$/i.test(id)) {
-        const { error } = await supabase
-          .from('user_playlists')
-          .delete()
-          .eq('id', id);
-        if (error) throw error;
-      }
+      onShowToast?.(`Deleted "${deleteDialog.name}"`);
     } catch (err) {
-      console.error('Delete error:', err);
+      console.error(err);
+      onShowToast?.('Failed to delete playlist');
     }
   };
 

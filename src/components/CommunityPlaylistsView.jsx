@@ -824,10 +824,11 @@ export function CommunityPlaylistsView({
   }, [playlists, selectedUserId, sortBy]);
 
   const featured = useMemo(() => {
-    if (!viewPlaylists.length) return null;
-    const pool = viewPlaylists.slice(0, Math.min(5, viewPlaylists.length));
-    return pool[Math.floor(featuredSeed * pool.length)];
-  }, [viewPlaylists, featuredSeed]);
+    // Pick from all public playlists that have tracks
+    const publicPool = playlists.filter((p) => p.is_public && p.trackCount > 0);
+    if (!publicPool.length) return null;
+    return publicPool[Math.floor(featuredSeed * publicPool.length)];
+  }, [playlists, featuredSeed]);
 
   const newThisWeek = useMemo(() => {
     const cutoff = Date.now() - 7 * 86400000;

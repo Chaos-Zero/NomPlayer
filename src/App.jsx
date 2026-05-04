@@ -2345,12 +2345,10 @@ export default function App() {
           setGuestImportState(null);
           setGuestImportSelections(null);
         }
+        setIsUserHydrated(true);
       } catch (error) {
         reportError('Load account data on login', error);
         setAuthError('Database error. Failed to load your account data.');
-      } finally {
-        // UI is unblocked — nominations/leaderboard are visible now.
-        setIsUserHydrated(true);
       }
 
       // ── Phase 2: catalog enrichment (background) ─────────────────────────
