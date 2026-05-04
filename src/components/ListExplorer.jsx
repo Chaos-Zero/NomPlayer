@@ -2018,6 +2018,7 @@ export default function ListExplorer({
         userId,
         video.videoId,
         col?.videos ?? [video],
+        col,
       );
     } else if (
       sourceListId === 'nominations' ||
@@ -3023,6 +3024,7 @@ export default function ListExplorer({
                             col.user_id,
                             video.videoId,
                             col.videos,
+                            col,
                           )
                         : onPlayNow(video)
                     }

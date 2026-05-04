@@ -3691,11 +3691,19 @@ export default function App() {
   );
 
   const handlePlayCommunityListFromTrack = useCallback(
-    (userId, startVideoId, nominations) => {
+    (userId, startVideoId, nominations, userMetadata = null) => {
       let communityUser = communityNominations.find((u) => u.userId === userId);
 
-      if (nominations?.length > 0) {
-        communityUser = { userId, nominations };
+      if (nominations?.length > 0 || userMetadata) {
+        // If we have an existing user entry, preserve its metadata (username, avatar, etc.)
+        // If userMetadata is provided, merge it in as well.
+        communityUser = {
+          ...communityUser,
+          ...userMetadata,
+          userId,
+          ...(nominations?.length > 0 ? { nominations } : {}),
+        };
+
         setCommunityNominations((prev) => {
           const exists = prev.some((u) => u.userId === userId);
           if (exists) {

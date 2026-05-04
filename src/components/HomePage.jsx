@@ -2458,6 +2458,7 @@ export default function HomePage({
           update.userId,
           video.videoId,
           update.nominations,
+          update,
         );
       } else {
         onPlayNow?.(resolveTrack(video));
@@ -3190,6 +3191,7 @@ export default function HomePage({
                       u.userId,
                       u.nominations[0].videoId,
                       u.nominations,
+                      u,
                     );
                   }
                 }}
