@@ -825,10 +825,16 @@ export function CommunityPlaylistsView({
 
   const featured = useMemo(() => {
     // Pick from all public playlists that have tracks
-    const publicPool = playlists.filter((p) => p.is_public && p.trackCount > 0);
+    let publicPool = playlists.filter((p) => p.is_public && p.trackCount > 0);
+
+    // If a specific user is selected, featured pick must be from that user
+    if (selectedUserId) {
+      publicPool = publicPool.filter((p) => p.user_id === selectedUserId);
+    }
+
     if (!publicPool.length) return null;
     return publicPool[Math.floor(featuredSeed * publicPool.length)];
-  }, [playlists, featuredSeed]);
+  }, [playlists, featuredSeed, selectedUserId]);
 
   const newThisWeek = useMemo(() => {
     const cutoff = Date.now() - 7 * 86400000;
