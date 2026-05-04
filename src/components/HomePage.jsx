@@ -187,7 +187,7 @@ async function fetchHomeCplTracks(supabase, playlistId) {
     .filter(Boolean);
 }
 
-const HOME_CPL_CARD_WIDTH = 280;
+const HOME_CPL_CARD_WIDTH = 260;
 const HOME_CPL_CARD_GAP = 12;
 
 function HomeCommunityPlaylistsStrip({
@@ -410,7 +410,9 @@ function HomeCommunityPlaylistsStrip({
           <div
             ref={gridRef}
             className="home-cpl-page"
-            style={{ gridTemplateColumns: `repeat(${pageSize}, 1fr)` }}
+            style={{
+              gridTemplateColumns: `repeat(${pageSize}, ${HOME_CPL_CARD_WIDTH}px)`,
+            }}
           >
             {visiblePlaylists.map((pl) => (
               <div

@@ -131,6 +131,60 @@ export async function fetchRecentComments(supabase, limit = 20) {
   return data || [];
 }
 
+export async function fetchAllCommunityFeedback(supabase) {
+  if (!supabase) return [];
+
+  const { data, error } = await supabase
+    .from('track_user_feedback')
+    .select(
+      `
+      track_id,
+      user_id,
+      rating,
+      note,
+      updated_at,
+      profiles (username, avatar_url),
+      tracks (
+        id,
+        canonical_game_title,
+        canonical_track_title,
+        track_sources (external_id)
+      )
+    `,
+    )
+    .order('updated_at', { ascending: false });
+
+  if (error) {
+    console.error('Failed to fetch all community feedback:', error);
+    return { entries: [], vgmcByTrackId: {} };
+  }
+
+  const entries = data || [];
+
+  // Fetch VGMC/tournament data separately via the catalog view
+  const trackIds = [...new Set(entries.map((e) => e.track_id).filter(Boolean))];
+  let vgmcByTrackId = {};
+  if (trackIds.length > 0) {
+    const { data: catalogRows } = await supabase
+      .from('track_catalog')
+      .select('track_id, tournaments')
+      .in('track_id', trackIds);
+
+    if (catalogRows) {
+      for (const row of catalogRows) {
+        const nums = Array.isArray(row.tournaments)
+          ? row.tournaments
+              .map((t) => t.sequence_number)
+              .filter((n) => Number.isInteger(n) && n > 0)
+          : [];
+        vgmcByTrackId[row.track_id] = [...new Set(nums)].sort((a, b) => b - a);
+      }
+    }
+  }
+
+  return { entries, vgmcByTrackId };
+}
+
 export async function fetchDetailedUserActivity(
   supabase,
   userId,

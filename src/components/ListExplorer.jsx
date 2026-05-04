@@ -59,6 +59,7 @@ import { ContextMenuPortal } from './ContextMenuPortal';
 import ExportIcon from './ExportIcon.jsx';
 import YouTubeIcon from './YouTubeIcon.jsx';
 import { CommunityPlaylistsView } from './CommunityPlaylistsView.jsx';
+import AllFeedbackView from './AllFeedbackView.jsx';
 
 function PlaylistPlusIcon() {
   return (
@@ -1449,6 +1450,7 @@ export default function ListExplorer({
   });
   const [showMyNominations, setShowMyNominations] = useState(true);
   const [explorerView, setExplorerView] = useState(initialView);
+  const [commentsSubView, setCommentsSubView] = useState('activity');
   const [activityData, setActivityData] = useState({
     personal: [],
     peer: [],
@@ -3036,25 +3038,56 @@ export default function ListExplorer({
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.3 }}
                 className="comments-view-scroll-shell"
-                style={{ flex: 1, overflow: 'hidden' }}
+                style={{
+                  flex: 1,
+                  overflow: 'hidden',
+                  display: 'flex',
+                  flexDirection: 'column',
+                }}
               >
-                <CommentsView
-                  data={activityData}
-                  isLoading={isLoadingActivity}
-                  authUser={authUser}
-                  onSelectTrack={(track) => {
-                    setSelectedTrackId(
-                      track.videoId || track.video_id || track.id,
-                    );
-                    setSelectedColumnId('comments');
-                    setIsEditingInfo(false);
-                  }}
-                  onEditTrack={(track, rect) => {
-                    onShowComments?.(track, rect, true);
-                  }}
-                  onDeleteFeedback={handleDeleteFeedback}
-                  onPlayNow={onPlayNow}
-                />
+                <div className="comments-sub-tabs">
+                  <button
+                    className={`comments-sub-tab${commentsSubView === 'activity' ? ' active' : ''}`}
+                    onClick={() => setCommentsSubView('activity')}
+                  >
+                    My Activity
+                  </button>
+                  <button
+                    className={`comments-sub-tab${commentsSubView === 'all' ? ' active' : ''}`}
+                    onClick={() => setCommentsSubView('all')}
+                  >
+                    All Ratings &amp; Comments
+                  </button>
+                </div>
+                {commentsSubView === 'activity' ? (
+                  <CommentsView
+                    data={activityData}
+                    isLoading={isLoadingActivity}
+                    authUser={authUser}
+                    onSelectTrack={(track) => {
+                      setSelectedTrackId(
+                        track.videoId || track.video_id || track.id,
+                      );
+                      setSelectedColumnId('comments');
+                      setIsEditingInfo(false);
+                    }}
+                    onEditTrack={(track, rect) => {
+                      onShowComments?.(track, rect, true);
+                    }}
+                    onDeleteFeedback={handleDeleteFeedback}
+                    onPlayNow={onPlayNow}
+                  />
+                ) : (
+                  <AllFeedbackView
+                    supabase={supabase}
+                    onSelectTrack={(track) => {
+                      setSelectedTrackId(track.videoId);
+                      setSelectedColumnId('all-feedback');
+                      setIsEditingInfo(false);
+                    }}
+                    onPlayNow={onPlayNow}
+                  />
+                )}
               </Motion.div>
             ) : (
               <Motion.div
