@@ -163,6 +163,7 @@ export default function AllFeedbackView({
     return list;
   }, [filtered, sortBy, sortAsc]);
 
+  // eslint-disable-next-line react-hooks/incompatible-library
   const rowVirtualizer = useVirtualizer({
     count: sorted.length,
     getScrollElement: () => parentRef.current,
