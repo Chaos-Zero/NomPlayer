@@ -8,6 +8,7 @@ import React, {
 import { getDisplayProfileName } from '../lib/playerState.js';
 import { SearchIcon } from './Icons.jsx';
 import PrivacyToggle from './PrivacyToggle.jsx';
+import CreatePlaylistDialog from './CreatePlaylistDialog.jsx';
 
 function PlaySvg() {
   return (
@@ -399,6 +400,7 @@ export function CommunityPlaylistsView({
   const [userSearch, setUserSearch] = useState('');
   const [sortBy, setSortBy] = useState('newest');
   const [featuredSeed, setFeaturedSeed] = useState(Math.random());
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
   const authUserId = authUser?.id ?? null;
 
   const [selectedPlaylist, setSelectedPlaylist] = useState(null);
@@ -1183,6 +1185,42 @@ export function CommunityPlaylistsView({
             : null
         }
       />
+
+      {authUser && (
+        <button
+          className="cpl-fab-create"
+          onClick={() => setShowCreateDialog(true)}
+          title="New custom playlist"
+          aria-label="Create new playlist"
+        >
+          +
+        </button>
+      )}
+
+      {showCreateDialog && (
+        <CreatePlaylistDialog
+          onConfirm={async (name) => {
+            setShowCreateDialog(false);
+            try {
+              const { error } = await supabase
+                .from('user_playlists')
+                .insert({
+                  name,
+                  is_public: false,
+                  user_id: authUser.id,
+                  is_active_queue: false,
+                });
+              if (error) throw error;
+              await fetchPlaylists();
+              onShowToast?.(`Created "${name}"`);
+            } catch (err) {
+              console.error(err);
+              onShowToast?.('Failed to create playlist');
+            }
+          }}
+          onCancel={() => setShowCreateDialog(false)}
+        />
+      )}
     </div>
   );
 }

@@ -145,8 +145,13 @@ export default function AllFeedbackView({
             )
           );
         case 'vgmc': {
-          const aV = a.vgmcNumbers.length ? Math.max(...a.vgmcNumbers) : 0;
-          const bV = b.vgmcNumbers.length ? Math.max(...b.vgmcNumbers) : 0;
+          const aV = a.vgmcNumbers.length
+            ? Math.max(...a.vgmcNumbers)
+            : Infinity;
+          const bV = b.vgmcNumbers.length
+            ? Math.max(...b.vgmcNumbers)
+            : Infinity;
+          if (aV === bV) return 0;
           return dir * (aV - bV);
         }
         case 'rating': {

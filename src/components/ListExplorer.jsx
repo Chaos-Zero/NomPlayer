@@ -60,6 +60,7 @@ import ExportIcon from './ExportIcon.jsx';
 import YouTubeIcon from './YouTubeIcon.jsx';
 import { CommunityPlaylistsView } from './CommunityPlaylistsView.jsx';
 import AllFeedbackView from './AllFeedbackView.jsx';
+import CreatePlaylistDialog from './CreatePlaylistDialog.jsx';
 
 function PlaylistPlusIcon() {
   return (
@@ -1903,6 +1904,8 @@ export default function ListExplorer({
   const [showNewPlaylistInput, setShowNewPlaylistInput] = useState(false);
   const [newPlaylistName, setNewPlaylistName] = useState('');
   const newPlaylistInputRef = useRef(null);
+  const [showCreatePlaylistDialog, setShowCreatePlaylistDialog] =
+    useState(false);
 
   const handleContextMenu = (e, video, options = {}) => {
     // Suppress context menu if currently dragging (especially for right-click drag)
@@ -2596,6 +2599,16 @@ export default function ListExplorer({
                   onClick={() => setShowNewNominations(!showNewNominations)}
                 >
                   New Nominations
+                </button>
+              </div>
+              <div className="toolbar-separator" />
+              <div className="toolbar-group">
+                <button
+                  className="toolbar-create-playlist-btn"
+                  onClick={() => setShowCreatePlaylistDialog(true)}
+                  title="Create a new empty custom playlist"
+                >
+                  + New Playlist
                 </button>
               </div>
               <div className="toolbar-separator" />
@@ -3414,6 +3427,16 @@ export default function ListExplorer({
           </div>,
           document.getElementById('modal-root'),
         )}
+
+      {showCreatePlaylistDialog && (
+        <CreatePlaylistDialog
+          onConfirm={(name) => {
+            handleCreateAndAddPlaylist(null, name);
+            setShowCreatePlaylistDialog(false);
+          }}
+          onCancel={() => setShowCreatePlaylistDialog(false)}
+        />
+      )}
     </div>
   );
 }

@@ -851,9 +851,13 @@ export async function fetchFilteredTracks(
   catalog.sort((a, b) => {
     let diff = 0;
     if (sortColumn === 'vgmc') {
-      const aSeq = a.tournaments?.[0]?.sequenceNumber ?? 999;
-      const bSeq = b.tournaments?.[0]?.sequenceNumber ?? 999;
-      diff = aSeq - bSeq;
+      const aSeq = a.tournaments?.[0]?.sequenceNumber ?? Infinity;
+      const bSeq = b.tournaments?.[0]?.sequenceNumber ?? Infinity;
+      if (aSeq === bSeq) {
+        diff = 0;
+      } else {
+        diff = aSeq - bSeq;
+      }
       if (diff === 0)
         diff = (a.gameTitle || '').localeCompare(b.gameTitle || '');
     } else if (sortColumn === 'game') {

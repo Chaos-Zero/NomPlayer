@@ -14126,6 +14126,7 @@ body.is-resizing .resize-handle {
   min-height: 0;
   overflow: hidden;
   width: 100%;
+  position: relative;
 }
 
 /* ── Sidebar ──────────────────────────────────────── */
@@ -16471,4 +16472,148 @@ body.is-resizing .resize-handle {
 
 .theme-light .comments-sub-tab.active {
   border-bottom-color: var(--bg-surface);
+}
+
+/* ─── Toolbar: New Playlist button ─── */
+.toolbar-create-playlist-btn {
+  padding: 4px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--accent);
+  background: var(--accent-dim);
+  color: var(--accent-light);
+  font:
+    600 12px 'Inter',
+    sans-serif;
+  cursor: pointer;
+  transition: all var(--transition);
+  white-space: nowrap;
+}
+
+.toolbar-create-playlist-btn:hover {
+  background: var(--accent);
+  color: #fff;
+}
+
+/* ─── Community Playlists FAB ─── */
+.cpl-fab-create {
+  position: absolute;
+  bottom: 28px;
+  right: 28px;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: none;
+  background: var(--accent);
+  color: #fff;
+  font-size: 26px;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition:
+    background var(--transition),
+    transform var(--transition),
+    box-shadow var(--transition);
+  z-index: 20;
+}
+
+.cpl-fab-create:hover {
+  background: var(--accent-hover, color-mix(in srgb, var(--accent) 80%, #fff));
+  transform: scale(1.08);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5);
+}
+
+/* ─── Create Playlist Dialog ─── */
+.cpd-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  backdrop-filter: blur(2px);
+}
+
+.cpd-dialog {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 24px;
+  width: 320px;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.cpd-title {
+  font:
+    700 16px 'Inter',
+    sans-serif;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.cpd-input {
+  width: 100%;
+  padding: 9px 12px;
+  border-radius: 7px;
+  border: 1px solid var(--border);
+  background: var(--bg-deep);
+  color: var(--text-primary);
+  font:
+    14px 'Inter',
+    sans-serif;
+  outline: none;
+  transition: border-color var(--transition);
+  box-sizing: border-box;
+}
+
+.cpd-input:focus {
+  border-color: var(--accent);
+}
+
+.cpd-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.cpd-btn {
+  padding: 7px 18px;
+  border-radius: 7px;
+  font:
+    600 13px 'Inter',
+    sans-serif;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: all var(--transition);
+}
+
+.cpd-btn-cancel {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: var(--border);
+  color: var(--text-muted);
+}
+
+.cpd-btn-cancel:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-primary);
+}
+
+.cpd-btn-confirm {
+  background: var(--accent);
+  color: #fff;
+}
+
+.cpd-btn-confirm:hover:not(:disabled) {
+  opacity: 0.88;
+}
+
+.cpd-btn-confirm:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
