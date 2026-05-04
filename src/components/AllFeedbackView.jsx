@@ -166,7 +166,7 @@ export default function AllFeedbackView({
   const rowVirtualizer = useVirtualizer({
     count: sorted.length,
     getScrollElement: () => parentRef.current,
-    estimateSize: () => 110,
+    estimateSize: () => 100,
     overscan: 6,
   });
 
@@ -269,6 +269,8 @@ export default function AllFeedbackView({
               return (
                 <div
                   key={group.trackId}
+                  data-index={vRow.index}
+                  ref={rowVirtualizer.measureElement}
                   style={{
                     position: 'absolute',
                     top: 0,
@@ -329,28 +331,23 @@ export default function AllFeedbackView({
                     </div>
 
                     <div className="afv-row-right">
-                      <div className="afv-stats">
-                        {group.avgRating != null && (
-                          <RatingBadge rating={group.avgRating} />
+                      <span className="afv-entry-counts">
+                        {group.ratingCount > 0 && (
+                          <span>
+                            {group.ratingCount} rating
+                            {group.ratingCount !== 1 ? 's' : ''}
+                          </span>
                         )}
-                        <span className="afv-entry-counts">
-                          {group.ratingCount > 0 && (
-                            <span>
-                              {group.ratingCount} rating
-                              {group.ratingCount !== 1 ? 's' : ''}
-                            </span>
-                          )}
-                          {group.ratingCount > 0 && group.commentCount > 0 && (
-                            <span className="afv-dot">&middot;</span>
-                          )}
-                          {group.commentCount > 0 && (
-                            <span>
-                              {group.commentCount} comment
-                              {group.commentCount !== 1 ? 's' : ''}
-                            </span>
-                          )}
-                        </span>
-                      </div>
+                        {group.ratingCount > 0 && group.commentCount > 0 && (
+                          <span className="afv-dot">&middot;</span>
+                        )}
+                        {group.commentCount > 0 && (
+                          <span>
+                            {group.commentCount} comment
+                            {group.commentCount !== 1 ? 's' : ''}
+                          </span>
+                        )}
+                      </span>
                       <div className="afv-date">
                         {group.latestDate.toLocaleDateString(undefined, {
                           month: 'short',
@@ -359,33 +356,51 @@ export default function AllFeedbackView({
                         })}
                       </div>
                     </div>
+                    {group.avgRating != null && (
+                      <RatingBadge rating={group.avgRating} />
+                    )}
                   </div>
 
                   {group.entries.length > 0 && (
                     <div className="afv-previews">
-                      {group.entries.slice(0, 2).map((e, i) => (
-                        <div key={i} className="afv-preview-entry">
-                          <span className="afv-preview-user">
-                            {getDisplayProfileName(
-                              e.profiles?.username,
-                              'Anonymous',
-                            )}
-                          </span>
-                          {e.rating != null && (
-                            <span className="afv-preview-rating">
-                              {e.rating}/10
+                      {group.entries.slice(0, 3).map((e, i) => {
+                        const hue =
+                          e.rating != null
+                            ? Math.round((e.rating / 10) * 120)
+                            : null;
+                        return (
+                          <div key={i} className="afv-preview-entry">
+                            <span
+                              className="afv-preview-rating"
+                              style={
+                                hue != null
+                                  ? {
+                                      background: `hsl(${hue},60%,28%)`,
+                                      color: `hsl(${hue},80%,75%)`,
+                                    }
+                                  : {
+                                      background: 'rgba(255,255,255,0.06)',
+                                      color: 'var(--text-muted)',
+                                    }
+                              }
+                            >
+                              {e.rating != null ? `★ ${e.rating}` : '—'}
                             </span>
-                          )}
-                          {e.note && (
+                            <span className="afv-preview-user">
+                              {getDisplayProfileName(
+                                e.profiles?.username,
+                                'Anonymous',
+                              )}
+                            </span>
                             <span className="afv-preview-note">
-                              &ldquo;{e.note}&rdquo;
+                              {e.note || ''}
                             </span>
-                          )}
-                        </div>
-                      ))}
-                      {group.entries.length > 2 && (
+                          </div>
+                        );
+                      })}
+                      {group.entries.length > 3 && (
                         <span className="afv-more">
-                          +{group.entries.length - 2} more
+                          +{group.entries.length - 3} more
                         </span>
                       )}
                     </div>
