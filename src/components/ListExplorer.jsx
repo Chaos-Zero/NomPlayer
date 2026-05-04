@@ -61,6 +61,11 @@ import YouTubeIcon from './YouTubeIcon.jsx';
 import { CommunityPlaylistsView } from './CommunityPlaylistsView.jsx';
 import AllFeedbackView from './AllFeedbackView.jsx';
 import CreatePlaylistDialog from './CreatePlaylistDialog.jsx';
+import {
+  parseYouTubeInput,
+  fetchPlaylistItems,
+  singleVideoEntry,
+} from '../utils/youtube.js';
 
 function PlaylistPlusIcon() {
   return (
@@ -1000,7 +1005,7 @@ function ListExplorerColumn({
             >
               <input
                 type="text"
-                placeholder="Paste YouTube link to add track..."
+                placeholder="Paste YouTube link or playlist to add tracks..."
                 value={addUrl}
                 onChange={(ev) => setAddUrl(ev.target.value)}
               />
@@ -2148,49 +2153,99 @@ export default function ListExplorer({
   };
 
   const handleAddByUrl = async (id, url) => {
-    const videoIdMatch = url.match(
-      /(?:youtu\.be\/|youtube\.com\/(?:.*v=|.*\/|.*e\/))([^&?/#]+)/,
-    );
-    const videoId = videoIdMatch ? videoIdMatch[1] : null;
-    if (!videoId) {
-      onShowToast('Invalid YouTube URL');
-      return;
-    }
-    const currentList = getListById(id);
-    if (currentList.some((v) => v.videoId === videoId)) {
-      onShowToast('Track already in this list');
+    const parsed = parseYouTubeInput(url);
+    if (!parsed) {
+      onShowToast('Invalid YouTube URL', 'error');
       return;
     }
 
-    // Rule: Nomination and Support cannot overlap
-    if (id === 'support') {
-      const isNominated = nominationList.some((v) => v.videoId === videoId);
-      if (isNominated) {
-        onShowToast('Track already exists in your nomination list', 'error');
+    const currentList = getListById(id);
+    const targetVideos = [];
+
+    if (parsed.type === 'playlist') {
+      onShowToast('Fetching playlist items...');
+      try {
+        const apiKey = import.meta.env.VITE_YT_API_KEY;
+        const items = await fetchPlaylistItems(parsed.playlistId, apiKey);
+        if (items.length === 0) {
+          onShowToast('Playlist is empty or private', 'error');
+          return;
+        }
+        targetVideos.push(...items);
+      } catch (err) {
+        console.error('Playlist fetch failed:', err);
+        onShowToast(
+          err.message === 'NO_API_KEY'
+            ? 'YouTube API key missing'
+            : 'Failed to fetch playlist items',
+          'error',
+        );
         return;
+      }
+    } else {
+      try {
+        const entry = await singleVideoEntry(parsed.videoId);
+        targetVideos.push(entry);
+      } catch (err) {
+        console.error('Single video metadata fetch failed:', err);
+        // Fallback if oEmbed fails
+        targetVideos.push({
+          videoId: parsed.videoId,
+          title: 'YouTube Track',
+          displayTitle: 'YouTube Track',
+          channelTitle: 'YouTube',
+          thumbnail: `https://i.ytimg.com/vi/${parsed.videoId}/mqdefault.jpg`,
+        });
       }
     }
 
-    const newTrack = {
-      videoId,
-      title: 'Loading metadata...',
-      displayTitle: 'YouTube Track',
-      channelTitle: 'YouTube',
-      thumbnail: `https://i.ytimg.com/vi/${videoId}/mqdefault.jpg`,
-      comment: '',
-      addedAt: new Date().toISOString(),
-    };
+    const nextList = [...currentList];
+    let addedCount = 0;
+    const existingIds = new Set(currentList.map((v) => v.videoId));
+    const addedVideoIds = new Set();
+
+    for (const video of targetVideos) {
+      if (existingIds.has(video.videoId)) continue;
+
+      // Rule: Nomination and Support cannot overlap
+      if (id === 'support') {
+        const isNominated = nominationList.some(
+          (v) => v.videoId === video.videoId,
+        );
+        if (isNominated) continue;
+      }
+
+      const newTrack = {
+        ...video,
+        comment: '',
+        addedAt: new Date().toISOString(),
+      };
+
+      nextList.push(newTrack);
+      existingIds.add(video.videoId);
+      addedVideoIds.add(video.videoId);
+      addedCount++;
+    }
+
+    if (addedCount === 0) {
+      onShowToast('No new tracks added (all already exist in list)');
+      return;
+    }
 
     // Rule: Nominations take priority and remove from support
     if (id === 'nominations') {
-      const isInSupport = supportList.some((v) => v.videoId === videoId);
-      if (isInSupport) {
-        onUpdateSupportList(supportList.filter((v) => v.videoId !== videoId));
+      const nextSupport = supportList.filter(
+        (v) => !addedVideoIds.has(v.videoId),
+      );
+      if (nextSupport.length !== supportList.length) {
+        onUpdateSupportList(nextSupport);
       }
     }
 
-    setListById(id, [...currentList, newTrack]);
-    onShowToast('Added track to queue');
+    setListById(id, nextList);
+    onShowToast(
+      `Added ${addedCount} track${addedCount > 1 ? 's' : ''} to list`,
+    );
   };
 
   const handleAddAllToCurrent = (tracks) => {
