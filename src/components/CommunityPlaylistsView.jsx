@@ -6,6 +6,7 @@ import React, {
   useRef,
 } from 'react';
 import { getDisplayProfileName } from '../lib/playerState.js';
+import { getYouTubeThumbnailUrl } from '../utils/youtube.js';
 import { SearchIcon } from './Icons.jsx';
 import PrivacyToggle from './PrivacyToggle.jsx';
 import CreatePlaylistDialog from './CreatePlaylistDialog.jsx';
@@ -452,7 +453,7 @@ export function CommunityPlaylistsView({
           supabase
             .from('user_playlist_tracks')
             .select(
-              'playlist_id, order_index, tracks(track_sources(external_id, cached_thumbnail_url, is_primary))',
+              'playlist_id, order_index, youtube_video_id, cached_thumbnail, tracks(track_sources(external_id, cached_thumbnail_url, is_primary))',
             )
             .in('playlist_id', playlistIds)
             .order('order_index', { ascending: true })
@@ -465,7 +466,11 @@ export function CommunityPlaylistsView({
                 if (src) {
                   thumbnailMap[pt.playlist_id] =
                     src.cached_thumbnail_url ||
-                    `https://i.ytimg.com/vi/${src.external_id}/mqdefault.jpg`;
+                    getYouTubeThumbnailUrl(src.external_id);
+                } else if (pt.youtube_video_id) {
+                  thumbnailMap[pt.playlist_id] =
+                    pt.cached_thumbnail ||
+                    getYouTubeThumbnailUrl(pt.youtube_video_id);
                 }
               }
             }),
@@ -1202,14 +1207,12 @@ export function CommunityPlaylistsView({
           onConfirm={async (name) => {
             setShowCreateDialog(false);
             try {
-              const { error } = await supabase
-                .from('user_playlists')
-                .insert({
-                  name,
-                  is_public: false,
-                  user_id: authUser.id,
-                  is_active_queue: false,
-                });
+              const { error } = await supabase.from('user_playlists').insert({
+                name,
+                is_public: false,
+                user_id: authUser.id,
+                is_active_queue: false,
+              });
               if (error) throw error;
               await fetchPlaylists();
               onShowToast?.(`Created "${name}"`);
