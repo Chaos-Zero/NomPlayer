@@ -2116,11 +2116,22 @@ export default function ListExplorer({
 
   const confirmDelete = () => {
     if (!deleteDialog) return;
-    onUpdateCustomPlaylists(
-      customPlaylists.filter((p) => p.id !== deleteDialog.id),
-    );
-    if (focusedListId === deleteDialog.id) setFocusedListId(null);
+    const { id } = deleteDialog;
+    onUpdateCustomPlaylists(customPlaylists.filter((p) => p.id !== id));
+    if (focusedListId === id) setFocusedListId(null);
     setDeleteDialog(null);
+    // Delete directly from DB — syncCustomPlaylists skips when the resulting
+    // list is empty (safety guard), so this is the only reliable path when
+    // deleting the last playlist.
+    if (supabase && /^[0-9a-f-]{36}$/i.test(id)) {
+      supabase
+        .from('user_playlists')
+        .delete()
+        .eq('id', id)
+        .then(({ error }) => {
+          if (error) console.error('Failed to delete playlist from DB', error);
+        });
+    }
   };
 
   const handleToggleCustomPlaylistPrivacy = (id, isPublic) => {

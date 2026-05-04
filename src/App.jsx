@@ -4805,6 +4805,35 @@ export default function App() {
     [appendVideosToPlaylist, applyCatalogMetadataToVideo],
   );
 
+  const handleAddDirectToCustomPlaylist = useCallback(
+    (items) => {
+      // Compute newVideos synchronously from current state so we can return
+      // addedCount before React's async commit runs the setCustomPlaylists updater.
+      const currentPl = customPlaylists.find(
+        (pl) => pl.id === activePlaylistView.id,
+      );
+      const existingIds = new Set(
+        (currentPl?.videos || []).map((v) => v.videoId),
+      );
+      const newVideos = items.filter((item) => !existingIds.has(item.videoId));
+      if (newVideos.length > 0) {
+        setCustomPlaylists((prev) =>
+          prev.map((pl) =>
+            pl.id === activePlaylistView.id
+              ? { ...pl, videos: [...pl.videos, ...newVideos] }
+              : pl,
+          ),
+        );
+      }
+      return {
+        addedCount: newVideos.length,
+        blockedNominationCount: 0,
+        blockedRetiredCount: 0,
+      };
+    },
+    [activePlaylistView.id, customPlaylists, setCustomPlaylists],
+  );
+
   const handlePlayCatalogTrack = useCallback(
     (video) => {
       const nextVideo = applyCatalogMetadataToVideo(video);
@@ -5803,6 +5832,11 @@ export default function App() {
                 }
               }}
               onAddDirectItems={handleQueueFromSupportList}
+              onAddDirectToCustomPlaylist={
+                activePlaylistView.type === 'custom-playlist'
+                  ? handleAddDirectToCustomPlaylist
+                  : null
+              }
               retiredVideoIds={retiredVideoIds}
               pendingMetadataCount={tracksNeedingMetadata.length}
               onOpenMetadataDialog={() => setShowMetadataDialog(true)}

@@ -538,7 +538,7 @@ export function CommunityPlaylistsView({
     const { data, error } = await supabase
       .from('user_playlist_tracks')
       .select(
-        `order_index, track_id,
+        `id, order_index, track_id, youtube_video_id, cached_title, cached_channel, cached_thumbnail,
          tracks (
            id, canonical_game_title, canonical_track_title,
            track_sources (
@@ -552,30 +552,53 @@ export function CommunityPlaylistsView({
     if (error) throw error;
     return (data || [])
       .map((pt) => {
-        const track = pt.tracks;
-        const src =
-          track?.track_sources?.find((s) => s.is_primary) ??
-          track?.track_sources?.[0];
-        if (!src) return null;
-        return {
-          videoId: src.external_id,
-          trackId: pt.track_id,
-          title:
-            src.cached_title ||
-            [track.canonical_game_title, track.canonical_track_title]
-              .filter(Boolean)
-              .join(' – '),
-          displayTitle:
-            track.canonical_track_title || src.cached_title || src.external_id,
-          channelTitle: src.cached_channel_title || 'YouTube',
-          thumbnail:
-            src.cached_thumbnail_url ||
-            `https://i.ytimg.com/vi/${src.external_id}/mqdefault.jpg`,
-          gameTitle: track.canonical_game_title,
-          trackTitle: track.canonical_track_title,
-          comment: '',
-          addedAt: new Date().toISOString(),
-        };
+        if (pt.track_id != null) {
+          const track = pt.tracks;
+          const src =
+            track?.track_sources?.find((s) => s.is_primary) ??
+            track?.track_sources?.[0];
+          if (!src) return null;
+          return {
+            id: pt.id,
+            videoId: src.external_id,
+            trackId: pt.track_id,
+            title:
+              src.cached_title ||
+              [track.canonical_game_title, track.canonical_track_title]
+                .filter(Boolean)
+                .join(' – '),
+            displayTitle:
+              track.canonical_track_title ||
+              src.cached_title ||
+              src.external_id,
+            channelTitle: src.cached_channel_title || 'YouTube',
+            thumbnail:
+              src.cached_thumbnail_url ||
+              `https://i.ytimg.com/vi/${src.external_id}/mqdefault.jpg`,
+            gameTitle: track.canonical_game_title,
+            trackTitle: track.canonical_track_title,
+            comment: '',
+            addedAt: new Date().toISOString(),
+          };
+        }
+        if (pt.youtube_video_id) {
+          return {
+            id: pt.id,
+            videoId: pt.youtube_video_id,
+            trackId: null,
+            title: pt.cached_title || pt.youtube_video_id,
+            displayTitle: pt.cached_title || pt.youtube_video_id,
+            channelTitle: pt.cached_channel || 'YouTube',
+            thumbnail:
+              pt.cached_thumbnail ||
+              `https://i.ytimg.com/vi/${pt.youtube_video_id}/mqdefault.jpg`,
+            gameTitle: '',
+            trackTitle: '',
+            comment: '',
+            addedAt: new Date().toISOString(),
+          };
+        }
+        return null;
       })
       .filter(Boolean);
   }

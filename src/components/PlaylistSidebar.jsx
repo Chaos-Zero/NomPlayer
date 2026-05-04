@@ -417,6 +417,7 @@ export default function PlaylistSidebar({
   onToggleNomination,
   onRemoveFromPlaylist,
   onAddDirectItems = () => 0,
+  onAddDirectToCustomPlaylist = null,
   retiredVideoIds = new Set(),
   isDesktopOverlayPlaylistOpen = false,
   onToggleDesktopOverlay,
@@ -645,36 +646,58 @@ export default function PlaylistSidebar({
     const { data, error } = await supabase
       .from('user_playlist_tracks')
       .select(
-        `order_index, track_id, tracks(id, canonical_game_title, canonical_track_title,
-         track_sources(external_id, cached_title, cached_channel_title, cached_thumbnail_url, is_primary))`,
+        `id, order_index, track_id, youtube_video_id, cached_title, cached_channel, cached_thumbnail,
+         tracks(id, canonical_game_title, canonical_track_title,
+           track_sources(external_id, cached_title, cached_channel_title, cached_thumbnail_url, is_primary))`,
       )
       .eq('playlist_id', playlistId)
       .order('order_index');
     if (error) throw error;
     return (data || [])
       .map((pt) => {
-        const track = pt.tracks;
-        const src =
-          track?.track_sources?.find((s) => s.is_primary) ??
-          track?.track_sources?.[0];
-        if (!src) return null;
-        return {
-          videoId: src.external_id,
-          trackId: pt.track_id,
-          title:
-            src.cached_title ||
-            [track.canonical_game_title, track.canonical_track_title]
-              .filter(Boolean)
-              .join(' – '),
-          displayTitle:
-            track.canonical_track_title || src.cached_title || src.external_id,
-          channelTitle: src.cached_channel_title || 'YouTube',
-          thumbnail:
-            src.cached_thumbnail_url ||
-            `https://i.ytimg.com/vi/${src.external_id}/mqdefault.jpg`,
-          comment: '',
-          addedAt: new Date().toISOString(),
-        };
+        if (pt.track_id != null) {
+          const track = pt.tracks;
+          const src =
+            track?.track_sources?.find((s) => s.is_primary) ??
+            track?.track_sources?.[0];
+          if (!src) return null;
+          return {
+            id: pt.id,
+            videoId: src.external_id,
+            trackId: pt.track_id,
+            title:
+              src.cached_title ||
+              [track.canonical_game_title, track.canonical_track_title]
+                .filter(Boolean)
+                .join(' – '),
+            displayTitle:
+              track.canonical_track_title ||
+              src.cached_title ||
+              src.external_id,
+            channelTitle: src.cached_channel_title || 'YouTube',
+            thumbnail:
+              src.cached_thumbnail_url ||
+              `https://i.ytimg.com/vi/${src.external_id}/mqdefault.jpg`,
+            comment: '',
+            addedAt: new Date().toISOString(),
+          };
+        }
+        if (pt.youtube_video_id) {
+          return {
+            id: pt.id,
+            videoId: pt.youtube_video_id,
+            trackId: null,
+            title: pt.cached_title || pt.youtube_video_id,
+            displayTitle: pt.cached_title || pt.youtube_video_id,
+            channelTitle: pt.cached_channel || 'YouTube',
+            thumbnail:
+              pt.cached_thumbnail ||
+              `https://i.ytimg.com/vi/${pt.youtube_video_id}/mqdefault.jpg`,
+            comment: '',
+            addedAt: new Date().toISOString(),
+          };
+        }
+        return null;
       })
       .filter(Boolean);
   }
@@ -1273,16 +1296,29 @@ export default function PlaylistSidebar({
             </div>
           </div>
         ) : !isCommunityView ? (
-          <CollectionAdder
-            tone={
-              tone === 'nomination' || tone === 'support' ? tone : 'playlist'
-            }
-            addButtonLabel="+"
-            addButtonAriaLabel="Add to queue"
-            addButtonTitle="Add to queue"
-            onAddDirectItems={onAddDirectItems}
-            compact
-          />
+          activePlaylistView.type === 'custom-playlist' &&
+          onAddDirectToCustomPlaylist ? (
+            <CollectionAdder
+              tone="playlist"
+              addButtonLabel="+"
+              addButtonAriaLabel="Add to playlist"
+              addButtonTitle="Add to playlist"
+              inputPlaceholder="Paste a YouTube link to add to this playlist…"
+              onAddDirectItems={onAddDirectToCustomPlaylist}
+              compact
+            />
+          ) : (
+            <CollectionAdder
+              tone={
+                tone === 'nomination' || tone === 'support' ? tone : 'playlist'
+              }
+              addButtonLabel="+"
+              addButtonAriaLabel="Add to queue"
+              addButtonTitle="Add to queue"
+              onAddDirectItems={onAddDirectItems}
+              compact
+            />
+          )
         ) : null}
       </div>
     );

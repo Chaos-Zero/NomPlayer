@@ -1087,9 +1087,19 @@ export async function saveActiveQueue(
       }));
 
     if (tracksToUpsert.length > 0) {
+      // upsert via onConflict is not viable after the PK became a surrogate UUID
+      // with partial unique indexes — delete the affected rows then re-insert.
+      await supabase
+        .from('user_playlist_tracks')
+        .delete()
+        .eq('playlist_id', playlistId)
+        .in(
+          'track_id',
+          tracksToUpsert.map((t) => t.track_id),
+        );
       const { error: tracksError } = await supabase
         .from('user_playlist_tracks')
-        .upsert(tracksToUpsert, { onConflict: 'playlist_id,track_id' });
+        .insert(tracksToUpsert);
       if (tracksError) throw tracksError;
     }
   } else if (currentEntries.length > 0) {
@@ -1181,16 +1191,28 @@ export async function syncCustomPlaylists(supabase, userId, customPlaylists) {
     }
 
     const allVideos = pl.videos || [];
-    const tracksToInsert = allVideos
-      .filter((v) => v.trackId != null)
-      .map((v, i) => ({
-        playlist_id: playlistId,
-        track_id: v.trackId,
-        order_index: i,
-      }));
+    const tracksToInsert = [];
+    allVideos.forEach((v, i) => {
+      if (v.trackId != null) {
+        tracksToInsert.push({
+          playlist_id: playlistId,
+          track_id: v.trackId,
+          order_index: i,
+        });
+      } else if (v.videoId) {
+        tracksToInsert.push({
+          playlist_id: playlistId,
+          youtube_video_id: v.videoId,
+          cached_title: v.title || null,
+          cached_channel: v.channelTitle || null,
+          cached_thumbnail: v.thumbnail || null,
+          order_index: i,
+        });
+      }
+    });
 
-    // Skip if videos exist but none have trackIds yet — catalog hasn't loaded,
-    // so we can't distinguish "empty" from "not yet resolved". Avoids wiping tracks.
+    // Skip only when no video has any identifier at all — pathological after
+    // normalization, but guards against wiping DB tracks if state is corrupt.
     if (allVideos.length > 0 && tracksToInsert.length === 0) {
       continue;
     }
