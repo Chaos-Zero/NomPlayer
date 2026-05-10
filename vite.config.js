@@ -96,6 +96,18 @@ export default defineConfig({
           }
 
           if (
+            id.includes('/framer-motion/') ||
+            id.includes('/motion/') ||
+            id.includes('framer-motion@')
+          ) {
+            return 'framer-motion';
+          }
+
+          if (id.includes('/gsap/') || id.includes('gsap@')) {
+            return 'gsap';
+          }
+
+          if (
             id.includes('react-youtube') ||
             id.includes('/youtube-player/') ||
             id.includes('/sister/')

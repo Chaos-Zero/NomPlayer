@@ -2248,11 +2248,18 @@ export default function HomePage({
   );
 
   useEffect(() => {
-    if (!isAuthReady) return undefined;
+    if (!supabase) return undefined;
     let isActive = true;
 
     async function loadDashboardUpdates() {
-      // 1. Load fast spotlight candidate
+      // Kick off the slow network call immediately so it runs while static
+      // data loads below, shaving its round-trip off the critical path.
+      const networkPromise = fetchDashboardNominationUpdates(
+        supabase,
+        null, // Fetch all for catalog usage
+      );
+
+      // 1. Load fast spotlight candidate (static, no network)
       const fastCandidate = await getFastSpotlightCandidate();
       if (isActive && fastCandidate) {
         setFastSpotlightCandidate(fastCandidate);
@@ -2265,12 +2272,9 @@ export default function HomePage({
         setIsDashboardLoading(false);
       }
 
-      // 3. Refresh quietly in the background
+      // 3. Await the already-in-flight network fetch
       try {
-        const data = await fetchDashboardNominationUpdates(
-          supabase,
-          null, // Fetch all for catalog usage
-        );
+        const data = await networkPromise;
         if (!isActive) return;
         setNominationUpdates(data);
         onNominationsLoaded?.(data);
@@ -2317,7 +2321,7 @@ export default function HomePage({
     return () => {
       isActive = false;
     };
-  }, [supabase, isAuthReady, onNominationsLoaded]);
+  }, [supabase, onNominationsLoaded]);
 
   useEffect(() => {
     if (!isAuthReady) return undefined;

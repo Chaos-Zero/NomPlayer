@@ -14310,6 +14310,7 @@ body.is-resizing .resize-handle {
   flex: 1;
   scrollbar-width: thin;
   scrollbar-color: var(--border) transparent;
+  transition: padding-right 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .cpl-main::-webkit-scrollbar {
@@ -15676,8 +15677,8 @@ body.is-resizing .resize-handle {
   }
 }
 
-.list-explorer-container.has-selection .cpl-layout {
-  margin-right: 420px;
+.list-explorer-container.has-selection .cpl-main {
+  padding-right: 420px;
 }
 
 .cpl-track-item:hover {
