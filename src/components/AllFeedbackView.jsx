@@ -46,6 +46,8 @@ export default function AllFeedbackView({
   supabase,
   onPlayNow,
   onSelectTrack,
+  nominationVideoIds = null,
+  supportVideoIds = null,
 }) {
   const [entries, setEntries] = useState([]);
   const [vgmcByTrackId, setVgmcByTrackId] = useState({});
@@ -54,6 +56,8 @@ export default function AllFeedbackView({
   const [sortAsc, setSortAsc] = useState(false);
   const [vgmcFilter, setVgmcFilter] = useState('');
   const [userFilter, setUserFilter] = useState('');
+  const [filterNominations, setFilterNominations] = useState(false);
+  const [filterSupports, setFilterSupports] = useState(false);
 
   const parentRef = useRef(null);
 
@@ -108,6 +112,15 @@ export default function AllFeedbackView({
 
   const filtered = useMemo(() => {
     let list = groupedTracks;
+    if (filterNominations || filterSupports) {
+      list = list.filter((g) => {
+        if (!g.videoId) return false;
+        if (filterNominations && nominationVideoIds?.has(g.videoId))
+          return true;
+        if (filterSupports && supportVideoIds?.has(g.videoId)) return true;
+        return false;
+      });
+    }
     if (vgmcFilter) {
       const num = parseInt(vgmcFilter, 10);
       list = list.filter((g) => g.vgmcNumbers.includes(num));
@@ -121,7 +134,15 @@ export default function AllFeedbackView({
       );
     }
     return list;
-  }, [groupedTracks, vgmcFilter, userFilter]);
+  }, [
+    groupedTracks,
+    vgmcFilter,
+    userFilter,
+    filterNominations,
+    filterSupports,
+    nominationVideoIds,
+    supportVideoIds,
+  ]);
 
   const sorted = useMemo(() => {
     const list = [...filtered];
@@ -221,6 +242,22 @@ export default function AllFeedbackView({
           ))}
         </div>
         <div className="afv-filters">
+          {nominationVideoIds?.size > 0 && (
+            <button
+              className={`afv-sort-btn${filterNominations ? ' active' : ''}`}
+              onClick={() => setFilterNominations((v) => !v)}
+            >
+              My Nominations
+            </button>
+          )}
+          {supportVideoIds?.size > 0 && (
+            <button
+              className={`afv-sort-btn${filterSupports ? ' active' : ''}`}
+              onClick={() => setFilterSupports((v) => !v)}
+            >
+              My Supports
+            </button>
+          )}
           <select
             className="afv-filter-select"
             value={vgmcFilter}

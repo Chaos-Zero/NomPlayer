@@ -1476,7 +1476,7 @@ export default function ListExplorer({
   });
   const [showMyNominations, setShowMyNominations] = useState(true);
   const [explorerView, setExplorerView] = useState(initialView);
-  const [commentsSubView, setCommentsSubView] = useState('activity');
+  const [commentsSubView, setCommentsSubView] = useState('all');
   const [activityData, setActivityData] = useState({
     personal: [],
     peer: [],
@@ -1636,6 +1636,16 @@ export default function ListExplorer({
 
     return allNoms.filter((n) => !myTrackIds.has(n.videoId));
   }, [allPeerLists, nominationList, supportList, playlist]);
+
+  const nominationVideoIds = useMemo(
+    () => new Set(nominationList.map((t) => t.videoId)),
+    [nominationList],
+  );
+
+  const supportVideoIds = useMemo(
+    () => new Set(supportList.map((t) => t.videoId)),
+    [supportList],
+  );
 
   const togglePeerList = (user) => {
     if (peerColumns.some((c) => c.user_id === user.user_id)) {
@@ -3153,16 +3163,16 @@ export default function ListExplorer({
               >
                 <div className="comments-sub-tabs">
                   <button
-                    className={`comments-sub-tab${commentsSubView === 'activity' ? ' active' : ''}`}
-                    onClick={() => setCommentsSubView('activity')}
-                  >
-                    My Activity
-                  </button>
-                  <button
                     className={`comments-sub-tab${commentsSubView === 'all' ? ' active' : ''}`}
                     onClick={() => setCommentsSubView('all')}
                   >
                     All Ratings &amp; Comments
+                  </button>
+                  <button
+                    className={`comments-sub-tab${commentsSubView === 'activity' ? ' active' : ''}`}
+                    onClick={() => setCommentsSubView('activity')}
+                  >
+                    My Activity
                   </button>
                 </div>
                 {commentsSubView === 'activity' ? (
@@ -3192,6 +3202,8 @@ export default function ListExplorer({
                       setIsEditingInfo(false);
                     }}
                     onPlayNow={onPlayNow}
+                    nominationVideoIds={nominationVideoIds}
+                    supportVideoIds={supportVideoIds}
                   />
                 )}
               </Motion.div>
