@@ -220,6 +220,7 @@ function HomeCommunityPlaylistsStrip({
   onAddToPlaylist,
   onShowToast,
   isAuthReady,
+  isMobileLayout,
 }) {
   const [playlists, setPlaylists] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -411,33 +412,37 @@ function HomeCommunityPlaylistsStrip({
     <div className="home-cpl-content">
       <div className="home-cpl-main">
         <div className="home-cpl-page-wrapper">
-          <button
-            className="home-cpl-nav-btn"
-            onClick={handlePrevPage}
-            disabled={!canGoBack}
-            style={{ visibility: canGoBack ? 'visible' : 'hidden' }}
-            aria-label="Previous playlists"
-            type="button"
-          >
-            <svg
-              viewBox="0 0 20 20"
-              fill="currentColor"
-              width="18"
-              height="18"
-              aria-hidden
+          {!isMobileLayout && (
+            <button
+              className="home-cpl-nav-btn"
+              onClick={handlePrevPage}
+              disabled={!canGoBack}
+              style={{ visibility: canGoBack ? 'visible' : 'hidden' }}
+              aria-label="Previous playlists"
+              type="button"
             >
-              <path d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" />
-            </svg>
-          </button>
+              <svg
+                viewBox="0 0 20 20"
+                fill="currentColor"
+                width="18"
+                height="18"
+                aria-hidden
+              >
+                <path d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" />
+              </svg>
+            </button>
+          )}
 
           <div
             ref={gridRef}
-            className="home-cpl-page"
+            className={`home-cpl-page${isMobileLayout ? ' home-cpl-page-mobile' : ''}`}
             style={{
-              gridTemplateColumns: `repeat(${pageSize}, ${HOME_CPL_CARD_WIDTH}px)`,
+              gridTemplateColumns: isMobileLayout
+                ? 'repeat(auto-fill, minmax(140px, 1fr))'
+                : `repeat(${pageSize}, ${HOME_CPL_CARD_WIDTH}px)`,
             }}
           >
-            {visiblePlaylists.map((pl) => (
+            {(isMobileLayout ? playlists : visiblePlaylists).map((pl) => (
               <div
                 key={pl.id}
                 className={`cpl-new-card home-cpl-new-card${selectedPlaylist?.id === pl.id ? ' home-cpl-card-selected' : ''}`}
@@ -545,29 +550,33 @@ function HomeCommunityPlaylistsStrip({
             )}
           </div>
 
-          <button
-            className="home-cpl-nav-btn"
-            onClick={handleNextPage}
-            disabled={!canGoForward || isFetchingMore}
-            style={{ visibility: canGoForward ? 'visible' : 'hidden' }}
-            aria-label="Next playlists"
-            type="button"
-          >
-            <svg
-              viewBox="0 0 20 20"
-              fill="currentColor"
-              width="18"
-              height="18"
-              aria-hidden
+          {!isMobileLayout && (
+            <button
+              className="home-cpl-nav-btn"
+              onClick={handleNextPage}
+              disabled={!canGoForward || isFetchingMore}
+              style={{ visibility: canGoForward ? 'visible' : 'hidden' }}
+              aria-label="Next playlists"
+              type="button"
             >
-              <path d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" />
-            </svg>
-          </button>
+              <svg
+                viewBox="0 0 20 20"
+                fill="currentColor"
+                width="18"
+                height="18"
+                aria-hidden
+              >
+                <path d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" />
+              </svg>
+            </button>
+          )}
         </div>
       </div>
 
       {selectedPlaylist && (
-        <div className="home-cpl-side-panel">
+        <div
+          className={`home-cpl-side-panel${isMobileLayout ? ' home-cpl-side-panel-mobile' : ''}`}
+        >
           <div className="home-cpl-panel-header">
             <button
               className="home-cpl-panel-close"
@@ -3061,46 +3070,48 @@ export default function HomePage({
           summary={sectionSummaries.nominations}
           actions={
             <div className="nom-section-actions">
-              <button
-                className="nom-view-toggle-btn"
-                type="button"
-                onClick={() => {
-                  if (isNominationGridView) {
-                    setIsNominationGridView(false);
-                    setSelectedGridUpdate(null);
-                  } else {
-                    setIsNominationGridView(true);
-                    setExpandedUserId(null);
+              {!isMobileLayout && (
+                <button
+                  className="nom-view-toggle-btn"
+                  type="button"
+                  onClick={() => {
+                    if (isNominationGridView) {
+                      setIsNominationGridView(false);
+                      setSelectedGridUpdate(null);
+                    } else {
+                      setIsNominationGridView(true);
+                      setExpandedUserId(null);
+                    }
+                  }}
+                  title={
+                    isNominationGridView
+                      ? 'Switch to carousel view'
+                      : 'Switch to grid view'
                   }
-                }}
-                title={
-                  isNominationGridView
-                    ? 'Switch to carousel view'
-                    : 'Switch to grid view'
-                }
-              >
-                {isNominationGridView ? (
-                  /* carousel icon — shown when in grid mode */
-                  <svg
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    aria-hidden
-                  >
-                    <rect x="3" y="4" width="18" height="16" rx="2" />
-                    <line x1="7" y1="4" x2="7" y2="20" />
-                    <line x1="17" y1="4" x2="17" y2="20" />
-                    <polyline points="1,12 3,10 3,14" />
-                    <polyline points="23,12 21,10 21,14" />
-                  </svg>
-                ) : (
-                  /* grid icon — shown when in carousel mode */
-                  <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden>
-                    <path d="M3 3h7v7H3V3zm0 11h7v7H3v-7zm11-11h7v7h-7V3zm0 11h7v7h-7v-7z" />
-                  </svg>
-                )}
-              </button>
+                >
+                  {isNominationGridView ? (
+                    /* carousel icon — shown when in grid mode */
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      aria-hidden
+                    >
+                      <rect x="3" y="4" width="18" height="16" rx="2" />
+                      <line x1="7" y1="4" x2="7" y2="20" />
+                      <line x1="17" y1="4" x2="17" y2="20" />
+                      <polyline points="1,12 3,10 3,14" />
+                      <polyline points="23,12 21,10 21,14" />
+                    </svg>
+                  ) : (
+                    /* grid icon — shown when in carousel mode */
+                    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+                      <path d="M3 3h7v7H3V3zm0 11h7v7H3v-7zm11-11h7v7h-7V3zm0 11h7v7h-7v-7z" />
+                    </svg>
+                  )}
+                </button>
+              )}
               {authUser && (
                 <button
                   className={`dashboard-nominations-user-toggle ${
@@ -3157,7 +3168,7 @@ export default function HomePage({
               <NominationEmptyCard />
               <NominationEmptyCard />
             </div>
-          ) : isNominationGridView ? (
+          ) : isMobileLayout || isNominationGridView ? (
             <div className="nom-grid-wrapper animate-fade-in">
               <div className="nom-grid-scroll-area">
                 <div className="nom-grid">
@@ -3272,6 +3283,7 @@ export default function HomePage({
             onAddToPlaylist={onAddToPlaylist}
             onShowToast={onShowToast}
             isAuthReady={isAuthReady}
+            isMobileLayout={isMobileLayout}
           />
         </DashboardSection>
 

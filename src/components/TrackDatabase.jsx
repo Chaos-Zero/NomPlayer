@@ -544,8 +544,20 @@ export default function TrackDatabase({
   const [showSidebar, setShowSidebar] = useState(false);
   const [columnWidths, setColumnWidths] = useState(() => {
     const saved = localStorage.getItem('nomplayer_db_col_widths');
-    return saved
-      ? JSON.parse(saved)
+    if (saved) return JSON.parse(saved);
+    const isMobile =
+      window.matchMedia?.('(max-width: 960px)')?.matches ?? false;
+    return isMobile
+      ? {
+          index: 40,
+          vgmc: 60,
+          game: 160,
+          track: 160,
+          rating: 70,
+          placement: 70,
+          link: 160,
+          comment: 200,
+        }
       : {
           index: 60,
           vgmc: 80,
@@ -1109,7 +1121,10 @@ export default function TrackDatabase({
                   src="/loading.lottie"
                   autoplay
                   loop
-                  style={{ width: '220px', height: '220px' }}
+                  style={{
+                    width: 'min(220px, 70vw)',
+                    height: 'min(220px, 70vw)',
+                  }}
                 />
               </div>
               <div className="database-loading-text">

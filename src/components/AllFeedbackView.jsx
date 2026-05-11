@@ -216,7 +216,7 @@ export default function AllFeedbackView({
             src="/loading.lottie"
             autoplay
             loop
-            style={{ width: '180px', height: '180px' }}
+            style={{ width: 'min(180px, 70vw)', height: 'min(180px, 70vw)' }}
           />
         </div>
         <div className="database-loading-text">

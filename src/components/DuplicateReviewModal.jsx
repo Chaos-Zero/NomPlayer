@@ -1379,6 +1379,31 @@ export default function DuplicateReviewModal({
           color: var(--accent-light);
           line-height: 1.5;
         }
+        @media (max-width: 520px) {
+          .modal-header {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 8px;
+            padding: 14px 16px;
+          }
+          .modal-header h2 {
+            font-size: 1.05rem;
+          }
+          .modal-actions-group {
+            width: 100%;
+            justify-content: flex-end;
+          }
+          .modal-footer {
+            padding: 14px 16px;
+            gap: 10px;
+          }
+          .confirmation-view {
+            padding: 32px 16px;
+          }
+          .confirm-summary-box {
+            padding: 20px 16px;
+          }
+        }
       `}</style>
     </div>
   );
