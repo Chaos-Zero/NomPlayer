@@ -15787,6 +15787,7 @@ body.is-resizing .resize-handle {
 /* ── Grid layout wrapper ──────────────────────────── */
 
 .nom-grid-wrapper {
+  position: relative;
   display: flex;
   height: 600px;
   overflow: hidden;
@@ -15891,21 +15892,24 @@ body.is-resizing .resize-handle {
 /* ── Nominator side panel ─────────────────────────── */
 
 .nom-side-panel {
-  width: 0;
-  min-width: 0;
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 360px;
   overflow: hidden;
-  flex-shrink: 0;
   border-left: 1px solid transparent;
   background: var(--bg-surface);
   display: flex;
   flex-direction: column;
+  transform: translateX(100%);
   transition:
-    width 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.3s cubic-bezier(0.16, 1, 0.3, 1),
     border-color 0.3s ease;
 }
 
 .nom-side-panel.is-open {
-  width: 360px;
+  transform: translateX(0);
   border-left-color: var(--border);
 }
 
