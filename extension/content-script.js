@@ -44,12 +44,95 @@ function extractTopicMeta() {
   return { topicId, boardId, gameTitle, topicTitle, url: location.href };
 }
 
-// --- Post extraction (unchanged once a topic is being followed) -------------------
-const POST_CONTAINER_SELECTOR = '.message, [id^="msg"], [id^="message_"]';
+// --- Post extraction ---------------------------------------------------------------
+// Confirmed against a live GameFAQs message board thread (2026-08-13) — a `<table
+// class="board message ...">` of `<tr><td class="msg" id="message_<postId>">` rows.
+// Each row's `.msg_infobox` holds the poster's name as `data-username` on
+// `a.name`; the actual text lives in `.msg_text` (a sibling of `.signature`, so
+// selecting `.msg_text` specifically already excludes the signature for free).
+// Quoted replies are `<cite>Name posted...</cite><blockquote>quoted text</blockquote>`
+// — both need stripping, not just the blockquote, or a quoted "X posted..." line
+// lingers as noise (harmless for parsing, but not clean).
+const POST_CONTAINER_SELECTOR = 'td.msg[id^="message_"]';
 const POST_ID_ATTR_PATTERN = /^(?:msg|message_)?(\d+)$/;
-const AUTHOR_SELECTOR = '.topic_username, .post_username, .username, .poster';
-const BODY_SELECTOR = '.msg_body, .post_body, .message_body, .body';
-const QUOTE_SELECTOR = '.quote, blockquote, .quoted_text';
+const AUTHOR_SELECTOR = '.msg_infobox a.name[data-username]';
+const BODY_SELECTOR = '.msg_text';
+const QUOTE_SELECTOR = 'cite, blockquote';
+
+// --- Pagination ----------------------------------------------------------------
+// GameFAQs splits a topic's posts across multiple pages (`?page=N` on the same
+// topic URL — confirmed against a live thread, 2026-08-13) rather than showing
+// them all on one page, so a single-page extraction only ever sees a fraction of
+// a long nomination thread. Both the top and bottom of a topic page repeat an
+// identical `<ul class="paginate">...Page X of Y...</ul>` control (distinct from
+// `<ul class="paginate user">`, the unrelated account-menu dropdown) — that text
+// is a far more robust source of the total page count than trying to parse
+// individual First/Previous/Next/Last link hrefs, so that's all we rely on here;
+// every page URL is then just constructed directly rather than "clicked through".
+const PAGINATE_SELECTOR = 'ul.paginate:not(.user)';
+const PAGE_COUNT_PATTERN = /Page\s+\d+\s+of\s+(\d+)/i;
+
+function discoverTotalPages(doc) {
+  const node = doc.querySelector(PAGINATE_SELECTOR);
+  if (!node) return 1;
+
+  const match = node.textContent.match(PAGE_COUNT_PATTERN);
+  const total = match ? Number(match[1]) : 1;
+  return Number.isFinite(total) && total > 0 ? total : 1;
+}
+
+function getCurrentPageNumber() {
+  const page = Number(new URLSearchParams(location.search).get('page'));
+  return Number.isFinite(page) && page > 0 ? page : 1;
+}
+
+function buildPageUrl(pageNumber) {
+  return `${location.origin}${location.pathname}?page=${pageNumber}`;
+}
+
+/** Same-origin fetch + parse of one other page of this same topic. Never throws —
+ * a single failed page shouldn't abort the rest of the crawl. */
+async function fetchPagePosts(url) {
+  try {
+    const response = await fetch(url, { credentials: 'same-origin' });
+    if (!response.ok) return [];
+    const html = await response.text();
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    return extractPosts(doc);
+  } catch {
+    return [];
+  }
+}
+
+/** Extracts the current page's posts, then fills in every other page of the same
+ * topic (fetched same-origin, no extra host_permissions needed), merging by
+ * postId — GameFAQs message ids are unique thread-wide so a plain merge is safe. */
+async function crawlAllPages(totalPages) {
+  const postsByPostId = new Map();
+  for (const post of extractPosts(document)) {
+    postsByPostId.set(post.postId, post);
+  }
+
+  if (totalPages > 1) {
+    const currentPage = getCurrentPageNumber();
+    const otherPages = [];
+    for (let page = 1; page <= totalPages; page += 1) {
+      if (page !== currentPage) otherPages.push(page);
+    }
+
+    const otherPagePosts = await Promise.all(
+      otherPages.map((page) => fetchPagePosts(buildPageUrl(page))),
+    );
+
+    for (const posts of otherPagePosts) {
+      for (const post of posts) {
+        postsByPostId.set(post.postId, post);
+      }
+    }
+  }
+
+  return [...postsByPostId.values()];
+}
 
 function extractPostId(element) {
   const match = (element.id || '').match(POST_ID_ATTR_PATTERN);
@@ -58,13 +141,29 @@ function extractPostId(element) {
 
 function extractAuthor(element) {
   const node = element.querySelector(AUTHOR_SELECTOR);
-  return node ? node.textContent.trim() : null;
+  return node
+    ? (node.getAttribute('data-username') || '').trim() || null
+    : null;
 }
 
 function extractBodyText(element) {
   const node = element.querySelector(BODY_SELECTOR) || element;
   const clone = node.cloneNode(true);
   clone.querySelectorAll(QUOTE_SELECTOR).forEach((quote) => quote.remove());
+
+  // Found live (2026-08-14): GameFAQs renders a poster's own line breaks as
+  // literal `<br>` tags inside `.msg_text`, but `.textContent` drops element
+  // boundaries entirely — it does NOT insert a newline for `<br>` the way a
+  // browser's rendered/visible text would. A post with several nominations,
+  // each on its own line, was collapsing into one run-on string with no
+  // separator between them. Server-side folding treats one post as one line
+  // per '+'/'-' command (src/lib/vgmcIngest.js splits on /\r?\n/), so without
+  // this every nomination after the first one line-wise got silently eaten
+  // into the *first* line's link field as trailing garbage, and only the post's
+  // first command ever parsed. Converting each `<br>` to a real '\n' before
+  // reading textContent restores that boundary.
+  clone.querySelectorAll('br').forEach((br) => br.replaceWith('\n'));
+
   return clone.textContent.trim();
 }
 
@@ -132,8 +231,13 @@ function showTrackButton(meta) {
 }
 
 // --- Orchestration --------------------------------------------------------------
-function runExtraction() {
-  const posts = extractPosts(document);
+async function runExtraction() {
+  const totalPages = discoverTotalPages(document);
+  if (totalPages > 1) {
+    showSyncBadge(`NomPlayer: crawling ${totalPages} pages…`);
+  }
+
+  const posts = await crawlAllPages(totalPages);
   if (posts.length === 0) return;
 
   showSyncBadge(

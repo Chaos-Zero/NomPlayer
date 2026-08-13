@@ -1,3 +1,5 @@
+const VIDEO_ID_PATTERN = /^[A-Za-z0-9_-]{11}$/;
+
 /**
  * Parse YouTube video ID or playlist ID from a URL or bare ID string.
  * Returns: { type: 'video'|'playlist', videoId?, playlistId? }
@@ -9,16 +11,24 @@ export function parseYouTubeInput(input) {
   try {
     const url = new URL(str);
     const listId = url.searchParams.get('list');
-    const videoId = url.searchParams.get('v');
+    // `URLSearchParams.get('v')` happily returns whatever's between `v=` and the
+    // next `&` (or end of string) with no shape validation — if the input has no
+    // `&` at all (e.g. a "link" that accidentally swallowed unrelated trailing
+    // text — found live from a VGMC nomination post whose line breaks got lost
+    // upstream), that's the *entire* rest of the string, not an 11-char id. Only
+    // trust it once it actually looks like one.
+    const rawVideoId = url.searchParams.get('v');
+    const videoId =
+      rawVideoId && VIDEO_ID_PATTERN.test(rawVideoId) ? rawVideoId : null;
 
-    if (listId)
-      return { type: 'playlist', playlistId: listId, videoId: videoId || null };
+    if (listId) return { type: 'playlist', playlistId: listId, videoId };
     if (videoId) return { type: 'video', videoId };
 
     // youtu.be short links
     if (url.hostname === 'youtu.be') {
       const vid = url.pathname.slice(1).split('?')[0];
-      if (vid) return { type: 'video', videoId: vid };
+      if (vid && VIDEO_ID_PATTERN.test(vid))
+        return { type: 'video', videoId: vid };
     }
   } catch {
     // Not a URL — treat as bare ID
@@ -27,7 +37,7 @@ export function parseYouTubeInput(input) {
       return { type: 'playlist', playlistId: str };
     }
     // Video ID: 11 chars
-    if (/^[A-Za-z0-9_-]{11}$/.test(str)) {
+    if (VIDEO_ID_PATTERN.test(str)) {
       return { type: 'video', videoId: str };
     }
   }
@@ -37,7 +47,7 @@ export function parseYouTubeInput(input) {
 
 export function getYouTubeThumbnailUrl(videoId, quality = 'mqdefault') {
   const normalizedVideoId = typeof videoId === 'string' ? videoId.trim() : '';
-  if (!/^[A-Za-z0-9_-]{11}$/.test(normalizedVideoId)) {
+  if (!VIDEO_ID_PATTERN.test(normalizedVideoId)) {
     return '';
   }
 

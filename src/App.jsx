@@ -202,7 +202,6 @@ import { fetchUserFeedback } from './lib/feedback.js';
 import { fetchDashboardNominationUpdates } from './lib/dashboard.js';
 import {
   fetchVgmcPlaylistTracks,
-  mergeNewPlaylistVideos,
   toPlaylistVideos,
 } from './lib/vgmcStandings.js';
 import { reportError } from './lib/errorReporter.js';
@@ -3867,16 +3866,24 @@ export default function App() {
       setVgmcStandingsRows(rows);
       const freshVideos = toPlaylistVideos(rows);
 
-      // Merge in place — only appends newly-synced tracks to the VGMC view, never
-      // resets which track is playing or reorders anything. If the VGMC view isn't
-      // the active/playing view right now, leave those alone entirely; the fresh
-      // rows are still reflected in the standings table via vgmcStandingsRows.
+      // Replace outright — `freshVideos` is already in true nomination order
+      // (fetchVgmcPlaylistTracks orders by order_index), and a re-sync can add
+      // posts *anywhere* in that order, not just at the end (an earlier page can
+      // finish syncing after a later one, a removed nomination can get reposted,
+      // etc.). An earlier append-only merge here preserved whatever order things
+      // happened to be *discovered* in across repeated refreshes rather than the
+      // order they were actually posted in, which is exactly the bug reported:
+      // the playlist stopped matching the thread. Playback continuity doesn't
+      // need special-casing to do this safely — the currently-playing video is
+      // tracked by id (currentVideoIdRef), not array position, and "next" is
+      // resolved fresh off this array at the moment of advancing, so replacing
+      // it mid-playback doesn't interrupt anything already playing. If the VGMC
+      // view isn't the active/playing view right now, leave those alone
+      // entirely; the fresh rows are still reflected in the standings table via
+      // vgmcStandingsRows.
       const mergeIntoVgmcView = (view) =>
         view?.type === 'community-playlist' && view.id === VGMC_PLAYLIST_ID
-          ? {
-              ...view,
-              videos: mergeNewPlaylistVideos(view.videos, freshVideos),
-            }
+          ? { ...view, videos: freshVideos }
           : view;
 
       setActivePlaylistView(mergeIntoVgmcView);

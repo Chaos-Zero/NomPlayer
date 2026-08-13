@@ -142,7 +142,7 @@ export default function VgmcStandingsView({
                 <th style={{ padding: '4px 8px' }}>Game</th>
                 <th style={{ padding: '4px 8px' }}>Song</th>
                 <th style={{ padding: '4px 8px', textAlign: 'right' }}>
-                  Support
+                  Total
                 </th>
                 <th style={{ padding: '4px 8px', width: '2.5em' }} />
               </tr>

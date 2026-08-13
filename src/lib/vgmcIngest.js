@@ -73,6 +73,20 @@ export function parseCommandLine(line) {
   };
 }
 
+const MAX_AUTHOR_MAGNITUDE = 2;
+
+/** Adds `value` onto `author`'s running total in `votes`, clamped to
+ * [-MAX_AUTHOR_MAGNITUDE, MAX_AUTHOR_MAGNITUDE] — see the "two points max per
+ * author" rule on foldThread. */
+function applyVote(votes, author, value) {
+  const runningTotal = (votes.get(author) || 0) + value;
+  const clamped = Math.max(
+    -MAX_AUTHOR_MAGNITUDE,
+    Math.min(MAX_AUTHOR_MAGNITUDE, runningTotal),
+  );
+  votes.set(author, clamped);
+}
+
 function comparePostIds(a, b) {
   const numA = Number(a);
   const numB = Number(b);
@@ -90,10 +104,14 @@ function comparePostIds(a, b) {
  *  - Authority rule: only a single '-' (never '--') from the song's current owner
  *    (the author of its most recent '+'/'++') removes it. Anything else with '-'
  *    polarity is a vote, never a removal.
- *  - One live vote per author: each author holds at most one vote per song — a
- *    later +/++/-/-- from the same author on the same song replaces their previous
- *    vote rather than stacking with it. This mirrors the site's own per-user support
- *    records and means nobody can inflate or tank a song's score by reposting.
+ *  - Two points max per author: every +/++/-/-- from the same author on the same
+ *    song accumulates onto their running total for it (across as many separate
+ *    posts as they like — one ++ and two separate +'s both get you to the same
+ *    place), but that running total is clamped to [-2, 2] after each event. A
+ *    third '+' on top of an already-maxed pair of them is a no-op; a later '-'
+ *    still pulls a maxed-out total back down, it just can't be pushed past the
+ *    cap. This is what stops one person inflating or tanking a song's score by
+ *    reposting, while still counting genuine repeat show-of-support.
  *  - Ordinal stability: a key's `ordinal` is assigned once, the first time it's ever
  *    introduced, and is never reassigned — not even across removal. Votes persist
  *    across a removal/re-add too, for the same reason a tombstoned song keeps its
@@ -140,8 +158,10 @@ export function foldThread(posts) {
             existing.song = song;
             existing.owner = post.author;
           }
-          existing.votes.set(post.author, value);
+          applyVote(existing.votes, post.author, value);
         } else {
+          const votes = new Map();
+          applyVote(votes, post.author, value);
           records.set(sourceKey, {
             sourceKey,
             game,
@@ -150,7 +170,7 @@ export function foldThread(posts) {
             present: true,
             owner: post.author,
             ordinal: nextOrdinal++,
-            votes: new Map([[post.author, value]]),
+            votes,
           });
         }
         continue;
@@ -169,7 +189,7 @@ export function foldThread(posts) {
         existing.present = false;
       }
 
-      existing.votes.set(post.author, value);
+      applyVote(existing.votes, post.author, value);
     }
   }
 

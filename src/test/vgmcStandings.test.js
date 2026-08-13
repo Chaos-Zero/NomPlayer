@@ -1,9 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import {
-  mergeNewPlaylistVideos,
-  partitionStandings,
-  toPlaylistVideos,
-} from '../lib/vgmcStandings.js';
+import { partitionStandings, toPlaylistVideos } from '../lib/vgmcStandings.js';
 
 function row(overrides) {
   return {
@@ -89,34 +85,5 @@ describe('partitionStandings', () => {
 
     expect(standings.map((r) => r.id)).toContain('a');
     expect(locked.map((r) => r.id)).toContain('a');
-  });
-});
-
-describe('mergeNewPlaylistVideos', () => {
-  it('appends only videos missing from the current playlist', () => {
-    const current = [{ videoId: 'aaa', title: 'A' }];
-    const fresh = [
-      { videoId: 'aaa', title: 'A (renamed)' },
-      { videoId: 'bbb', title: 'B' },
-    ];
-
-    expect(mergeNewPlaylistVideos(current, fresh)).toEqual([
-      { videoId: 'aaa', title: 'A' },
-      { videoId: 'bbb', title: 'B' },
-    ]);
-  });
-
-  it('never reorders or drops existing entries', () => {
-    const current = [
-      { videoId: 'ccc', title: 'C' },
-      { videoId: 'aaa', title: 'A' },
-    ];
-
-    const merged = mergeNewPlaylistVideos(current, []);
-    expect(merged).toEqual(current);
-  });
-
-  it('returns an empty array when given no current playlist and no fresh videos', () => {
-    expect(mergeNewPlaylistVideos(null, null)).toEqual([]);
   });
 });

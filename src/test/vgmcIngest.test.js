@@ -309,7 +309,7 @@ describe('foldThread', () => {
     expect(buildReconcileEntries(records)[0].video_id).toBe('aaaaaaaaaaa');
   });
 
-  it('one live vote per author — a later vote replaces, not stacks with, their earlier one', () => {
+  it("a later vote accumulates onto the same author's running total, not replaces it", () => {
     const records = foldThread([
       {
         postId: '1',
@@ -324,10 +324,119 @@ describe('foldThread', () => {
       { postId: '3', author: 'bob', text: '-- Game A | Song A | link' },
     ]);
 
-    // alice: +1, bob's vote replaced ++ (2) with -- (-2) -> total -1 overall.
-    // (Still present in the playlist itself — buildReconcileEntries only filters on
-    // presence, not score; the >1-point threshold is the standings view's job.)
-    expect(buildReconcileEntries(records)[0].support_points).toBe(-1);
+    // alice: +1. bob: ++ (2) then -- (-2) accumulate to a net 0, not a
+    // replacement down to -2 — bob effectively took his support back.
+    // Total: 1 + 0 = 1. (Still present in the playlist itself —
+    // buildReconcileEntries only filters on presence, not score; the >1-point
+    // threshold is the standings view's job.)
+    expect(buildReconcileEntries(records)[0].support_points).toBe(1);
+  });
+
+  it("a third '+' on top of an already-maxed pair from the same author is a no-op", () => {
+    const records = foldThread([
+      {
+        postId: '1',
+        author: 'alice',
+        text: '+ Game A | Song A | https://youtu.be/aaaaaaaaaaa',
+      },
+      {
+        postId: '2',
+        author: 'alice',
+        text: '+ Game A | Song A | https://youtu.be/aaaaaaaaaaa',
+      },
+      {
+        postId: '3',
+        author: 'alice',
+        text: '+ Game A | Song A | https://youtu.be/aaaaaaaaaaa',
+      },
+    ]);
+
+    // Two separate +'s already max alice out at 2 — a third contributes nothing.
+    expect(buildReconcileEntries(records)[0].support_points).toBe(2);
+  });
+
+  it('an author can never exceed 2 points total, however they get there', () => {
+    const viaTwoPlusRecords = foldThread([
+      {
+        postId: '1',
+        author: 'alice',
+        text: '+ Game A | Song A | https://youtu.be/aaaaaaaaaaa',
+      },
+      {
+        postId: '2',
+        author: 'alice',
+        text: '+ Game A | Song A | https://youtu.be/aaaaaaaaaaa',
+      },
+    ]);
+    const viaDoublePlusRecords = foldThread([
+      {
+        postId: '1',
+        author: 'alice',
+        text: '++ Game A | Song A | https://youtu.be/aaaaaaaaaaa',
+      },
+    ]);
+    const viaDoublePlusThenPlusRecords = foldThread([
+      {
+        postId: '1',
+        author: 'alice',
+        text: '++ Game A | Song A | https://youtu.be/aaaaaaaaaaa',
+      },
+      {
+        postId: '2',
+        author: 'alice',
+        text: '+ Game A | Song A | https://youtu.be/aaaaaaaaaaa',
+      },
+    ]);
+
+    expect(buildReconcileEntries(viaTwoPlusRecords)[0].support_points).toBe(2);
+    expect(buildReconcileEntries(viaDoublePlusRecords)[0].support_points).toBe(
+      2,
+    );
+    expect(
+      buildReconcileEntries(viaDoublePlusThenPlusRecords)[0].support_points,
+    ).toBe(2);
+  });
+
+  it('the same cap applies symmetrically on the negative side', () => {
+    const records = foldThread([
+      {
+        postId: '1',
+        author: 'alice',
+        text: '+ Game A | Song A | https://youtu.be/aaaaaaaaaaa',
+      },
+      // bob isn't the owner, so his '-'s are pure opposition votes, never removals.
+      { postId: '2', author: 'bob', text: '- Game A | Song A | link' },
+      { postId: '3', author: 'bob', text: '- Game A | Song A | link' },
+      { postId: '4', author: 'bob', text: '- Game A | Song A | link' },
+    ]);
+
+    // bob's three separate -1's cap at -2, not -3.
+    expect(buildReconcileEntries(records)[0].support_points).toBe(1 + -2);
+  });
+
+  it('a partial reversal that never hit the cap nets normally (+1, +1, -1 = 1)', () => {
+    const records = foldThread([
+      {
+        postId: '1',
+        author: 'alice',
+        text: '+ Game A | Song A | https://youtu.be/aaaaaaaaaaa',
+      },
+      {
+        postId: '2',
+        author: 'alice',
+        text: '+ Game A | Song A | https://youtu.be/aaaaaaaaaaa',
+      },
+      { postId: '3', author: 'alice', text: '- Game A | Song A | link' },
+    ]);
+
+    // alice is the owner, but this '-' is her second event on an already-'+'
+    // record — the authority rule only fires on a lone '-' as the very act
+    // that would flip present -> false; here it still does (owner, magnitude 1,
+    // present), so this also tombstones the record. Scoring still accumulates
+    // regardless: 1 + 1 - 1 = 1.
+    const record = records.get('game a|song a');
+    expect(record.present).toBe(false);
+    expect(supportPoints(record)).toBe(1);
   });
 
   it('"--" never removes the nomination, only affects its score', () => {
@@ -340,9 +449,11 @@ describe('foldThread', () => {
       { postId: '2', author: 'alice', text: '-- Game A | Song A | link' },
     ]);
 
-    // alice's own vote replaced (2 -> -2); still present, just below the >1 threshold
+    // alice's own total accumulates (2 + -2 = 0, clamped no-op); still present,
+    // just below the >1 threshold — '--' only ever affects score, never presence.
     const record = records.get('game a|song a');
     expect(record.present).toBe(true);
+    expect(supportPoints(record)).toBe(0);
   });
 });
 

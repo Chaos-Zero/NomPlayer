@@ -72,21 +72,3 @@ export function partitionStandings(rows) {
     locked: qualifying.filter((row) => row.supportPoints >= 7),
   };
 }
-
-/**
- * Refresh-safe merge for the app's main `playlist` state: appends videos present in
- * `freshVideos` but missing from `currentPlaylist` (by videoId); never removes or
- * reorders anything already there, so refreshing standings never interrupts
- * whatever's currently playing.
- */
-export function mergeNewPlaylistVideos(currentPlaylist, freshVideos) {
-  const existingIds = new Set(
-    (currentPlaylist || []).map((video) => video.videoId),
-  );
-  const additions = (freshVideos || []).filter(
-    (video) => video && video.videoId && !existingIds.has(video.videoId),
-  );
-
-  if (additions.length === 0) return currentPlaylist || [];
-  return [...(currentPlaylist || []), ...additions];
-}
