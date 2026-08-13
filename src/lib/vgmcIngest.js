@@ -2,8 +2,10 @@ import { parseYouTubeInput } from '../utils/youtube.js';
 
 // Server-side parser/fold for the GameFAQs VGMC nomination-thread convention:
 //
-//   + Game | Song | Link      adds (or updates the link of) a nomination
-//   - Game | Song | Link      removes a nomination
+//   + Game | Song | Link      adds (or updates the link of) a nomination; 1 support point
+//   ++ Game | Song | Link     same, but worth 2 support points (can also be the initial nomination)
+//   - Game | Song | Link      removes a nomination (owner only) and casts a -1 point vote
+//   -- Game | Song | Link     casts a -2 point vote; never removes
 //
 // This is the single place that convention lives. The browser extension is a dumb
 // extractor — it only ships {postId, author, text} per post — so a parsing fix or a
@@ -14,7 +16,7 @@ import { parseYouTubeInput } from '../utils/youtube.js';
 // content script before it reaches here. That's a DOM-structure concern the server
 // can't see, so it has to happen at extraction time, not here.
 
-const COMMAND_LINE_PATTERN = /^\s*([+-])\s*([^|]+)\|([^|]+)\|(.+)$/;
+const COMMAND_LINE_PATTERN = /^\s*([+-]{1,2})\s*([^|]+)\|([^|]+)\|(.+)$/;
 
 function normalizeText(value) {
   return (value || '').toLowerCase().trim().replace(/\s+/g, ' ');
@@ -33,10 +35,14 @@ export function extractVideoId(rawLink) {
 }
 
 /**
- * Parses a single line of post text as a nomination command.
+ * Parses a single line of post text as a nomination/support command. `sign` is the
+ * matched run's polarity ('+' or '-'); `value` is its signed point weight — ±1 for a
+ * single symbol, ±2 for a doubled one (the regex caps the run at two characters, so
+ * that's the natural ceiling — there's no `+++`).
+ *
  * Returns null for anything that isn't a well-formed command line — including a
- * '+' line whose link doesn't resolve to a YouTube video id, since you can't add a
- * song with no playable link.
+ * '+'/'++' line whose link doesn't resolve to a YouTube video id, since you can't
+ * nominate or support a song with no playable link.
  */
 export function parseCommandLine(line) {
   if (typeof line !== 'string') return null;
@@ -44,19 +50,25 @@ export function parseCommandLine(line) {
   const match = line.match(COMMAND_LINE_PATTERN);
   if (!match) return null;
 
-  const [, sign, rawGame, rawSong, rawLink] = match;
+  const [, signRun, rawGame, rawSong, rawLink] = match;
   const game = rawGame.trim();
   const song = rawSong.trim();
   if (!game || !song) return null;
+
+  const sign = signRun[0];
+  const magnitude = signRun.length;
+  const value = sign === '+' ? magnitude : -magnitude;
 
   const videoId = extractVideoId(rawLink);
   if (sign === '+' && !videoId) return null;
 
   return {
     sign,
+    magnitude,
+    value,
     game,
     song,
-    videoId, // may be null on a well-formed '-' line with a stale/invalid link
+    videoId, // may be null on a well-formed '-'/'--' line with a stale/invalid link
     sourceKey: normalizeKey(game, song),
   };
 }
@@ -71,22 +83,25 @@ function comparePostIds(a, b) {
 }
 
 /**
- * Replays every post in thread order (post 1 -> N) and folds nomination commands
- * into a final record set, keyed by normalized (game, song) identity.
+ * Replays every post in thread order (post 1 -> N) and folds nomination/support
+ * commands into a final record set, keyed by normalized (game, song) identity.
  *
- * Two rules make this work:
- *  - Authority rule: a '-' only removes a nomination if it comes from the same
- *    author who most recently affirmed it with a '+'. A '-' from anyone else, or on
- *    a key that isn't currently present, is a no-op for playlist purposes (it reads
- *    socially as a downvote, not a removal).
+ * Three rules make this work:
+ *  - Authority rule: only a single '-' (never '--') from the song's current owner
+ *    (the author of its most recent '+'/'++') removes it. Anything else with '-'
+ *    polarity is a vote, never a removal.
+ *  - One live vote per author: each author holds at most one vote per song — a
+ *    later +/++/-/-- from the same author on the same song replaces their previous
+ *    vote rather than stacking with it. This mirrors the site's own per-user support
+ *    records and means nobody can inflate or tank a song's score by reposting.
  *  - Ordinal stability: a key's `ordinal` is assigned once, the first time it's ever
- *    introduced, and is never reassigned — not even across removal. A later '+' pair
- *    that only changes the link updates the record in place; a removed-then-re-added
- *    song returns to its original slot.
+ *    introduced, and is never reassigned — not even across removal. Votes persist
+ *    across a removal/re-add too, for the same reason a tombstoned song keeps its
+ *    slot: the record's identity doesn't reset just because it's temporarily absent.
  *
  * Always replays from the full post set — never call this with a delta. Returns the
  * full record map (including tombstones); use buildReconcileEntries to get the
- * desired playlist order.
+ * desired playlist order plus each record's total support points.
  */
 export function foldThread(posts) {
   const records = new Map();
@@ -101,16 +116,31 @@ export function foldThread(posts) {
       const command = parseCommandLine(line);
       if (!command) continue;
 
-      const { sign, sourceKey, game, song, videoId } = command;
+      const { sign, magnitude, value, sourceKey, game, song, videoId } =
+        command;
       const existing = records.get(sourceKey);
 
       if (sign === '+') {
         if (existing) {
+          // Only the owner (the current nominator) can change what the record
+          // points at. Anyone else's '+'/'++' is pure support — it must not silently
+          // edit the link/game/song, and critically must not steal removal rights
+          // away from the person who actually nominated it (see the authority-rule
+          // regression this guards: a supporter's '++' used to reassign `owner` to
+          // themselves, which meant the original nominator could no longer remove
+          // their own nomination).  A fresh re-add of a tombstoned record is the one
+          // exception — whoever revives it becomes the new owner.
+          const wasAbsent = !existing.present;
+          const isOwnerAction = wasAbsent || existing.owner === post.author;
+
           existing.present = true;
-          existing.videoId = videoId;
-          existing.game = game;
-          existing.song = song;
-          existing.owner = post.author;
+          if (isOwnerAction) {
+            existing.videoId = videoId;
+            existing.game = game;
+            existing.song = song;
+            existing.owner = post.author;
+          }
+          existing.votes.set(post.author, value);
         } else {
           records.set(sourceKey, {
             sourceKey,
@@ -120,21 +150,37 @@ export function foldThread(posts) {
             present: true,
             owner: post.author,
             ordinal: nextOrdinal++,
+            votes: new Map([[post.author, value]]),
           });
         }
         continue;
       }
 
-      // sign === '-': authority rule — only the current owner can remove.
-      if (existing && existing.present && existing.owner === post.author) {
+      // sign === '-': nothing to vote on or remove if the song was never nominated.
+      if (!existing) continue;
+
+      // Authority rule — only a single '-' (magnitude 1) from the current owner
+      // removes. A '--' (magnitude 2) never removes, only votes.
+      if (
+        magnitude === 1 &&
+        existing.present &&
+        existing.owner === post.author
+      ) {
         existing.present = false;
       }
-      // TODO: once downvotes are wired to track_supports/feedback, record a
-      // non-owner '-' there instead of silently dropping it for playlist purposes.
+
+      existing.votes.set(post.author, value);
     }
   }
 
   return records;
+}
+
+/** Sums a record's per-author votes into its total support point count. */
+export function supportPoints(record) {
+  let total = 0;
+  for (const value of record.votes.values()) total += value;
+  return total;
 }
 
 /** Maps a folded record set to the ordered payload reconcile_vgmc_playlist expects. */
@@ -147,5 +193,6 @@ export function buildReconcileEntries(records) {
       video_id: record.videoId,
       game: record.game,
       song: record.song,
+      support_points: supportPoints(record),
     }));
 }

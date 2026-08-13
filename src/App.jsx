@@ -17,6 +17,125 @@ function ModalPortal({ children }) {
   if (!target) return null;
   return createPortal(children, target);
 }
+
+// Persistent VGMC/NomPlayer page switch — shown on every page (not just the VGMC
+// view itself) so it's always available, not just a one-way trip in from Settings.
+// One button that always names *where clicking it takes you*, not where you are.
+function VgmcNavToggle({ isOnVgmcPage, onNavigate }) {
+  const label = isOnVgmcPage ? 'NomPlayer' : 'VGMC 20';
+  const target = isOnVgmcPage ? 'home' : 'vgmcStandings';
+
+  return (
+    <div style={{ position: 'relative', display: 'inline-flex' }}>
+      {/* Soft light-blue glow, base site only (i.e. while the button reads "VGMC
+          20" and is inviting you in) — draws the eye without being the same purple
+          used for hover/press feedback. Gone once you're already on the VGMC page. */}
+      {!isOnVgmcPage && (
+        <div className="vgmc-toggle-attention-glow" aria-hidden="true" />
+      )}
+      <button
+        type="button"
+        className="vgmc-toggle-btn"
+        onClick={() => onNavigate(target)}
+        style={{ position: 'relative', zIndex: 1 }}
+      >
+        {label}
+      </button>
+    </div>
+  );
+}
+
+// Mobile-only slide-in drawer for the VGMC standings table. On mobile the VGMC page
+// otherwise behaves exactly like the classic player page (see the isMobileLayout
+// check around isVgmcStandingsPage below) — the desktop side-by-side column doesn't
+// fit a phone screen, so standings live behind this drawer instead.
+function VgmcStandingsDrawer({
+  isOpen,
+  onClose,
+  rows,
+  isLoading,
+  onRefresh,
+  onPlayNow,
+}) {
+  return (
+    <>
+      {isOpen && (
+        <div
+          className="modal-backdrop"
+          role="presentation"
+          onClick={onClose}
+          style={{
+            zIndex: 1700,
+            alignItems: 'stretch',
+            justifyContent: 'flex-start',
+            padding: 0,
+          }}
+        />
+      )}
+      <div
+        style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          height: '100%',
+          width: 'min(85vw, 360px)',
+          background: 'var(--bg-card)',
+          borderRight: '1px solid var(--border)',
+          zIndex: 1701,
+          transform: isOpen ? 'translateX(0)' : 'translateX(-100%)',
+          transition: 'transform 0.25s ease',
+          display: 'flex',
+          flexDirection: 'column',
+          boxShadow: isOpen ? '4px 0 24px rgba(0, 0, 0, 0.35)' : 'none',
+        }}
+        aria-hidden={!isOpen}
+      >
+        {/* Fades out quickly (0.12s) on its own, well before the panel's slower
+            0.25s slide-out finishes — content disappears before the drawer
+            withdraws, instead of visibly dragging text off-screen with it. */}
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            height: '100%',
+            minHeight: 0,
+            opacity: isOpen ? 1 : 0,
+            transition: 'opacity 0.12s ease',
+          }}
+        >
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: '12px 16px',
+              borderBottom: '1px solid var(--border)',
+            }}
+          >
+            <strong style={{ color: 'var(--text)' }}>VGMC 20 Standings</strong>
+            <button
+              className="btn-close"
+              type="button"
+              onClick={onClose}
+              aria-label="Close standings"
+              title="Close standings"
+            >
+              ✕
+            </button>
+          </div>
+          <div style={{ flex: '1 1 auto', minHeight: 0 }}>
+            <VgmcStandingsView
+              rows={rows}
+              isLoading={isLoading}
+              onRefresh={onRefresh}
+              onPlayNow={onPlayNow}
+            />
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
 import VideoPlayer from './components/VideoPlayer.jsx';
 import PlaylistSidebar from './components/PlaylistSidebar.jsx';
 import FavouritesPanel from './components/FavouritesPanel.jsx';
@@ -33,6 +152,8 @@ import SupportLevelDropdown from './components/SupportLevelDropdown.jsx';
 import ExportVgmcModal from './components/ExportVgmcModal.jsx';
 import DeleteAccountConfirmDialog from './components/DeleteAccountConfirmDialog.jsx';
 import FooterFeedbackPanel from './components/FooterFeedbackPanel.jsx';
+import VgmcStandingsView from './components/VgmcStandingsView.jsx';
+import { DotLottieReact } from '@lottiefiles/dotlottie-react';
 const TrackDatabase = lazy(() => import('./components/TrackDatabase.jsx'));
 import useMediaQuery from './hooks/useMediaQuery.js';
 import {
@@ -79,6 +200,11 @@ import {
 } from './lib/trackCatalog.js';
 import { fetchUserFeedback } from './lib/feedback.js';
 import { fetchDashboardNominationUpdates } from './lib/dashboard.js';
+import {
+  fetchVgmcPlaylistTracks,
+  mergeNewPlaylistVideos,
+  toPlaylistVideos,
+} from './lib/vgmcStandings.js';
 import { reportError } from './lib/errorReporter.js';
 import { getSupabaseClient, isSupabaseConfigured } from './lib/supabase.js';
 import {
@@ -110,6 +236,11 @@ const AUTH_SYNC_IDLE_MS = 1800;
 const AUTH_SYNC_STORAGE_KEY_PREFIX = 'yt_auth_sync';
 const THEME_STORAGE_KEY = 'nom-theme';
 const SIDEBAR_VIEW_STORAGE_KEY = 'nom-active-sidebar-view';
+// Pages that show the classic player page's full VideoPlayer + persistent sidebar
+// chrome (see isPlayerLikePage). Used both for render-time layout decisions and
+// inside handleNavigate's page-transition animation logic.
+const PLAYER_LIKE_PAGES = new Set(['player', 'vgmcStandings']);
+const VGMC_PLAYLIST_ID = import.meta.env.VITE_VGMC_PLAYLIST_ID || '';
 
 function loadStoredList(storageKey, fallbackKey = null) {
   try {
@@ -503,6 +634,23 @@ export default function App() {
   );
   const supportListRef = useRef(supportList);
   const nominationListRef = useRef(nominationList);
+
+  // VGMC standings view — see src/lib/vgmcStandings.js. `hasLoadedVgmcPlaylistRef`/
+  // `hasAutoNavigatedToVgmcRef` survive the view unmounting (switching back to the
+  // Classic tab), which is why "load once per session" lives here as refs rather
+  // than as local state inside VgmcStandingsView.
+  const [vgmcStandingsRows, setVgmcStandingsRows] = useState([]);
+  const [isVgmcStandingsLoading, setIsVgmcStandingsLoading] = useState(false);
+  const [isVgmcStandingsDrawerOpen, setIsVgmcStandingsDrawerOpen] =
+    useState(false);
+  // Distinct from isVgmcStandingsLoading, which also covers Refresh — this one only
+  // ever flips true once, after the very first load finishes, and drives the
+  // full-view loading overlay (Refresh keeps its lighter button-only feedback).
+  const [hasVgmcLoadedOnce, setHasVgmcLoadedOnce] = useState(false);
+  const hasLoadedVgmcPlaylistRef = useRef(false);
+  const hasAutoNavigatedToVgmcRef = useRef(false);
+  // handleLoadVgmcPlaylist/handleRefreshVgmcPlaylist are defined further down, right
+  // after handlePlayCommunityPlaylist — they build on it, so they live near it.
 
   useEffect(() => {
     supportListRef.current = supportList;
@@ -1971,9 +2119,27 @@ export default function App() {
   const isPlayerPage = activePage === 'player';
   const isDatabasePage = activePage === 'database';
   const isListExplorerPage = activePage === 'listExplorer';
+  // The VGMC standings page reuses the classic player page's full VideoPlayer +
+  // persistent sidebar chrome (see PLAYER_LIKE_PAGES in handleNavigate for the
+  // matching navigation-animation treatment) — it just adds a standings table above
+  // it, rendered separately below. Everywhere the player page's layout/chrome used to
+  // key off `isPlayerPage` alone now keys off `isPlayerLikePage` instead.
+  const isVgmcStandingsPage = activePage === 'vgmcStandings';
+  const isPlayerLikePage = isPlayerPage || isVgmcStandingsPage;
+  // Desktop shows standings as a side-by-side column; mobile behaves exactly like
+  // the classic player page (isPlayerLikePage) and gets a slide-in drawer instead
+  // (see VgmcStandingsDrawer) — there's no room for a permanent side column there.
+  const isVgmcSplitLayout = isVgmcStandingsPage && !isMobileLayout;
+
+  useEffect(() => {
+    if (!isVgmcStandingsPage) {
+      setIsVgmcStandingsDrawerOpen(false);
+    }
+  }, [isVgmcStandingsPage]);
   const dbCacheRef = useRef({ tracks: [], selectedVideoId: null });
-  const shouldRenderDesktopPlaylistOverlay = !isMobileLayout && !isPlayerPage;
-  const effectivePlaylistCollapsed = isPlayerPage
+  const shouldRenderDesktopPlaylistOverlay =
+    !isMobileLayout && !isPlayerLikePage;
+  const effectivePlaylistCollapsed = isPlayerLikePage
     ? isPlaylistCollapsed
     : !isDesktopOverlayPlaylistOpen;
 
@@ -3655,6 +3821,73 @@ export default function App() {
     [currentVideoIdRef, markVideoStarted, transientVideo],
   );
 
+  // Loads the VGMC nomination playlist the same way viewing any other public
+  // playlist works: activePlaylistView/playingPlaylistView + a transient "now
+  // playing" video (handlePlayCommunityPlaylist, above). This deliberately does
+  // *not* touch `playlist` — that's the user's own saved queue, and viewing/playing
+  // the VGMC standings must never overwrite it. Leaving the VGMC view (Classic tab,
+  // or playing something else) falls back to whatever the user actually had queued,
+  // the same way leaving any community playlist already does.
+  const handleLoadVgmcPlaylist = useCallback(async () => {
+    // Loads once per session — after that, only the explicit Refresh button re-syncs.
+    if (hasLoadedVgmcPlaylistRef.current) return;
+    hasLoadedVgmcPlaylistRef.current = true;
+
+    if (!supabase || !VGMC_PLAYLIST_ID) {
+      // Nothing to load — don't leave the full-view loading overlay stuck up.
+      setHasVgmcLoadedOnce(true);
+      return;
+    }
+
+    setIsVgmcStandingsLoading(true);
+    try {
+      const rows = await fetchVgmcPlaylistTracks(supabase, VGMC_PLAYLIST_ID);
+      setVgmcStandingsRows(rows);
+      const videos = toPlaylistVideos(rows);
+      if (videos.length > 0) {
+        handlePlayCommunityPlaylist(videos, {
+          id: VGMC_PLAYLIST_ID,
+          name: 'VGMC 20 Nominations',
+        });
+      }
+    } catch (error) {
+      reportError('Load VGMC playlist', error);
+    } finally {
+      setIsVgmcStandingsLoading(false);
+      setHasVgmcLoadedOnce(true);
+    }
+  }, [supabase, handlePlayCommunityPlaylist]);
+
+  const handleRefreshVgmcPlaylist = useCallback(async () => {
+    if (!supabase || !VGMC_PLAYLIST_ID) return;
+
+    setIsVgmcStandingsLoading(true);
+    try {
+      const rows = await fetchVgmcPlaylistTracks(supabase, VGMC_PLAYLIST_ID);
+      setVgmcStandingsRows(rows);
+      const freshVideos = toPlaylistVideos(rows);
+
+      // Merge in place — only appends newly-synced tracks to the VGMC view, never
+      // resets which track is playing or reorders anything. If the VGMC view isn't
+      // the active/playing view right now, leave those alone entirely; the fresh
+      // rows are still reflected in the standings table via vgmcStandingsRows.
+      const mergeIntoVgmcView = (view) =>
+        view?.type === 'community-playlist' && view.id === VGMC_PLAYLIST_ID
+          ? {
+              ...view,
+              videos: mergeNewPlaylistVideos(view.videos, freshVideos),
+            }
+          : view;
+
+      setActivePlaylistView(mergeIntoVgmcView);
+      setPlayingPlaylistView(mergeIntoVgmcView);
+    } catch (error) {
+      reportError('Refresh VGMC playlist', error);
+    } finally {
+      setIsVgmcStandingsLoading(false);
+    }
+  }, [supabase]);
+
   const handlePlayCommunityList = useCallback(
     (userId) => {
       const communityUser = communityNominations.find(
@@ -5000,7 +5233,7 @@ export default function App() {
   }, []);
 
   const shouldShowDetachedFooter =
-    !isPlayerPage && Boolean(currentVideo) && isPlaying;
+    !isPlayerLikePage && Boolean(currentVideo) && isPlaying;
   const previousDetachedFooterIntentRef = useRef(shouldShowDetachedFooter);
 
   useEffect(() => {
@@ -5064,17 +5297,24 @@ export default function App() {
 
   const handleNavigate = useCallback(
     (nextPage) => {
+      // The VGMC standings page gets the same player-reveal/detached-footer
+      // animation treatment as the classic player page (see isPlayerLikePage above)
+      // since it reuses the same full VideoPlayer + persistent sidebar chrome.
+      const isNextPagePlayerLike = PLAYER_LIKE_PAGES.has(nextPage);
+      const isCurrentPagePlayerLike = PLAYER_LIKE_PAGES.has(
+        activePageRef.current,
+      );
       const shouldAnimateDetachedFooter =
-        nextPage !== 'player' &&
-        activePageRef.current === 'player' &&
+        !isNextPagePlayerLike &&
+        isCurrentPagePlayerLike &&
         Boolean(currentVideoIdRef.current) &&
         isPlayingRef.current;
       const shouldAnimatePlayerReveal =
-        nextPage === 'player' &&
+        isNextPagePlayerLike &&
         !isMobileLayout &&
         Boolean(currentVideoIdRef.current);
 
-      if (nextPage === 'player' && !isMobileLayout && !isPlaylistCollapsed) {
+      if (isNextPagePlayerLike && !isMobileLayout && !isPlaylistCollapsed) {
         if (restoreTransitionFrameRef.current) {
           window.cancelAnimationFrame(restoreTransitionFrameRef.current);
         }
@@ -5120,7 +5360,7 @@ export default function App() {
       setActivePage(nextPage);
       setIsFeedbackPanelOpen(false);
       setIsMobileNavOpen(false);
-      if (!isMobileLayout && nextPage !== 'player') {
+      if (!isMobileLayout && !isNextPagePlayerLike) {
         setIsDesktopOverlayPlaylistOpen(false);
       }
 
@@ -5145,19 +5385,40 @@ export default function App() {
     ],
   );
 
+  // VGMC 20 is the default landing page for everyone for now (not gated on any
+  // per-user setting) — fires once per session, and never fights a deep link or
+  // the user's own later navigation back to Classic, since it only ever fires
+  // while still on the default 'home' page.
+  //
+  // The site loads into the normal home page first, behind a full-screen loading
+  // overlay (see hasVgmcLoadedOnce below) — navigation to the VGMC page itself only
+  // happens *after* the playlist has fully loaded, not before. Mounting the VGMC
+  // page's tree while data was still arriving was the source of it rendering blank —
+  // deferring the page switch until everything's ready sidesteps that entirely.
+  useEffect(() => {
+    if (hasAutoNavigatedToVgmcRef.current) return;
+    if (!VGMC_PLAYLIST_ID) return;
+    if (activePageRef.current !== 'home') return;
+
+    hasAutoNavigatedToVgmcRef.current = true;
+    handleLoadVgmcPlaylist().then(() => {
+      handleNavigate('vgmcStandings');
+    });
+  }, [handleNavigate, handleLoadVgmcPlaylist]);
+
   const handleTogglePlaylist = useCallback(() => {
     // If we're on the dashboard/other home views, we toggle the Desktop Overlay state
-    if (!isPlayerPage) {
+    if (!isPlayerLikePage) {
       setIsDesktopOverlayPlaylistOpen((prev) => !prev);
       // Ensure it's never starting in a collapsed state when opened from here
       setIsPlaylistCollapsed(false);
     } else {
-      // If we're on the player page, we just toggle the regular collapse state
+      // If we're on the player (or VGMC) page, we just toggle the regular collapse state
       setIsPlaylistCollapsed((prev) => !prev);
     }
     // ensure we are looking at personal view
     setActivePlaylistView({ type: 'personal' });
-  }, [isPlayerPage]);
+  }, [isPlayerLikePage]);
 
   // True when playing from a named list; false for one-off "play now" transients.
   const isPlayingFromList =
@@ -5209,13 +5470,13 @@ export default function App() {
   // activePlaylistView is already set to the correct type when a list plays,
   // so we only need to open/uncollapse the sidebar here.
   const handleOpenPlayingList = useCallback(() => {
-    if (!isPlayerPage) {
+    if (!isPlayerLikePage) {
       setIsDesktopOverlayPlaylistOpen(true);
       setIsPlaylistCollapsed(false);
     } else {
       setIsPlaylistCollapsed(false);
     }
-  }, [isPlayerPage]);
+  }, [isPlayerLikePage]);
 
   const handleNavigateToPlayer = useCallback(() => {
     handleNavigate('player');
@@ -5245,10 +5506,11 @@ export default function App() {
 
   const shellIsCollapsed =
     isPlaylistCollapsed ||
-    !isPlayerPage ||
+    !isPlayerLikePage ||
     isDatabasePage ||
     isListExplorerPage;
-  const shouldRenderPersistentPlayer = isPlayerPage || Boolean(currentVideo);
+  const shouldRenderPersistentPlayer =
+    isPlayerLikePage || Boolean(currentVideo);
   const canTogglePlayback = Boolean(transientVideo) || playlist.length > 0;
   const isCurrentlyBecomingDetached =
     shouldShowDetachedFooter &&
@@ -5262,7 +5524,7 @@ export default function App() {
     (!isDetachedFooterPending || isActuallySettling);
   const isDesktopDetachedFooter = hasDetachedFooter && !isMobileLayout;
   const isMobileDetachedFooter = hasDetachedFooter && isMobileLayout;
-  const playerPresentation = isPlayerPage
+  const playerPresentation = isPlayerLikePage
     ? isPlayerRevealPending
       ? 'hidden'
       : 'full'
@@ -5331,7 +5593,7 @@ export default function App() {
         isCurrentVideoInPlaylist={isCurrentVideoInPlaylist}
         onAddToPlaylist={handleQueueFromSupportList}
         variant={playerPresentation}
-        showMetadata={isPlayerPage}
+        showMetadata={isPlayerLikePage}
         playingListLabel={playingListLabel}
         onOpenPlayingList={handleOpenPlayingList}
         supabase={supabase}
@@ -5513,6 +5775,27 @@ export default function App() {
 
   return (
     <div className={`app-frame${isMobileLayout ? ' mobile' : ''}`}>
+      {VGMC_PLAYLIST_ID && !hasVgmcLoadedOnce && (
+        // Full-screen splash while the default VGMC 20 landing loads — the site
+        // mounts into the normal home page underneath this the whole time; we only
+        // navigate to the VGMC page (see the auto-navigate effect above) once
+        // loading is completely done, and this comes down at the same moment.
+        <div
+          className="database-loading-overlay initial"
+          style={{ position: 'fixed', inset: 0, zIndex: 2000 }}
+        >
+          <div className="lottie-player-container">
+            <DotLottieReact
+              src="/loading.lottie"
+              autoplay
+              loop
+              style={{ width: 'min(220px, 70vw)', height: 'min(220px, 70vw)' }}
+            />
+          </div>
+          <div className="database-loading-text">Loading VGMC 20…</div>
+        </div>
+      )}
+
       {!isMobileLayout && (
         <SiteNavigation
           activePage={activePage}
@@ -5536,7 +5819,7 @@ export default function App() {
       )}
 
       <div
-        className={`app-shell${shellIsCollapsed ? ' playlist-collapsed' : ''}${isPlayerPage ? '' : ' home-view'}${suppressPlaylistRestoreTransition ? ' playlist-transitionless' : ''}`}
+        className={`app-shell${shellIsCollapsed ? ' playlist-collapsed' : ''}${isPlayerLikePage ? '' : ' home-view'}${suppressPlaylistRestoreTransition ? ' playlist-transitionless' : ''}`}
       >
         <TopBar
           theme={theme}
@@ -5544,7 +5827,7 @@ export default function App() {
           isPlaying={isPlaying}
           hidePlaybackControls={
             isPlaying &&
-            activePage !== 'player' &&
+            !isPlayerLikePage &&
             !isMobileLayout &&
             !showSupportList &&
             !showNominationsList
@@ -5607,7 +5890,7 @@ export default function App() {
           supabase={supabase}
           onCatalogPlayNow={handlePlayCatalogTrack}
           onAddCatalogToPlaylist={handleQueueFromSupportList}
-          isPlayerPage={isPlayerPage}
+          isPlayerPage={isPlayerLikePage}
           hasMobileDetachedPlayer={isMobileDetachedFooter}
           isMobileDetachedPlayerEntering={
             isMobileDetachedFooter && isDetachedFooterEntering
@@ -5632,136 +5915,276 @@ export default function App() {
         />
 
         <main
-          className={`main-content${isPlayerPage ? ' player-view' : isDatabasePage || isListExplorerPage ? ' home-view' : ' home-view'}${isListExplorerPage ? ' list-explorer-view' : ''}${!isPlayerPage && isLogoutTransitioning ? ' logout-fade-in' : ''}${hasDetachedFooter && !isPlayerPage ? ' has-persistent-player' : ''}`}
+          className={`main-content${isPlayerLikePage ? ' player-view' : isDatabasePage || isListExplorerPage ? ' home-view' : ' home-view'}${isListExplorerPage ? ' list-explorer-view' : ''}${!isPlayerLikePage && isLogoutTransitioning ? ' logout-fade-in' : ''}${hasDetachedFooter && !isPlayerLikePage ? ' has-persistent-player' : ''}`}
           id="main-content"
         >
-          {!isPlayerPage && !isDatabasePage && !isListExplorerPage && (
-            <HomePage
-              supabase={supabase}
-              authUser={authUser}
-              isAuthReady={isAuthReady}
-              currentPlaylist={playlist}
-              supportStatusById={supportStatusById}
-              globalActivityByVideoId={globalActivityByVideoId}
-              listenedStatusById={listenedStatusById}
-              isFeedbackPanelOpen={isFeedbackPanelOpen}
-              onAddToPlaylist={handleQueueFromSupportList}
-              onPlayNow={handlePlayNowFromSupportList}
-              onPlayPlaylist={handlePlayCommunityPlaylist}
-              onToggleSupport={handleToggleSupportFromPlaylist}
-              onToggleNomination={handleToggleNominationFromPlaylist}
-              onOpenSupportDropdown={(video, position) =>
-                setSupportLevelDropdown({
-                  video,
-                  position,
-                  direction: 'down',
-                  showRemove: false,
-                })
-              }
-              onShowComments={handleShowComments}
-              onNavigateToPlayer={handleNavigateToPlayer}
-              onNavigateToExplorer={handleNavigateToExplorer}
-              onNavigateToCommunityPlaylists={
-                handleNavigateToCommunityPlaylists
-              }
-              onNavigateToExplorerComments={handleNavigateToExplorerComments}
-              onNavigateToDatabase={handleNavigateToDatabase}
-              onOpenPlaylist={handleTogglePlaylist}
-              onOpenNominationsAdding={handleOpenNominationsWithHighlight}
-              onShowToast={(message) =>
-                showDefaultAppToast(message, 'dashboard')
-              }
-              onUpdateMetadata={handleOpenMetadataUpdate}
-              catalogMetadata={catalogTrackByVideoId}
-              lastMetadataUpdateBatch={lastMetadataUpdateBatch}
-              onPlayCommunityListFromTrack={handlePlayCommunityListFromTrack}
-              onPlayFromNominationList={handlePlayFromNominationList}
-              onPlayFromSupportList={handlePlayFromSupportList}
-              userProfile={userProfile}
-              nominationList={nominationList}
-              onNominationsLoaded={handleNominationsLoaded}
-              nominationRefreshToken={nominationRefreshToken}
-              customPlaylists={customPlaylists}
-              onUpdateCustomPlaylists={setCustomPlaylists}
-            />
-          )}
-
-          {isDatabasePage && (
-            <Suspense fallback={null}>
-              <TrackDatabase
-                supabase={supabase}
-                authUser={authUser}
-                onAddToPlaylist={handleQueueFromSupportList}
-                onPlayNow={handlePlayNowFromSupportList}
-                onShowToast={handleShowDashboardToast}
-                hasPlayer={Boolean(currentVideo)}
-                listenedStatusById={listenedStatusById}
-                onRefreshFeedback={refreshUserFeedback}
-                onTrackSaved={(trackId, updates) => {
-                  applyUpdatesToList(trackId, updates);
+          {/*
+            main-content is `display: flex` with no flex-direction set, i.e. a row
+            (see .main-content / .main-content.player-view in index.css) — that was
+            never a problem when the player was its only real child. Now that a
+            persistent nav toggle (and, on the VGMC page, a standings table) needs to
+            stack *above* that content instead of sitting beside it, everything below
+            is wrapped in one explicit flex-column container. main-content's own
+            row/stretch rules then apply to just this single wrapper (harmless — a
+            lone flex child fills the box the same way regardless of direction), and
+            this wrapper controls the real internal stacking.
+          */}
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              width: '100%',
+              height: '100%',
+              minHeight: 0,
+            }}
+          >
+            {VGMC_PLAYLIST_ID && (
+              // Normal flow — reserves its own row so every page's content (the
+              // hero, the VGMC split, etc.) renders below it, never under it.
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  padding: '12px 16px',
+                  position: 'relative',
                 }}
-                onUpdateMetadata={handleOpenMetadataUpdate}
-                onToggleNomination={handleToggleNominationFromPlaylist}
-                onOpenSupportDropdown={(video, position) =>
-                  setSupportLevelDropdown({ video, position })
-                }
-                initialTracks={dbCacheRef.current.tracks}
-                initialSelectedVideoId={dbCacheRef.current.selectedVideoId}
-                onUnmount={(tracks, selectedVideoId) => {
-                  dbCacheRef.current = { tracks, selectedVideoId };
-                }}
-                onFeedbackSaved={handleFeedbackSaved}
-                customPlaylists={customPlaylists}
-                onUpdateCustomPlaylists={setCustomPlaylists}
-              />
-            </Suspense>
-          )}
+              >
+                {/* Centered regardless of whether the mobile Standings trigger
+                    (pinned to the left, below) is present. */}
+                <VgmcNavToggle
+                  isOnVgmcPage={isVgmcStandingsPage}
+                  onNavigate={handleNavigate}
+                />
+                {isMobileLayout && isVgmcStandingsPage && (
+                  <button
+                    type="button"
+                    className="vgmc-toggle-btn"
+                    onClick={() => setIsVgmcStandingsDrawerOpen(true)}
+                    style={{ position: 'absolute', left: '16px' }}
+                  >
+                    Standings
+                  </button>
+                )}
+              </div>
+            )}
 
-          {activePage === 'listExplorer' && (
-            <ListExplorer
-              playlist={playlist}
-              supportList={supportList}
-              nominationList={nominationList}
-              customPlaylists={customPlaylists}
-              onUpdatePlaylist={setPlaylist}
-              onUpdateSupportList={setSupportList}
-              onUpdateNominationList={setNominationList}
-              onUpdateCustomPlaylists={setCustomPlaylists}
-              onPlayNow={(video) => handlePlayNowFromSupportList(video)}
-              onAddToPlaylist={(videos) => handleQueueFromSupportList(videos)}
-              onRemoveFromPlaylist={handleRemoveFromPlaylist}
-              onToggleSupport={handleToggleSupportFromPlaylist}
-              onToggleNomination={handleToggleNominationFromPlaylist}
-              onShowToast={handleShowDashboardToast}
-              authUser={authUser}
-              userProfile={userProfile}
-              supabase={supabase}
-              onUpdateMetadata={handleOpenMetadataUpdate}
-              onOpenSupportDropdown={(video, position) =>
-                setSupportLevelDropdown({
-                  video,
-                  position,
-                  direction: 'down',
-                  showRemove: false,
-                })
-              }
-              onExport={handleOpenExportModal}
-              onSavePlaylist={handleCreateYTPlaylist}
-              onPlayExplorerList={handlePlayExplorerList}
-              onPlayCommunityListFromTrack={handlePlayCommunityListFromTrack}
-              onPlayCommunityPlaylist={handlePlayCommunityPlaylist}
-              catalogTrackByVideoId={catalogTrackByVideoId}
-              initialView={explorerInitialView}
-              onRefreshFeedback={refreshUserFeedback}
-              refreshKey={feedbackRefreshKey}
-              onShowComments={handleShowComments}
-              onFeedbackSaved={handleFeedbackSaved}
-            />
-          )}
-          {persistentPlayer}
+            {/*
+              One flex container for every page's main content + the player,
+              flexDirection toggling row/column for the VGMC split — deliberately
+              *not* two separately-branched trees like this used to be. Each
+              possible child is `key`ed and conditionally rendered side-by-side in
+              the same container, so the persistent-player child (key
+              "persistent-player") stays the same node across every navigation
+              (Home <-> VGMC, VGMC desktop <-> mobile, etc.) instead of being
+              unmounted and remounted — that unmount was what silently reloaded
+              (restarted) playback whenever you switched to or from this page.
+            */}
+            <div
+              style={{
+                flex: '1 1 auto',
+                minHeight: 0,
+                display: 'flex',
+                flexDirection: isVgmcSplitLayout ? 'row' : 'column',
+                width: '100%',
+                position: 'relative',
+              }}
+            >
+              {isVgmcSplitLayout && (
+                <div
+                  key="vgmc-standings"
+                  style={{
+                    width: '33%',
+                    minWidth: '280px',
+                    maxWidth: '420px',
+                    flexShrink: 0,
+                    borderRight: '1px solid var(--border)',
+                    overflow: 'hidden',
+                    display: 'flex',
+                  }}
+                >
+                  <VgmcStandingsView
+                    rows={vgmcStandingsRows}
+                    isLoading={isVgmcStandingsLoading}
+                    onRefresh={handleRefreshVgmcPlaylist}
+                    onPlayNow={handlePlayNowFromSupportList}
+                  />
+                </div>
+              )}
+
+              {!isPlayerLikePage && !isDatabasePage && !isListExplorerPage && (
+                <div key="home-page" style={{ flex: '1 1 auto', minHeight: 0 }}>
+                  <HomePage
+                    supabase={supabase}
+                    authUser={authUser}
+                    isAuthReady={isAuthReady}
+                    currentPlaylist={playlist}
+                    supportStatusById={supportStatusById}
+                    globalActivityByVideoId={globalActivityByVideoId}
+                    listenedStatusById={listenedStatusById}
+                    isFeedbackPanelOpen={isFeedbackPanelOpen}
+                    onAddToPlaylist={handleQueueFromSupportList}
+                    onPlayNow={handlePlayNowFromSupportList}
+                    onPlayPlaylist={handlePlayCommunityPlaylist}
+                    onToggleSupport={handleToggleSupportFromPlaylist}
+                    onToggleNomination={handleToggleNominationFromPlaylist}
+                    onOpenSupportDropdown={(video, position) =>
+                      setSupportLevelDropdown({
+                        video,
+                        position,
+                        direction: 'down',
+                        showRemove: false,
+                      })
+                    }
+                    onShowComments={handleShowComments}
+                    onNavigateToPlayer={handleNavigateToPlayer}
+                    onNavigateToExplorer={handleNavigateToExplorer}
+                    onNavigateToCommunityPlaylists={
+                      handleNavigateToCommunityPlaylists
+                    }
+                    onNavigateToExplorerComments={
+                      handleNavigateToExplorerComments
+                    }
+                    onNavigateToDatabase={handleNavigateToDatabase}
+                    onOpenPlaylist={handleTogglePlaylist}
+                    onOpenNominationsAdding={handleOpenNominationsWithHighlight}
+                    onShowToast={(message) =>
+                      showDefaultAppToast(message, 'dashboard')
+                    }
+                    onUpdateMetadata={handleOpenMetadataUpdate}
+                    catalogMetadata={catalogTrackByVideoId}
+                    lastMetadataUpdateBatch={lastMetadataUpdateBatch}
+                    onPlayCommunityListFromTrack={
+                      handlePlayCommunityListFromTrack
+                    }
+                    onPlayFromNominationList={handlePlayFromNominationList}
+                    onPlayFromSupportList={handlePlayFromSupportList}
+                    userProfile={userProfile}
+                    nominationList={nominationList}
+                    onNominationsLoaded={handleNominationsLoaded}
+                    nominationRefreshToken={nominationRefreshToken}
+                    customPlaylists={customPlaylists}
+                    onUpdateCustomPlaylists={setCustomPlaylists}
+                  />
+                </div>
+              )}
+
+              {isDatabasePage && (
+                <div
+                  key="database-page"
+                  style={{ flex: '1 1 auto', minHeight: 0 }}
+                >
+                  <Suspense fallback={null}>
+                    <TrackDatabase
+                      supabase={supabase}
+                      authUser={authUser}
+                      onAddToPlaylist={handleQueueFromSupportList}
+                      onPlayNow={handlePlayNowFromSupportList}
+                      onShowToast={handleShowDashboardToast}
+                      hasPlayer={Boolean(currentVideo)}
+                      listenedStatusById={listenedStatusById}
+                      onRefreshFeedback={refreshUserFeedback}
+                      onTrackSaved={(trackId, updates) => {
+                        applyUpdatesToList(trackId, updates);
+                      }}
+                      onUpdateMetadata={handleOpenMetadataUpdate}
+                      onToggleNomination={handleToggleNominationFromPlaylist}
+                      onOpenSupportDropdown={(video, position) =>
+                        setSupportLevelDropdown({ video, position })
+                      }
+                      initialTracks={dbCacheRef.current.tracks}
+                      initialSelectedVideoId={
+                        dbCacheRef.current.selectedVideoId
+                      }
+                      onUnmount={(tracks, selectedVideoId) => {
+                        dbCacheRef.current = { tracks, selectedVideoId };
+                      }}
+                      onFeedbackSaved={handleFeedbackSaved}
+                      customPlaylists={customPlaylists}
+                      onUpdateCustomPlaylists={setCustomPlaylists}
+                    />
+                  </Suspense>
+                </div>
+              )}
+
+              {activePage === 'listExplorer' && (
+                <div
+                  key="list-explorer-page"
+                  style={{ flex: '1 1 auto', minHeight: 0 }}
+                >
+                  <ListExplorer
+                    playlist={playlist}
+                    supportList={supportList}
+                    nominationList={nominationList}
+                    customPlaylists={customPlaylists}
+                    onUpdatePlaylist={setPlaylist}
+                    onUpdateSupportList={setSupportList}
+                    onUpdateNominationList={setNominationList}
+                    onUpdateCustomPlaylists={setCustomPlaylists}
+                    onPlayNow={(video) => handlePlayNowFromSupportList(video)}
+                    onAddToPlaylist={(videos) =>
+                      handleQueueFromSupportList(videos)
+                    }
+                    onRemoveFromPlaylist={handleRemoveFromPlaylist}
+                    onToggleSupport={handleToggleSupportFromPlaylist}
+                    onToggleNomination={handleToggleNominationFromPlaylist}
+                    onShowToast={handleShowDashboardToast}
+                    authUser={authUser}
+                    userProfile={userProfile}
+                    supabase={supabase}
+                    onUpdateMetadata={handleOpenMetadataUpdate}
+                    onOpenSupportDropdown={(video, position) =>
+                      setSupportLevelDropdown({
+                        video,
+                        position,
+                        direction: 'down',
+                        showRemove: false,
+                      })
+                    }
+                    onExport={handleOpenExportModal}
+                    onSavePlaylist={handleCreateYTPlaylist}
+                    onPlayExplorerList={handlePlayExplorerList}
+                    onPlayCommunityListFromTrack={
+                      handlePlayCommunityListFromTrack
+                    }
+                    onPlayCommunityPlaylist={handlePlayCommunityPlaylist}
+                    catalogTrackByVideoId={catalogTrackByVideoId}
+                    initialView={explorerInitialView}
+                    onRefreshFeedback={refreshUserFeedback}
+                    refreshKey={feedbackRefreshKey}
+                    onShowComments={handleShowComments}
+                    onFeedbackSaved={handleFeedbackSaved}
+                  />
+                </div>
+              )}
+
+              {shouldRenderPersistentPlayer && (
+                <div
+                  key="persistent-player"
+                  className={
+                    isVgmcSplitLayout ? 'vgmc-player-column' : undefined
+                  }
+                  style={{ flex: '1 1 auto', minHeight: 0, display: 'flex' }}
+                >
+                  {persistentPlayer}
+                </div>
+              )}
+            </div>
+          </div>
         </main>
 
-        {(isPlayerPage || shouldRenderDesktopPlaylistOverlay) && (
+        {isMobileLayout && isVgmcStandingsPage && (
+          <VgmcStandingsDrawer
+            isOpen={isVgmcStandingsDrawerOpen}
+            onClose={() => setIsVgmcStandingsDrawerOpen(false)}
+            rows={vgmcStandingsRows}
+            isLoading={isVgmcStandingsLoading}
+            onRefresh={handleRefreshVgmcPlaylist}
+            onPlayNow={handlePlayNowFromSupportList}
+          />
+        )}
+
+        {(isPlayerLikePage || shouldRenderDesktopPlaylistOverlay) && (
           <aside
             className={`sidebar app-sidebar${effectivePlaylistCollapsed ? ' collapsed' : ''}${shouldRenderDesktopPlaylistOverlay ? ' overlay-sidebar' : ''}`}
           >
@@ -5777,7 +6200,7 @@ export default function App() {
               onShuffle={handleShufflePlaylist}
               onTogglePreview={handleTogglePreviewMode}
               onToggleCollapse={() => {
-                if (isPlayerPage) {
+                if (isPlayerLikePage) {
                   setIsPlaylistCollapsed((previousValue) => !previousValue);
                   return;
                 }

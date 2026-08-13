@@ -13,8 +13,9 @@
   "host_permissions": [
     "https://gamefaqs.gamespot.com/*",
     "https://*.supabase.co/*",
-    "https://nomplayer.app/*",
-    "http://localhost:8788/*"
+    "https://nomplayer.foldedcal.zone/*",
+    "http://localhost:8788/*",
+    "http://127.0.0.1:54321/*"
   ],
   "background": {
     "scripts": ["config.js", "storage.js", "supabase-auth.js", "background.js"]

@@ -1,7 +1,106 @@
 {
-  "exportedAt": "2026-05-11T00:32:39.333Z",
+  "exportedAt": "2026-08-13T14:22:43.981Z",
   "totalCount": 8,
   "users": [
+    {
+      "user_id": "0cd5abff-9c4d-47b7-90f4-d0482144ee8a",
+      "username": "dc:acireexists",
+      "avatar_url": "https://cdn.discordapp.com/avatars/206514649947045889/1512b3760adc9c33ce64cc8904dc38b7.png",
+      "gamefaqs_username": null,
+      "updated_at": "2026-08-02T04:10:32.984959+00:00",
+      "nominations": [
+        {
+          "title": "Sonic Rush - Wrapped in Black",
+          "trackId": "1b1ed054-b19e-467e-9d39-9465bab086fb",
+          "videoId": "Ed-lHZqYIt8",
+          "gameTitle": "Sonic Rush",
+          "trackTitle": "Wrapped in Black",
+          "channelTitle": "Sonic's Mixtapes",
+          "displayTitle": "Sonic Rush - Wrapped in Black"
+        },
+        {
+          "title": "Mario Kart World - Rainbow Road",
+          "trackId": "d790ed24-52b3-4b47-a57b-11f2f58ee515",
+          "videoId": "IVb08Dp1zLo",
+          "gameTitle": "Mario Kart World",
+          "trackTitle": "Rainbow Road",
+          "channelTitle": "SupraDarky",
+          "displayTitle": "Mario Kart World - Rainbow Road"
+        },
+        {
+          "title": "Minecraft - Dreiton",
+          "trackId": "ed9dc56d-3137-41ec-a957-472ff64fe5de",
+          "videoId": "VRYs-QfdToc",
+          "gameTitle": "Minecraft",
+          "trackTitle": "Dreiton",
+          "channelTitle": "C418 - Topic",
+          "displayTitle": "Minecraft - Dreiton"
+        },
+        {
+          "title": "beatmania IIDX 29 CastHour - Nocturnal 2097 (Long Version)",
+          "trackId": "3771d5fc-54f6-4971-b71c-de76b6352c5b",
+          "videoId": "6hIrbIo01qk",
+          "gameTitle": "beatmania IIDX 29 CastHour",
+          "trackTitle": "Nocturnal 2097 (Long Version)",
+          "channelTitle": "StyleK226",
+          "displayTitle": "beatmania IIDX 29 CastHour - Nocturnal 2097 (Long Version)"
+        },
+        {
+          "title": "Risk of Rain 2: Alloyed Collective - We'll Rain Together",
+          "trackId": "6f27435d-1d01-47b1-b3db-6eb6c905db94",
+          "videoId": "NOlfXpHX56A",
+          "gameTitle": "Risk of Rain 2: Alloyed Collective",
+          "trackTitle": "We'll Rain Together",
+          "channelTitle": "Stavros Markonis",
+          "displayTitle": "Risk of Rain 2: Alloyed Collective - We'll Rain Together"
+        },
+        {
+          "title": "Clannad - Snowfield",
+          "trackId": "e5c9ace4-b462-439b-bf61-7bb7b79b8d98",
+          "videoId": "Eexl6s4Nbts",
+          "gameTitle": "Clannad",
+          "trackTitle": "Snowfield",
+          "channelTitle": "VISUAL ARTS / Key - Topic",
+          "displayTitle": "Clannad - Snowfield"
+        },
+        {
+          "title": "The Legend of Heroes: Trails to Azure - The Azure Arbitrator",
+          "trackId": "f0b65476-cdb6-46d5-b7a7-576ffc51b1b6",
+          "videoId": "ycyWkb6Zmak",
+          "gameTitle": "The Legend of Heroes: Trails to Azure",
+          "trackTitle": "The Azure Arbitrator",
+          "channelTitle": "Falcom Sound Team jdk - Topic",
+          "displayTitle": "The Legend of Heroes: Trails to Azure - The Azure Arbitrator"
+        },
+        {
+          "title": "DISSIDIA 012 [duodecim] FINAL FANTASY - 「God in Fire」",
+          "trackId": "13d91292-e406-4d6d-b1a4-c4af20c25fe6",
+          "videoId": "HqqySYvxH4w",
+          "gameTitle": "DISSIDIA 012 [duodecim] FINAL FANTASY",
+          "trackTitle": "「God in Fire」",
+          "channelTitle": "Takeharu Ishimoto - Topic",
+          "displayTitle": "DISSIDIA 012 [duodecim] FINAL FANTASY - 「God in Fire」"
+        },
+        {
+          "title": "DELTARUNE - Garden of Hopes and Dreams",
+          "trackId": "4f865264-0f55-402f-9553-7299eef74d29",
+          "videoId": "7rJWMSYNBU8",
+          "gameTitle": "DELTARUNE",
+          "trackTitle": "Garden of Hopes and Dreams",
+          "channelTitle": null,
+          "displayTitle": "DELTARUNE - Garden of Hopes and Dreams"
+        },
+        {
+          "title": "Airport CEO - Aerodynamics",
+          "trackId": "b70cd37b-d7aa-4e04-a5ab-d89b14010389",
+          "videoId": "1qaMG6aKAzo",
+          "gameTitle": "Airport CEO",
+          "trackTitle": "Aerodynamics",
+          "channelTitle": null,
+          "displayTitle": "Airport CEO - Aerodynamics"
+        }
+      ]
+    },
     {
       "user_id": "018e71e8-6cc8-43c2-8f50-3fd2f7c52fca",
       "username": "dc:ten8097",
@@ -179,105 +278,6 @@
           "trackTitle": "Misty Er'A ~One Day~ (Extended Ver.)",
           "channelTitle": "Mycin.T - Topic",
           "displayTitle": "DJMAX RESPECT V - Misty Er'A ~One Day~ (Extended Ver.)"
-        }
-      ]
-    },
-    {
-      "user_id": "0cd5abff-9c4d-47b7-90f4-d0482144ee8a",
-      "username": "dc:acireexists",
-      "avatar_url": "https://cdn.discordapp.com/avatars/206514649947045889/1512b3760adc9c33ce64cc8904dc38b7.png",
-      "gamefaqs_username": null,
-      "updated_at": "2026-05-01T03:41:01.841425+00:00",
-      "nominations": [
-        {
-          "title": "Sonic Rush - Wrapped in Black",
-          "trackId": "1b1ed054-b19e-467e-9d39-9465bab086fb",
-          "videoId": "Ed-lHZqYIt8",
-          "gameTitle": "Sonic Rush",
-          "trackTitle": "Wrapped in Black",
-          "channelTitle": "Sonic's Mixtapes",
-          "displayTitle": "Sonic Rush - Wrapped in Black"
-        },
-        {
-          "title": "Mario Kart World - Rainbow Road",
-          "trackId": "d790ed24-52b3-4b47-a57b-11f2f58ee515",
-          "videoId": "IVb08Dp1zLo",
-          "gameTitle": "Mario Kart World",
-          "trackTitle": "Rainbow Road",
-          "channelTitle": "SupraDarky",
-          "displayTitle": "Mario Kart World - Rainbow Road"
-        },
-        {
-          "title": "Minecraft - Dreiton",
-          "trackId": "ed9dc56d-3137-41ec-a957-472ff64fe5de",
-          "videoId": "VRYs-QfdToc",
-          "gameTitle": "Minecraft",
-          "trackTitle": "Dreiton",
-          "channelTitle": "C418 - Topic",
-          "displayTitle": "Minecraft - Dreiton"
-        },
-        {
-          "title": "beatmania IIDX 29 CastHour - Nocturnal 2097 (Long Version)",
-          "trackId": "3771d5fc-54f6-4971-b71c-de76b6352c5b",
-          "videoId": "6hIrbIo01qk",
-          "gameTitle": "beatmania IIDX 29 CastHour",
-          "trackTitle": "Nocturnal 2097 (Long Version)",
-          "channelTitle": "StyleK226",
-          "displayTitle": "beatmania IIDX 29 CastHour - Nocturnal 2097 (Long Version)"
-        },
-        {
-          "title": "Risk of Rain 2: Alloyed Collective - We'll Rain Together",
-          "trackId": "6f27435d-1d01-47b1-b3db-6eb6c905db94",
-          "videoId": "NOlfXpHX56A",
-          "gameTitle": "Risk of Rain 2: Alloyed Collective",
-          "trackTitle": "We'll Rain Together",
-          "channelTitle": "Stavros Markonis",
-          "displayTitle": "Risk of Rain 2: Alloyed Collective - We'll Rain Together"
-        },
-        {
-          "title": "Clannad - Snowfield",
-          "trackId": "e5c9ace4-b462-439b-bf61-7bb7b79b8d98",
-          "videoId": "Eexl6s4Nbts",
-          "gameTitle": "Clannad",
-          "trackTitle": "Snowfield",
-          "channelTitle": "VISUAL ARTS / Key - Topic",
-          "displayTitle": "Clannad - Snowfield"
-        },
-        {
-          "title": "The Legend of Heroes: Trails to Azure - The Azure Arbitrator",
-          "trackId": "f0b65476-cdb6-46d5-b7a7-576ffc51b1b6",
-          "videoId": "ycyWkb6Zmak",
-          "gameTitle": "The Legend of Heroes: Trails to Azure",
-          "trackTitle": "The Azure Arbitrator",
-          "channelTitle": "Falcom Sound Team jdk - Topic",
-          "displayTitle": "The Legend of Heroes: Trails to Azure - The Azure Arbitrator"
-        },
-        {
-          "title": "Marvel's Guardians of the Galaxy - The Darkness Inside",
-          "trackId": "c3dc74b7-6220-42ad-85c8-0f0cac8f1399",
-          "videoId": "JiSjrTFPm2M",
-          "gameTitle": "Marvel's Guardians of the Galaxy",
-          "trackTitle": "The Darkness Inside",
-          "channelTitle": "Star-Lord Band - Topic",
-          "displayTitle": "Marvel's Guardians of the Galaxy - The Darkness Inside"
-        },
-        {
-          "title": "DISSIDIA 012 [duodecim] FINAL FANTASY - 「God in Fire」",
-          "trackId": "13d91292-e406-4d6d-b1a4-c4af20c25fe6",
-          "videoId": "HqqySYvxH4w",
-          "gameTitle": "DISSIDIA 012 [duodecim] FINAL FANTASY",
-          "trackTitle": "「God in Fire」",
-          "channelTitle": "Takeharu Ishimoto - Topic",
-          "displayTitle": "DISSIDIA 012 [duodecim] FINAL FANTASY - 「God in Fire」"
-        },
-        {
-          "title": "Pizza Tower - Thousand March",
-          "trackId": "0090408e-5b92-43f9-9600-8bf3216969d9",
-          "videoId": "tF_4kmMgKoQ",
-          "gameTitle": "Pizza Tower",
-          "trackTitle": "Thousand March",
-          "channelTitle": "Mr. Sauceman - Topic",
-          "displayTitle": "Pizza Tower - Thousand March"
         }
       ]
     },

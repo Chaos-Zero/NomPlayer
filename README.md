@@ -48,6 +48,13 @@ syncing GameFAQs VGMC nomination threads into a playlist — it's not part of th
 counterpart is `functions/api/vgmc-ingest.js`, documented in
 [`functions/README.md`](functions/README.md).
 
+The GameFAQs thread convention scores support too (`++`/`--` are worth 2 points,
+`+`/`-` are worth 1 — see `src/lib/vgmcIngest.js`), and that score powers a live
+standings homepage view (`src/components/VgmcStandingsView.jsx`). It needs
+`VITE_VGMC_PLAYLIST_ID` set (the bot-owned playlist the ingest pipeline writes to).
+The view itself is opt-in per account for now — toggle "Land on the live VGMC 20
+standings view" in Account Settings.
+
 ## Supabase Workflow
 
 This repo now manages Supabase schema changes as code with the Supabase CLI.

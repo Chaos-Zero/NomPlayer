@@ -6,12 +6,14 @@
 self.NOMPLAYER_VGMC_CONFIG = {
   // Same values as this repo's VITE_SUPABASE_URL / VITE_SUPABASE_PUBLISHABLE_KEY.
   // Safe to embed — this is the public anon key, not a secret.
-  SUPABASE_URL: 'https://your-project.supabase.co',
-  SUPABASE_ANON_KEY: 'your_publishable_key_here',
+  // Local Supabase (`npm run supabase:start`): http://127.0.0.1:54321 with the
+  // anon key `supabase status` prints.
+  SUPABASE_URL: 'https://irdhrrfjuwmcytavqrre.supabase.co',
+  SUPABASE_ANON_KEY: 'sb_publishable_rxgRd6_U--3UbjWrhEJSEA_SrXanmj4', // gitleaks:allow — public/publishable key, not a secret
 
   // Where the site's ingest endpoint lives. Use http://localhost:8788 when running
-  // `wrangler pages dev` locally.
-  API_BASE_URL: 'https://nomplayer.app',
+  // `wrangler pages dev dist` locally instead.
+  API_BASE_URL: 'https://nomplayer.foldedcal.zone',
 
   // Which vgmc_ingest_threads row this build feeds. Must match a thread_slug seeded
   // in Supabase (see the "Manual one-time setup" note in the migration). One contest

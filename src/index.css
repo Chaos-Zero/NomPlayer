@@ -5028,6 +5028,25 @@ body {
   position: relative;
 }
 
+/* VGMC page: the player sits in a narrower column (see App.jsx's
+   isVgmcStandingsPage), not the full-width classic layout .player-wrap's min-height
+   is sized for — that min-height (calculated off the fixed 900px --player-max-w
+   reference) was forcing empty space above the video here. Scoped to this page only;
+   the classic player page never gets the vgmc-player-column class. */
+.vgmc-player-column .player-wrap {
+  min-height: 0;
+}
+
+/* .player-grid-top-spacer deliberately grows (flex: 1 1 0px) to vertically-center
+   the video within the classic page's taller layout — that's the actual remaining
+   cause of the video not sitting at the top here. Collapse it to zero in this
+   column only; .player-bottom-content-wrapper (flex: 1 1 0px) still absorbs the
+   leftover space below the video/comments as normal. */
+.vgmc-player-column .player-grid-top-spacer {
+  flex: 0 0 0px;
+  min-height: 0;
+}
+
 .player-wrap-full {
   height: 100%;
   width: 100% !important;
@@ -16712,4 +16731,139 @@ body.is-resizing .resize-handle {
 .cpd-btn-confirm:disabled {
   opacity: 0.4;
   cursor: not-allowed;
+}
+
+/* VGMC nav toggle + mobile standings-drawer trigger (see App.jsx). It floats over
+   whatever's underneath it (a page's hero background, video, etc. — see the
+   position:absolute wrapper in App.jsx), so its resting state needs real contrast
+   against *any* of those, not just a plain neutral fill: a translucent glass pill
+   with a light border reads clearly everywhere, and stays reserved for hover to go
+   full purple. Pseudo-classes need a real CSS class rather than React inline styles. */
+.vgmc-toggle-btn {
+  padding: 8px 18px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  background: rgba(18, 14, 34, 0.6);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.35);
+  transition:
+    background 0.18s ease,
+    border-color 0.18s ease,
+    box-shadow 0.18s ease,
+    transform 0.12s ease;
+}
+
+.vgmc-toggle-btn:hover {
+  background: var(--accent, #6d5efc);
+  border-color: var(--accent, #6d5efc);
+  box-shadow:
+    0 0 0 4px rgba(109, 94, 252, 0.22),
+    0 4px 18px rgba(0, 0, 0, 0.35);
+}
+
+.vgmc-toggle-btn:active {
+  transform: scale(0.94);
+  box-shadow:
+    0 0 0 6px rgba(109, 94, 252, 0.3),
+    0 4px 18px rgba(0, 0, 0, 0.35);
+}
+
+/* Attention glow behind the toggle on the base site (see VgmcNavToggle) — a light
+   blue deliberately distinct from the purple hover/press states, so it reads as
+   "notice this" rather than as interaction feedback. */
+.vgmc-toggle-attention-glow {
+  position: absolute;
+  inset: -34px;
+  border-radius: 999px;
+  background: radial-gradient(
+    circle,
+    rgba(96, 200, 255, 0.36) 0%,
+    rgba(96, 200, 255, 0.16) 45%,
+    rgba(96, 200, 255, 0.05) 70%,
+    transparent 90%
+  );
+  filter: blur(4px);
+  pointer-events: none;
+  animation: vgmc-toggle-glow-pulse 2.4s ease-in-out infinite;
+}
+
+@keyframes vgmc-toggle-glow-pulse {
+  0%,
+  100% {
+    opacity: 0.6;
+    transform: scale(0.96);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.04);
+  }
+}
+
+/* Standings table (VgmcStandingsView) play-now button — a dedicated per-row button
+   rather than the whole row being clickable. */
+.vgmc-standings-play-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  color: var(--text);
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease,
+    transform 0.12s ease;
+}
+
+.vgmc-standings-play-btn svg {
+  width: 12px;
+  height: 12px;
+}
+
+.vgmc-standings-play-btn:hover {
+  background: var(--accent, #6d5efc);
+  border-color: var(--accent, #6d5efc);
+  color: #fff;
+}
+
+.vgmc-standings-play-btn:active {
+  transform: scale(0.88);
+}
+
+/* Mobile: standings live in a full-width drawer (see VgmcStandingsDrawer), so
+   there's room to size the table up for readability rather than keeping the
+   cramped desktop-column sizing. */
+@media (max-width: 960px) {
+  .vgmc-standings-table {
+    font-size: 15px;
+  }
+
+  .vgmc-standings-table th {
+    font-size: 13px;
+  }
+
+  .vgmc-standings-table td {
+    padding: 10px 8px;
+  }
+
+  .vgmc-standings-play-btn {
+    width: 34px;
+    height: 34px;
+  }
+
+  .vgmc-standings-play-btn svg {
+    width: 14px;
+    height: 14px;
+  }
 }

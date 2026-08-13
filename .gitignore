@@ -36,3 +36,6 @@ public/NomPlayer_crumb3.png
 public/Nomplayer_icon_full.png
 # src/data/catalogSnapshot.json (now committed)
 # (snapshot files being committed)
+
+# Local Wrangler/Miniflare dev-runtime state (wrangler pages dev)
+.wrangler/

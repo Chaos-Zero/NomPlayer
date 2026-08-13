@@ -164,6 +164,7 @@ export async function onRequestPost(context) {
   return jsonResponse({
     acceptedPosts: ingestResult.accepted,
     playlistSize: reconcileResult.playlistSize,
+    skippedVideoConflicts: reconcileResult.skippedVideoConflicts || 0,
     updatedAt: new Date().toISOString(),
   });
 }

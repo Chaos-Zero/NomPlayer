@@ -5,6 +5,7 @@ import {
   foldThread,
   normalizeKey,
   parseCommandLine,
+  supportPoints,
 } from '../lib/vgmcIngest.js';
 
 describe('normalizeKey', () => {
@@ -35,6 +36,8 @@ describe('parseCommandLine', () => {
       ),
     ).toEqual({
       sign: '+',
+      magnitude: 1,
+      value: 1,
       game: 'Zelda',
       song: 'Song of Storms',
       videoId: 'abc12345678',
@@ -56,6 +59,22 @@ describe('parseCommandLine', () => {
     expect(
       parseCommandLine('+ Zelda | Song of Storms | not a link'),
     ).toBeNull();
+  });
+
+  it('parses a doubled "++" as magnitude 2', () => {
+    expect(
+      parseCommandLine(
+        '++ Zelda | Song of Storms | https://www.youtube.com/watch?v=abc12345678',
+      ),
+    ).toMatchObject({ sign: '+', magnitude: 2, value: 2 });
+  });
+
+  it('parses a doubled "--" as magnitude 2, negative', () => {
+    expect(parseCommandLine('-- Zelda | Song of Storms | link')).toMatchObject({
+      sign: '-',
+      magnitude: 2,
+      value: -2,
+    });
   });
 
   it('rejects lines missing a pipe-delimited field', () => {
@@ -91,6 +110,7 @@ describe('foldThread', () => {
         video_id: 'abc12345678',
         game: 'Zelda',
         song: 'Song of Storms',
+        support_points: 1,
       },
     ]);
   });
@@ -215,5 +235,127 @@ describe('foldThread', () => {
     ]);
 
     expect(buildReconcileEntries(records)).toEqual([]);
+  });
+
+  it('a plain nomination starts at 1 support point, ++ starts at 2', () => {
+    const plusRecords = foldThread([
+      {
+        postId: '1',
+        author: 'alice',
+        text: '+ Game A | Song A | https://youtu.be/aaaaaaaaaaa',
+      },
+    ]);
+    const doublePlusRecords = foldThread([
+      {
+        postId: '1',
+        author: 'alice',
+        text: '++ Game B | Song B | https://youtu.be/bbbbbbbbbbb',
+      },
+    ]);
+
+    expect(buildReconcileEntries(plusRecords)[0].support_points).toBe(1);
+    expect(buildReconcileEntries(doublePlusRecords)[0].support_points).toBe(2);
+  });
+
+  it("sums other authors' votes on top of the nominator's", () => {
+    const records = foldThread([
+      {
+        postId: '1',
+        author: 'alice',
+        text: '+ Game A | Song A | https://youtu.be/aaaaaaaaaaa',
+      },
+      {
+        postId: '2',
+        author: 'bob',
+        text: '++ Game A | Song A | https://youtu.be/aaaaaaaaaaa',
+      },
+    ]);
+
+    expect(buildReconcileEntries(records)[0].support_points).toBe(3);
+  });
+
+  it("a supporter's ++ never steals removal rights from the original nominator", () => {
+    const records = foldThread([
+      {
+        postId: '1',
+        author: 'alice',
+        text: '+ Game A | Song A | https://youtu.be/aaaaaaaaaaa',
+      },
+      {
+        postId: '2',
+        author: 'bob',
+        text: '++ Game A | Song A | https://youtu.be/aaaaaaaaaaa',
+      },
+      { postId: '3', author: 'alice', text: '- Game A | Song A | link' },
+    ]);
+
+    expect(buildReconcileEntries(records)).toEqual([]);
+  });
+
+  it("a supporter's ++ never edits the record's link/game/song", () => {
+    const records = foldThread([
+      {
+        postId: '1',
+        author: 'alice',
+        text: '+ Game A | Song A | https://youtu.be/aaaaaaaaaaa',
+      },
+      {
+        postId: '2',
+        author: 'bob',
+        text: '++ Game A | Song A | https://youtu.be/bbbbbbbbbbb',
+      },
+    ]);
+
+    expect(buildReconcileEntries(records)[0].video_id).toBe('aaaaaaaaaaa');
+  });
+
+  it('one live vote per author — a later vote replaces, not stacks with, their earlier one', () => {
+    const records = foldThread([
+      {
+        postId: '1',
+        author: 'alice',
+        text: '+ Game A | Song A | https://youtu.be/aaaaaaaaaaa',
+      },
+      {
+        postId: '2',
+        author: 'bob',
+        text: '++ Game A | Song A | https://youtu.be/aaaaaaaaaaa',
+      },
+      { postId: '3', author: 'bob', text: '-- Game A | Song A | link' },
+    ]);
+
+    // alice: +1, bob's vote replaced ++ (2) with -- (-2) -> total -1 overall.
+    // (Still present in the playlist itself — buildReconcileEntries only filters on
+    // presence, not score; the >1-point threshold is the standings view's job.)
+    expect(buildReconcileEntries(records)[0].support_points).toBe(-1);
+  });
+
+  it('"--" never removes the nomination, only affects its score', () => {
+    const records = foldThread([
+      {
+        postId: '1',
+        author: 'alice',
+        text: '++ Game A | Song A | https://youtu.be/aaaaaaaaaaa',
+      },
+      { postId: '2', author: 'alice', text: '-- Game A | Song A | link' },
+    ]);
+
+    // alice's own vote replaced (2 -> -2); still present, just below the >1 threshold
+    const record = records.get('game a|song a');
+    expect(record.present).toBe(true);
+  });
+});
+
+describe('supportPoints', () => {
+  it('sums every vote in a record', () => {
+    const record = {
+      votes: new Map([
+        ['alice', 1],
+        ['bob', 2],
+        ['carol', -1],
+      ]),
+    };
+
+    expect(supportPoints(record)).toBe(2);
   });
 });

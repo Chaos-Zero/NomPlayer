@@ -7,6 +7,7 @@ import {
 } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import App from '../App.jsx';
+import { fetchVgmcPlaylistTracks } from '../lib/vgmcStandings.js';
 
 const appTestState = vi.hoisted(() => ({
   topBarProps: null,
@@ -151,6 +152,20 @@ vi.mock('../lib/supabase.js', () => {
   };
 });
 
+// The mocked supabase client above resolves every call almost immediately, which
+// would make the VGMC 20 auto-navigate effect (App.jsx) fire during every single
+// test in this file, not just the ones about it — breaking assumptions in tests
+// that have nothing to do with VGMC. Default to a promise that never resolves, so
+// activePage stays on 'home' unless a test explicitly opts in with
+// `vi.mocked(fetchVgmcPlaylistTracks).mockResolvedValueOnce(...)`.
+vi.mock('../lib/vgmcStandings.js', async (importOriginal) => {
+  const actual = await importOriginal();
+  return {
+    ...actual,
+    fetchVgmcPlaylistTracks: vi.fn(() => new Promise(() => {})),
+  };
+});
+
 vi.mock('../lib/feedback.js', () => ({
   fetchCommunityFeedback: vi.fn().mockResolvedValue([]),
   upsertUserFeedback: vi.fn().mockResolvedValue({ error: null }),
@@ -222,6 +237,38 @@ describe('App', () => {
     } else {
       delete window.matchMedia;
     }
+  });
+
+  it('loads behind the home page, then switches to VGMC 20 once it is ready', async () => {
+    let resolveFetch;
+    vi.mocked(fetchVgmcPlaylistTracks).mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolveFetch = resolve;
+        }),
+    );
+
+    render(<App />);
+
+    // The site is mounted into the normal home page underneath the whole time —
+    // the loading overlay sits on top of it, not instead of it.
+    expect(screen.getByText('Discover')).toBeInTheDocument();
+    expect(screen.getByText('Loading VGMC 20…')).toBeInTheDocument();
+
+    await act(async () => {
+      resolveFetch([]);
+      await Promise.resolve();
+    });
+
+    // Only once loading actually finishes does it switch to the VGMC page — the
+    // toggle names where clicking it takes you, so "NomPlayer" confirms we're on
+    // the VGMC page now.
+    await waitFor(() => {
+      expect(
+        screen.getByRole('button', { name: 'NomPlayer' }),
+      ).toBeInTheDocument();
+    });
+    expect(screen.queryByText('Loading VGMC 20…')).not.toBeInTheDocument();
   });
 
   it('shows the dashboard sections by default', () => {

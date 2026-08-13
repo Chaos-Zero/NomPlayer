@@ -1377,7 +1377,7 @@ export default function PlaylistSidebar({
             </div>
           </div>
         )}
-        {!isCollapsed && renderAddControl()}
+        {!isCollapsed && !isReadOnlyView && renderAddControl()}
       </div>
     );
   }
@@ -1599,7 +1599,7 @@ export default function PlaylistSidebar({
           )}
         </div>
       )}
-      {!isCollapsed && renderAddControl()}
+      {!isCollapsed && !isReadOnlyView && renderAddControl()}
       {contextMenu && (
         <ContextMenuPortal
           x={contextMenu.left}

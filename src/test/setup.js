@@ -10,6 +10,15 @@ globalThis.ResizeObserver = class {
   disconnect = vi.fn();
 };
 
+// Mock IntersectionObserver which is not available in JSDOM — needed by
+// @lottiefiles/dotlottie-react (used for loading-state animations).
+globalThis.IntersectionObserver = class {
+  constructor() {}
+  observe = vi.fn();
+  unobserve = vi.fn();
+  disconnect = vi.fn();
+};
+
 afterEach(() => {
   cleanup();
 });
