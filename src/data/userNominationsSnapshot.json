@@ -1,7 +1,133 @@
 {
-  "exportedAt": "2026-08-13T14:24:56.858Z",
+  "exportedAt": "2026-08-13T20:50:09.849Z",
   "totalCount": 8,
   "users": [
+    {
+      "user_id": "6452d560-7b18-4e7b-8a22-208e09bddc28",
+      "username": "dc:CalzoneB",
+      "avatar_url": "https://images-ext-1.discordapp.net/external/y2Co85kS3Mh3VsdtU2Ac44E2zDM5BfkXeE-zi-5a4FQ/%3Fsize%3D1024/https/cdn.discordapp.com/avatars/268487608680579072/783e089fb3fbb4d845543e17a35ada0e.webp?format=webp&width=745&height=745",
+      "gamefaqs_username": "-Chaos-Zero-",
+      "updated_at": "2026-08-13T20:25:35.917548+00:00",
+      "nominations": [
+        {
+          "title": "Tekken Tag Tournament 2 - School (After School Mix)",
+          "trackId": "9fbeb722-e4dc-444d-bf10-a9b3d96bcc7e",
+          "videoId": "1knbBEEPpig",
+          "gameTitle": "Tekken Tag Tournament 2",
+          "trackTitle": "School (After School Mix)",
+          "channelTitle": null,
+          "displayTitle": "Tekken Tag Tournament 2 - School (After School Mix)"
+        },
+        {
+          "title": "Swarmlake - Swarmlake",
+          "trackId": "8335ba95-8aa6-404a-bc75-3206b1d130fa",
+          "videoId": "YljDiA_Rp1Q",
+          "gameTitle": "Swarmlake",
+          "trackTitle": "Swarmlake",
+          "channelTitle": "Singto Conley",
+          "displayTitle": "Swarmlake - Swarmlake"
+        },
+        {
+          "title": "Alpine Racer 3 - Sunset Rush",
+          "trackId": "cf28aae8-594e-45d9-aa93-c70b9dddf719",
+          "videoId": "KHzlU0GUCh4",
+          "gameTitle": "Alpine Racer 3",
+          "trackTitle": "Sunset Rush",
+          "channelTitle": null,
+          "displayTitle": "Alpine Racer 3 - Sunset Rush"
+        },
+        {
+          "title": "Shovel Knight Dig - One Person's Trash (Magic Landfill)",
+          "trackId": "e7de51d3-a4e4-4eba-928c-c420f81bc110",
+          "videoId": "nNnp6KhYkvU",
+          "gameTitle": "Shovel Knight Dig",
+          "trackTitle": "One Person's Trash (Magic Landfill)",
+          "channelTitle": null,
+          "displayTitle": "Shovel Knight Dig - One Person's Trash (Magic Landfill)"
+        },
+        {
+          "title": "Astro Bot - Marine Serene",
+          "trackId": "1cd881cf-343e-4fa7-abcf-a00a78c885fa",
+          "videoId": "TZ9x6FP8BNw",
+          "gameTitle": "Astro Bot",
+          "trackTitle": "Marine Serene",
+          "channelTitle": "Scraic",
+          "displayTitle": "Astro Bot - Marine Serene"
+        },
+        {
+          "title": "Ape Escape 3 - Mount Amazing 2",
+          "trackId": "dd089c59-8094-4879-8ea6-cce89f3c4ace",
+          "videoId": "XYi-zuFRGUE",
+          "gameTitle": "Ape Escape 3",
+          "trackTitle": "Mount Amazing 2",
+          "channelTitle": "Soichi Terada - Topic",
+          "displayTitle": "Ape Escape 3 - Mount Amazing 2"
+        },
+        {
+          "title": "Hyper Light Breaker - Apocalyptic Blues Paean",
+          "trackId": "a35849f4-4482-4a2b-b7ed-e5b97a418717",
+          "videoId": "qfSRCzeiQ0I",
+          "gameTitle": "Hyper Light Breaker",
+          "trackTitle": "Apocalyptic Blues Paean",
+          "channelTitle": "Scraic",
+          "displayTitle": "Hyper Light Breaker - Apocalyptic Blues Paean"
+        },
+        {
+          "title": "Satisfactory - Nostalgium",
+          "trackId": "1af05484-738d-4e80-b046-b70393917613",
+          "videoId": "PPS7fiGA1iI",
+          "gameTitle": "Satisfactory",
+          "trackTitle": "Nostalgium",
+          "channelTitle": "Bartek888_888",
+          "displayTitle": "Satisfactory - Nostalgium"
+        },
+        {
+          "title": "Jetpack Joyride - Main Theme",
+          "trackId": "9425f368-9c1f-424c-8964-0f47e989a52b",
+          "videoId": "MiUjLJJligs",
+          "gameTitle": "Jetpack Joyride",
+          "trackTitle": "Main Theme",
+          "channelTitle": "Halfbrick Studios",
+          "displayTitle": "Jetpack Joyride - Main Theme"
+        },
+        {
+          "title": "Dicey Dungeons: Reunion - Just Roll With It",
+          "trackId": "3d0d9c09-eec2-480d-815a-94a0c0ccd676",
+          "videoId": "oThk7mXxEW0",
+          "gameTitle": "Dicey Dungeons: Reunion",
+          "trackTitle": "Just Roll With It",
+          "channelTitle": "chipzel",
+          "displayTitle": "Dicey Dungeons: Reunion - Just Roll With It"
+        },
+        {
+          "title": "The Legend of Zelda: The Minish Cap - Minish Village",
+          "trackId": "9873a0fd-738f-4fc3-ba84-40fb8cfe828b",
+          "videoId": "BbQgK8DIK3M",
+          "gameTitle": "The Legend of Zelda: The Minish Cap",
+          "trackTitle": "Minish Village",
+          "channelTitle": "Cha Chingo Christiano",
+          "displayTitle": "The Legend of Zelda: The Minish Cap - Minish Village"
+        },
+        {
+          "title": "Tatsunoko vs. Capcom: Ultimate All-Stars - Orbital Ring Systems Cargo Bay",
+          "trackId": "71981b63-c2cc-4709-8f85-30c0af0094a3",
+          "videoId": "bp1ZkMq26A8",
+          "gameTitle": "Tatsunoko vs. Capcom: Ultimate All-Stars",
+          "trackTitle": "Orbital Ring Systems Cargo Bay",
+          "channelTitle": "PikawilMusic",
+          "displayTitle": "Tatsunoko vs. Capcom: Ultimate All-Stars - Orbital Ring Systems Cargo Bay"
+        },
+        {
+          "title": "Fall Guys - Fall 'N' Roll",
+          "trackId": "fa8e4af3-aed5-4df5-9f9e-3f14bce05f20",
+          "videoId": "LL70vTa0E2g",
+          "gameTitle": "Fall Guys",
+          "trackTitle": "Fall 'N' Roll",
+          "channelTitle": "Jukio Kallio - Topic",
+          "displayTitle": "Fall Guys - Fall 'N' Roll"
+        }
+      ]
+    },
     {
       "user_id": "0cd5abff-9c4d-47b7-90f4-d0482144ee8a",
       "username": "dc:acireexists",
@@ -118,13 +244,13 @@
           "displayTitle": "King of Fighters ’99 - Tears"
         },
         {
-          "title": "Advance Wars: Days of Ruin - Mr. Bear/Cold-Hearted Doll/Penny's Theme",
+          "title": "Advance Wars: Days of Ruin - Mr. Bear ~ Penny",
           "trackId": "f087403a-bf81-409d-a306-d2305372db4b",
           "videoId": "zO5WDOkpEtI",
           "gameTitle": "Advance Wars: Days of Ruin",
-          "trackTitle": "Mr. Bear/Cold-Hearted Doll/Penny's Theme",
+          "trackTitle": "Mr. Bear ~ Penny",
           "channelTitle": "BlackfireMagnum",
-          "displayTitle": "Advance Wars: Days of Ruin - Mr. Bear/Cold-Hearted Doll/Penny's Theme"
+          "displayTitle": "Advance Wars: Days of Ruin - Mr. Bear ~ Penny"
         },
         {
           "title": "beatmania IIDX 10th Style - No Doubt Get Loud",
@@ -577,13 +703,13 @@
           "displayTitle": "Machinarium - The Bottom"
         },
         {
-          "title": "Even The Ocean - Dreamdram Canyon Power Plant",
+          "title": "Even the Ocean - Dreamdram Canyon Power Plant",
           "trackId": "62c087a7-ff41-4b79-95b0-37017b7494b7",
           "videoId": "ik0m1OX6g-M",
-          "gameTitle": "Even The Ocean",
+          "gameTitle": "Even the Ocean",
           "trackTitle": "Dreamdram Canyon Power Plant",
           "channelTitle": "ANALGESIC PRODUCTIONS",
-          "displayTitle": "Even The Ocean - Dreamdram Canyon Power Plant"
+          "displayTitle": "Even the Ocean - Dreamdram Canyon Power Plant"
         },
         {
           "title": "Rabbit and Steel - Rondo for the Witch's Messenger",
@@ -667,13 +793,13 @@
           "displayTitle": "Shining Wind - Heart-Shaped Chant"
         },
         {
-          "title": "Honkai Stair Rail - Rondo Across Countless Kalpas",
+          "title": "Honkai: Star Rail - Rondo Across Countless Kalpas",
           "trackId": "2740255e-a83d-4ae3-86ef-a3037329f7e2",
           "videoId": "B5UeNLlnUOA",
-          "gameTitle": "Honkai Stair Rail",
+          "gameTitle": "Honkai: Star Rail",
           "trackTitle": "Rondo Across Countless Kalpas",
           "channelTitle": "HOYO-MiX - Topic",
-          "displayTitle": "Honkai Stair Rail - Rondo Across Countless Kalpas"
+          "displayTitle": "Honkai: Star Rail - Rondo Across Countless Kalpas"
         },
         {
           "title": "Danganronpa V3 - Climactic Re-enactment V3",
@@ -685,13 +811,13 @@
           "displayTitle": "Danganronpa V3 - Climactic Re-enactment V3"
         },
         {
-          "title": "Ace Attorney Investigations - Prelude to Pursuit - Search for the Truth",
+          "title": "Ace Attorney Investigations Collection - Prelude to Pursuit - Search for the Truth",
           "trackId": "202c9226-bcab-4ff2-8276-116a277a65e0",
           "videoId": "nSP6E1pb9fw",
-          "gameTitle": "Ace Attorney Investigations",
+          "gameTitle": "Ace Attorney Investigations Collection",
           "trackTitle": "Prelude to Pursuit - Search for the Truth",
           "channelTitle": "Shankey",
-          "displayTitle": "Ace Attorney Investigations - Prelude to Pursuit - Search for the Truth"
+          "displayTitle": "Ace Attorney Investigations Collection - Prelude to Pursuit - Search for the Truth"
         },
         {
           "title": "Need for Speed: The Run - Make Up Time",
@@ -840,114 +966,6 @@
       ]
     },
     {
-      "user_id": "6452d560-7b18-4e7b-8a22-208e09bddc28",
-      "username": "dc:CalzoneB",
-      "avatar_url": "https://images-ext-1.discordapp.net/external/y2Co85kS3Mh3VsdtU2Ac44E2zDM5BfkXeE-zi-5a4FQ/%3Fsize%3D1024/https/cdn.discordapp.com/avatars/268487608680579072/783e089fb3fbb4d845543e17a35ada0e.webp?format=webp&width=745&height=745",
-      "gamefaqs_username": "-Chaos-Zero-",
-      "updated_at": "2026-04-17T00:36:04.048929+00:00",
-      "nominations": [
-        {
-          "title": "Hyper Light Breaker - Apocalyptic Blues Paean",
-          "trackId": "a35849f4-4482-4a2b-b7ed-e5b97a418717",
-          "videoId": "qfSRCzeiQ0I",
-          "gameTitle": "Hyper Light Breaker",
-          "trackTitle": "Apocalyptic Blues Paean",
-          "channelTitle": "Scraic",
-          "displayTitle": "Hyper Light Breaker - Apocalyptic Blues Paean"
-        },
-        {
-          "title": "Satisfactory - Nostalgium",
-          "trackId": "1af05484-738d-4e80-b046-b70393917613",
-          "videoId": "PPS7fiGA1iI",
-          "gameTitle": "Satisfactory",
-          "trackTitle": "Nostalgium",
-          "channelTitle": "Bartek888_888",
-          "displayTitle": "Satisfactory - Nostalgium"
-        },
-        {
-          "title": "Jetpack Joyride - Main Theme",
-          "trackId": "9425f368-9c1f-424c-8964-0f47e989a52b",
-          "videoId": "MiUjLJJligs",
-          "gameTitle": "Jetpack Joyride",
-          "trackTitle": "Main Theme",
-          "channelTitle": "Halfbrick Studios",
-          "displayTitle": "Jetpack Joyride - Main Theme"
-        },
-        {
-          "title": "Dicey Dungeons: Reunion - Just Roll With It",
-          "trackId": "3d0d9c09-eec2-480d-815a-94a0c0ccd676",
-          "videoId": "oThk7mXxEW0",
-          "gameTitle": "Dicey Dungeons: Reunion",
-          "trackTitle": "Just Roll With It",
-          "channelTitle": "chipzel",
-          "displayTitle": "Dicey Dungeons: Reunion - Just Roll With It"
-        },
-        {
-          "title": "The Legend of Zelda: The Minish Cap - Minish Village",
-          "trackId": "9873a0fd-738f-4fc3-ba84-40fb8cfe828b",
-          "videoId": "BbQgK8DIK3M",
-          "gameTitle": "The Legend of Zelda: The Minish Cap",
-          "trackTitle": "Minish Village",
-          "channelTitle": "Cha Chingo Christiano",
-          "displayTitle": "The Legend of Zelda: The Minish Cap - Minish Village"
-        },
-        {
-          "title": "Astro Bot - Marine Serene",
-          "trackId": "1cd881cf-343e-4fa7-abcf-a00a78c885fa",
-          "videoId": "TZ9x6FP8BNw",
-          "gameTitle": "Astro Bot",
-          "trackTitle": "Marine Serene",
-          "channelTitle": "Scraic",
-          "displayTitle": "Astro Bot - Marine Serene"
-        },
-        {
-          "title": "Ape Escape 3 - Mount Amazing 2",
-          "trackId": "dd089c59-8094-4879-8ea6-cce89f3c4ace",
-          "videoId": "XYi-zuFRGUE",
-          "gameTitle": "Ape Escape 3",
-          "trackTitle": "Mount Amazing 2",
-          "channelTitle": "Soichi Terada - Topic",
-          "displayTitle": "Ape Escape 3 - Mount Amazing 2"
-        },
-        {
-          "title": "Tatsunoko vs. Capcom: Ultimate All-Stars - Orbital Ring Systems Cargo Bay",
-          "trackId": "71981b63-c2cc-4709-8f85-30c0af0094a3",
-          "videoId": "bp1ZkMq26A8",
-          "gameTitle": "Tatsunoko vs. Capcom: Ultimate All-Stars",
-          "trackTitle": "Orbital Ring Systems Cargo Bay",
-          "channelTitle": "PikawilMusic",
-          "displayTitle": "Tatsunoko vs. Capcom: Ultimate All-Stars - Orbital Ring Systems Cargo Bay"
-        },
-        {
-          "title": "Swarmlake - Swarmlake (Original Game Soundtrack)",
-          "trackId": "8335ba95-8aa6-404a-bc75-3206b1d130fa",
-          "videoId": "YljDiA_Rp1Q",
-          "gameTitle": "Swarmlake",
-          "trackTitle": "Swarmlake (Original Game Soundtrack)",
-          "channelTitle": "Singto Conley",
-          "displayTitle": "Swarmlake - Swarmlake (Original Game Soundtrack)"
-        },
-        {
-          "title": "Tekken 8 - Volcanic Bomb (Climax)",
-          "trackId": "fc6a193c-41af-4743-94a9-f6f91b84ddaf",
-          "videoId": "zKXHxdShsr0",
-          "gameTitle": "Tekken 8",
-          "trackTitle": "Volcanic Bomb (Climax)",
-          "channelTitle": "TEKKEN Project - Topic",
-          "displayTitle": "Tekken 8 - Volcanic Bomb (Climax)"
-        },
-        {
-          "title": "Fall Guys - Fall 'N' Roll",
-          "trackId": "fa8e4af3-aed5-4df5-9f9e-3f14bce05f20",
-          "videoId": "LL70vTa0E2g",
-          "gameTitle": "Fall Guys",
-          "trackTitle": "Fall 'N' Roll",
-          "channelTitle": "Jukio Kallio - Topic",
-          "displayTitle": "Fall Guys - Fall 'N' Roll"
-        }
-      ]
-    },
-    {
       "user_id": "68ffbbf7-9d04-46a9-992b-82889c7fa1e7",
       "username": "dc:kamakazikila",
       "avatar_url": "https://cdn.discordapp.com/avatars/302993232516612106/c42a539a0d25e4bcb9b45650eb125acc.png",
@@ -1000,22 +1018,22 @@
           "displayTitle": "Once Upon A KATAMARI - YangYang"
         },
         {
-          "title": "Ar Nosurge: Ode to an Unborn Star - em-pyei-n vari-fen jang",
+          "title": "Ar Nosurge - em-pyei-n vari-fen jang",
           "trackId": "b030b521-4ecd-4c7a-b26c-18ac5766dfa3",
           "videoId": "oBGNIZ-KL90",
-          "gameTitle": "Ar Nosurge: Ode to an Unborn Star",
+          "gameTitle": "Ar Nosurge",
           "trackTitle": "em-pyei-n vari-fen jang",
           "channelTitle": "MyraSlokov",
-          "displayTitle": "Ar Nosurge: Ode to an Unborn Star - em-pyei-n vari-fen jang"
+          "displayTitle": "Ar Nosurge - em-pyei-n vari-fen jang"
         },
         {
-          "title": "Pokemon Legends: Z-A - Jacinthe Battle",
+          "title": "Pokemon Legends: Z-A - Battle! (Jacinthe)",
           "trackId": "109760c3-74ed-4b03-9549-d56e47854680",
           "videoId": "tvSlzzXpZEQ",
           "gameTitle": "Pokemon Legends: Z-A",
-          "trackTitle": "Jacinthe Battle",
+          "trackTitle": "Battle! (Jacinthe)",
           "channelTitle": "Pokeli",
-          "displayTitle": "Pokemon Legends: Z-A - Jacinthe Battle"
+          "displayTitle": "Pokemon Legends: Z-A - Battle! (Jacinthe)"
         },
         {
           "title": "WACCA Reverse - Can I Friend You On Bassbook ? Lol",
@@ -1063,22 +1081,22 @@
           "displayTitle": "Guitar Hero 2 - Jordan"
         },
         {
-          "title": "Ar Tonelico 2 - HOMURA",
+          "title": "Ar Tonelico 2 - Homura",
           "trackId": "b5eaa273-fd09-4ba8-8c3a-cdb13aaebc79",
           "videoId": "HXZZ4KosCVI",
           "gameTitle": "Ar Tonelico 2",
-          "trackTitle": "HOMURA",
+          "trackTitle": "Homura",
           "channelTitle": "ZaMaBa",
-          "displayTitle": "Ar Tonelico 2 - HOMURA"
+          "displayTitle": "Ar Tonelico 2 - Homura"
         },
         {
-          "title": "Project Sekai - Lagtrain",
+          "title": "Project Sekai - Lag Train",
           "trackId": "eac99044-b31b-4f59-b580-4192cc82ac16",
           "videoId": "tofxHl0UArM",
           "gameTitle": "Project Sekai",
-          "trackTitle": "Lagtrain",
+          "trackTitle": "Lag Train",
           "channelTitle": "Yan☆",
-          "displayTitle": "Project Sekai - Lagtrain"
+          "displayTitle": "Project Sekai - Lag Train"
         },
         {
           "title": "Risk of Rain 2 - The Rain Formerly Known as Purple",
