@@ -1,0 +1,33 @@
+{
+  "manifest_version": 3,
+  "name": "NomPlayer VGMC Sync",
+  "version": "0.1.0",
+  "description": "Syncs VGMC nomination-thread posts from a GameFAQs topic into your NomPlayer account. Unofficial — not affiliated with GameFAQs, GameSpot, or Fandom.",
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "vgmc-sync@nomplayer.app",
+      "strict_min_version": "115.0"
+    }
+  },
+  "permissions": ["storage"],
+  "host_permissions": [
+    "https://gamefaqs.gamespot.com/*",
+    "https://*.supabase.co/*",
+    "https://nomplayer.app/*",
+    "http://localhost:8788/*"
+  ],
+  "background": {
+    "scripts": ["config.js", "storage.js", "supabase-auth.js", "background.js"]
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://gamefaqs.gamespot.com/boards/*"],
+      "js": ["storage.js", "content-script.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "NomPlayer VGMC Sync"
+  }
+}

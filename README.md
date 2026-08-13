@@ -40,6 +40,14 @@ VITE_SUPABASE_URL=https://your-project.supabase.co
 VITE_SUPABASE_PUBLISHABLE_KEY=your_publishable_key_here
 ```
 
+## VGMC Nomination Sync
+
+[`extension/`](extension/README.md) is a separate, standalone Firefox extension for
+syncing GameFAQs VGMC nomination threads into a playlist — it's not part of this app
+(no build step, own lint config, never bundled or deployed with the site). Its API
+counterpart is `functions/api/vgmc-ingest.js`, documented in
+[`functions/README.md`](functions/README.md).
+
 ## Supabase Workflow
 
 This repo now manages Supabase schema changes as code with the Supabase CLI.

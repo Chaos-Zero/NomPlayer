@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>NomPlayer VGMC Sync</title>
+    <style>
+      body {
+        width: 260px;
+        font-family: system-ui, sans-serif;
+        font-size: 13px;
+        color: #1b1b1f;
+        margin: 0;
+        padding: 12px;
+      }
+      h1 {
+        font-size: 14px;
+        margin: 0 0 8px;
+      }
+      p.hint {
+        color: #666;
+        margin: 0 0 10px;
+      }
+      label {
+        display: block;
+        margin-top: 8px;
+        font-weight: 600;
+      }
+      input {
+        width: 100%;
+        box-sizing: border-box;
+        padding: 6px;
+        margin-top: 2px;
+      }
+      button {
+        margin-top: 10px;
+        width: 100%;
+        padding: 7px;
+        cursor: pointer;
+      }
+      #status {
+        margin-top: 10px;
+        padding: 8px;
+        border-radius: 6px;
+        background: #f2f2f4;
+      }
+      #error {
+        color: #b3261e;
+        margin-top: 6px;
+      }
+      .row {
+        display: flex;
+        gap: 6px;
+      }
+      .row button {
+        flex: 1;
+      }
+      h2 {
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+        color: #666;
+        margin: 14px 0 4px;
+      }
+      #topics-list {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+      }
+      #topics-list li {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 6px;
+        padding: 4px 0;
+        border-bottom: 1px solid #eee;
+      }
+      #topics-list li span {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      #topics-list button {
+        width: auto;
+        margin: 0;
+        padding: 2px 6px;
+      }
+      #topics-hint {
+        color: #666;
+      }
+      #track-active-tab {
+        margin-top: 8px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>NomPlayer VGMC Sync</h1>
+    <p class="hint">Unofficial helper — not part of GameFAQs.</p>
+
+    <div id="signed-out-view">
+      <label
+        >Email<input id="email" type="email" autocomplete="username"
+      /></label>
+      <label
+        >Password<input
+          id="password"
+          type="password"
+          autocomplete="current-password"
+      /></label>
+      <button id="sign-in">Sign in</button>
+      <p id="error"></p>
+    </div>
+
+    <div id="signed-in-view" hidden>
+      <p id="account"></p>
+      <div id="status"></div>
+      <div class="row">
+        <button id="sync-now">Sync now</button>
+        <button id="sign-out">Sign out</button>
+      </div>
+
+      <h2>Followed topics</h2>
+      <ul id="topics-list"></ul>
+      <p id="topics-hint">
+        None yet. Open a GameFAQs topic and click "Track this page for
+        NomPlayer", or:
+      </p>
+      <button id="track-active-tab">Track this tab</button>
+    </div>
+
+    <script src="config.js"></script>
+    <script src="popup.js"></script>
+  </body>
+</html>
