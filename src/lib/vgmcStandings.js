@@ -70,11 +70,11 @@ export function toPlaylistVideos(rows) {
 }
 
 /**
- * Splits playlist-track rows into the two standings views: `standings` is every
- * song with more than 1 support point (this includes a nomination submitted with
- * `++`, which starts at 2), sorted highest-first; `locked` is the subset at 7+
- * points. Locked is a filtered view of standings, not a separate bucket, a song
- * can appear in both.
+ * Splits playlist-track rows into the two standings views: `standings` is
+ * every song with more than 1 but fewer than 7 support points (this includes
+ * a nomination submitted with `++`, which starts at 2), sorted highest-first;
+ * `locked` is everything at 7+. Disjoint tabs, once a song locks in it moves
+ * out of Current Standings entirely rather than continuing to show in both.
  */
 export function partitionStandings(rows) {
   const qualifying = (rows || [])
@@ -87,7 +87,7 @@ export function partitionStandings(rows) {
     );
 
   return {
-    standings: qualifying,
+    standings: qualifying.filter((row) => row.supportPoints < 7),
     locked: qualifying.filter((row) => row.supportPoints >= 7),
   };
 }

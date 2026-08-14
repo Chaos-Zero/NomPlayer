@@ -89,7 +89,7 @@ describe('partitionStandings', () => {
   it('sorts standings by support points descending', () => {
     const { standings } = partitionStandings([
       row({ id: 'low', support_points: 2 }),
-      row({ id: 'high', support_points: 9 }),
+      row({ id: 'high', support_points: 6 }),
       row({ id: 'mid', support_points: 5 }),
     ]);
 
@@ -115,12 +115,22 @@ describe('partitionStandings', () => {
     expect(locked.map((r) => r.id)).toEqual(['c', 'b']);
   });
 
-  it('locked is a filtered view of standings, not a disjoint tab', () => {
+  it('a locked song (7+) is removed from standings, not shown in both', () => {
     const { standings, locked } = partitionStandings([
       row({ id: 'a', support_points: 9 }),
     ]);
 
-    expect(standings.map((r) => r.id)).toContain('a');
+    expect(standings.map((r) => r.id)).not.toContain('a');
     expect(locked.map((r) => r.id)).toContain('a');
+  });
+
+  it('standings only includes songs below the 7-point lock threshold', () => {
+    const { standings } = partitionStandings([
+      row({ id: 'a', support_points: 2 }),
+      row({ id: 'b', support_points: 6 }),
+      row({ id: 'c', support_points: 7 }),
+    ]);
+
+    expect(standings.map((r) => r.id)).toEqual(['b', 'a']);
   });
 });

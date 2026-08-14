@@ -152,7 +152,7 @@ describe('PlaylistSidebar', () => {
     expect(screen.getByLabelText('Play Alpha')).not.toHaveClass('active');
   });
 
-  it('shows a numeric position for each playlist entry', () => {
+  it('numbers each playlist entry sequentially by its displayed position, not loadIndex', () => {
     const beta = {
       videoId: 'beta12345678',
       title: 'Beta',
@@ -160,6 +160,32 @@ describe('PlaylistSidebar', () => {
       channelTitle: 'Channel B',
     };
     const { container } = renderSidebar({
+      // loadIndex deliberately mismatches display order here — the number
+      // shown must follow where the row actually is (1, 2, ...), not this.
+      playlist: [
+        { ...video, loadIndex: 1 },
+        { ...beta, loadIndex: 0 },
+      ],
+    });
+
+    const numbers = [...container.querySelectorAll('.list-entry-number')].map(
+      (node) => node.textContent,
+    );
+
+    expect(numbers).toEqual(['1', '2']);
+  });
+
+  it('shows each entry\'s original position instead, when "show original order" is on', () => {
+    const beta = {
+      videoId: 'beta12345678',
+      title: 'Beta',
+      thumbnail: 'b.jpg',
+      channelTitle: 'Channel B',
+    };
+    const { container } = renderSidebar({
+      showOriginalOrder: true,
+      // Rows stay in this (shuffled) position — only the number should
+      // reflect loadIndex now, not this array position.
       playlist: [
         { ...video, loadIndex: 1 },
         { ...beta, loadIndex: 0 },

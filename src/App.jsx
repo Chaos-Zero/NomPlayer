@@ -1891,10 +1891,13 @@ export default function App() {
     const loadIndexById = new Map(
       playlist.map((video, index) => [video.videoId, index]),
     );
-    const orderIds =
-      isPersonalShuffleActive && !showOriginalOrder
-        ? playOrderIds
-        : playlist.map((video) => video.videoId);
+    // Row order follows shuffle state alone — showOriginalOrder never moves
+    // rows, it only changes which number is shown on them (see orderNumber in
+    // PlaylistSidebar). Turning shuffle off entirely is what reverts row
+    // order back to the playlist's saved order.
+    const orderIds = isPersonalShuffleActive
+      ? playOrderIds
+      : playlist.map((video) => video.videoId);
 
     const playlistById = new Map(
       playlist.map((video) => [video.videoId, video]),
@@ -1942,13 +1945,7 @@ export default function App() {
         };
       })
       .filter(Boolean);
-  }, [
-    catalogTrackByVideoId,
-    isPersonalShuffleActive,
-    playlist,
-    playOrderIds,
-    showOriginalOrder,
-  ]);
+  }, [catalogTrackByVideoId, isPersonalShuffleActive, playlist, playOrderIds]);
 
   const enrichedNominationList = useMemo(() => {
     return nominationList.map((nom, index) => {
@@ -2102,17 +2099,20 @@ export default function App() {
     // handlePrev/handleNext/handleVideoEnd need it).
     if (tracks === undefined) return displayPlaylist;
 
-    // Stamp each track's pre-shuffle position once, before reordering, so its
-    // displayed number stays put when shuffled, only the row's position
-    // moves, not the number on it. Some branches above (nominations, support)
-    // already stamp their own loadIndex; this only fills in a fallback for
-    // whichever don't (custom playlists, and any community-playlist whose
-    // caller didn't set one).
+    // Each track's original position, so a row's displayed number can stay
+    // truthful (see PlaylistSidebar's orderNumber, showOriginalOrder) even
+    // after shuffle physically moves the row elsewhere. Some branches above
+    // (nominations, support) already stamp their own loadIndex; this only
+    // fills in a fallback for whichever don't (custom playlists, and any
+    // community-playlist whose caller didn't set one).
     const tracksWithStableOrder = tracks.map((video, index) => ({
       ...video,
       loadIndex: Number.isFinite(video.loadIndex) ? video.loadIndex : index,
     }));
 
+    // Row order follows shuffle state alone — showOriginalOrder never moves
+    // rows, only the number shown on them. Turning shuffle off (not this
+    // toggle) is what reverts row order back to the saved playlist order.
     return applyShuffleOrder(tracksWithStableOrder, shuffleOrderIds);
   }, [
     activePlaylistView,

@@ -1584,7 +1584,9 @@ export default function PlaylistSidebar({
             displayPlaylist.map((video, index) => (
               <PlaylistItem
                 key={video.videoId}
-                orderNumber={(video.loadIndex ?? index) + 1}
+                orderNumber={
+                  (showOriginalOrder ? (video.loadIndex ?? index) : index) + 1
+                }
                 video={video}
                 isActive={index === currentIndex}
                 isFlashing={flashIds.has(video.videoId)}
@@ -1623,7 +1625,10 @@ export default function PlaylistSidebar({
                 {displayPlaylist.map((video, index) => (
                   <SortablePlaylistItem
                     key={video.videoId}
-                    orderNumber={(video.loadIndex ?? index) + 1}
+                    orderNumber={
+                      (showOriginalOrder ? (video.loadIndex ?? index) : index) +
+                      1
+                    }
                     video={video}
                     isActive={index === currentIndex}
                     isFlashing={flashIds.has(video.videoId)}
@@ -1653,7 +1658,9 @@ export default function PlaylistSidebar({
             displayPlaylist.map((video, index) => (
               <PlaylistItem
                 key={video.videoId}
-                orderNumber={(video.loadIndex ?? index) + 1}
+                orderNumber={
+                  (showOriginalOrder ? (video.loadIndex ?? index) : index) + 1
+                }
                 video={video}
                 isActive={index === currentIndex}
                 isFlashing={flashIds.has(video.videoId)}
