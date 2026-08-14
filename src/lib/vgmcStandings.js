@@ -37,16 +37,31 @@ function normalizeRow(row) {
   };
 }
 
-/** Maps playlist-track rows to the {videoId, title, thumbnail, channelTitle} shape
- * the rest of the app already uses for playlist entries, in nomination order. */
+/** Maps playlist-track rows to the {videoId, title, thumbnail, channelTitle,
+ * gameTitle, trackTitle, displayTitle, supportPoints, loadIndex} shape the rest
+ * of the app already uses for playlist entries, in nomination order.
+ *
+ * gameTitle/trackTitle come straight off nomination_game/nomination_song
+ * (populated correctly server-side by reconcile_vgmc_playlist) — this used to
+ * only carry the combined `cached_title` display string and nothing else,
+ * which is why every VGMC track showed up as "Metadata Needed" wherever
+ * something (the sidebar, the GameFAQs export formatter) needed the game/song
+ * split individually rather than the single display string. */
 export function toPlaylistVideos(rows) {
   return (rows || [])
     .filter((row) => row && row.youtube_video_id)
     .map((row) => ({
       videoId: row.youtube_video_id,
       title: row.cached_title || 'Untitled track',
+      displayTitle: row.cached_title || '',
+      gameTitle: row.nomination_game || '',
+      trackTitle: row.nomination_song || '',
       thumbnail: getYouTubeThumbnailUrl(row.youtube_video_id),
       channelTitle: '',
+      supportPoints: Number.isFinite(row.support_points)
+        ? row.support_points
+        : 0,
+      loadIndex: Number.isFinite(row.order_index) ? row.order_index : 0,
     }));
 }
 

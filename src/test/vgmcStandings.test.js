@@ -16,18 +16,47 @@ function row(overrides) {
 describe('toPlaylistVideos', () => {
   it('maps rows to the playlist-video shape, skipping rows with no video id', () => {
     const videos = toPlaylistVideos([
-      row({ youtube_video_id: 'aaaaaaaaaaa', cached_title: 'Foo' }),
+      row({
+        youtube_video_id: 'aaaaaaaaaaa',
+        cached_title: 'Foo - Bar',
+        nomination_game: 'Foo',
+        nomination_song: 'Bar',
+        support_points: 3,
+        order_index: 2,
+      }),
       { ...row({}), youtube_video_id: null },
     ]);
 
     expect(videos).toEqual([
       {
         videoId: 'aaaaaaaaaaa',
-        title: 'Foo',
+        title: 'Foo - Bar',
+        displayTitle: 'Foo - Bar',
+        gameTitle: 'Foo',
+        trackTitle: 'Bar',
         thumbnail: expect.stringContaining('aaaaaaaaaaa'),
         channelTitle: '',
+        supportPoints: 3,
+        loadIndex: 2,
       },
     ]);
+  });
+
+  it('carries the game/song split individually, not just the combined display title', () => {
+    // Regression guard: this split used to get dropped entirely, which is why
+    // anything reading gameTitle/trackTitle off a VGMC track (the sidebar, the
+    // GameFAQs export formatter) fell back to "Metadata Needed" even though
+    // reconcile_vgmc_playlist had already stored the split correctly.
+    const [video] = toPlaylistVideos([
+      row({
+        youtube_video_id: 'bbbbbbbbbbb',
+        nomination_game: 'Some Game',
+        nomination_song: 'Some Song',
+      }),
+    ]);
+
+    expect(video.gameTitle).toBe('Some Game');
+    expect(video.trackTitle).toBe('Some Song');
   });
 });
 

@@ -26,6 +26,8 @@ import useMediaQuery from '../hooks/useMediaQuery.js';
 import { getDisplayProfileName } from '../lib/playerState.js';
 import { SortByRatingIcon, SpeechBubbleIcon } from './Icons.jsx';
 
+const VGMC_PLAYLIST_ID = import.meta.env.VITE_VGMC_PLAYLIST_ID || '';
+
 function FastForwardIcon() {
   return (
     <svg viewBox="0 0 20 20" aria-hidden="true">
@@ -280,6 +282,14 @@ function PlaylistItem({
             {video.rating}
           </span>
         )}
+        {video.supportPoints != null && (
+          <span
+            className="sidebar-support-points"
+            title="VGMC ranking (total support points)"
+          >
+            {video.supportPoints}
+          </span>
+        )}
         {commentActivity && (
           <button
             className={`comment-bubble-btn${commentActivity === 'commented' ? ' has-comments' : ' has-rated'}`}
@@ -478,6 +488,8 @@ export default function PlaylistSidebar({
   const [selectedIds, setSelectedIds] = useState([]);
   const [contextMenu, setContextMenu] = useState(null);
   const [isSortingByRating, setIsSortingByRating] = useState(false);
+  // null (nomination order) -> 'desc' (highest ranked first) -> 'asc' -> null
+  const [rankingSortDirection, setRankingSortDirection] = useState(null);
   const collapseGestureRef = useRef(null);
   const supportIds = useMemo(
     () => new Set(supportList.map((entry) => entry.videoId)),
@@ -498,6 +510,18 @@ export default function PlaylistSidebar({
     [playlist, selectedIds],
   );
   const displayPlaylist = useMemo(() => {
+    if (rankingSortDirection) {
+      return [...playlist].sort((a, b) => {
+        const pointsA = a.supportPoints ?? 0;
+        const pointsB = b.supportPoints ?? 0;
+        const diff =
+          rankingSortDirection === 'desc'
+            ? pointsB - pointsA
+            : pointsA - pointsB;
+        if (diff !== 0) return diff;
+        return (a.loadIndex ?? 0) - (b.loadIndex ?? 0);
+      });
+    }
     if (!isSortingByRating) return playlist;
     return [...playlist].sort((a, b) => {
       const ratingA = a.rating ?? -1;
@@ -505,7 +529,7 @@ export default function PlaylistSidebar({
       if (ratingB !== ratingA) return ratingB - ratingA;
       return (a.loadIndex ?? 0) - (b.loadIndex ?? 0);
     });
-  }, [playlist, isSortingByRating]);
+  }, [playlist, isSortingByRating, rankingSortDirection]);
 
   const selectedVideos = useMemo(
     () => playlist.filter((video) => selectedIdSet.has(video.videoId)),
@@ -513,10 +537,15 @@ export default function PlaylistSidebar({
   );
 
   const isReadOnlyView = activePlaylistView.type === 'community-playlist';
+  const isVgmcPlaylistView =
+    isReadOnlyView &&
+    Boolean(VGMC_PLAYLIST_ID) &&
+    activePlaylistView.id === VGMC_PLAYLIST_ID;
   const canReorder =
     !selectionMode &&
     (!isShuffleEnabled || showOriginalOrder) &&
     !isSortingByRating &&
+    !rankingSortDirection &&
     !isReadOnlyView;
   useEffect(() => {
     setSelectionMode(false);
@@ -1173,6 +1202,35 @@ export default function PlaylistSidebar({
                     }
                   />
                 </div>
+              ) : isVgmcPlaylistView ? (
+                <button
+                  className={`fav-panel-action-btn icon-only${rankingSortDirection ? ' active' : ''}`}
+                  type="button"
+                  onClick={() =>
+                    setRankingSortDirection((previousValue) =>
+                      previousValue === null
+                        ? 'desc'
+                        : previousValue === 'desc'
+                          ? 'asc'
+                          : null,
+                    )
+                  }
+                  title={
+                    rankingSortDirection === 'desc'
+                      ? 'Sorted by ranking, highest first — click for lowest first'
+                      : rankingSortDirection === 'asc'
+                        ? 'Sorted by ranking, lowest first — click to reset'
+                        : 'Sort by ranking'
+                  }
+                  aria-label="Sort by ranking"
+                >
+                  <SortByRatingIcon />
+                  {rankingSortDirection && (
+                    <span className="sort-direction-arrow" aria-hidden="true">
+                      {rankingSortDirection === 'desc' ? '↓' : '↑'}
+                    </span>
+                  )}
+                </button>
               ) : (
                 <button
                   className="fav-panel-action-btn icon-only"

@@ -1535,6 +1535,35 @@ body {
   color: white !important;
 }
 
+.sidebar-support-points {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 18px;
+  padding: 0 4px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+  background: rgba(124, 58, 237, 0.2);
+  color: #c4b5fd;
+  border: 1px solid rgba(196, 181, 253, 0.2);
+  flex-shrink: 0;
+}
+
+.playlist-item.active .sidebar-support-points {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.25);
+  color: white;
+}
+
+.theme-light .sidebar-support-points {
+  background: rgba(124, 58, 237, 0.12);
+  color: #4c1d95;
+  border-color: rgba(124, 58, 237, 0.2);
+}
+
 .dashboard-message-danger {
   border-color: rgba(239, 68, 68, 0.34);
   background: rgba(127, 29, 29, 0.2);
@@ -7263,11 +7292,21 @@ button.playlist-search-indicator:hover {
   display: flex;
   align-items: center;
   justify-content: center;
+  position: relative;
 }
 
 .fav-panel-action-btn.icon-only svg {
   width: 16px;
   height: 16px;
+}
+
+.sort-direction-arrow {
+  position: absolute;
+  bottom: 2px;
+  right: 3px;
+  font-size: 8px;
+  font-weight: 800;
+  line-height: 1;
 }
 
 .fav-panel-action-btn.selection-accent {

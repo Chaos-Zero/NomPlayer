@@ -2085,7 +2085,19 @@ export default function App() {
     // (playback advancement resolves its own order separately, at the point
     // handlePrev/handleNext/handleVideoEnd need it).
     if (tracks === undefined) return displayPlaylist;
-    return applyShuffleOrder(tracks, shuffleOrderIds);
+
+    // Stamp each track's pre-shuffle position once, before reordering, so its
+    // displayed number stays put when shuffled — only the row's position
+    // moves, not the number on it. Some branches above (nominations, support)
+    // already stamp their own loadIndex; this only fills in a fallback for
+    // whichever don't (custom playlists, and any community-playlist whose
+    // caller didn't set one).
+    const tracksWithStableOrder = tracks.map((video, index) => ({
+      ...video,
+      loadIndex: Number.isFinite(video.loadIndex) ? video.loadIndex : index,
+    }));
+
+    return applyShuffleOrder(tracksWithStableOrder, shuffleOrderIds);
   }, [
     activePlaylistView,
     communityNominations,
