@@ -150,6 +150,7 @@ import UserSettingsDialog from './components/UserSettingsDialog.jsx';
 import ListeningHistoryDialog from './components/ListeningHistoryDialog.jsx';
 import SupportLevelDropdown from './components/SupportLevelDropdown.jsx';
 import ExportVgmcModal from './components/ExportVgmcModal.jsx';
+import VgmcSheetSyncPanel from './components/VgmcSheetSyncPanel.jsx';
 import DeleteAccountConfirmDialog from './components/DeleteAccountConfirmDialog.jsx';
 import FooterFeedbackPanel from './components/FooterFeedbackPanel.jsx';
 import VgmcStandingsView from './components/VgmcStandingsView.jsx';
@@ -691,6 +692,7 @@ export default function App() {
   // ever flips true once, after the very first load finishes, and drives the
   // full-view loading overlay (Refresh keeps its lighter button-only feedback).
   const [hasVgmcLoadedOnce, setHasVgmcLoadedOnce] = useState(false);
+  const [isVgmcSheetSyncOpen, setIsVgmcSheetSyncOpen] = useState(false);
   const hasLoadedVgmcPlaylistRef = useRef(false);
   const hasAutoNavigatedToVgmcRef = useRef(false);
   // handleLoadVgmcPlaylist/handleRefreshVgmcPlaylist are defined further down, right
@@ -2233,6 +2235,24 @@ export default function App() {
   // the classic player page (isPlayerLikePage) and gets a slide-in drawer instead
   // (see VgmcStandingsDrawer) — there's no room for a permanent side column there.
   const isVgmcSplitLayout = isVgmcStandingsPage && !isMobileLayout;
+
+  // Feeds VgmcSheetSyncPanel — {videoId: {rating, note}} for every VGMC song
+  // with a rating from the signed-in user. Built entirely from state already
+  // loaded for the standings view + the existing feedback fetch, so opening
+  // the sync panel doesn't trigger any DB reads of its own.
+  const vgmcFeedbackByVideoId = useMemo(() => {
+    const map = {};
+    for (const row of vgmcStandingsRows) {
+      if (!row.track_id || !row.youtube_video_id) continue;
+      const feedback = userFeedback[row.track_id];
+      if (!feedback || feedback.rating == null) continue;
+      map[row.youtube_video_id] = {
+        rating: feedback.rating,
+        note: feedback.note || '',
+      };
+    }
+    return map;
+  }, [vgmcStandingsRows, userFeedback]);
 
   useEffect(() => {
     if (!isVgmcStandingsPage) {
@@ -5752,6 +5772,9 @@ export default function App() {
         showMetadata={isPlayerLikePage}
         playingListLabel={playingListLabel}
         onOpenPlayingList={handleOpenPlayingList}
+        onOpenVgmcSheetSync={
+          isVgmcStandingsPage ? () => setIsVgmcSheetSyncOpen(true) : undefined
+        }
         supabase={supabase}
         authUser={authUser}
         userProfile={userProfile}
@@ -6663,6 +6686,12 @@ export default function App() {
         isOpen={isExportModalOpen}
         tracks={exportTracks}
         onClose={handleRequestCloseExportModal}
+      />
+
+      <VgmcSheetSyncPanel
+        isOpen={isVgmcSheetSyncOpen}
+        onClose={() => setIsVgmcSheetSyncOpen(false)}
+        feedbackByVideoId={vgmcFeedbackByVideoId}
       />
 
       {isFeedbackPanelOpen && (feedbackTrack || currentVideo) && (

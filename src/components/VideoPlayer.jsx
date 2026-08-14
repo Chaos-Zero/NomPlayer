@@ -59,6 +59,7 @@ const VideoPlayer = forwardRef(function VideoPlayer(
     playingListLabel,
     onOpenPlayingList,
     onFeedbackSaved,
+    onOpenVgmcSheetSync,
   },
   ref,
 ) {
@@ -372,19 +373,33 @@ const VideoPlayer = forwardRef(function VideoPlayer(
   const nowPlayingListNode =
     showMetadata && isFull ? (
       <div className="now-playing-list-label">
-        {playingListLabel ? (
-          <>
-            <span className="now-playing-list-prefix">Now Playing List: </span>
-            <button
-              className="now-playing-list-btn"
-              type="button"
-              onClick={onOpenPlayingList}
-            >
-              {playingListLabel}
-            </button>
-          </>
-        ) : (
-          <span className="now-playing-list-prefix">Now Playing</span>
+        <span className="now-playing-list-text">
+          {playingListLabel ? (
+            <>
+              <span className="now-playing-list-prefix">
+                Now Playing List:{' '}
+              </span>
+              <button
+                className="now-playing-list-btn"
+                type="button"
+                onClick={onOpenPlayingList}
+              >
+                {playingListLabel}
+              </button>
+            </>
+          ) : (
+            <span className="now-playing-list-prefix">Now Playing</span>
+          )}
+        </span>
+        {onOpenVgmcSheetSync && (
+          <button
+            className="now-playing-list-btn vgmc-sheet-sync-btn"
+            type="button"
+            onClick={onOpenVgmcSheetSync}
+            title="Sync your VGMC ratings to the reaction sheet"
+          >
+            Sync to Sheet
+          </button>
         )}
       </div>
     ) : null;

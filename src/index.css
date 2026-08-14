@@ -5299,8 +5299,25 @@ body {
   color: var(--text-secondary);
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 4px;
   margin-bottom: 4px;
+}
+
+.now-playing-list-text {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.vgmc-sheet-sync-btn {
+  flex-shrink: 0;
+  text-decoration: none !important;
+  opacity: 0.75;
+}
+
+.vgmc-sheet-sync-btn:hover {
+  opacity: 1;
 }
 
 .now-playing-list-prefix {
