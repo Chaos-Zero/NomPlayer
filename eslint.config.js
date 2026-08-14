@@ -6,7 +6,7 @@ import { defineConfig, globalIgnores } from 'eslint/config';
 
 export default defineConfig([
   // extension/ is a separate, standalone browser extension (WebExtension APIs, no
-  // build step, not part of this Vite app) — it has its own eslint.config.js.
+  // build step, not part of this Vite app), it has its own eslint.config.js.
   globalIgnores(['dist', 'extension']),
   {
     files: ['**/*.{js,jsx}'],

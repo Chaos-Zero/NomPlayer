@@ -1,6 +1,6 @@
 // Tests covering the three security fixes from migrations 20260510120000–20260510120002.
 //
-// 20260510120000: identities view — security_invoker = true
+// 20260510120000: identities view, security_invoker = true
 //   Pure DB permission change; no JS code accesses public.identities, so no JS test applies.
 //
 // 20260510120001: profiles anon column restriction
@@ -41,7 +41,7 @@ function makeChain({ data = null, error = null } = {}) {
 
 // ─── get_user_activity_summary ownership guard ───────────────────────────────
 
-describe('fetchDetailedUserActivity — ownership guard', () => {
+describe('fetchDetailedUserActivity, ownership guard', () => {
   it('returns empty collections immediately when supabase or userId is missing', async () => {
     expect(await fetchDetailedUserActivity(null, 'user-1')).toEqual({
       personal: [],
@@ -134,7 +134,7 @@ describe('fetchDetailedUserActivity — ownership guard', () => {
 
 // ─── profiles anon column restriction ────────────────────────────────────────
 
-describe('community feedback queries — no email column exposed to anon', () => {
+describe('community feedback queries, no email column exposed to anon', () => {
   it('fetchCommunityFeedback only selects non-sensitive profile columns', async () => {
     const chain = makeChain({ data: [], error: null });
     const supabase = { from: vi.fn().mockReturnValue(chain) };

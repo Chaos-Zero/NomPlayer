@@ -12,7 +12,7 @@
 -- have a FOR ALL write policy (which includes SELECT) evaluated per-row with a
 -- bare auth.role() call. Splitting them into INSERT/UPDATE/DELETE means
 -- authenticated SELECT queries fall through to the existing select_public
--- USING(true) policy — identical cost to anonymous queries.
+-- USING(true) policy, identical cost to anonymous queries.
 
 -- ============================================================
 -- CATEGORY 2B: Split FOR ALL write policies into INSERT/UPDATE/DELETE

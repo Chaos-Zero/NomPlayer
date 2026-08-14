@@ -12,9 +12,9 @@ export function parseYouTubeInput(input) {
     const url = new URL(str);
     const listId = url.searchParams.get('list');
     // `URLSearchParams.get('v')` happily returns whatever's between `v=` and the
-    // next `&` (or end of string) with no shape validation — if the input has no
+    // next `&` (or end of string) with no shape validation, if the input has no
     // `&` at all (e.g. a "link" that accidentally swallowed unrelated trailing
-    // text — found live from a VGMC nomination post whose line breaks got lost
+    // text, found live from a VGMC nomination post whose line breaks got lost
     // upstream), that's the *entire* rest of the string, not an 11-char id. Only
     // trust it once it actually looks like one.
     const rawVideoId = url.searchParams.get('v');
@@ -31,7 +31,7 @@ export function parseYouTubeInput(input) {
         return { type: 'video', videoId: vid };
     }
   } catch {
-    // Not a URL — treat as bare ID
+    // Not a URL, treat as bare ID
     // Playlist IDs start with PL, RD, UU, LL, FL, OL, etc.
     if (/^(PL|RD|UU|LL|FL|OL|WL)[A-Za-z0-9_-]+$/.test(str)) {
       return { type: 'playlist', playlistId: str };
@@ -114,7 +114,7 @@ export async function fetchPlaylistItems(playlistId, apiKey) {
 }
 
 /**
- * Fetch a video's title via YouTube oEmbed — no API key required.
+ * Fetch a video's title via YouTube oEmbed, no API key required.
  * Falls back to videoId if the request fails.
  */
 export async function fetchOEmbedTitle(videoId) {

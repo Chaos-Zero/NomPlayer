@@ -1,6 +1,6 @@
 -- Add SET search_path = public to functions that were missing it.
 -- Prevents search_path hijack by malicious roles (Supabase lint: function_search_path_mutable).
--- No logic changes — bodies are identical to originals.
+-- No logic changes, bodies are identical to originals.
 
 CREATE OR REPLACE FUNCTION public.set_updated_at()
 RETURNS trigger

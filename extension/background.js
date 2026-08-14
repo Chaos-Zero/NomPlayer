@@ -1,5 +1,5 @@
 // Background script: owns the Supabase session, talks to the ingest API, and relays
-// status back to the popup. The content script never calls the API directly — this
+// status back to the popup. The content script never calls the API directly, this
 // keeps the API call out of GameFAQs' page context entirely (no page CSP/CORS to
 // fight) and keeps the access token out of any page-visible context.
 /* global NOMPLAYER_VGMC_CONFIG, NomplayerAuth, NomplayerStorage */
@@ -69,7 +69,7 @@ async function submitPosts(posts) {
       await NomplayerStorage.clearSession();
       await NomplayerStorage.setStatus({
         state: 'signed_out',
-        message: 'Signed out — please sign in again.',
+        message: 'Signed out, please sign in again.',
       });
       return;
     }

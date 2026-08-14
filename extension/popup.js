@@ -1,4 +1,4 @@
-// Popup: thin UI over the background script. No Supabase calls happen here directly —
+// Popup: thin UI over the background script. No Supabase calls happen here directly,
 // everything goes through browser.runtime.sendMessage so the session lives in one
 // place (background.js / browser.storage.local).
 const signedOutView = document.getElementById('signed-out-view');
@@ -12,7 +12,7 @@ const topicsHintEl = document.getElementById('topics-hint');
 function describeStatus(status) {
   switch (status.state) {
     case 'synced':
-      return `Last synced ${new Date(status.lastSyncedAt).toLocaleString()} — ${status.lastAcceptedPosts} post(s) accepted, playlist has ${status.lastPlaylistSize} track(s).`;
+      return `Last synced ${new Date(status.lastSyncedAt).toLocaleString()}, ${status.lastAcceptedPosts} post(s) accepted, playlist has ${status.lastPlaylistSize} track(s).`;
     case 'signed_out':
       return status.message || 'Signed out.';
     case 'update_required':
@@ -36,7 +36,7 @@ async function renderFollowedTopics() {
     const item = document.createElement('li');
 
     const label = document.createElement('span');
-    label.textContent = `${topic.gameTitle} — ${topic.topicTitle}`;
+    label.textContent = `${topic.gameTitle}, ${topic.topicTitle}`;
     label.title = topic.url;
     item.appendChild(label);
 

@@ -745,7 +745,7 @@ export default function TrackDatabase({
       setLoading(true);
 
       if (isFirstLoadRef.current) {
-        // Remounting with cached data — keep tracks visible while refreshing
+        // Remounting with cached data, keep tracks visible while refreshing
         isFirstLoadRef.current = false;
       } else {
         setTracks([]);

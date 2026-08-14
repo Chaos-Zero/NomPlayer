@@ -1,15 +1,15 @@
 -- Promote every currently-nominated VGMC song into the permanent track catalog.
 --
 -- Until now, a GameFAQs nomination only ever produced a raw `user_playlist_tracks`
--- row on the bot-owned playlist — never a `tracks`/`track_sources` catalog entry,
+-- row on the bot-owned playlist, never a `tracks`/`track_sources` catalog entry,
 -- and never a `track_tournament_appearances` link. Two visible symptoms of that:
 -- listen-progress tracking silently no-ops for these videos (`record_youtube_track
--- _listen` requires a `track_sources` match — see `isMissingCatalogTrackError` in
+-- _listen` requires a `track_sources` match, see `isMissingCatalogTrackError` in
 -- App.jsx, which already anticipates exactly this case), and the songs don't show
 -- up anywhere as VGMC history once the contest ends.
 --
 -- Per explicit product decision: a song becomes a permanent catalog/history entry
--- the moment it's nominated — support-point count (locked-in 7+ or not) is not a
+-- the moment it's nominated, support-point count (locked-in 7+ or not) is not a
 -- gate. So this promotes every entry reconcile_vgmc_playlist is about to write,
 -- reusing import_vgmc_catalog_row (the same RPC the admin catalog-import flow
 -- uses), rather than inventing a second way to create tracks/tournaments.
@@ -17,7 +17,7 @@
 -- 1. Which numbered contest a thread feeds. Threads already carry a `tournament_id`
 --    FK, but import_vgmc_catalog_row keys tournaments by integer sequence number
 --    (creating "VGMC N" on first use, see e.g. VGMC 1..19 already seeded from past
---    contests), not by uuid — so a thread needs that same integer to call it.
+--    contests), not by uuid, so a thread needs that same integer to call it.
 alter table public.vgmc_ingest_threads
   add column if not exists contest_number integer;
 
@@ -89,7 +89,7 @@ begin
     end if;
 
     -- Same video, different song identity, already claimed earlier this round
-    -- (entries arrive in ordinal/nomination order) — skip, don't crash the batch.
+    -- (entries arrive in ordinal/nomination order), skip, don't crash the batch.
     if normalized_video_id = any (claimed_video_ids) then
       skipped_video_conflicts := skipped_video_conflicts + 1;
       continue;
@@ -150,7 +150,7 @@ begin
         promoted_count := promoted_count + 1;
       exception when others then
         -- Catalog promotion is a bonus, not the source of truth for the playlist
-        -- itself — never let a bad title/row take the whole sync down.
+        -- itself, never let a bad title/row take the whole sync down.
         raise warning 'VGMC catalog promotion failed for % (%): %',
           normalized_source_key, normalized_video_id, sqlerrm;
       end;
@@ -167,7 +167,7 @@ begin
   where id = thread_row.playlist_id;
 
   -- Backfill the thread's tournament_id link once the tournament exists (first
-  -- successful promotion above creates it) — self-healing, doesn't block on it.
+  -- successful promotion above creates it), self-healing, doesn't block on it.
   if thread_row.tournament_id is null and thread_row.contest_number is not null then
     select id into resolved_tournament_id
     from public.tournaments

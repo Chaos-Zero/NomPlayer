@@ -21,9 +21,9 @@ function tabButtonStyle(isActive) {
 }
 
 /**
- * The left column of the VGMC live page (see App.jsx's isVgmcStandingsPage) — a
+ * The left column of the VGMC live page (see App.jsx's isVgmcStandingsPage), a
  * standings table ranked by support points, alongside the normal player (which sits
- * in the remaining right-hand column, comments and all — see App.jsx). This
+ * in the remaining right-hand column, comments and all, see App.jsx). This
  * component only owns the table and its own sub-tabs; App.jsx's wrapper controls the
  * column's width (about a third of the view) and the divider between the two. The
  * VGMC/Classic page switch lives in App.jsx instead (see VgmcNavToggle) so it's
@@ -41,7 +41,7 @@ export default function VgmcStandingsView({
 
   function handlePlayRow(row) {
     if (!onPlayNow || !row.videoId) return;
-    // handlePlayNowFromSupportList (App.jsx) plays this transiently — it remembers
+    // handlePlayNowFromSupportList (App.jsx) plays this transiently, it remembers
     // whatever was actually playing before and resumes it once this ends, so
     // playing a standings row never disturbs the real queue/position.
     onPlayNow({

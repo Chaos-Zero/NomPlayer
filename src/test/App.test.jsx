@@ -154,7 +154,7 @@ vi.mock('../lib/supabase.js', () => {
 
 // The mocked supabase client above resolves every call almost immediately, which
 // would make the VGMC 20 auto-navigate effect (App.jsx) fire during every single
-// test in this file, not just the ones about it — breaking assumptions in tests
+// test in this file, not just the ones about it, breaking assumptions in tests
 // that have nothing to do with VGMC. Default to a promise that never resolves, so
 // activePage stays on 'home' unless a test explicitly opts in with
 // `vi.mocked(fetchVgmcPlaylistTracks).mockResolvedValueOnce(...)`.
@@ -250,7 +250,7 @@ describe('App', () => {
 
     render(<App />);
 
-    // The site is mounted into the normal home page underneath the whole time —
+    // The site is mounted into the normal home page underneath the whole time,
     // the loading overlay sits on top of it, not instead of it.
     expect(screen.getByText('Discover')).toBeInTheDocument();
     expect(screen.getByText('Loading VGMC 20…')).toBeInTheDocument();
@@ -260,7 +260,7 @@ describe('App', () => {
       await Promise.resolve();
     });
 
-    // Only once loading actually finishes does it switch to the VGMC page — the
+    // Only once loading actually finishes does it switch to the VGMC page, the
     // toggle names where clicking it takes you, so "NomPlayer" confirms we're on
     // the VGMC page now.
     await waitFor(() => {
@@ -353,7 +353,7 @@ describe('App', () => {
 
     fireEvent.click(supportButton);
 
-    // The button opens a level picker — select a level to add to the support list
+    // The button opens a level picker, select a level to add to the support list
     const possibleButton = await screen.findByRole('menuitem', {
       name: /Possible Support/i,
     });

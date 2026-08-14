@@ -2,12 +2,12 @@
 --
 -- The GameFAQs nomination convention isn't just add/remove: people also vote
 -- support/opposition on an already-nominated song with +/++/-/-- (see
--- src/lib/vgmcIngest.js for the fold logic — one live vote per author, magnitude
+-- src/lib/vgmcIngest.js for the fold logic, one live vote per author, magnitude
 -- 1 or 2). This persists that score per playlist track, and adds a per-user opt-in
 -- flag for the new live standings homepage view (no admin roles yet, so it's a
 -- personal setting for now, toggled from the existing account settings dialog).
 
--- 1. Score + display fields on the VGMC playlist's tracks. Additive/defaulted —
+-- 1. Score + display fields on the VGMC playlist's tracks. Additive/defaulted,
 --    nothing existing selects `*` from this table, so this is non-breaking.
 alter table public.user_playlist_tracks
   add column if not exists support_points integer not null default 0,
@@ -16,7 +16,7 @@ alter table public.user_playlist_tracks
 
 -- 2. Per-user opt-in: land on the VGMC standings view instead of the normal
 --    homepage. Existing profiles_select_own/profiles_update_own policies already
---    cover this column — no RLS changes needed.
+--    cover this column, no RLS changes needed.
 alter table public.profiles
   add column if not exists vgmc_mode_enabled boolean not null default false;
 

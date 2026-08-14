@@ -2021,7 +2021,7 @@ body {
     display: none !important;
   }
 
-  /* Style the comment icon on mobile — purple only when comments present, grey when rated-only */
+  /* Style the comment icon on mobile, purple only when comments present, grey when rated-only */
   .dashboard-update-peek-row.has-activity .peek-action-btn-comments.has-rated,
   .dashboard-update-peek-row.has-activity
     .peek-action-btn-comments.has-comments {
@@ -2666,6 +2666,36 @@ body {
 
 .detached-footer-support-btn.locked:hover,
 .detached-footer-support-btn.locked:focus-visible {
+  color: #c89cff;
+}
+
+.now-playing-support-btn {
+  font-size: 16px;
+  line-height: 1;
+}
+
+.now-playing-support-btn.supported {
+  color: var(--gold);
+}
+
+.now-playing-support-btn.supported.level-2 {
+  color: var(--support-pink);
+}
+
+.now-playing-support-btn.supported.level-3 {
+  color: var(--support-gold);
+}
+
+.now-playing-support-btn.nominated {
+  color: var(--accent-light);
+}
+
+.now-playing-support-btn:hover:not(:disabled) {
+  color: var(--gold);
+}
+
+.now-playing-support-btn.locked:hover,
+.now-playing-support-btn.locked:focus-visible {
   color: #c89cff;
 }
 
@@ -5037,7 +5067,7 @@ body {
 
 /* VGMC page: the player sits in a narrower column (see App.jsx's
    isVgmcStandingsPage), not the full-width classic layout .player-wrap's min-height
-   is sized for — that min-height (calculated off the fixed 900px --player-max-w
+   is sized for, that min-height (calculated off the fixed 900px --player-max-w
    reference) was forcing empty space above the video here. Scoped to this page only;
    the classic player page never gets the vgmc-player-column class. */
 .vgmc-player-column .player-wrap {
@@ -5045,7 +5075,7 @@ body {
 }
 
 /* .player-grid-top-spacer deliberately grows (flex: 1 1 0px) to vertically-center
-   the video within the classic page's taller layout — that's the actual remaining
+   the video within the classic page's taller layout, that's the actual remaining
    cause of the video not sitting at the top here. Collapse it to zero in this
    column only; .player-bottom-content-wrapper (flex: 1 1 0px) still absorbs the
    leftover space below the video/comments as normal. */
@@ -6014,7 +6044,7 @@ body {
   padding-left: 28px;
 }
 
-/* Back-to-main option — styled as a regular list row */
+/* Back-to-main option, styled as a regular list row */
 .community-playlists-back {
   display: flex;
   align-items: center;
@@ -6059,7 +6089,7 @@ body {
   stroke-linejoin: round;
 }
 
-/* Browse all button — styled as a regular option row */
+/* Browse all button, styled as a regular option row */
 .community-option-browse {
   display: flex;
   align-items: center;
@@ -14737,7 +14767,7 @@ body.is-resizing .resize-handle {
   );
 }
 
-/* CSS-only dot grid + soft glow — replaces the WebGL particles */
+/* CSS-only dot grid + soft glow, replaces the WebGL particles */
 @keyframes cpl-bg-breathe {
   0%,
   100% {
@@ -16776,7 +16806,7 @@ body.is-resizing .resize-handle {
 }
 
 /* VGMC nav toggle + mobile standings-drawer trigger (see App.jsx). It floats over
-   whatever's underneath it (a page's hero background, video, etc. — see the
+   whatever's underneath it (a page's hero background, video, etc., see the
    position:absolute wrapper in App.jsx), so its resting state needs real contrast
    against *any* of those, not just a plain neutral fill: a translucent glass pill
    with a light border reads clearly everywhere, and stays reserved for hover to go
@@ -16816,7 +16846,7 @@ body.is-resizing .resize-handle {
     0 4px 18px rgba(0, 0, 0, 0.35);
 }
 
-/* Attention glow behind the toggle on the base site (see VgmcNavToggle) — a light
+/* Attention glow behind the toggle on the base site (see VgmcNavToggle), a light
    blue deliberately distinct from the purple hover/press states, so it reads as
    "notice this" rather than as interaction feedback. */
 .vgmc-toggle-attention-glow {
@@ -16847,7 +16877,7 @@ body.is-resizing .resize-handle {
   }
 }
 
-/* Standings table (VgmcStandingsView) play-now button — a dedicated per-row button
+/* Standings table (VgmcStandingsView) play-now button, a dedicated per-row button
    rather than the whole row being clickable. */
 .vgmc-standings-play-btn {
   display: inline-flex;

@@ -1,7 +1,7 @@
 -- Fixes a real bug found while testing the VGMC pipeline end-to-end: two different
 -- nominations (distinct game/song, hence distinct source_key) that happen to point
--- at the same YouTube video crashed the *entire* reconcile call outright — the whole
--- batch failed, not just the conflicting entry — because it hit
+-- at the same YouTube video crashed the *entire* reconcile call outright, the whole
+-- batch failed, not just the conflicting entry, because it hit
 -- upt_playlist_video_unique (playlist, youtube_video_id), which intentionally
 -- enforces "the same video never appears twice in a playlist" and is staying exactly
 -- as strict as it already was.
@@ -67,7 +67,7 @@ begin
     end if;
 
     -- Same video, different song identity, already claimed earlier this round
-    -- (entries arrive in ordinal/nomination order) — skip, don't crash the batch.
+    -- (entries arrive in ordinal/nomination order), skip, don't crash the batch.
     if normalized_video_id = any (claimed_video_ids) then
       skipped_video_conflicts := skipped_video_conflicts + 1;
       continue;

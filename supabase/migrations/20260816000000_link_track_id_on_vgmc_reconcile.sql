@@ -1,15 +1,15 @@
 -- reconcile_vgmc_playlist never set user_playlist_tracks.track_id, even after the
 -- previous migration started promoting every nomination into the tracks catalog.
 -- That column is how the frontend resolves a personal rating (track_user_feedback
--- is keyed by track_id, not youtube_video_id) — without it, a user's own 1-10
+-- is keyed by track_id, not youtube_video_id), without it, a user's own 1-10
 -- rating on a VGMC song can never be found, no matter how correctly everything
 -- else is wired up.
 --
 -- Fix: call import_vgmc_catalog_row *before* the playlist upsert instead of after,
 -- capture the uuid it returns (that's the whole point of it being a `returns
--- uuid` function — the previous migration only ever `perform`ed it, discarding
+-- uuid` function, the previous migration only ever `perform`ed it, discarding
 -- that value), and write it onto the row. Catalog promotion is still allowed to
--- fail without taking the sync down — the only difference now is where the
+-- fail without taking the sync down, the only difference now is where the
 -- resulting track_id, on success, actually goes.
 create or replace function public.reconcile_vgmc_playlist(
   thread_slug_input text,
@@ -69,7 +69,7 @@ begin
     end if;
 
     -- Same video, different song identity, already claimed earlier this round
-    -- (entries arrive in ordinal/nomination order) — skip, don't crash the batch.
+    -- (entries arrive in ordinal/nomination order), skip, don't crash the batch.
     if normalized_video_id = any (claimed_video_ids) then
       skipped_video_conflicts := skipped_video_conflicts + 1;
       continue;
@@ -99,7 +99,7 @@ begin
         promoted_count := promoted_count + 1;
       exception when others then
         -- Catalog promotion is a bonus, not the source of truth for the playlist
-        -- itself — never let a bad title/row take the whole sync down.
+        -- itself, never let a bad title/row take the whole sync down.
         raise warning 'VGMC catalog promotion failed for % (%): %',
           normalized_source_key, normalized_video_id, sqlerrm;
       end;
@@ -153,7 +153,7 @@ begin
   where id = thread_row.playlist_id;
 
   -- Backfill the thread's tournament_id link once the tournament exists (first
-  -- successful promotion above creates it) — self-healing, doesn't block on it.
+  -- successful promotion above creates it), self-healing, doesn't block on it.
   if thread_row.tournament_id is null and thread_row.contest_number is not null then
     select id into resolved_tournament_id
     from public.tournaments
@@ -186,7 +186,7 @@ to service_role;
 -- linked back. Link it now via the same (provider, external_id) match
 -- import_vgmc_catalog_row itself uses.
 --
--- Scoped to playlists a vgmc_ingest_threads row actually feeds — this must
+-- Scoped to playlists a vgmc_ingest_threads row actually feeds, this must
 -- only ever touch VGMC nomination playlists, never reach into anyone's
 -- personal/custom/other playlists just because a video id happens to match
 -- something in the catalog.

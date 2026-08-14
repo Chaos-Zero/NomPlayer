@@ -3,11 +3,11 @@
 // It is a dumb extractor by design (see /src/lib/vgmcIngest.js in the main repo for
 // why): it never interprets the '+ Game | Song | Link' convention, it just pulls
 // {postId, author, text} per post and hands the array to the background script,
-// which does the actual API call. The one exception is quote-block stripping — that
+// which does the actual API call. The one exception is quote-block stripping, that
 // genuinely has to happen here, because only the DOM (not raw text) reliably tells
 // you which lines are a quoted reply vs. the poster's own words.
 //
-// manifest.json's content_scripts.matches deliberately covers every GameFAQs board —
+// manifest.json's content_scripts.matches deliberately covers every GameFAQs board,
 // this script itself decides whether to act, by checking the current topic against a
 // user-maintained "followed topics" list (storage.js). We don't want to be extracting
 // from every GameFAQs page anyone happens to be reading. A topic only ever gets added
@@ -15,7 +15,7 @@
 // identity (id/board/title) is read straight off the page, so there's nothing to
 // type in by hand.
 //
-// ⚠️ SELECTOR ASSUMPTIONS — VERIFY AGAINST THE LIVE THREAD BEFORE RELYING ON THIS.
+// ⚠️ SELECTOR ASSUMPTIONS, VERIFY AGAINST THE LIVE THREAD BEFORE RELYING ON THIS.
 // This was written without the ability to browse gamefaqs.gamespot.com from the
 // build environment, so every selector/pattern below is a best-effort guess at
 // GameFAQs' markup and URL structure. Open a real topic, inspect it in devtools, and
@@ -45,13 +45,13 @@ function extractTopicMeta() {
 }
 
 // --- Post extraction ---------------------------------------------------------------
-// Confirmed against a live GameFAQs message board thread (2026-08-13) — a `<table
+// Confirmed against a live GameFAQs message board thread (2026-08-13), a `<table
 // class="board message ...">` of `<tr><td class="msg" id="message_<postId>">` rows.
 // Each row's `.msg_infobox` holds the poster's name as `data-username` on
 // `a.name`; the actual text lives in `.msg_text` (a sibling of `.signature`, so
 // selecting `.msg_text` specifically already excludes the signature for free).
 // Quoted replies are `<cite>Name posted...</cite><blockquote>quoted text</blockquote>`
-// — both need stripping, not just the blockquote, or a quoted "X posted..." line
+//, both need stripping, not just the blockquote, or a quoted "X posted..." line
 // lingers as noise (harmless for parsing, but not clean).
 const POST_CONTAINER_SELECTOR = 'td.msg[id^="message_"]';
 const POST_ID_ATTR_PATTERN = /^(?:msg|message_)?(\d+)$/;
@@ -61,11 +61,11 @@ const QUOTE_SELECTOR = 'cite, blockquote';
 
 // --- Pagination ----------------------------------------------------------------
 // GameFAQs splits a topic's posts across multiple pages (`?page=N` on the same
-// topic URL — confirmed against a live thread, 2026-08-13) rather than showing
+// topic URL, confirmed against a live thread, 2026-08-13) rather than showing
 // them all on one page, so a single-page extraction only ever sees a fraction of
 // a long nomination thread. Both the top and bottom of a topic page repeat an
 // identical `<ul class="paginate">...Page X of Y...</ul>` control (distinct from
-// `<ul class="paginate user">`, the unrelated account-menu dropdown) — that text
+// `<ul class="paginate user">`, the unrelated account-menu dropdown), that text
 // is a far more robust source of the total page count than trying to parse
 // individual First/Previous/Next/Last link hrefs, so that's all we rely on here;
 // every page URL is then just constructed directly rather than "clicked through".
@@ -90,7 +90,7 @@ function buildPageUrl(pageNumber) {
   return `${location.origin}${location.pathname}?page=${pageNumber}`;
 }
 
-/** Same-origin fetch + parse of one other page of this same topic. Never throws —
+/** Same-origin fetch + parse of one other page of this same topic. Never throws,
  * a single failed page shouldn't abort the rest of the crawl. */
 async function fetchPagePosts(url) {
   try {
@@ -106,7 +106,7 @@ async function fetchPagePosts(url) {
 
 /** Extracts the current page's posts, then fills in every other page of the same
  * topic (fetched same-origin, no extra host_permissions needed), merging by
- * postId — GameFAQs message ids are unique thread-wide so a plain merge is safe. */
+ * postId, GameFAQs message ids are unique thread-wide so a plain merge is safe. */
 async function crawlAllPages(totalPages) {
   const postsByPostId = new Map();
   for (const post of extractPosts(document)) {
@@ -153,7 +153,7 @@ function extractBodyText(element) {
 
   // Found live (2026-08-14): GameFAQs renders a poster's own line breaks as
   // literal `<br>` tags inside `.msg_text`, but `.textContent` drops element
-  // boundaries entirely — it does NOT insert a newline for `<br>` the way a
+  // boundaries entirely, it does NOT insert a newline for `<br>` the way a
   // browser's rendered/visible text would. A post with several nominations,
   // each on its own line, was collapsing into one run-on string with no
   // separator between them. Server-side folding treats one post as one line

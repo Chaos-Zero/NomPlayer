@@ -49,7 +49,7 @@ export function normalizeNominationDashboardUpdate(entry) {
       : null;
   const rawUsername =
     typeof entry.username === 'string' ? entry.username.trim() : '';
-  // Guard: never expose email addresses — strip domain if one slipped through
+  // Guard: never expose email addresses, strip domain if one slipped through
   const username =
     rawUsername && !rawUsername.includes('@') ? rawUsername : 'Unknown user';
   const nominations = normalizeVideoList(entry.nominations);

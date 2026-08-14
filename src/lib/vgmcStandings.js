@@ -2,7 +2,7 @@ import { getYouTubeThumbnailUrl } from '../utils/youtube.js';
 
 // Backs the live VGMC standings homepage view. The scoring itself is computed
 // server-side (src/lib/vgmcIngest.js) and persisted onto user_playlist_tracks by
-// reconcile_vgmc_playlist — this module just reads that back and shapes it for the
+// reconcile_vgmc_playlist, this module just reads that back and shapes it for the
 // UI. Everything here is a plain read against RLS (public playlists are readable by
 // anyone), so there's no new API surface for this feature.
 
@@ -42,7 +42,7 @@ function normalizeRow(row) {
  * of the app already uses for playlist entries, in nomination order.
  *
  * gameTitle/trackTitle come straight off nomination_game/nomination_song
- * (populated correctly server-side by reconcile_vgmc_playlist) — this used to
+ * (populated correctly server-side by reconcile_vgmc_playlist), this used to
  * only carry the combined `cached_title` display string and nothing else,
  * which is why every VGMC track showed up as "Metadata Needed" wherever
  * something (the sidebar, the GameFAQs export formatter) needed the game/song
@@ -59,7 +59,7 @@ export function toPlaylistVideos(rows) {
       thumbnail: getYouTubeThumbnailUrl(row.youtube_video_id),
       channelTitle: '',
       // The catalog track this nomination was promoted to (reconcile_vgmc_playlist
-      // links it) — this is what a personal rating is actually keyed by
+      // links it), this is what a personal rating is actually keyed by
       // (track_user_feedback.track_id), not the video id.
       trackId: row.track_id || null,
       supportPoints: Number.isFinite(row.support_points)
@@ -73,7 +73,7 @@ export function toPlaylistVideos(rows) {
  * Splits playlist-track rows into the two standings views: `standings` is every
  * song with more than 1 support point (this includes a nomination submitted with
  * `++`, which starts at 2), sorted highest-first; `locked` is the subset at 7+
- * points. Locked is a filtered view of standings, not a separate bucket — a song
+ * points. Locked is a filtered view of standings, not a separate bucket, a song
  * can appear in both.
  */
 export function partitionStandings(rows) {

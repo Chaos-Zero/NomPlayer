@@ -1,9 +1,10 @@
 import { createClient } from '@supabase/supabase-js';
 import { buildReconcileEntries, foldThread } from '../../src/lib/vgmcIngest.js';
+import { verifySupabaseUser } from '../lib/supabaseAuth.js';
 
 // Ingest endpoint for the VGMC nomination-sync browser extension (see /extension).
 //
-// This is the *only* thing allowed to mutate a VGMC playlist — ingest_vgmc_thread_posts
+// This is the *only* thing allowed to mutate a VGMC playlist, ingest_vgmc_thread_posts
 // and reconcile_vgmc_playlist are both granted to service_role only (see the
 // add_vgmc_ingest_pipeline migration), and the service-role key only ever lives in this
 // server-side function's environment, never in the extension or the site's client bundle.
@@ -18,25 +19,6 @@ function jsonResponse(body, status = 200) {
     status,
     headers: { 'cache-control': 'no-store' },
   });
-}
-
-async function verifySupabaseUser(supabaseUrl, anonKey, accessToken) {
-  if (!accessToken || typeof accessToken !== 'string') return null;
-
-  try {
-    const response = await fetch(`${supabaseUrl}/auth/v1/user`, {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        apikey: anonKey,
-      },
-    });
-    if (!response.ok) return null;
-
-    const user = await response.json();
-    return user && user.id ? user : null;
-  } catch {
-    return null;
-  }
 }
 
 function sanitizePosts(posts) {

@@ -324,7 +324,7 @@ const VideoPlayer = forwardRef(function VideoPlayer(
           verifyPauseState();
         }, 180);
       } else if (event?.data === 3) {
-        // Buffering — duration is reliably available here even before first play
+        // Buffering, duration is reliably available here even before first play
         try {
           const player = playerRef.current;
           const dur = player?.getDuration?.() ?? 0;
@@ -495,6 +495,29 @@ const VideoPlayer = forwardRef(function VideoPlayer(
             aria-label="Add to Queue"
           >
             <PlaylistPlusIcon />
+          </button>
+          <button
+            className={`btn btn-icon now-playing-support-btn${supportClassName}`}
+            type="button"
+            onClick={(event) => {
+              const rect = event.currentTarget.getBoundingClientRect();
+              onOpenSupportDropdown(
+                video,
+                {
+                  top: rect.bottom,
+                  left: rect.left + rect.width / 2,
+                },
+                {
+                  direction: 'down',
+                  showRemove: isSupported,
+                },
+              );
+            }}
+            title={supportTooltip}
+            aria-label={supportLabel}
+            disabled={isNominated}
+          >
+            {supportGlyph}
           </button>
         </div>
       </div>

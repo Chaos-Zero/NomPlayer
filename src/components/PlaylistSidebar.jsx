@@ -292,7 +292,7 @@ function PlaylistItem({
             type="button"
             title={
               showRatingInsteadOfComments && video.rating != null
-                ? `Your rating: ${video.rating} — view community comments`
+                ? `Your rating: ${video.rating}, view community comments`
                 : 'View community comments'
             }
             onClick={(e) => {
@@ -517,7 +517,7 @@ export default function PlaylistSidebar({
   );
   const displayPlaylist = useMemo(() => {
     if (rankingSortDirection) {
-      // Your own rating (out of 10), not the community's VGMC support total —
+      // Your own rating (out of 10), not the community's VGMC support total,
       // that's what the "Total" column on the standings tab already covers.
       return [...playlist].sort((a, b) => {
         const ratingA = a.rating ?? -1;
@@ -1225,9 +1225,9 @@ export default function PlaylistSidebar({
                   }
                   title={
                     rankingSortDirection === 'desc'
-                      ? 'Sorted by your rating, highest first — click for lowest first'
+                      ? 'Sorted by your rating, highest first, click for lowest first'
                       : rankingSortDirection === 'asc'
-                        ? 'Sorted by your rating, lowest first — click to reset'
+                        ? 'Sorted by your rating, lowest first, click to reset'
                         : 'Sort by your rating'
                   }
                   aria-label="Sort by your rating"

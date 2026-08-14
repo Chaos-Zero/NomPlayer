@@ -325,8 +325,8 @@ describe('foldThread', () => {
     ]);
 
     // alice: +1. bob: ++ (2) then -- (-2) accumulate to a net 0, not a
-    // replacement down to -2 — bob effectively took his support back.
-    // Total: 1 + 0 = 1. (Still present in the playlist itself —
+    // replacement down to -2, bob effectively took his support back.
+    // Total: 1 + 0 = 1. (Still present in the playlist itself,
     // buildReconcileEntries only filters on presence, not score; the >1-point
     // threshold is the standings view's job.)
     expect(buildReconcileEntries(records)[0].support_points).toBe(1);
@@ -351,7 +351,7 @@ describe('foldThread', () => {
       },
     ]);
 
-    // Two separate +'s already max alice out at 2 — a third contributes nothing.
+    // Two separate +'s already max alice out at 2, a third contributes nothing.
     expect(buildReconcileEntries(records)[0].support_points).toBe(2);
   });
 
@@ -430,7 +430,7 @@ describe('foldThread', () => {
     ]);
 
     // alice is the owner, but this '-' is her second event on an already-'+'
-    // record — the authority rule only fires on a lone '-' as the very act
+    // record, the authority rule only fires on a lone '-' as the very act
     // that would flip present -> false; here it still does (owner, magnitude 1,
     // present), so this also tombstones the record. Scoring still accumulates
     // regardless: 1 + 1 - 1 = 1.
@@ -450,7 +450,7 @@ describe('foldThread', () => {
     ]);
 
     // alice's own total accumulates (2 + -2 = 0, clamped no-op); still present,
-    // just below the >1 threshold — '--' only ever affects score, never presence.
+    // just below the >1 threshold, '--' only ever affects score, never presence.
     const record = records.get('game a|song a');
     expect(record.present).toBe(true);
     expect(supportPoints(record)).toBe(0);

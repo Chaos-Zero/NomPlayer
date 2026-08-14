@@ -3,7 +3,7 @@
 -- Backs the GameFAQs-thread-syncing browser extension: raw posts extracted from a
 -- nomination thread are ingested and replayed server-side into a "VGMC 20"-style
 -- public playlist. Both mutation entry points are SECURITY DEFINER functions granted
--- to service_role only — no authenticated user, not even the bot account that owns
+-- to service_role only, no authenticated user, not even the bot account that owns
 -- the playlist, can write to these tables or the reconciled playlist directly. The
 -- Cloudflare Function holding the service-role secret is the only caller.
 
@@ -39,7 +39,7 @@ alter table public.vgmc_ingest_threads enable row level security;
 revoke all on public.vgmc_ingest_threads from public, anon, authenticated;
 grant all on public.vgmc_ingest_threads to service_role;
 
--- 3. Raw post storage — the replay source of truth. Keyed by GameFAQs' own message id
+-- 3. Raw post storage, the replay source of truth. Keyed by GameFAQs' own message id
 --    (not a page-relative index) so identity survives pagination. Re-ingesting the same
 --    post_id overwrites raw_text, so edits and re-syncs are naturally idempotent.
 create table if not exists public.vgmc_thread_posts (
@@ -157,7 +157,7 @@ grant execute on function public.ingest_vgmc_thread_posts(text, integer, integer
 to service_role;
 
 -- 5. Replace-diff the playlist's tracks against an already-folded, ordered desired
---    state. `entries_input` is `[{source_key, video_id, game, song}]` in final order —
+--    state. `entries_input` is `[{source_key, video_id, game, song}]` in final order,
 --    the fold/authority-rule/ordinal logic lives in application code
 --    (src/lib/vgmcIngest.js), not here; this function only does the idempotent write.
 create or replace function public.reconcile_vgmc_playlist(

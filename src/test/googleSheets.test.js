@@ -178,7 +178,7 @@ describe('buildSheetUpdates', () => {
     ]);
   });
 
-  it('never adds rows — a rated video missing from the sheet is simply unmatched', () => {
+  it('never adds rows, a rated video missing from the sheet is simply unmatched', () => {
     const rows = [headerRow];
 
     const { updates } = buildSheetUpdates({

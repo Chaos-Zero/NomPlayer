@@ -350,7 +350,7 @@ function HomeCommunityPlaylistsStrip({
       } else {
         onAddToPlaylist(tracks);
       }
-      onShowToast?.(`Playing "${playlist.name}" — ${tracks.length} tracks`);
+      onShowToast?.(`Playing "${playlist.name}", ${tracks.length} tracks`);
     } catch {
       onShowToast?.('Failed to load playlist');
     } finally {
@@ -798,7 +798,7 @@ function NominatorGridCard({ update, isSelected, onSelect }) {
     <button
       className={`nom-grid-card${isSelected ? ' selected' : ''}`}
       onClick={() => onSelect(update)}
-      title={`${displayName}'s nominations — ${trackCount} tracks`}
+      title={`${displayName}'s nominations, ${trackCount} tracks`}
     >
       <div className="nom-grid-card-avatar">
         {update.avatarUrl ? (
@@ -3090,7 +3090,7 @@ export default function HomePage({
                   }
                 >
                   {isNominationGridView ? (
-                    /* carousel icon — shown when in grid mode */
+                    /* carousel icon, shown when in grid mode */
                     <svg
                       viewBox="0 0 24 24"
                       fill="none"
@@ -3105,7 +3105,7 @@ export default function HomePage({
                       <polyline points="23,12 21,10 21,14" />
                     </svg>
                   ) : (
-                    /* grid icon — shown when in carousel mode */
+                    /* grid icon, shown when in carousel mode */
                     <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden>
                       <path d="M3 3h7v7H3V3zm0 11h7v7H3v-7zm11-11h7v7h-7V3zm0 11h7v7h-7v-7z" />
                     </svg>

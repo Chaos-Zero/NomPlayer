@@ -18,7 +18,7 @@ function ModalPortal({ children }) {
   return createPortal(children, target);
 }
 
-// Persistent VGMC/NomPlayer page switch — shown on every page (not just the VGMC
+// Persistent VGMC/NomPlayer page switch, shown on every page (not just the VGMC
 // view itself) so it's always available, not just a one-way trip in from Settings.
 // One button that always names *where clicking it takes you*, not where you are.
 function VgmcNavToggle({ isOnVgmcPage, onNavigate }) {
@@ -28,7 +28,7 @@ function VgmcNavToggle({ isOnVgmcPage, onNavigate }) {
   return (
     <div style={{ position: 'relative', display: 'inline-flex' }}>
       {/* Soft light-blue glow, base site only (i.e. while the button reads "VGMC
-          20" and is inviting you in) — draws the eye without being the same purple
+          20" and is inviting you in), draws the eye without being the same purple
           used for hover/press feedback. Gone once you're already on the VGMC page. */}
       {!isOnVgmcPage && (
         <div className="vgmc-toggle-attention-glow" aria-hidden="true" />
@@ -47,7 +47,7 @@ function VgmcNavToggle({ isOnVgmcPage, onNavigate }) {
 
 // Mobile-only slide-in drawer for the VGMC standings table. On mobile the VGMC page
 // otherwise behaves exactly like the classic player page (see the isMobileLayout
-// check around isVgmcStandingsPage below) — the desktop side-by-side column doesn't
+// check around isVgmcStandingsPage below), the desktop side-by-side column doesn't
 // fit a phone screen, so standings live behind this drawer instead.
 function VgmcStandingsDrawer({
   isOpen,
@@ -91,7 +91,7 @@ function VgmcStandingsDrawer({
         aria-hidden={!isOpen}
       >
         {/* Fades out quickly (0.12s) on its own, well before the panel's slower
-            0.25s slide-out finishes — content disappears before the drawer
+            0.25s slide-out finishes, content disappears before the drawer
             withdraws, instead of visibly dragging text off-screen with it. */}
         <div
           style={{
@@ -312,8 +312,8 @@ function resolvePlayOrderIds(playlist, shuffleOrderIds) {
 
 /** Reorders `tracks` to match the active shuffle order, for display. A no-op
  * (returns tracks in their existing order) whenever shuffleOrderIds doesn't
- * apply to this exact set of tracks — e.g. it was computed for a different
- * view — since resolvePlayOrderIds already falls back to original order then. */
+ * apply to this exact set of tracks, e.g. it was computed for a different
+ * view, since resolvePlayOrderIds already falls back to original order then. */
 function applyShuffleOrder(tracks, shuffleOrderIds) {
   const orderIds = resolvePlayOrderIds(tracks, shuffleOrderIds);
   if (orderIds === shuffleOrderIds) {
@@ -340,7 +340,7 @@ function shuffleVideoIds(videoIds, pinnedVideoId = null) {
 }
 
 /** Same shuffle as shuffleVideoIds, but groups never-listened-to videos first
- * (each group independently randomized) — used for the VGMC standings
+ * (each group independently randomized), used for the VGMC standings
  * playlist so shuffling surfaces songs you haven't heard yet before ones
  * you've already started or finished. */
 function shuffleVideoIdsNotStartedFirst(
@@ -604,7 +604,7 @@ export default function App() {
   // Playlist state
   const [playlist, setPlaylist] = useState(initialPlayerState.playlist);
   const playlistRef = useRef([]);
-  // Whatever's actually playing right now — the personal playlist, or (while
+  // Whatever's actually playing right now, the personal playlist, or (while
   // transientVideo is set) a community/nominations/support/custom-playlist view.
   // Synced below, after playingTracks is defined. Used by shuffle so it can
   // operate on whichever of those is currently relevant, not just the personal
@@ -680,7 +680,7 @@ export default function App() {
   const supportListRef = useRef(supportList);
   const nominationListRef = useRef(nominationList);
 
-  // VGMC standings view — see src/lib/vgmcStandings.js. `hasLoadedVgmcPlaylistRef`/
+  // VGMC standings view, see src/lib/vgmcStandings.js. `hasLoadedVgmcPlaylistRef`/
   // `hasAutoNavigatedToVgmcRef` survive the view unmounting (switching back to the
   // Classic tab), which is why "load once per session" lives here as refs rather
   // than as local state inside VgmcStandingsView.
@@ -688,7 +688,7 @@ export default function App() {
   const [isVgmcStandingsLoading, setIsVgmcStandingsLoading] = useState(false);
   const [isVgmcStandingsDrawerOpen, setIsVgmcStandingsDrawerOpen] =
     useState(false);
-  // Distinct from isVgmcStandingsLoading, which also covers Refresh — this one only
+  // Distinct from isVgmcStandingsLoading, which also covers Refresh, this one only
   // ever flips true once, after the very first load finishes, and drives the
   // full-view loading overlay (Refresh keeps its lighter button-only feedback).
   const [hasVgmcLoadedOnce, setHasVgmcLoadedOnce] = useState(false);
@@ -696,7 +696,7 @@ export default function App() {
   const hasLoadedVgmcPlaylistRef = useRef(false);
   const hasAutoNavigatedToVgmcRef = useRef(false);
   // handleLoadVgmcPlaylist/handleRefreshVgmcPlaylist are defined further down, right
-  // after handlePlayCommunityPlaylist — they build on it, so they live near it.
+  // after handlePlayCommunityPlaylist, they build on it, so they live near it.
 
   useEffect(() => {
     supportListRef.current = supportList;
@@ -1479,7 +1479,7 @@ export default function App() {
   }, [authUser]);
 
   // Warm the catalog cache as early as possible so it's ready before login.
-  // getFullCatalog is idempotent — subsequent calls return the cached result instantly.
+  // getFullCatalog is idempotent, subsequent calls return the cached result instantly.
   useEffect(() => {
     if (supabase) getFullCatalog(supabase).catch(() => {});
   }, [supabase]);
@@ -1860,7 +1860,7 @@ export default function App() {
     [playlist, shuffleOrderIds],
   );
 
-  // Personal-queue-specific — feeds displayPlaylist's own reordering only.
+  // Personal-queue-specific, feeds displayPlaylist's own reordering only.
   // isShuffleEnabled (general, reflects whatever's actually playing right now)
   // is defined below, once playingTracks exists.
   const isPersonalShuffleActive = useMemo(
@@ -2077,8 +2077,8 @@ export default function App() {
         [];
     } else if (activePlaylistView.type === 'community-playlist') {
       // toPlaylistVideos (the source of these, for VGMC) has no access to
-      // catalogTrackByVideoId/userFeedback, so the user's own rating — what
-      // the sidebar badge actually shows, not the community support count —
+      // catalogTrackByVideoId/userFeedback, so the user's own rating, what
+      // the sidebar badge actually shows, not the community support count,
       // has to get attached here instead, same lookup the other views do.
       tracks = (activePlaylistView.videos || []).map((video) => {
         const catalogEntry = catalogTrackByVideoId[video.videoId];
@@ -2094,7 +2094,7 @@ export default function App() {
     }
 
     // 'personal' (and the community-with-no-match edge case above) falls back
-    // to displayPlaylist, which already reflects shuffle order on its own —
+    // to displayPlaylist, which already reflects shuffle order on its own,
     // applying it again here would be redundant, not wrong, but skip it.
     // Every other view type doesn't get shuffle-reordered anywhere else, so it
     // has to happen here for the sidebar to actually show shuffled order
@@ -2103,7 +2103,7 @@ export default function App() {
     if (tracks === undefined) return displayPlaylist;
 
     // Stamp each track's pre-shuffle position once, before reordering, so its
-    // displayed number stays put when shuffled — only the row's position
+    // displayed number stays put when shuffled, only the row's position
     // moves, not the number on it. Some branches above (nominations, support)
     // already stamp their own loadIndex; this only fills in a fallback for
     // whichever don't (custom playlists, and any community-playlist whose
@@ -2196,7 +2196,7 @@ export default function App() {
     playingTracksRef.current = playingTracks;
   }, [playingTracks]);
 
-  // General shuffle state — reflects whatever's actually playing right now
+  // General shuffle state, reflects whatever's actually playing right now
   // (a transient community/nominations/support/custom-playlist view, or the
   // personal queue when there's no transient video). This drives the shuffle
   // button's own active/available state and playback advancement; it's
@@ -2226,17 +2226,17 @@ export default function App() {
   const isListExplorerPage = activePage === 'listExplorer';
   // The VGMC standings page reuses the classic player page's full VideoPlayer +
   // persistent sidebar chrome (see PLAYER_LIKE_PAGES in handleNavigate for the
-  // matching navigation-animation treatment) — it just adds a standings table above
+  // matching navigation-animation treatment), it just adds a standings table above
   // it, rendered separately below. Everywhere the player page's layout/chrome used to
   // key off `isPlayerPage` alone now keys off `isPlayerLikePage` instead.
   const isVgmcStandingsPage = activePage === 'vgmcStandings';
   const isPlayerLikePage = isPlayerPage || isVgmcStandingsPage;
   // Desktop shows standings as a side-by-side column; mobile behaves exactly like
   // the classic player page (isPlayerLikePage) and gets a slide-in drawer instead
-  // (see VgmcStandingsDrawer) — there's no room for a permanent side column there.
+  // (see VgmcStandingsDrawer), there's no room for a permanent side column there.
   const isVgmcSplitLayout = isVgmcStandingsPage && !isMobileLayout;
 
-  // Feeds VgmcSheetSyncPanel — {videoId: {rating, note}} for every VGMC song
+  // Feeds VgmcSheetSyncPanel, {videoId: {rating, note}} for every VGMC song
   // with a rating from the signed-in user. Built entirely from state already
   // loaded for the standings view + the existing feedback fetch, so opening
   // the sync panel doesn't trigger any DB reads of its own.
@@ -2467,7 +2467,7 @@ export default function App() {
     ) => {
       if (!supabase || !user) return;
 
-      // Kick off catalog in background — may already be loading from the warm
+      // Kick off catalog in background, may already be loading from the warm
       // effect. We do NOT await it here; phase 1 completes without it.
       const catalogPromise = getFullCatalog(supabase);
       let rawHydratedDbState = null;
@@ -2642,7 +2642,7 @@ export default function App() {
 
       // ── Phase 2: catalog enrichment (background) ─────────────────────────
       // Only needed if catalog wasn't loaded during phase 1. UI is already
-      // visible at this point — this just fills in titles/thumbnails.
+      // visible at this point, this just fills in titles/thumbnails.
       const catalogWasReady = Boolean(getCachedCatalog());
       try {
         const catalog = await catalogPromise;
@@ -3947,17 +3947,17 @@ export default function App() {
   // Loads the VGMC nomination playlist the same way viewing any other public
   // playlist works: activePlaylistView/playingPlaylistView + a transient "now
   // playing" video (handlePlayCommunityPlaylist, above). This deliberately does
-  // *not* touch `playlist` — that's the user's own saved queue, and viewing/playing
+  // *not* touch `playlist`, that's the user's own saved queue, and viewing/playing
   // the VGMC standings must never overwrite it. Leaving the VGMC view (Classic tab,
   // or playing something else) falls back to whatever the user actually had queued,
   // the same way leaving any community playlist already does.
   const handleLoadVgmcPlaylist = useCallback(async () => {
-    // Loads once per session — after that, only the explicit Refresh button re-syncs.
+    // Loads once per session, after that, only the explicit Refresh button re-syncs.
     if (hasLoadedVgmcPlaylistRef.current) return;
     hasLoadedVgmcPlaylistRef.current = true;
 
     if (!supabase || !VGMC_PLAYLIST_ID) {
-      // Nothing to load — don't leave the full-view loading overlay stuck up.
+      // Nothing to load, don't leave the full-view loading overlay stuck up.
       setHasVgmcLoadedOnce(true);
       return;
     }
@@ -3990,7 +3990,7 @@ export default function App() {
       setVgmcStandingsRows(rows);
       const freshVideos = toPlaylistVideos(rows);
 
-      // Replace outright — `freshVideos` is already in true nomination order
+      // Replace outright, `freshVideos` is already in true nomination order
       // (fetchVgmcPlaylistTracks orders by order_index), and a re-sync can add
       // posts *anywhere* in that order, not just at the end (an earlier page can
       // finish syncing after a later one, a removed nomination can get reposted,
@@ -3998,7 +3998,7 @@ export default function App() {
       // happened to be *discovered* in across repeated refreshes rather than the
       // order they were actually posted in, which is exactly the bug reported:
       // the playlist stopped matching the thread. Playback continuity doesn't
-      // need special-casing to do this safely — the currently-playing video is
+      // need special-casing to do this safely, the currently-playing video is
       // tracked by id (currentVideoIdRef), not array position, and "next" is
       // resolved fresh off this array at the moment of advancing, so replacing
       // it mid-playback doesn't interrupt anything already playing. If the VGMC
@@ -4445,7 +4445,7 @@ export default function App() {
       return;
     }
 
-    // Shuffle whatever's actually playing right now — a transient
+    // Shuffle whatever's actually playing right now, a transient
     // community/nominations/support/custom-playlist view (VGMC included), or
     // the personal queue when there isn't one. Mirrors the same transientVideo
     // branch handlePrev/handleNext/handleVideoEnd already use.
@@ -5562,14 +5562,14 @@ export default function App() {
   );
 
   // VGMC 20 is the default landing page for everyone for now (not gated on any
-  // per-user setting) — fires once per session, and never fights a deep link or
+  // per-user setting), fires once per session, and never fights a deep link or
   // the user's own later navigation back to Classic, since it only ever fires
   // while still on the default 'home' page.
   //
   // The site loads into the normal home page first, behind a full-screen loading
-  // overlay (see hasVgmcLoadedOnce below) — navigation to the VGMC page itself only
+  // overlay (see hasVgmcLoadedOnce below), navigation to the VGMC page itself only
   // happens *after* the playlist has fully loaded, not before. Mounting the VGMC
-  // page's tree while data was still arriving was the source of it rendering blank —
+  // page's tree while data was still arriving was the source of it rendering blank,
   // deferring the page switch until everything's ready sidesteps that entirely.
   useEffect(() => {
     if (hasAutoNavigatedToVgmcRef.current) return;
@@ -5759,8 +5759,8 @@ export default function App() {
         previewCountdown={previewCountdown}
         onTogglePreview={handleTogglePreviewMode}
         isSupported={isCurrentVideoSupported}
-        onOpenSupportDropdown={(video, position) =>
-          setSupportLevelDropdown({ video, position })
+        onOpenSupportDropdown={(video, position, options) =>
+          setSupportLevelDropdown({ video, position, ...options })
         }
         isNominated={isCurrentVideoNominated}
         onToggleSupport={handleToggleSupportFromPlaylist}
@@ -5955,7 +5955,7 @@ export default function App() {
   return (
     <div className={`app-frame${isMobileLayout ? ' mobile' : ''}`}>
       {VGMC_PLAYLIST_ID && !hasVgmcLoadedOnce && (
-        // Full-screen splash while the default VGMC 20 landing loads — the site
+        // Full-screen splash while the default VGMC 20 landing loads, the site
         // mounts into the normal home page underneath this the whole time; we only
         // navigate to the VGMC page (see the auto-navigate effect above) once
         // loading is completely done, and this comes down at the same moment.
@@ -6099,12 +6099,12 @@ export default function App() {
         >
           {/*
             main-content is `display: flex` with no flex-direction set, i.e. a row
-            (see .main-content / .main-content.player-view in index.css) — that was
+            (see .main-content / .main-content.player-view in index.css), that was
             never a problem when the player was its only real child. Now that a
             persistent nav toggle (and, on the VGMC page, a standings table) needs to
             stack *above* that content instead of sitting beside it, everything below
             is wrapped in one explicit flex-column container. main-content's own
-            row/stretch rules then apply to just this single wrapper (harmless — a
+            row/stretch rules then apply to just this single wrapper (harmless, a
             lone flex child fills the box the same way regardless of direction), and
             this wrapper controls the real internal stacking.
           */}
@@ -6118,7 +6118,7 @@ export default function App() {
             }}
           >
             {VGMC_PLAYLIST_ID && (
-              // Normal flow — reserves its own row so every page's content (the
+              // Normal flow, reserves its own row so every page's content (the
               // hero, the VGMC split, etc.) renders below it, never under it.
               <div
                 style={{
@@ -6150,13 +6150,13 @@ export default function App() {
 
             {/*
               One flex container for every page's main content + the player,
-              flexDirection toggling row/column for the VGMC split — deliberately
+              flexDirection toggling row/column for the VGMC split, deliberately
               *not* two separately-branched trees like this used to be. Each
               possible child is `key`ed and conditionally rendered side-by-side in
               the same container, so the persistent-player child (key
               "persistent-player") stays the same node across every navigation
               (Home <-> VGMC, VGMC desktop <-> mobile, etc.) instead of being
-              unmounted and remounted — that unmount was what silently reloaded
+              unmounted and remounted, that unmount was what silently reloaded
               (restarted) playback whenever you switched to or from this page.
             */}
             <div
@@ -6691,6 +6691,7 @@ export default function App() {
       <VgmcSheetSyncPanel
         isOpen={isVgmcSheetSyncOpen}
         onClose={() => setIsVgmcSheetSyncOpen(false)}
+        supabase={supabase}
         feedbackByVideoId={vgmcFeedbackByVideoId}
       />
 

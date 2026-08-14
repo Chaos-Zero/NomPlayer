@@ -43,16 +43,16 @@ VITE_SUPABASE_PUBLISHABLE_KEY=your_publishable_key_here
 ## VGMC Nomination Sync
 
 [`extension/`](extension/README.md) is a separate, standalone Firefox extension for
-syncing GameFAQs VGMC nomination threads into a playlist — it's not part of this app
+syncing GameFAQs VGMC nomination threads into a playlist, it's not part of this app
 (no build step, own lint config, never bundled or deployed with the site). Its API
 counterpart is `functions/api/vgmc-ingest.js`, documented in
 [`functions/README.md`](functions/README.md).
 
 The GameFAQs thread convention scores support too (`++`/`--` are worth 2 points,
-`+`/`-` are worth 1 — see `src/lib/vgmcIngest.js`), and that score powers a live
+`+`/`-` are worth 1, see `src/lib/vgmcIngest.js`), and that score powers a live
 standings homepage view (`src/components/VgmcStandingsView.jsx`). It needs
 `VITE_VGMC_PLAYLIST_ID` set (the bot-owned playlist the ingest pipeline writes to).
-The view itself is opt-in per account for now — toggle "Land on the live VGMC 20
+The view itself is opt-in per account for now, toggle "Land on the live VGMC 20
 standings view" in Account Settings.
 
 ## Supabase Workflow

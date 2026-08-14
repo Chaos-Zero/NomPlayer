@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "NomPlayer VGMC Sync",
   "version": "0.1.0",
-  "description": "Syncs VGMC nomination-thread posts from a GameFAQs topic into your NomPlayer account. Unofficial — not affiliated with GameFAQs, GameSpot, or Fandom.",
+  "description": "Syncs VGMC nomination-thread posts from a GameFAQs topic into your NomPlayer account. Unofficial, not affiliated with GameFAQs, GameSpot, or Fandom.",
   "browser_specific_settings": {
     "gecko": {
       "id": "vgmc-sync@nomplayer.app",

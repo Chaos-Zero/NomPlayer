@@ -902,13 +902,13 @@ export async function syncNominations(
 
   let trackIdsToDelete;
   if (previousList !== null) {
-    // Use cached previous state — no SELECT needed
+    // Use cached previous state, no SELECT needed
     const prevSet = new Set(
       previousList.filter((v) => v.trackId != null).map((v) => v.trackId),
     );
     trackIdsToDelete = [...prevSet].filter((id) => !currentSet.has(id));
   } else {
-    // First sync after login — fall back to fetching from DB
+    // First sync after login, fall back to fetching from DB
     const { data: existingNoms } = await supabase
       .from('track_nominations')
       .select('track_id')
@@ -975,14 +975,14 @@ export async function syncSupports(
 
   let trackIdsToDelete;
   if (previousList !== null) {
-    // Use cached previous state — no SELECT needed
+    // Use cached previous state, no SELECT needed
     const prevValid = previousList.filter(
       (v) => v.trackId != null && v.supportLevel,
     );
     const prevSet = new Set(prevValid.map((v) => v.trackId));
     trackIdsToDelete = [...prevSet].filter((id) => !currentSet.has(id));
   } else {
-    // First sync after login — fall back to fetching from DB
+    // First sync after login, fall back to fetching from DB
     const { data: existingSups } = await supabase
       .from('track_supports')
       .select('track_id')
@@ -1092,7 +1092,7 @@ export async function saveActiveQueue(
 
     if (tracksToUpsert.length > 0) {
       // upsert via onConflict is not viable after the PK became a surrogate UUID
-      // with partial unique indexes — delete the affected rows then re-insert.
+      // with partial unique indexes, delete the affected rows then re-insert.
       await supabase
         .from('user_playlist_tracks')
         .delete()
@@ -1107,7 +1107,7 @@ export async function saveActiveQueue(
       if (tracksError) throw tracksError;
     }
   } else if (currentEntries.length > 0) {
-    // First sync or no cache — full replace, but only if there are tracks.
+    // First sync or no cache, full replace, but only if there are tracks.
     // If current is empty and we have no cache, skip: cannot distinguish
     // "genuinely empty" from "state not yet loaded". Avoids wiping the table.
     await supabase
@@ -1130,7 +1130,7 @@ export async function saveActiveQueue(
 
 export async function syncCustomPlaylists(supabase, userId, customPlaylists) {
   // Only skip sync if state genuinely hasn't loaded (null/undefined).
-  // An empty array is intentional — it means the user deleted all playlists,
+  // An empty array is intentional, it means the user deleted all playlists,
   // and the diff should proceed to remove them from the DB.
   if (customPlaylists === null || customPlaylists === undefined) {
     return customPlaylists;
@@ -1215,7 +1215,7 @@ export async function syncCustomPlaylists(supabase, userId, customPlaylists) {
       }
     });
 
-    // Skip only when no video has any identifier at all — pathological after
+    // Skip only when no video has any identifier at all, pathological after
     // normalization, but guards against wiping DB tracks if state is corrupt.
     if (allVideos.length > 0 && tracksToInsert.length === 0) {
       continue;

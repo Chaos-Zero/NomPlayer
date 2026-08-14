@@ -1,5 +1,5 @@
 // Small browser.storage.local wrapper shared by background.js and popup.js.
-// Classic script — sits on the shared global scope as `self.NomplayerStorage`.
+// Classic script, sits on the shared global scope as `self.NomplayerStorage`.
 (function () {
   const SESSION_KEY = 'nomplayer_vgmc_session';
   const STATUS_KEY = 'nomplayer_vgmc_status';
@@ -39,7 +39,7 @@
   }
 
   // Topics the user has explicitly opted to sync (see content-script.js's
-  // "Track this page" button — extracted from the page, never typed in by hand).
+  // "Track this page" button, extracted from the page, never typed in by hand).
   // { topicId, boardId, gameTitle, topicTitle, url, addedAt }[]
   async function getFollowedTopics() {
     const stored = await browser.storage.local.get(TOPICS_KEY);

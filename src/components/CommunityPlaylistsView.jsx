@@ -739,7 +739,7 @@ export function CommunityPlaylistsView({
       startVideoId,
       autoplay: true,
     });
-    onShowToast?.(`Playing "${playlist.name}" — ${tracks.length} tracks`);
+    onShowToast?.(`Playing "${playlist.name}", ${tracks.length} tracks`);
   }
 
   function handlePanelAdd(playlist, tracks) {
@@ -764,7 +764,7 @@ export function CommunityPlaylistsView({
         name: playlist.name,
         autoplay: true,
       });
-      onShowToast?.(`Playing "${playlist.name}" — ${videos.length} tracks`);
+      onShowToast?.(`Playing "${playlist.name}", ${videos.length} tracks`);
     } catch {
       onShowToast?.('Failed to load playlist');
     } finally {

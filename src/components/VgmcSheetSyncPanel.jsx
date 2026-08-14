@@ -1,58 +1,36 @@
 import { useState } from 'react';
-import {
-  buildSheetUpdates,
-  fetchSheetGrid,
-  findHeaderRow,
-  parseGoogleSheetUrl,
-  requestSheetsAccessToken,
-  writeSheetUpdates,
-} from '../lib/googleSheets.js';
+import { parseGoogleSheetUrl } from '../lib/googleSheets.js';
 
-const GOOGLE_SHEETS_CLIENT_ID =
-  import.meta.env.VITE_GOOGLE_SHEETS_CLIENT_ID || '';
-
-// Hardcoded for now, per explicit request — this is the one VGMC 20 reaction
+// Hardcoded for now, per explicit request, this is the one VGMC 20 reaction
 // sheet this feature targets today. Still editable in the field below in case
 // someone's working off a copy.
 const DEFAULT_SHEET_URL =
   'https://docs.google.com/spreadsheets/d/1vRu2CbwGp4RFPTSkarhglnRPl6IzZ5jJu4yqkLr83po/edit?gid=0#gid=0';
 
+// The actual read/match/write happens server-side (functions/api/vgmc-sheet-sync.js),
+// using the site's own Google service account rather than the signed-in user's,
+// see that file's comment for why. This component's job is just: gather what's
+// already loaded client-side (feedbackByVideoId) and hand it to that endpoint.
+// There's deliberately no "Connect Google Account" step here anymore.
 export default function VgmcSheetSyncPanel({
   isOpen,
   onClose,
+  supabase,
   feedbackByVideoId,
 }) {
   const [sheetUrl, setSheetUrl] = useState(DEFAULT_SHEET_URL);
   const [userColumn, setUserColumn] = useState('');
   const [overwrite, setOverwrite] = useState(false);
-  const [accessToken, setAccessToken] = useState(null);
-  const [status, setStatus] = useState('idle'); // idle | connecting | syncing | done | error
+  const [status, setStatus] = useState('idle'); // idle | syncing | done | error
   const [result, setResult] = useState(null);
   const [errorMessage, setErrorMessage] = useState('');
 
   if (!isOpen) return null;
 
-  const isConnected = Boolean(accessToken);
-  const isBusy = status === 'connecting' || status === 'syncing';
-
-  const handleConnect = async () => {
-    setStatus('connecting');
-    setErrorMessage('');
-    try {
-      const token = await requestSheetsAccessToken(GOOGLE_SHEETS_CLIENT_ID);
-      setAccessToken(token);
-      setStatus('idle');
-    } catch (error) {
-      setErrorMessage(error.message || 'Could not connect to Google.');
-      setStatus('error');
-    }
-  };
+  const isBusy = status === 'syncing';
 
   const handleSync = async () => {
-    if (!accessToken) return;
-
-    const parsed = parseGoogleSheetUrl(sheetUrl);
-    if (!parsed) {
+    if (!parseGoogleSheetUrl(sheetUrl)) {
       setErrorMessage("That doesn't look like a Google Sheets link.");
       setStatus('error');
       return;
@@ -62,38 +40,51 @@ export default function VgmcSheetSyncPanel({
       setStatus('error');
       return;
     }
+    if (!supabase) {
+      setErrorMessage('Sign in to sync your ratings.');
+      setStatus('error');
+      return;
+    }
 
     setStatus('syncing');
     setErrorMessage('');
     setResult(null);
 
     try {
-      const grid = await fetchSheetGrid(
-        accessToken,
-        parsed.spreadsheetId,
-        parsed.gid,
-      );
-      const header = findHeaderRow(grid.rows);
-      if (!header) {
-        throw new Error('Could not find a header row in that sheet tab.');
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      const accessToken = session?.access_token;
+      if (!accessToken) {
+        throw new Error('Sign in to sync your ratings.');
       }
 
-      const { updates, skippedFilled, noRatingFound } = buildSheetUpdates({
-        rows: grid.rows,
-        headerRowIndex: header.headerIndex,
-        userColumn: userColumn.trim(),
-        feedbackByVideoId,
-        overwrite,
-      });
-
-      await writeSheetUpdates(
-        accessToken,
-        parsed.spreadsheetId,
-        grid.sheetId,
-        updates,
+      const ratings = Object.entries(feedbackByVideoId || {}).map(
+        ([videoId, feedback]) => ({
+          videoId,
+          rating: feedback.rating,
+          note: feedback.note || '',
+        }),
       );
 
-      setResult({ filled: updates.length, skippedFilled, noRatingFound });
+      const response = await fetch('/api/vgmc-sheet-sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          access_token: accessToken,
+          sheet_url: sheetUrl,
+          user_column: userColumn.trim(),
+          overwrite,
+          ratings,
+        }),
+      });
+
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(data.error || `Sync failed (${response.status}).`);
+      }
+
+      setResult(data);
       setStatus('done');
     } catch (error) {
       setErrorMessage(error.message || 'Sync failed.');
@@ -116,144 +107,113 @@ export default function VgmcSheetSyncPanel({
         </div>
 
         <div className="modal-body" style={{ padding: '20px' }}>
-          {!GOOGLE_SHEETS_CLIENT_ID ? (
-            <p style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>
-              Google Sheets sync isn't configured yet on this deployment.
+          <p
+            style={{
+              marginBottom: '16px',
+              fontSize: '14px',
+              color: 'var(--text-secondary)',
+            }}
+          >
+            Matches your rating and comment for each song against the{' '}
+            <strong>Link</strong> column, and fills in your column, only for
+            songs already in the sheet, and only for cells that don't already
+            have something in them (unless you turn that off below).
+          </p>
+
+          <label
+            style={{ display: 'block', fontSize: '13px', marginBottom: '4px' }}
+          >
+            Sheet link
+          </label>
+          <input
+            type="text"
+            value={sheetUrl}
+            onChange={(e) => setSheetUrl(e.target.value)}
+            disabled={isBusy}
+            style={{ width: '100%', marginBottom: '12px' }}
+          />
+
+          <label
+            style={{ display: 'block', fontSize: '13px', marginBottom: '4px' }}
+          >
+            Your column (e.g. "Cal")
+          </label>
+          <input
+            type="text"
+            value={userColumn}
+            onChange={(e) => setUserColumn(e.target.value)}
+            disabled={isBusy}
+            placeholder="Cal"
+            style={{ width: '100%', marginBottom: '12px' }}
+          />
+
+          <label
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              fontSize: '13px',
+              marginBottom: '16px',
+            }}
+          >
+            <input
+              type="checkbox"
+              checked={overwrite}
+              onChange={(e) => setOverwrite(e.target.checked)}
+              disabled={isBusy}
+            />
+            Overwrite cells that already have a value or note
+          </label>
+
+          {errorMessage && (
+            <p
+              style={{
+                color: 'var(--danger, #ef4444)',
+                fontSize: '13px',
+                marginBottom: '12px',
+              }}
+            >
+              {errorMessage}
             </p>
-          ) : (
-            <>
-              <p
-                style={{
-                  marginBottom: '16px',
-                  fontSize: '14px',
-                  color: 'var(--text-secondary)',
-                }}
-              >
-                Matches your rating and comment for each song against the{' '}
-                <strong>Link</strong> column, and fills in your column — only
-                for songs already in the sheet, and only for cells that don't
-                already have something in them (unless you turn that off below).
-              </p>
+          )}
 
-              <label
-                style={{
-                  display: 'block',
-                  fontSize: '13px',
-                  marginBottom: '4px',
-                }}
-              >
-                Sheet link
-              </label>
-              <input
-                type="text"
-                value={sheetUrl}
-                onChange={(e) => setSheetUrl(e.target.value)}
-                disabled={isBusy}
-                style={{ width: '100%', marginBottom: '12px' }}
-              />
-
-              <label
-                style={{
-                  display: 'block',
-                  fontSize: '13px',
-                  marginBottom: '4px',
-                }}
-              >
-                Your column (e.g. "Cal")
-              </label>
-              <input
-                type="text"
-                value={userColumn}
-                onChange={(e) => setUserColumn(e.target.value)}
-                disabled={isBusy}
-                placeholder="Cal"
-                style={{ width: '100%', marginBottom: '12px' }}
-              />
-
-              <label
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  fontSize: '13px',
-                  marginBottom: '16px',
-                }}
-              >
-                <input
-                  type="checkbox"
-                  checked={overwrite}
-                  onChange={(e) => setOverwrite(e.target.checked)}
-                  disabled={isBusy}
-                />
-                Overwrite cells that already have a value or note
-              </label>
-
-              {errorMessage && (
-                <p
-                  style={{
-                    color: 'var(--danger, #ef4444)',
-                    fontSize: '13px',
-                    marginBottom: '12px',
-                  }}
-                >
-                  {errorMessage}
-                </p>
-              )}
-
-              {status === 'done' && result && (
-                <p style={{ fontSize: '13px', marginBottom: '12px' }}>
-                  Filled {result.filled} cell{result.filled === 1 ? '' : 's'}.{' '}
-                  {result.skippedFilled > 0 &&
-                    `${result.skippedFilled} already had something and were left alone. `}
-                  {result.noRatingFound > 0 &&
-                    `${result.noRatingFound} songs in the sheet have no rating from you yet.`}
-                </p>
-              )}
-            </>
+          {status === 'done' && result && (
+            <p style={{ fontSize: '13px', marginBottom: '12px' }}>
+              Filled {result.filled} cell{result.filled === 1 ? '' : 's'}.{' '}
+              {result.skippedFilled > 0 &&
+                `${result.skippedFilled} already had something and were left alone. `}
+              {result.noRatingFound > 0 &&
+                `${result.noRatingFound} songs in the sheet have no rating from you yet.`}
+            </p>
           )}
         </div>
 
-        {GOOGLE_SHEETS_CLIENT_ID && (
-          <div
-            className="modal-footer"
-            style={{
-              display: 'flex',
-              justifyContent: 'flex-end',
-              gap: '12px',
-              padding: '16px 20px',
-              borderTop: '1px solid var(--border)',
-            }}
+        <div
+          className="modal-footer"
+          style={{
+            display: 'flex',
+            justifyContent: 'flex-end',
+            gap: '12px',
+            padding: '16px 20px',
+            borderTop: '1px solid var(--border)',
+          }}
+        >
+          <button
+            className="btn btn-primary"
+            onClick={handleSync}
+            disabled={isBusy}
+            style={{ margin: 0 }}
           >
-            {!isConnected ? (
-              <button
-                className="btn btn-primary"
-                onClick={handleConnect}
-                disabled={isBusy}
-                style={{ margin: 0 }}
-              >
-                {status === 'connecting'
-                  ? 'Connecting…'
-                  : 'Connect Google Account'}
-              </button>
-            ) : (
-              <button
-                className="btn btn-primary"
-                onClick={handleSync}
-                disabled={isBusy}
-                style={{ margin: 0 }}
-              >
-                {status === 'syncing' ? 'Syncing…' : 'Sync my ratings'}
-              </button>
-            )}
-            <button
-              className="btn btn-muted"
-              onClick={onClose}
-              style={{ margin: 0 }}
-            >
-              Close
-            </button>
-          </div>
-        )}
+            {isBusy ? 'Syncing…' : 'Sync my ratings'}
+          </button>
+          <button
+            className="btn btn-muted"
+            onClick={onClose}
+            style={{ margin: 0 }}
+          >
+            Close
+          </button>
+        </div>
       </div>
     </div>
   );

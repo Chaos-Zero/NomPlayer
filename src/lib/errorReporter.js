@@ -3,7 +3,7 @@
  *
  * Silently reports application errors to the Discord bot via the feedback API.
  * Uses `type: "log"` so messages land in the dedicated log channel.
- * Never throws — failure to report is swallowed so the caller is not affected.
+ * Never throws, failure to report is swallowed so the caller is not affected.
  */
 
 const FEEDBACK_URL = import.meta.env.VITE_FEEDBACK_API_URL;
@@ -49,7 +49,7 @@ export function reportError(interaction, error) {
     timestamp: new Date().toISOString(),
   };
 
-  // Fire-and-forget — never await this
+  // Fire-and-forget, never await this
   fetch(LOG_URL, {
     method: 'POST',
     headers: {
@@ -60,6 +60,6 @@ export function reportError(interaction, error) {
     },
     body: JSON.stringify(payload),
   }).catch(() => {
-    // Silently swallow — reporting failures must never surface to the user
+    // Silently swallow, reporting failures must never surface to the user
   });
 }

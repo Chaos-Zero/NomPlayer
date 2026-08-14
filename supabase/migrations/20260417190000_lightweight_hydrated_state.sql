@@ -1,7 +1,7 @@
 -- Replace get_user_hydrated_state with a lightweight version.
 --
 -- The previous version joined track_catalog (a view) for each of nominations,
--- supports, playlists, and custom playlist tracks — returning full metadata
+-- supports, playlists, and custom playlist tracks, returning full metadata
 -- (titles, thumbnails, game names, channel names) for every item. All of that
 -- data is already present in the client's in-memory catalog, so it was being
 -- fetched from the DB and transmitted over the wire for no benefit.

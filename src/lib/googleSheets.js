@@ -1,78 +1,13 @@
 import { parseYouTubeInput } from '../utils/youtube.js';
 
-// Client-side Google Sheets integration for the VGMC "reaction sheet" sync
-// feature (see VgmcSheetSyncPanel.jsx). Deliberately has no server component at
-// all: Google Identity Services hands the browser a Sheets-scoped access token
-// directly (no client secret, no redirect back through our own backend), and
-// everything after that is a plain fetch() to the Sheets REST API using that
-// token. We already have the user's ratings/comments loaded client-side for the
-// VGMC standings view, so there's nothing here that touches our own DB.
-//
-// Requires a Google Cloud OAuth Client ID (VITE_GOOGLE_SHEETS_CLIENT_ID) — see
-// README for the one-time console setup; that part can't be automated from here.
-
-const SHEETS_SCOPE = 'https://www.googleapis.com/auth/spreadsheets';
-const GIS_SCRIPT_SRC = 'https://accounts.google.com/gsi/client';
-
-let gisLoadPromise = null;
-
-function loadGoogleIdentityServices() {
-  if (typeof window === 'undefined') {
-    return Promise.reject(
-      new Error('Google sign-in is only available in the browser.'),
-    );
-  }
-  if (window.google?.accounts?.oauth2) return Promise.resolve();
-  if (gisLoadPromise) return gisLoadPromise;
-
-  gisLoadPromise = new Promise((resolve, reject) => {
-    const script = document.createElement('script');
-    script.src = GIS_SCRIPT_SRC;
-    script.async = true;
-    script.defer = true;
-    script.onload = () => resolve();
-    script.onerror = () =>
-      reject(new Error('Failed to load Google Identity Services.'));
-    document.head.appendChild(script);
-  });
-
-  return gisLoadPromise;
-}
-
-/** Opens Google's consent popup and resolves with a short-lived (~1hr) Sheets
- * access token. Nothing is persisted — reconnecting is required each session,
- * which is a deliberate tradeoff of staying fully client-side (no refresh token
- * without a backend to hold it safely). */
-export async function requestSheetsAccessToken(clientId) {
-  if (!clientId) {
-    throw new Error(
-      'Google Sheets sync is not configured (missing client ID).',
-    );
-  }
-  await loadGoogleIdentityServices();
-
-  return new Promise((resolve, reject) => {
-    const tokenClient = window.google.accounts.oauth2.initTokenClient({
-      client_id: clientId,
-      scope: SHEETS_SCOPE,
-      callback: (response) => {
-        if (response.error) {
-          reject(new Error(response.error_description || response.error));
-          return;
-        }
-        resolve(response.access_token);
-      },
-      error_callback: (error) => {
-        reject(
-          new Error(
-            error?.message || 'Google sign-in was cancelled or failed.',
-          ),
-        );
-      },
-    });
-    tokenClient.requestAccessToken();
-  });
-}
+// Shared Google Sheets logic for the VGMC "reaction sheet" sync feature, pure
+// parsing/matching plus plain fetch() calls against the Sheets REST API, with no
+// browser- or Workers-specific globals, so the exact same module is imported by
+// both the client (VgmcSheetSyncPanel.jsx, for cheap upfront validation of the
+// sheet link) and the server (functions/api/vgmc-sheet-sync.js, which does the
+// actual read/match/write using a service account, see that file for why this
+// isn't a per-user OAuth popup: the site's own Google account does the writing
+// so individual VGMC participants never need to touch Google auth at all).
 
 /** Pulls {spreadsheetId, gid} out of any Google Sheets URL shape. */
 export function parseGoogleSheetUrl(url) {
@@ -117,7 +52,7 @@ async function resolveSheetTitle(accessToken, spreadsheetId, gid) {
 }
 
 /** Reads one tab's full grid (values + any existing notes), keyed by the gid
- * from the sheet URL — only ever fetches that one tab, not the whole workbook. */
+ * from the sheet URL, only ever fetches that one tab, not the whole workbook. */
 export async function fetchSheetGrid(accessToken, spreadsheetId, gid) {
   const title = await resolveSheetTitle(accessToken, spreadsheetId, gid);
 
@@ -154,7 +89,7 @@ export async function fetchSheetGrid(accessToken, spreadsheetId, gid) {
   };
 }
 
-/** First row with any content — the header row we match column names against. */
+/** First row with any content, the header row we match column names against. */
 export function findHeaderRow(rows) {
   const headerIndex = (rows || []).findIndex((row) =>
     row.some((cell) => cell.value?.trim()),
@@ -168,10 +103,10 @@ export function findHeaderRow(rows) {
 }
 
 /**
- * Pure matching pass — no network calls. Walks every existing data row, and for
+ * Pure matching pass, no network calls. Walks every existing data row, and for
  * each one whose Link column resolves to a video the current user has rated,
  * queues a cell update for their column. Never adds rows: a rated song that
- * isn't already a row in the sheet is simply not matched, by construction —
+ * isn't already a row in the sheet is simply not matched, by construction,
  * there's nothing to add it *to*.
  */
 export function buildSheetUpdates({

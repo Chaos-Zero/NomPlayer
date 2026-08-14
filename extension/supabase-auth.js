@@ -2,11 +2,11 @@
 //
 // Deliberately hand-rolled instead of bundling @supabase/supabase-js: it's three
 // small REST calls, and skipping the SDK means this extension stays a plain set of
-// files with no build step — load it as-is via about:debugging. It talks to the exact
+// files with no build step, load it as-is via about:debugging. It talks to the exact
 // same Auth REST API the website's supabase-js client uses under the hood, so tokens
 // this produces are indistinguishable from a normal website session server-side.
 //
-// Classic script — sits on the shared global scope as `self.NomplayerAuth`.
+// Classic script, sits on the shared global scope as `self.NomplayerAuth`.
 (function () {
   const { SUPABASE_URL, SUPABASE_ANON_KEY } = self.NOMPLAYER_VGMC_CONFIG;
 

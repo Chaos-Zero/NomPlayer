@@ -10,7 +10,7 @@
 ALTER TABLE public.user_playlist_tracks
   DROP CONSTRAINT user_playlist_tracks_pkey;
 
--- 2. Make track_id nullable (the FK itself stays — NULLs skip FK checks in Postgres)
+-- 2. Make track_id nullable (the FK itself stays, NULLs skip FK checks in Postgres)
 ALTER TABLE public.user_playlist_tracks
   ALTER COLUMN track_id DROP NOT NULL;
 

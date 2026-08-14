@@ -326,7 +326,7 @@ export async function fetchTrackCatalogByVideoIds(supabase, videoIds) {
     return [];
   }
 
-  // Serve from memory cache when available — avoids a DB roundtrip.
+  // Serve from memory cache when available, avoids a DB roundtrip.
   const cached = getCachedCatalog();
   if (cached) {
     const idSet = new Set(normalizedIds);
@@ -548,7 +548,7 @@ export async function getFullCatalog(supabase) {
 
       if (supabase) {
         // 2. Fetch Delta, Deletions & live support counts concurrently.
-        // track_stats_summary (all-time comments/ratings) is deferred — only
+        // track_stats_summary (all-time comments/ratings) is deferred, only
         // loaded when the track database opens via loadCatalogStatsIfNeeded().
         const [deltaRes, deletionRes, supportStatsRes] = await Promise.all([
           supabase
@@ -769,7 +769,7 @@ export async function fetchFilteredTracks(
 ) {
   let catalog = await getFullCatalog(supabase);
 
-  // Search filter — delegate to DB slim search RPC; client-side filtering
+  // Search filter, delegate to DB slim search RPC; client-side filtering
   // (vgmcFilter, viewMode, sort) is applied to the returned rows below.
   if (searchTerm && searchTerm.trim().length >= 2) {
     if (supabase) {

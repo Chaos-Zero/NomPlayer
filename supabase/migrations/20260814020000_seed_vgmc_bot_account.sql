@@ -1,13 +1,13 @@
 -- Seeds the VGMC 20 bot account + playlist + ingest-thread row as code, instead of
 -- a manual dashboard step. This is a system/service account, not a real user:
--- `encrypted_password` is left NULL, so GoTrue can never authenticate it — nobody
+-- `encrypted_password` is left NULL, so GoTrue can never authenticate it, nobody
 -- can sign in as this account. It exists purely to satisfy user_playlists.user_id's
 -- foreign key to auth.users. Owning the row grants it no special privilege; the
 -- playlist can still only be mutated through the service_role-only ingest RPCs (see
 -- 20260813000000_add_vgmc_ingest_pipeline.sql).
 --
 -- Column list below matches this project's live auth.users schema (checked via
--- `supabase db dump --linked --schema auth` before writing this) — auth.users is
+-- `supabase db dump --linked --schema auth` before writing this), auth.users is
 -- owned/migrated by GoTrue, not app code, so if a future Supabase platform upgrade
 -- changes required columns, this may need revisiting.
 --
@@ -33,7 +33,7 @@ values (
   'authenticated',
   'authenticated',
   'vgmc-bot@nomplayer.internal',
-  null, -- no password hash — this account can never log in
+  null, -- no password hash, this account can never log in
   timezone('utc', now()),
   '{"provider": "system", "providers": ["system"]}'::jsonb,
   '{}'::jsonb,
@@ -44,7 +44,7 @@ on conflict (id) do nothing;
 
 -- public.handle_new_auth_user() (20260317022000_namespace_discord_usernames.sql)
 -- fires on the insert above and creates the matching public.profiles row
--- automatically — no need to insert it here too.
+-- automatically, no need to insert it here too.
 
 insert into public.user_playlists (id, user_id, name, is_public, is_active_queue)
 values (

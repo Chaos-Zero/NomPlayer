@@ -5,7 +5,7 @@
 -- nominated or supported in the current VGMC allotment.  Reads are a single
 -- primary-key lookup instead of per-row subquery aggregations.
 --
--- Year rollover is a manual admin operation (see bottom of file) — it is
+-- Year rollover is a manual admin operation (see bottom of file), it is
 -- intentionally NOT exposed through any RPC or application route.
 -- ─────────────────────────────────────────────────────────────────────────────
 
@@ -440,7 +440,7 @@ GRANT EXECUTE ON FUNCTION public.get_allotment_stats_by_video_ids(text[]) TO aut
 
 
 -- ── 8. RLS ───────────────────────────────────────────────────────────────────
--- Public read. No user writes — the table is exclusively trigger-maintained.
+-- Public read. No user writes, the table is exclusively trigger-maintained.
 
 ALTER TABLE public.track_allotment_stats         ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.track_allotment_stats_history ENABLE ROW LEVEL SECURITY;
@@ -460,7 +460,7 @@ GRANT SELECT ON public.track_allotment_stats_history TO anon, authenticated;
 
 
 -- ─────────────────────────────────────────────────────────────────────────────
--- YEAR ROLLOVER (admin SQL — run manually in Supabase SQL editor, never via app)
+-- YEAR ROLLOVER (admin SQL, run manually in Supabase SQL editor, never via app)
 -- ─────────────────────────────────────────────────────────────────────────────
 --
 -- Replace 'vgmc-XX' with the slug of the tournament year being archived.
