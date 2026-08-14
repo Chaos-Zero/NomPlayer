@@ -2074,7 +2074,21 @@ export default function App() {
         customPlaylists.find((p) => p.id === activePlaylistView.id)?.videos ||
         [];
     } else if (activePlaylistView.type === 'community-playlist') {
-      tracks = activePlaylistView.videos || [];
+      // toPlaylistVideos (the source of these, for VGMC) has no access to
+      // catalogTrackByVideoId/userFeedback, so the user's own rating — what
+      // the sidebar badge actually shows, not the community support count —
+      // has to get attached here instead, same lookup the other views do.
+      tracks = (activePlaylistView.videos || []).map((video) => {
+        const catalogEntry = catalogTrackByVideoId[video.videoId];
+        const personalRating =
+          (catalogEntry?.id && userFeedback[catalogEntry.id]?.rating) ||
+          (video.trackId && userFeedback[video.trackId]?.rating);
+        return {
+          ...video,
+          rating: personalRating || video.rating || null,
+          trackId: catalogEntry?.trackId ?? video.trackId ?? null,
+        };
+      });
     }
 
     // 'personal' (and the community-with-no-match edge case above) falls back

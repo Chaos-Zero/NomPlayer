@@ -1522,6 +1522,13 @@ body {
 }
 
 .sidebar-rating {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 18px;
+  padding: 0 4px !important;
+  line-height: 1;
   margin-right: -4px;
   background: rgba(139, 92, 246, 0.25) !important;
   border-color: rgba(167, 139, 250, 0.3) !important;
@@ -1533,35 +1540,6 @@ body {
   background: rgba(255, 255, 255, 0.15) !important;
   border-color: rgba(255, 255, 255, 0.25) !important;
   color: white !important;
-}
-
-.sidebar-support-points {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 22px;
-  height: 18px;
-  padding: 0 4px;
-  border-radius: 4px;
-  font-size: 10px;
-  font-weight: 700;
-  line-height: 1;
-  background: rgba(124, 58, 237, 0.2);
-  color: #c4b5fd;
-  border: 1px solid rgba(196, 181, 253, 0.2);
-  flex-shrink: 0;
-}
-
-.playlist-item.active .sidebar-support-points {
-  background: rgba(255, 255, 255, 0.15);
-  border-color: rgba(255, 255, 255, 0.25);
-  color: white;
-}
-
-.theme-light .sidebar-support-points {
-  background: rgba(124, 58, 237, 0.12);
-  color: #4c1d95;
-  border-color: rgba(124, 58, 237, 0.2);
 }
 
 .dashboard-message-danger {
@@ -13957,6 +13935,14 @@ body.is-resizing .resize-handle {
 .comment-bubble-btn svg {
   width: 13px;
   height: 13px;
+}
+
+.comment-bubble-rating {
+  min-width: 14px;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  text-align: center;
 }
 
 .theme-light .comment-bubble-btn:hover {

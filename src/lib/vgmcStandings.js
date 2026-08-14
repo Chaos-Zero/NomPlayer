@@ -13,7 +13,7 @@ export async function fetchVgmcPlaylistTracks(supabase, playlistId) {
   const { data, error } = await supabase
     .from('user_playlist_tracks')
     .select(
-      'id, youtube_video_id, cached_title, nomination_game, nomination_song, support_points, order_index',
+      'id, track_id, youtube_video_id, cached_title, nomination_game, nomination_song, support_points, order_index',
     )
     .eq('playlist_id', playlistId)
     .order('order_index', { ascending: true });
@@ -58,6 +58,10 @@ export function toPlaylistVideos(rows) {
       trackTitle: row.nomination_song || '',
       thumbnail: getYouTubeThumbnailUrl(row.youtube_video_id),
       channelTitle: '',
+      // The catalog track this nomination was promoted to (reconcile_vgmc_playlist
+      // links it) — this is what a personal rating is actually keyed by
+      // (track_user_feedback.track_id), not the video id.
+      trackId: row.track_id || null,
       supportPoints: Number.isFinite(row.support_points)
         ? row.support_points
         : 0,

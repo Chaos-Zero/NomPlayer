@@ -4,6 +4,7 @@ import { partitionStandings, toPlaylistVideos } from '../lib/vgmcStandings.js';
 function row(overrides) {
   return {
     id: overrides.id || `row-${overrides.support_points}`,
+    track_id: overrides.track_id ?? null,
     youtube_video_id: overrides.youtube_video_id ?? 'aaaaaaaaaaa',
     cached_title: overrides.cached_title ?? 'Game - Song',
     nomination_game: overrides.nomination_game ?? 'Game',
@@ -23,6 +24,7 @@ describe('toPlaylistVideos', () => {
         nomination_song: 'Bar',
         support_points: 3,
         order_index: 2,
+        track_id: 'track-uuid-1',
       }),
       { ...row({}), youtube_video_id: null },
     ]);
@@ -36,10 +38,16 @@ describe('toPlaylistVideos', () => {
         trackTitle: 'Bar',
         thumbnail: expect.stringContaining('aaaaaaaaaaa'),
         channelTitle: '',
+        trackId: 'track-uuid-1',
         supportPoints: 3,
         loadIndex: 2,
       },
     ]);
+  });
+
+  it('carries trackId through as null when the nomination has not been promoted to the catalog yet', () => {
+    const [video] = toPlaylistVideos([row({ track_id: null })]);
+    expect(video.trackId).toBeNull();
   });
 
   it('carries the game/song split individually, not just the combined display title', () => {

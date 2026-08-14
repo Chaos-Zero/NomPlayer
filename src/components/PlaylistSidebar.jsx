@@ -140,6 +140,7 @@ function PlaylistItem({
   onToggleSelected,
   commentActivity = null,
   onShowComments,
+  showRatingInsteadOfComments = false,
 }) {
   const [imgError, setImgError] = useState(false);
   const tickLabel =
@@ -277,24 +278,23 @@ function PlaylistItem({
       </div>
 
       <div className="playlist-item-actions">
-        {video.rating != null && (
-          <span className="list-explorer-peer-rating sidebar-rating">
-            {video.rating}
-          </span>
-        )}
-        {video.supportPoints != null && (
+        {video.rating != null && !showRatingInsteadOfComments && (
           <span
-            className="sidebar-support-points"
-            title="VGMC ranking (total support points)"
+            className="list-explorer-peer-rating sidebar-rating"
+            title="Your rating"
           >
-            {video.supportPoints}
+            {video.rating}
           </span>
         )}
         {commentActivity && (
           <button
             className={`comment-bubble-btn${commentActivity === 'commented' ? ' has-comments' : ' has-rated'}`}
             type="button"
-            title="View community comments"
+            title={
+              showRatingInsteadOfComments && video.rating != null
+                ? `Your rating: ${video.rating} — view community comments`
+                : 'View community comments'
+            }
             onClick={(e) => {
               e.stopPropagation();
               const rect = e.currentTarget.getBoundingClientRect();
@@ -306,7 +306,11 @@ function PlaylistItem({
               });
             }}
           >
-            <SpeechBubbleIcon />
+            {showRatingInsteadOfComments && video.rating != null ? (
+              <span className="comment-bubble-rating">{video.rating}</span>
+            ) : (
+              <SpeechBubbleIcon />
+            )}
           </button>
         )}
         <div className="item-fav-container">
@@ -351,6 +355,7 @@ function SortablePlaylistItem({
   onOpenContextMenu,
   commentActivity = null,
   onShowComments,
+  showRatingInsteadOfComments = false,
 }) {
   const {
     attributes,
@@ -400,6 +405,7 @@ function SortablePlaylistItem({
         onToggleSelected={() => {}}
         commentActivity={commentActivity}
         onShowComments={onShowComments}
+        showRatingInsteadOfComments={showRatingInsteadOfComments}
       />
     </div>
   );
@@ -511,13 +517,15 @@ export default function PlaylistSidebar({
   );
   const displayPlaylist = useMemo(() => {
     if (rankingSortDirection) {
+      // Your own rating (out of 10), not the community's VGMC support total —
+      // that's what the "Total" column on the standings tab already covers.
       return [...playlist].sort((a, b) => {
-        const pointsA = a.supportPoints ?? 0;
-        const pointsB = b.supportPoints ?? 0;
+        const ratingA = a.rating ?? -1;
+        const ratingB = b.rating ?? -1;
         const diff =
           rankingSortDirection === 'desc'
-            ? pointsB - pointsA
-            : pointsA - pointsB;
+            ? ratingB - ratingA
+            : ratingA - ratingB;
         if (diff !== 0) return diff;
         return (a.loadIndex ?? 0) - (b.loadIndex ?? 0);
       });
@@ -1217,12 +1225,12 @@ export default function PlaylistSidebar({
                   }
                   title={
                     rankingSortDirection === 'desc'
-                      ? 'Sorted by ranking, highest first — click for lowest first'
+                      ? 'Sorted by your rating, highest first — click for lowest first'
                       : rankingSortDirection === 'asc'
-                        ? 'Sorted by ranking, lowest first — click to reset'
-                        : 'Sort by ranking'
+                        ? 'Sorted by your rating, lowest first — click to reset'
+                        : 'Sort by your rating'
                   }
-                  aria-label="Sort by ranking"
+                  aria-label="Sort by your rating"
                 >
                   <SortByRatingIcon />
                   {rankingSortDirection && (
@@ -1585,6 +1593,7 @@ export default function PlaylistSidebar({
                   globalActivityByVideoId.get(video.videoId) ?? null
                 }
                 onShowComments={onShowComments}
+                showRatingInsteadOfComments={isVgmcPlaylistView}
               />
             ))
           ) : canReorder ? (
@@ -1621,6 +1630,7 @@ export default function PlaylistSidebar({
                       globalActivityByVideoId.get(video.videoId) ?? null
                     }
                     onShowComments={onShowComments}
+                    showRatingInsteadOfComments={isVgmcPlaylistView}
                   />
                 ))}
               </SortableContext>
@@ -1652,6 +1662,7 @@ export default function PlaylistSidebar({
                   globalActivityByVideoId.get(video.videoId) ?? null
                 }
                 onShowComments={onShowComments}
+                showRatingInsteadOfComments={isVgmcPlaylistView}
               />
             ))
           )}
