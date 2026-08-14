@@ -1,5 +1,5 @@
 {
-  "exportedAt": "2026-08-14T00:44:23.830Z",
+  "exportedAt": "2026-08-14T01:35:33.603Z",
   "totalCount": 8,
   "users": [
     {
@@ -235,13 +235,13 @@
       "updated_at": "2026-05-01T20:26:13.066469+00:00",
       "nominations": [
         {
-          "title": "King of Fighters ’99 - Tears",
+          "title": "The King of Fighters '99 - Tears (? Theme)",
           "trackId": "94aa603e-326f-480b-bfb3-d7c0a0bdce1c",
           "videoId": "jBSGxhqWctA",
-          "gameTitle": "King of Fighters ’99",
-          "trackTitle": "Tears",
+          "gameTitle": "The King of Fighters '99",
+          "trackTitle": "Tears (? Theme)",
           "channelTitle": "SNK SOUND TEAM - Topic",
-          "displayTitle": "King of Fighters ’99 - Tears"
+          "displayTitle": "The King of Fighters '99 - Tears (? Theme)"
         },
         {
           "title": "Advance Wars: Days of Ruin - Mr. Bear ~ Penny",
@@ -1000,22 +1000,22 @@
           "displayTitle": "Touhou Danmaku Kagura Phantasia Lost - Can't Look Away"
         },
         {
-          "title": "Unbeatable - SQUARE UP",
+          "title": "Unbeatable - Square Up",
           "trackId": "8ec5c3b2-ca68-43df-b231-2b23b3a8bf80",
           "videoId": "0ZVFAkdRMRY",
           "gameTitle": "Unbeatable",
-          "trackTitle": "SQUARE UP",
+          "trackTitle": "Square Up",
           "channelTitle": "Jamie Paige / JamieP",
-          "displayTitle": "Unbeatable - SQUARE UP"
+          "displayTitle": "Unbeatable - Square Up"
         },
         {
-          "title": "Once Upon A KATAMARI - YangYang",
+          "title": "Once Upon a Katamari - YangYang",
           "trackId": "fe69bf61-a4d6-40a3-b79d-5e663dba4577",
           "videoId": "DOnr8T7mb4g",
-          "gameTitle": "Once Upon A KATAMARI",
+          "gameTitle": "Once Upon a Katamari",
           "trackTitle": "YangYang",
           "channelTitle": "Daoko - Topic",
-          "displayTitle": "Once Upon A KATAMARI - YangYang"
+          "displayTitle": "Once Upon a Katamari - YangYang"
         },
         {
           "title": "Ar Nosurge - em-pyei-n vari-fen jang",
