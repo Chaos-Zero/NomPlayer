@@ -1,7 +1,205 @@
 {
-  "exportedAt": "2026-08-14T01:35:33.603Z",
-  "totalCount": 8,
+  "exportedAt": "2026-08-14T13:52:01.689Z",
+  "totalCount": 9,
   "users": [
+    {
+      "user_id": "e63d2f90-9be3-4f22-9f10-76cc496817b4",
+      "username": "dc:Chaeix",
+      "avatar_url": "https://cdn.discordapp.com/avatars/278330645418344449/eec61ae7400d93fe245d91101b3d824a.png",
+      "gamefaqs_username": "Chaeix",
+      "updated_at": "2026-08-14T07:22:56.115585+00:00",
+      "nominations": [
+        {
+          "title": "Shining Wind - Heart-Shaped Chant",
+          "trackId": "b142f3ff-9f69-4a61-9426-97ce2feb8f6a",
+          "videoId": "1FOn-tQmO6o",
+          "gameTitle": "Shining Wind",
+          "trackTitle": "Heart-Shaped Chant",
+          "channelTitle": "sleeping0dragon",
+          "displayTitle": "Shining Wind - Heart-Shaped Chant"
+        },
+        {
+          "title": "Honkai: Star Rail - Rondo Across Countless Kalpas",
+          "trackId": "2740255e-a83d-4ae3-86ef-a3037329f7e2",
+          "videoId": "B5UeNLlnUOA",
+          "gameTitle": "Honkai: Star Rail",
+          "trackTitle": "Rondo Across Countless Kalpas",
+          "channelTitle": "HOYO-MiX - Topic",
+          "displayTitle": "Honkai: Star Rail - Rondo Across Countless Kalpas"
+        },
+        {
+          "title": "Ace Combat: Assault Horizon - Shall Defend",
+          "trackId": "be2eb2fb-61c3-4931-9078-3cb9ce11336b",
+          "videoId": "CWI0oND9B3Q",
+          "gameTitle": "Ace Combat: Assault Horizon",
+          "trackTitle": "Shall Defend",
+          "channelTitle": null,
+          "displayTitle": "Ace Combat: Assault Horizon - Shall Defend"
+        },
+        {
+          "title": "Ace Attorney Investigations Collection - Prelude to Pursuit - Search for the Truth",
+          "trackId": "202c9226-bcab-4ff2-8276-116a277a65e0",
+          "videoId": "nSP6E1pb9fw",
+          "gameTitle": "Ace Attorney Investigations Collection",
+          "trackTitle": "Prelude to Pursuit - Search for the Truth",
+          "channelTitle": "Shankey",
+          "displayTitle": "Ace Attorney Investigations Collection - Prelude to Pursuit - Search for the Truth"
+        },
+        {
+          "title": "Directive 8020 - Do You Know?",
+          "trackId": "d0918a66-285d-49cb-b02c-d84d005b74db",
+          "videoId": "zQy0zu2d2uo",
+          "gameTitle": "Directive 8020",
+          "trackTitle": "Do You Know?",
+          "channelTitle": null,
+          "displayTitle": "Directive 8020 - Do You Know?"
+        },
+        {
+          "title": "Pokemon Legends: Z-A - Lysandre Battle",
+          "trackId": "fe5cf35b-e7fd-4b09-98e3-359bde868259",
+          "videoId": "zcrTFTlxC2s",
+          "gameTitle": "Pokemon Legends: Z-A",
+          "trackTitle": "Lysandre Battle",
+          "channelTitle": "RezyMania",
+          "displayTitle": "Pokemon Legends: Z-A - Lysandre Battle"
+        },
+        {
+          "title": "Wild Arms XF - Intrude Upon Happiness, Plunder the Future",
+          "trackId": "e0251b44-8f6d-46bb-a06a-5b76548b91ae",
+          "videoId": "z8iuwPgdVQg",
+          "gameTitle": "Wild Arms XF",
+          "trackTitle": "Intrude Upon Happiness, Plunder the Future",
+          "channelTitle": "sleeping0dragon",
+          "displayTitle": "Wild Arms XF - Intrude Upon Happiness, Plunder the Future"
+        },
+        {
+          "title": "Kusan: City of Wolves - Fixer",
+          "trackId": "4da41891-f581-4f3a-8263-8590d7ddd634",
+          "videoId": "S25Ik00o2k4",
+          "gameTitle": "Kusan: City of Wolves",
+          "trackTitle": "Fixer",
+          "channelTitle": null,
+          "displayTitle": "Kusan: City of Wolves - Fixer"
+        },
+        {
+          "title": "Honkai: Star Rail - Death in the Afternoon",
+          "trackId": "ee436e3e-a004-41cf-a5c2-5c7a3f4bd8af",
+          "videoId": "I6vPtWH4EEc",
+          "gameTitle": "Honkai: Star Rail",
+          "trackTitle": "Death in the Afternoon",
+          "channelTitle": null,
+          "displayTitle": "Honkai: Star Rail - Death in the Afternoon"
+        },
+        {
+          "title": "World of Warcraft: Legion - Anduin Part 1c",
+          "trackId": "eb939e30-3f25-4727-910f-9bd7bc9ca730",
+          "videoId": "nhe2CMO6w4s",
+          "gameTitle": "World of Warcraft: Legion",
+          "trackTitle": "Anduin Part 1c",
+          "channelTitle": null,
+          "displayTitle": "World of Warcraft: Legion - Anduin Part 1c"
+        }
+      ]
+    },
+    {
+      "user_id": "52b056d9-73a8-4bd0-b5a4-956052557dd0",
+      "username": "LkProd",
+      "avatar_url": null,
+      "gamefaqs_username": "LkProd",
+      "updated_at": "2026-08-14T07:12:08.527239+00:00",
+      "nominations": [
+        {
+          "title": "Forza Horizon 4 - Sunrise (Four Seasons Mix)",
+          "trackId": "8fd47d5b-29ff-44ad-889d-d91e55b13580",
+          "videoId": "S1sx8E9IIUo",
+          "gameTitle": "Forza Horizon 4",
+          "trackTitle": "Sunrise (Four Seasons Mix)",
+          "channelTitle": null,
+          "displayTitle": "Forza Horizon 4 - Sunrise (Four Seasons Mix)"
+        },
+        {
+          "title": "PROFESSIONAL BASEBALL SPIRITS 2015 - Main Theme 2015",
+          "trackId": "b9c6d169-5dc1-4794-a3c1-b3f9a79c37e7",
+          "videoId": "8dMpWpK2uN4",
+          "gameTitle": "PROFESSIONAL BASEBALL SPIRITS 2015",
+          "trackTitle": "Main Theme 2015",
+          "channelTitle": null,
+          "displayTitle": "PROFESSIONAL BASEBALL SPIRITS 2015 - Main Theme 2015"
+        },
+        {
+          "title": "Lamento -BEYOND THE VOID- - Poem of the Battle for Admiration",
+          "trackId": "1ea2f4e2-6379-4889-b7b1-05f1bc4aaa52",
+          "videoId": "NQbhhtQcwLY",
+          "gameTitle": "Lamento -BEYOND THE VOID-",
+          "trackTitle": "Poem of the Battle for Admiration",
+          "channelTitle": null,
+          "displayTitle": "Lamento -BEYOND THE VOID- - Poem of the Battle for Admiration"
+        },
+        {
+          "title": "STEINS;GATE - Masquerade ~Excerpt from the Third Chapter of the Noah New Century Book of Kings~",
+          "trackId": "0d8b10e0-ce21-4d2d-9e5c-e779399051b6",
+          "videoId": "5CVgy2wZoX4",
+          "gameTitle": "STEINS;GATE",
+          "trackTitle": "Masquerade ~Excerpt from the Third Chapter of the Noah New Century Book of Kings~",
+          "channelTitle": null,
+          "displayTitle": "STEINS;GATE - Masquerade ~Excerpt from the Third Chapter of the Noah New Century Book of Kings~"
+        },
+        {
+          "title": "Under Defeat HD - Don't look back!",
+          "trackId": "84302565-611a-4470-8844-cd6275937c14",
+          "videoId": "4T6uakczxfU",
+          "gameTitle": "Under Defeat HD",
+          "trackTitle": "Don't look back!",
+          "channelTitle": null,
+          "displayTitle": "Under Defeat HD - Don't look back!"
+        },
+        {
+          "title": "Mushihimesama HD - The Direction to the Heart of the Forest (Stage5)",
+          "trackId": "a5bdd889-37ac-425a-bef1-55f324741d63",
+          "videoId": "T-XCZ4T9QcE",
+          "gameTitle": "Mushihimesama HD",
+          "trackTitle": "The Direction to the Heart of the Forest (Stage5)",
+          "channelTitle": null,
+          "displayTitle": "Mushihimesama HD - The Direction to the Heart of the Forest (Stage5)"
+        },
+        {
+          "title": "The Silver Case (2016) - The Silver Case [Tuesday Bloody Tuesday Mix]",
+          "trackId": "35d5b5a3-4dfe-45aa-8342-4b08ca3863d9",
+          "videoId": "VUqZTWQb6eM",
+          "gameTitle": "The Silver Case (2016)",
+          "trackTitle": "The Silver Case [Tuesday Bloody Tuesday Mix]",
+          "channelTitle": null,
+          "displayTitle": "The Silver Case (2016) - The Silver Case [Tuesday Bloody Tuesday Mix]"
+        },
+        {
+          "title": "Dragon Ball Z: Budokai 2 - Go for it! (Staff Roll version)",
+          "trackId": "793feacb-b051-4258-aaff-b4f35e7d1117",
+          "videoId": "r56sW1_oCfk",
+          "gameTitle": "Dragon Ball Z: Budokai 2",
+          "trackTitle": "Go for it! (Staff Roll version)",
+          "channelTitle": null,
+          "displayTitle": "Dragon Ball Z: Budokai 2 - Go for it! (Staff Roll version)"
+        },
+        {
+          "title": "Green Light - We don't know",
+          "trackId": "b15806ee-0671-4a1d-8f4f-71d8435ef2a6",
+          "videoId": "P4zocbire84",
+          "gameTitle": "Green Light",
+          "trackTitle": "We don't know",
+          "channelTitle": null,
+          "displayTitle": "Green Light - We don't know"
+        },
+        {
+          "title": "Easy Delivery co. - Sunset Logistics",
+          "trackId": "4b55c6b9-9636-452f-8f4c-92d760774f15",
+          "videoId": "AtKQnQmBBX8",
+          "gameTitle": "Easy Delivery co.",
+          "trackTitle": "Sunset Logistics",
+          "channelTitle": null,
+          "displayTitle": "Easy Delivery co. - Sunset Logistics"
+        }
+      ]
+    },
     {
       "user_id": "6452d560-7b18-4e7b-8a22-208e09bddc28",
       "username": "dc:CalzoneB",
@@ -53,78 +251,6 @@
           "trackTitle": "Marine Serene",
           "channelTitle": "Scraic",
           "displayTitle": "Astro Bot - Marine Serene"
-        },
-        {
-          "title": "Ape Escape 3 - Mount Amazing 2",
-          "trackId": "dd089c59-8094-4879-8ea6-cce89f3c4ace",
-          "videoId": "XYi-zuFRGUE",
-          "gameTitle": "Ape Escape 3",
-          "trackTitle": "Mount Amazing 2",
-          "channelTitle": "Soichi Terada - Topic",
-          "displayTitle": "Ape Escape 3 - Mount Amazing 2"
-        },
-        {
-          "title": "Hyper Light Breaker - Apocalyptic Blues Paean",
-          "trackId": "a35849f4-4482-4a2b-b7ed-e5b97a418717",
-          "videoId": "qfSRCzeiQ0I",
-          "gameTitle": "Hyper Light Breaker",
-          "trackTitle": "Apocalyptic Blues Paean",
-          "channelTitle": "Scraic",
-          "displayTitle": "Hyper Light Breaker - Apocalyptic Blues Paean"
-        },
-        {
-          "title": "Satisfactory - Nostalgium",
-          "trackId": "1af05484-738d-4e80-b046-b70393917613",
-          "videoId": "PPS7fiGA1iI",
-          "gameTitle": "Satisfactory",
-          "trackTitle": "Nostalgium",
-          "channelTitle": "Bartek888_888",
-          "displayTitle": "Satisfactory - Nostalgium"
-        },
-        {
-          "title": "Jetpack Joyride - Main Theme",
-          "trackId": "9425f368-9c1f-424c-8964-0f47e989a52b",
-          "videoId": "MiUjLJJligs",
-          "gameTitle": "Jetpack Joyride",
-          "trackTitle": "Main Theme",
-          "channelTitle": "Halfbrick Studios",
-          "displayTitle": "Jetpack Joyride - Main Theme"
-        },
-        {
-          "title": "Dicey Dungeons: Reunion - Just Roll With It",
-          "trackId": "3d0d9c09-eec2-480d-815a-94a0c0ccd676",
-          "videoId": "oThk7mXxEW0",
-          "gameTitle": "Dicey Dungeons: Reunion",
-          "trackTitle": "Just Roll With It",
-          "channelTitle": "chipzel",
-          "displayTitle": "Dicey Dungeons: Reunion - Just Roll With It"
-        },
-        {
-          "title": "The Legend of Zelda: The Minish Cap - Minish Village",
-          "trackId": "9873a0fd-738f-4fc3-ba84-40fb8cfe828b",
-          "videoId": "BbQgK8DIK3M",
-          "gameTitle": "The Legend of Zelda: The Minish Cap",
-          "trackTitle": "Minish Village",
-          "channelTitle": "Cha Chingo Christiano",
-          "displayTitle": "The Legend of Zelda: The Minish Cap - Minish Village"
-        },
-        {
-          "title": "Tatsunoko vs. Capcom: Ultimate All-Stars - Orbital Ring Systems Cargo Bay",
-          "trackId": "71981b63-c2cc-4709-8f85-30c0af0094a3",
-          "videoId": "bp1ZkMq26A8",
-          "gameTitle": "Tatsunoko vs. Capcom: Ultimate All-Stars",
-          "trackTitle": "Orbital Ring Systems Cargo Bay",
-          "channelTitle": "PikawilMusic",
-          "displayTitle": "Tatsunoko vs. Capcom: Ultimate All-Stars - Orbital Ring Systems Cargo Bay"
-        },
-        {
-          "title": "Fall Guys - Fall 'N' Roll",
-          "trackId": "fa8e4af3-aed5-4df5-9f9e-3f14bce05f20",
-          "videoId": "LL70vTa0E2g",
-          "gameTitle": "Fall Guys",
-          "trackTitle": "Fall 'N' Roll",
-          "channelTitle": "Jukio Kallio - Topic",
-          "displayTitle": "Fall Guys - Fall 'N' Roll"
         }
       ]
     },
@@ -773,195 +899,6 @@
           "trackTitle": "Title Theme",
           "channelTitle": "the ida deerz dump",
           "displayTitle": "Moon Child (Amiga) - Title Theme"
-        }
-      ]
-    },
-    {
-      "user_id": "e63d2f90-9be3-4f22-9f10-76cc496817b4",
-      "username": "dc:Chaeix",
-      "avatar_url": "https://cdn.discordapp.com/avatars/278330645418344449/eec61ae7400d93fe245d91101b3d824a.png",
-      "gamefaqs_username": "Chaeix",
-      "updated_at": "2026-04-17T18:50:38.799739+00:00",
-      "nominations": [
-        {
-          "title": "Shining Wind - Heart-Shaped Chant",
-          "trackId": "b142f3ff-9f69-4a61-9426-97ce2feb8f6a",
-          "videoId": "1FOn-tQmO6o",
-          "gameTitle": "Shining Wind",
-          "trackTitle": "Heart-Shaped Chant",
-          "channelTitle": "sleeping0dragon",
-          "displayTitle": "Shining Wind - Heart-Shaped Chant"
-        },
-        {
-          "title": "Honkai: Star Rail - Rondo Across Countless Kalpas",
-          "trackId": "2740255e-a83d-4ae3-86ef-a3037329f7e2",
-          "videoId": "B5UeNLlnUOA",
-          "gameTitle": "Honkai: Star Rail",
-          "trackTitle": "Rondo Across Countless Kalpas",
-          "channelTitle": "HOYO-MiX - Topic",
-          "displayTitle": "Honkai: Star Rail - Rondo Across Countless Kalpas"
-        },
-        {
-          "title": "Danganronpa V3 - Climactic Re-enactment V3",
-          "trackId": "d09d688b-e3cb-46a8-a908-019efd039b39",
-          "videoId": "GYtsAyA_mUk",
-          "gameTitle": "Danganronpa V3",
-          "trackTitle": "Climactic Re-enactment V3",
-          "channelTitle": "A1st",
-          "displayTitle": "Danganronpa V3 - Climactic Re-enactment V3"
-        },
-        {
-          "title": "Ace Attorney Investigations Collection - Prelude to Pursuit - Search for the Truth",
-          "trackId": "202c9226-bcab-4ff2-8276-116a277a65e0",
-          "videoId": "nSP6E1pb9fw",
-          "gameTitle": "Ace Attorney Investigations Collection",
-          "trackTitle": "Prelude to Pursuit - Search for the Truth",
-          "channelTitle": "Shankey",
-          "displayTitle": "Ace Attorney Investigations Collection - Prelude to Pursuit - Search for the Truth"
-        },
-        {
-          "title": "Need for Speed: The Run - Make Up Time",
-          "trackId": "76fdbe04-7535-417b-9dce-e09a121123d0",
-          "videoId": "7SNhg2DtqR0",
-          "gameTitle": "Need for Speed: The Run",
-          "trackTitle": "Make Up Time",
-          "channelTitle": "SiulSC",
-          "displayTitle": "Need for Speed: The Run - Make Up Time"
-        },
-        {
-          "title": "World of Wacraft - Garden of Life",
-          "trackId": "59e6f2c3-a219-47a0-9815-30602f91386c",
-          "videoId": "RJTM3Si10U4",
-          "gameTitle": "World of Wacraft",
-          "trackTitle": "Garden of Life",
-          "channelTitle": "Release - Topic",
-          "displayTitle": "World of Wacraft - Garden of Life"
-        },
-        {
-          "title": "Honkai: Star Rail - NAME == Entelechy",
-          "trackId": "05dae8bb-6ab4-49b3-bfef-e782937d785f",
-          "videoId": "8EyFgUqtFK8",
-          "gameTitle": "Honkai: Star Rail",
-          "trackTitle": "NAME == Entelechy",
-          "channelTitle": "Pom-Pom’s Workstation",
-          "displayTitle": "Honkai: Star Rail - NAME == Entelechy"
-        },
-        {
-          "title": "Ace Combat: Assault Horizon - Shall Defend",
-          "trackId": "9632bc01-42b8-4486-9a91-ed1e04f99fd2",
-          "videoId": "PseSGiek5-M",
-          "gameTitle": "Ace Combat: Assault Horizon",
-          "trackTitle": "Shall Defend",
-          "channelTitle": "Ham",
-          "displayTitle": "Ace Combat: Assault Horizon - Shall Defend"
-        },
-        {
-          "title": "Pokemon Legends: Z-A - Lysandre Battle",
-          "trackId": "fe5cf35b-e7fd-4b09-98e3-359bde868259",
-          "videoId": "zcrTFTlxC2s",
-          "gameTitle": "Pokemon Legends: Z-A",
-          "trackTitle": "Lysandre Battle",
-          "channelTitle": "RezyMania",
-          "displayTitle": "Pokemon Legends: Z-A - Lysandre Battle"
-        },
-        {
-          "title": "The House in Fata Morgana - Girlhood in Shambles (in-game version)",
-          "trackId": "c2e54026-eaa1-4a69-abe6-0c87bbb78033",
-          "videoId": "-CCswRgA8cc",
-          "gameTitle": "The House in Fata Morgana",
-          "trackTitle": "Girlhood in Shambles (in-game version)",
-          "channelTitle": "Simone Martini",
-          "displayTitle": "The House in Fata Morgana - Girlhood in Shambles (in-game version)"
-        },
-        {
-          "title": "Need for Speed World - Static",
-          "trackId": "bdd08661-a14a-4caf-be38-136c7b54e9be",
-          "videoId": "i77Xd1QAti4",
-          "gameTitle": "Need for Speed World",
-          "trackTitle": "Static",
-          "channelTitle": "Trilogy94",
-          "displayTitle": "Need for Speed World - Static"
-        },
-        {
-          "title": "Wild Arms XF - Intrude Upon Happiness, Plunder the Future",
-          "trackId": "e0251b44-8f6d-46bb-a06a-5b76548b91ae",
-          "videoId": "z8iuwPgdVQg",
-          "gameTitle": "Wild Arms XF",
-          "trackTitle": "Intrude Upon Happiness, Plunder the Future",
-          "channelTitle": "sleeping0dragon",
-          "displayTitle": "Wild Arms XF - Intrude Upon Happiness, Plunder the Future"
-        },
-        {
-          "title": "Umineko: Golden Fantasia - The First and the Last -More Groove-",
-          "trackId": "1d1fcf68-25b4-45a5-8b1f-831c9ad18bc3",
-          "videoId": "aMhnNKeWRLI",
-          "gameTitle": "Umineko: Golden Fantasia",
-          "trackTitle": "The First and the Last -More Groove-",
-          "channelTitle": "Alberto Ferreyra",
-          "displayTitle": "Umineko: Golden Fantasia - The First and the Last -More Groove-"
-        },
-        {
-          "title": "Final Fantasy XIV - Weight of the World (Prelude Version)",
-          "trackId": "43696bd7-6d5d-42b5-8f08-df0d15e6a335",
-          "videoId": "gPSOaSwdEaE",
-          "gameTitle": "Final Fantasy XIV",
-          "trackTitle": "Weight of the World (Prelude Version)",
-          "channelTitle": "Masayoshi Soken - Topic",
-          "displayTitle": "Final Fantasy XIV - Weight of the World (Prelude Version)"
-        },
-        {
-          "title": "Ori and the Blind Forest - Light of Nibel",
-          "trackId": "022884b4-8055-43f1-bc75-2fcbe71ca779",
-          "videoId": "t6vWDz5NzOY",
-          "gameTitle": "Ori and the Blind Forest",
-          "trackTitle": "Light of Nibel",
-          "channelTitle": "Gareth Coker - Topic",
-          "displayTitle": "Ori and the Blind Forest - Light of Nibel"
-        },
-        {
-          "title": "World of Goo - Red Carpet Extend-o-Matic",
-          "trackId": "2c94478c-4dcf-47b3-8bfa-d413023ffc1b",
-          "videoId": "HwmxrIwetyU",
-          "gameTitle": "World of Goo",
-          "trackTitle": "Red Carpet Extend-o-Matic",
-          "channelTitle": "Rickkity-T",
-          "displayTitle": "World of Goo - Red Carpet Extend-o-Matic"
-        },
-        {
-          "title": "Metroid Prime - Menu Select",
-          "trackId": "1e5da35e-4fc8-486c-9ab7-bbff2dfd747f",
-          "videoId": "k0_-BkhG9Sw",
-          "gameTitle": "Metroid Prime",
-          "trackTitle": "Menu Select",
-          "channelTitle": "Metroid Music Channel",
-          "displayTitle": "Metroid Prime - Menu Select"
-        },
-        {
-          "title": "Platypus - Level 1",
-          "trackId": "8391fd93-9d38-4c8e-87fc-b2f6b6908794",
-          "videoId": "fEXDcUd6iis",
-          "gameTitle": "Platypus",
-          "trackTitle": "Level 1",
-          "channelTitle": "Снір Тциес",
-          "displayTitle": "Platypus - Level 1"
-        },
-        {
-          "title": "Old Spice Dikembe Mutombo's 4 1/2 Weeks to Save the World - We Saved the World",
-          "trackId": "257b2b0e-c9f9-4055-81ec-9494e6387bb2",
-          "videoId": "KuTeD9l8vXI",
-          "gameTitle": "Old Spice Dikembe Mutombo's 4 1/2 Weeks to Save the World",
-          "trackTitle": "We Saved the World",
-          "channelTitle": "RYAN TURNBULL",
-          "displayTitle": "Old Spice Dikembe Mutombo's 4 1/2 Weeks to Save the World - We Saved the World"
-        },
-        {
-          "title": "Touhou 18: Unconnected Marketeers - The Great Fantastic Underground Railway",
-          "trackId": "be9601f1-9685-4c26-a246-32cddcda2301",
-          "videoId": "vgnTgrNSg2k",
-          "gameTitle": "Touhou 18: Unconnected Marketeers",
-          "trackTitle": "The Great Fantastic Underground Railway",
-          "channelTitle": "Daily VG Music",
-          "displayTitle": "Touhou 18: Unconnected Marketeers - The Great Fantastic Underground Railway"
         }
       ]
     },
