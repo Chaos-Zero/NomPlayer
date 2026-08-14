@@ -1131,16 +1131,16 @@ export default function PlaylistSidebar({
                 className={`sidebar-icon-btn shuffle${isShuffleEnabled ? ' active' : ''}${!isShuffleAvailable ? ' disabled' : ''}`}
                 type="button"
                 onClick={isShuffleAvailable ? onShuffle : undefined}
-                disabled={!isShuffleAvailable || playlist.length < 2}
+                disabled={!isShuffleAvailable}
                 aria-label={
                   isShuffleAvailable
                     ? 'Shuffle queue'
-                    : 'Play from My Queue to use shuffle'
+                    : 'Add at least 2 tracks to shuffle'
                 }
                 title={
                   isShuffleAvailable
                     ? 'Shuffle queue'
-                    : 'Play from My Queue to use shuffle'
+                    : 'Add at least 2 tracks to shuffle'
                 }
               >
                 🔀

@@ -309,6 +309,19 @@ function resolvePlayOrderIds(playlist, shuffleOrderIds) {
   return shuffleOrderIds;
 }
 
+/** Reorders `tracks` to match the active shuffle order, for display. A no-op
+ * (returns tracks in their existing order) whenever shuffleOrderIds doesn't
+ * apply to this exact set of tracks — e.g. it was computed for a different
+ * view — since resolvePlayOrderIds already falls back to original order then. */
+function applyShuffleOrder(tracks, shuffleOrderIds) {
+  const orderIds = resolvePlayOrderIds(tracks, shuffleOrderIds);
+  if (orderIds === shuffleOrderIds) {
+    const byId = new Map(tracks.map((video) => [video.videoId, video]));
+    return orderIds.map((id) => byId.get(id)).filter(Boolean);
+  }
+  return tracks;
+}
+
 function shuffleVideoIds(videoIds, pinnedVideoId = null) {
   const remainingIds = pinnedVideoId
     ? videoIds.filter((id) => id !== pinnedVideoId)
@@ -323,6 +336,32 @@ function shuffleVideoIds(videoIds, pinnedVideoId = null) {
   }
 
   return pinnedVideoId ? [pinnedVideoId, ...remainingIds] : remainingIds;
+}
+
+/** Same shuffle as shuffleVideoIds, but groups never-listened-to videos first
+ * (each group independently randomized) — used for the VGMC standings
+ * playlist so shuffling surfaces songs you haven't heard yet before ones
+ * you've already started or finished. */
+function shuffleVideoIdsNotStartedFirst(
+  videoIds,
+  listenedStatusById,
+  pinnedVideoId = null,
+) {
+  const remainingIds = pinnedVideoId
+    ? videoIds.filter((id) => id !== pinnedVideoId)
+    : [...videoIds];
+
+  const notStartedIds = remainingIds.filter((id) => !listenedStatusById[id]);
+  const startedIds = remainingIds.filter((id) => listenedStatusById[id]);
+
+  const orderedRemaining = [
+    ...shuffleVideoIds(notStartedIds),
+    ...shuffleVideoIds(startedIds),
+  ];
+
+  return pinnedVideoId
+    ? [pinnedVideoId, ...orderedRemaining]
+    : orderedRemaining;
 }
 
 function mergeListenedStatuses(previousStatus, incomingStatus) {
@@ -564,6 +603,12 @@ export default function App() {
   // Playlist state
   const [playlist, setPlaylist] = useState(initialPlayerState.playlist);
   const playlistRef = useRef([]);
+  // Whatever's actually playing right now — the personal playlist, or (while
+  // transientVideo is set) a community/nominations/support/custom-playlist view.
+  // Synced below, after playingTracks is defined. Used by shuffle so it can
+  // operate on whichever of those is currently relevant, not just the personal
+  // queue.
+  const playingTracksRef = useRef([]);
   const [currentVideoId, setCurrentVideoId] = useState(
     initialPlayerState.currentVideoId,
   );
@@ -1813,12 +1858,13 @@ export default function App() {
     [playlist, shuffleOrderIds],
   );
 
-  const isShuffleEnabled = useMemo(
+  // Personal-queue-specific — feeds displayPlaylist's own reordering only.
+  // isShuffleEnabled (general, reflects whatever's actually playing right now)
+  // is defined below, once playingTracks exists.
+  const isPersonalShuffleActive = useMemo(
     () => shuffleOrderIds.length > 0 && playOrderIds === shuffleOrderIds,
     [playOrderIds, shuffleOrderIds],
   );
-
-  const isShuffleAvailable = activePlaylistView.type === 'personal';
 
   const supportStatusById = useMemo(() => {
     const status = {};
@@ -1844,7 +1890,7 @@ export default function App() {
       playlist.map((video, index) => [video.videoId, index]),
     );
     const orderIds =
-      isShuffleEnabled && !showOriginalOrder
+      isPersonalShuffleActive && !showOriginalOrder
         ? playOrderIds
         : playlist.map((video) => video.videoId);
 
@@ -1896,7 +1942,7 @@ export default function App() {
       .filter(Boolean);
   }, [
     catalogTrackByVideoId,
-    isShuffleEnabled,
+    isPersonalShuffleActive,
     playlist,
     playOrderIds,
     showOriginalOrder,
@@ -1977,12 +2023,14 @@ export default function App() {
   }, [supportList, catalogTrackByVideoId, userFeedback]);
 
   const sidebarTracks = useMemo(() => {
+    let tracks;
+
     if (activePlaylistView.type === 'community') {
       const communityUser = communityNominations.find(
         (u) => u.userId === activePlaylistView.userId,
       );
       if (communityUser) {
-        return communityUser.nominations.map((nom, index) => {
+        tracks = communityUser.nominations.map((nom, index) => {
           const catalogEntry = catalogTrackByVideoId[nom.videoId];
           const personalRating =
             (catalogEntry?.id && userFeedback[catalogEntry.id]?.rating) ||
@@ -2018,18 +2066,26 @@ export default function App() {
         });
       }
     } else if (activePlaylistView.type === 'nominations') {
-      return enrichedNominationList;
+      tracks = enrichedNominationList;
     } else if (activePlaylistView.type === 'support') {
-      return enrichedSupportList;
+      tracks = enrichedSupportList;
     } else if (activePlaylistView.type === 'custom-playlist') {
-      return (
+      tracks =
         customPlaylists.find((p) => p.id === activePlaylistView.id)?.videos ||
-        []
-      );
+        [];
     } else if (activePlaylistView.type === 'community-playlist') {
-      return activePlaylistView.videos || [];
+      tracks = activePlaylistView.videos || [];
     }
-    return displayPlaylist;
+
+    // 'personal' (and the community-with-no-match edge case above) falls back
+    // to displayPlaylist, which already reflects shuffle order on its own —
+    // applying it again here would be redundant, not wrong, but skip it.
+    // Every other view type doesn't get shuffle-reordered anywhere else, so it
+    // has to happen here for the sidebar to actually show shuffled order
+    // (playback advancement resolves its own order separately, at the point
+    // handlePrev/handleNext/handleVideoEnd need it).
+    if (tracks === undefined) return displayPlaylist;
+    return applyShuffleOrder(tracks, shuffleOrderIds);
   }, [
     activePlaylistView,
     communityNominations,
@@ -2039,6 +2095,7 @@ export default function App() {
     enrichedSupportList,
     displayPlaylist,
     customPlaylists,
+    shuffleOrderIds,
   ]);
 
   const playingTracks = useMemo(() => {
@@ -2106,6 +2163,27 @@ export default function App() {
     displayPlaylist,
     customPlaylists,
   ]);
+
+  useEffect(() => {
+    playingTracksRef.current = playingTracks;
+  }, [playingTracks]);
+
+  // General shuffle state — reflects whatever's actually playing right now
+  // (a transient community/nominations/support/custom-playlist view, or the
+  // personal queue when there's no transient video). This drives the shuffle
+  // button's own active/available state and playback advancement; it's
+  // deliberately separate from isPersonalShuffleActive above, which only ever
+  // describes the personal queue and only feeds displayPlaylist's ordering.
+  const currentContextTracks = transientVideo ? playingTracks : playlist;
+  const currentPlayOrderIds = useMemo(
+    () => resolvePlayOrderIds(currentContextTracks, shuffleOrderIds),
+    [currentContextTracks, shuffleOrderIds],
+  );
+  const isShuffleEnabled = useMemo(
+    () => shuffleOrderIds.length > 0 && currentPlayOrderIds === shuffleOrderIds,
+    [currentPlayOrderIds, shuffleOrderIds],
+  );
+  const isShuffleAvailable = playingTracks.length >= 2;
 
   const currentDisplayIndex = useMemo(() => {
     const activeVideoId = transientVideo?.videoId || currentVideoId;
@@ -4107,20 +4185,26 @@ export default function App() {
       transientVideo?.source?.endsWith('-view') ||
       transientVideo?.source === 'community-playlist'
     ) {
-      const currentIndex = playingTracks.findIndex(
-        (v) => v.videoId === transientVideo.videoId,
+      const resolvedTransientIds = resolvePlayOrderIds(
+        playingTracks,
+        shuffleOrderIdsRef.current,
       );
+      const currentIndex = resolvedTransientIds.indexOf(transientVideo.videoId);
       if (currentIndex > 0) {
-        const prevTrack = playingTracks[currentIndex - 1];
-        setTransientVideo({
-          ...prevTrack,
-          source: transientVideo.source,
-          communityUserId: transientVideo.communityUserId,
-        });
-        if (isPlaying) {
-          markVideoStarted(prevTrack.videoId);
+        const prevTrack = playingTracks.find(
+          (v) => v.videoId === resolvedTransientIds[currentIndex - 1],
+        );
+        if (prevTrack) {
+          setTransientVideo({
+            ...prevTrack,
+            source: transientVideo.source,
+            communityUserId: transientVideo.communityUserId,
+          });
+          if (isPlaying) {
+            markVideoStarted(prevTrack.videoId);
+          }
+          return;
         }
-        return;
       }
     }
 
@@ -4153,20 +4237,26 @@ export default function App() {
       transientVideo?.source?.endsWith('-view') ||
       transientVideo?.source === 'community-playlist'
     ) {
-      const currentIndex = playingTracks.findIndex(
-        (v) => v.videoId === transientVideo.videoId,
+      const resolvedTransientIds = resolvePlayOrderIds(
+        playingTracks,
+        shuffleOrderIdsRef.current,
       );
-      if (currentIndex >= 0 && currentIndex < playingTracks.length - 1) {
-        const nextTrack = playingTracks[currentIndex + 1];
-        setTransientVideo({
-          ...nextTrack,
-          source: transientVideo.source,
-          communityUserId: transientVideo.communityUserId,
-        });
-        if (isPlaying) {
-          markVideoStarted(nextTrack.videoId);
+      const currentIndex = resolvedTransientIds.indexOf(transientVideo.videoId);
+      if (currentIndex >= 0 && currentIndex < resolvedTransientIds.length - 1) {
+        const nextTrack = playingTracks.find(
+          (v) => v.videoId === resolvedTransientIds[currentIndex + 1],
+        );
+        if (nextTrack) {
+          setTransientVideo({
+            ...nextTrack,
+            source: transientVideo.source,
+            communityUserId: transientVideo.communityUserId,
+          });
+          if (isPlaying) {
+            markVideoStarted(nextTrack.videoId);
+          }
+          return;
         }
-        return;
       }
     }
 
@@ -4215,19 +4305,30 @@ export default function App() {
         transientVideo.source?.endsWith('-view') ||
         transientVideo.source === 'community-playlist'
       ) {
-        const currentIndex = playingTracks.findIndex(
-          (v) => v.videoId === transientVideo.videoId,
+        const resolvedTransientIds = resolvePlayOrderIds(
+          playingTracks,
+          shuffleOrderIdsRef.current,
         );
-        if (currentIndex >= 0 && currentIndex < playingTracks.length - 1) {
-          const nextTrack = playingTracks[currentIndex + 1];
-          setTransientVideo({
-            ...nextTrack,
-            source: transientVideo.source,
-            communityUserId: transientVideo.communityUserId,
-          });
-          markVideoStarted(nextTrack.videoId);
-          setIsPlaying(true);
-          return;
+        const currentIndex = resolvedTransientIds.indexOf(
+          transientVideo.videoId,
+        );
+        if (
+          currentIndex >= 0 &&
+          currentIndex < resolvedTransientIds.length - 1
+        ) {
+          const nextTrack = playingTracks.find(
+            (v) => v.videoId === resolvedTransientIds[currentIndex + 1],
+          );
+          if (nextTrack) {
+            setTransientVideo({
+              ...nextTrack,
+              source: transientVideo.source,
+              communityUserId: transientVideo.communityUserId,
+            });
+            markVideoStarted(nextTrack.videoId);
+            setIsPlaying(true);
+            return;
+          }
         }
       }
 
@@ -4298,20 +4399,42 @@ export default function App() {
       return;
     }
 
-    const originalIds = playlistRef.current.map((video) => video.videoId);
+    // Shuffle whatever's actually playing right now — a transient
+    // community/nominations/support/custom-playlist view (VGMC included), or
+    // the personal queue when there isn't one. Mirrors the same transientVideo
+    // branch handlePrev/handleNext/handleVideoEnd already use.
+    const sourceTracks = transientVideo
+      ? playingTracksRef.current
+      : playlistRef.current;
+    const originalIds = sourceTracks.map((video) => video.videoId);
     if (originalIds.length < 2) return;
 
+    const activeVideoId = transientVideo
+      ? transientVideo.videoId
+      : currentVideoIdRef.current;
     const pinnedVideoId =
-      currentVideoIdRef.current &&
-      originalIds.includes(currentVideoIdRef.current)
-        ? currentVideoIdRef.current
+      activeVideoId && originalIds.includes(activeVideoId)
+        ? activeVideoId
         : originalIds[0];
 
-    const nextShuffleOrderIds = shuffleVideoIds(originalIds, pinnedVideoId);
+    // VGMC specifically prioritizes songs you haven't listened to yet, so
+    // shuffling surfaces new nominations instead of ones you've already heard.
+    const isVgmcShuffle =
+      Boolean(VGMC_PLAYLIST_ID) &&
+      playingPlaylistView.type === 'community-playlist' &&
+      playingPlaylistView.id === VGMC_PLAYLIST_ID;
+
+    const nextShuffleOrderIds = isVgmcShuffle
+      ? shuffleVideoIdsNotStartedFirst(
+          originalIds,
+          listenedStatusById,
+          pinnedVideoId,
+        )
+      : shuffleVideoIds(originalIds, pinnedVideoId);
     shuffleOrderIdsRef.current = nextShuffleOrderIds;
     setShuffleOrderIds(nextShuffleOrderIds);
     setShowOriginalOrder(false);
-  }, []);
+  }, [transientVideo, playingPlaylistView, listenedStatusById]);
 
   const handleTogglePlaylistOrderView = useCallback(() => {
     if (shuffleOrderIdsRef.current.length === 0) return;
@@ -5654,7 +5777,7 @@ export default function App() {
                 title={
                   isShuffleAvailable
                     ? 'Shuffle'
-                    : 'Play from My Queue to use shuffle'
+                    : 'Add at least 2 tracks to shuffle'
                 }
                 disabled={!isShuffleAvailable}
               >

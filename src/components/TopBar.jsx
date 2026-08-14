@@ -547,12 +547,12 @@ export default function TopBar({
               title={
                 isShuffleAvailable
                   ? 'Shuffle queue'
-                  : 'Play from My Queue to use shuffle'
+                  : 'Add at least 2 tracks to shuffle'
               }
               aria-label={
                 isShuffleAvailable
                   ? 'Shuffle queue'
-                  : 'Play from My Queue to use shuffle'
+                  : 'Add at least 2 tracks to shuffle'
               }
               aria-pressed={isShuffleEnabled}
               disabled={!isShuffleAvailable}
