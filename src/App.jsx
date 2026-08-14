@@ -3968,9 +3968,38 @@ export default function App() {
       setVgmcStandingsRows(rows);
       const videos = toPlaylistVideos(rows);
       if (videos.length > 0) {
+        // Land on the first song (in nomination order) the user hasn't heard
+        // yet, rather than always the very first nomination. Fetched fresh
+        // and scoped to just this video set rather than trusting whatever's
+        // already in listenedStatusById — that state's own full-history fetch
+        // runs on a separate effect with no ordering guarantee relative to
+        // this one, so relying on it here could easily race on a fresh load.
+        let startVideoId;
+        if (authUserIdRef.current) {
+          try {
+            const statusByVideoId = await fetchUserTrackListenStatuses(
+              supabase,
+              videos.map((video) => video.videoId),
+            );
+            if (Object.keys(statusByVideoId).length > 0) {
+              startTransition(() => {
+                setListenedStatusById((previousStatus) =>
+                  mergeListenedStatuses(previousStatus, statusByVideoId),
+                );
+              });
+            }
+            startVideoId = videos.find(
+              (video) => !statusByVideoId[video.videoId],
+            )?.videoId;
+          } catch (error) {
+            reportError('Load VGMC listen status', error);
+          }
+        }
+
         handlePlayCommunityPlaylist(videos, {
           id: VGMC_PLAYLIST_ID,
           name: 'VGMC 20 Nominations',
+          startVideoId,
         });
       }
     } catch (error) {

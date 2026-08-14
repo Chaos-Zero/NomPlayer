@@ -497,6 +497,7 @@ export default function PlaylistSidebar({
   // null (nomination order) -> 'desc' (highest ranked first) -> 'asc' -> null
   const [rankingSortDirection, setRankingSortDirection] = useState(null);
   const collapseGestureRef = useRef(null);
+  const listContainerRef = useRef(null);
   const supportIds = useMemo(
     () => new Set(supportList.map((entry) => entry.videoId)),
     [supportList],
@@ -559,6 +560,19 @@ export default function PlaylistSidebar({
     setSelectionMode(false);
     setSelectedIds([]);
   }, [activePage]);
+
+  // Scrolls the active row into view once, when landing on a *different*
+  // playlist/view (e.g. arriving at the VGMC standings page already cued up
+  // to the next song you haven't heard) — deliberately keyed on the view
+  // itself, not currentIndex, so this never yanks the list out from under
+  // someone mid-scroll or mid-listen as playback advances normally.
+  useEffect(() => {
+    const container = listContainerRef.current;
+    if (!container) return;
+
+    const activeEl = container.querySelector('.playlist-item.active');
+    activeEl?.scrollIntoView({ block: 'center' });
+  }, [activePlaylistView.type, activePlaylistView.id]);
 
   useEffect(() => {
     function clearGesture() {
@@ -1565,7 +1579,7 @@ export default function PlaylistSidebar({
         </div>
       )}
       {!isCollapsed && (
-        <div className="playlist-list" role="list">
+        <div className="playlist-list" role="list" ref={listContainerRef}>
           {selectionMode ? (
             displayPlaylist.map((video, index) => (
               <PlaylistItem

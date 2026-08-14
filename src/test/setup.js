@@ -19,6 +19,12 @@ globalThis.IntersectionObserver = class {
   disconnect = vi.fn();
 };
 
+// Element.prototype.scrollIntoView isn't implemented in JSDOM either, used by
+// PlaylistSidebar to bring the active row into view when landing on a view.
+if (!Element.prototype.scrollIntoView) {
+  Element.prototype.scrollIntoView = vi.fn();
+}
+
 afterEach(() => {
   cleanup();
 });
