@@ -1,6 +1,15 @@
 set shell := ["bash", "-eu", "-o", "pipefail", "-c"]
 set dotenv-load := true
 
+# Vite (the site, http://localhost:5173) + wrangler (Cloudflare Functions, port
+# 8788, Vite proxies /api/* there, see vite.config.js). Ctrl+C stops both.
+run-dev:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    trap 'kill 0' EXIT
+    npx wrangler pages dev dist --env-file .env --port 8788 &
+    npm run dev
+
 deploy:
     node scripts/exportCatalogSnapshot.js
     node scripts/exportNominationsSnapshot.js

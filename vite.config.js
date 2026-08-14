@@ -69,6 +69,18 @@ function gameFaqsUpdatesPlugin() {
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react(), gameFaqsUpdatesPlugin()],
+  server: {
+    // Endpoints that are real Cloudflare Pages Functions (functions/api/*.js)
+    // rather than the lightweight dev-only middleware above only exist when
+    // `wrangler pages dev dist --port 8788` is also running, `npm run dev`
+    // alone has no idea these routes exist and 404s. This forwards them there
+    // so `npm run dev` still gives fast HMR for everything else. Add new
+    // functions/api/*.js routes here as they're built.
+    proxy: {
+      '/api/vgmc-ingest': 'http://localhost:8788',
+      '/api/vgmc-sheet-sync': 'http://localhost:8788',
+    },
+  },
   build: {
     chunkSizeWarningLimit: 2000,
     rollupOptions: {

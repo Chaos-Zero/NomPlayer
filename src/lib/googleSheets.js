@@ -102,38 +102,45 @@ export function findHeaderRow(rows) {
   };
 }
 
+/** Converts a spreadsheet column letter ("A", "Z", "AA", "AB", ...) to a
+ * 0-based column index. Returns -1 for anything that isn't purely letters. */
+export function columnLetterToIndex(letters) {
+  const normalized = (letters || '').trim().toUpperCase();
+  if (!/^[A-Z]+$/.test(normalized)) return -1;
+
+  let index = 0;
+  for (const char of normalized) {
+    index = index * 26 + (char.charCodeAt(0) - 64); // 'A' -> 1, ... 'Z' -> 26
+  }
+  return index - 1;
+}
+
 /**
  * Pure matching pass, no network calls. Walks every existing data row, and for
  * each one whose Link column resolves to a video the current user has rated,
- * queues a cell update for their column. Never adds rows: a rated song that
- * isn't already a row in the sheet is simply not matched, by construction,
- * there's nothing to add it *to*.
+ * queues a cell update for their column. Both columns are identified by
+ * letter (e.g. "Q", "AA", "K") rather than header text, the reaction
+ * sheet's actual header reads "Link (auto-fill from K2)", not just "Link",
+ * so matching on exact header text was fragile; a fixed column letter isn't.
+ * Never adds rows: a rated song that isn't already a row in the sheet is
+ * simply not matched, by construction, there's nothing to add it *to*.
  */
 export function buildSheetUpdates({
   rows,
   headerRowIndex,
-  linkColumnHeader = 'Link',
-  userColumn,
+  linkColumnLetter = 'K',
+  userColumnLetter,
   feedbackByVideoId,
   overwrite = false,
 }) {
-  const headers = rows[headerRowIndex].map((cell) => cell.value?.trim() || '');
-  const linkColIndex = headers.findIndex(
-    (header) => header.toLowerCase() === linkColumnHeader.toLowerCase(),
-  );
-  const userColIndex = headers.findIndex(
-    (header) => header.toLowerCase() === (userColumn || '').toLowerCase(),
-  );
+  const linkColIndex = columnLetterToIndex(linkColumnLetter);
+  const userColIndex = columnLetterToIndex(userColumnLetter);
 
-  if (linkColIndex === -1) {
-    throw new Error(
-      `Couldn't find a "${linkColumnHeader}" column in that sheet.`,
-    );
-  }
   if (userColIndex === -1) {
-    throw new Error(
-      `Couldn't find a column named "${userColumn}" in that sheet.`,
-    );
+    throw new Error(`"${userColumnLetter}" isn't a valid column letter.`);
+  }
+  if (linkColIndex === -1) {
+    throw new Error(`"${linkColumnLetter}" isn't a valid column letter.`);
   }
 
   const updates = [];

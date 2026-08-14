@@ -393,12 +393,12 @@ const VideoPlayer = forwardRef(function VideoPlayer(
         </span>
         {onOpenVgmcSheetSync && (
           <button
-            className="now-playing-list-btn vgmc-sheet-sync-btn"
+            className="vgmc-sheet-sync-btn"
             type="button"
             onClick={onOpenVgmcSheetSync}
             title="Sync your VGMC ratings to the reaction sheet"
           >
-            Sync to Sheet
+            Sync your feedback to Reactions Sheet
           </button>
         )}
       </div>

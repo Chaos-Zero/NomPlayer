@@ -1,5 +1,8 @@
 import { useState } from 'react';
-import { parseGoogleSheetUrl } from '../lib/googleSheets.js';
+import {
+  columnLetterToIndex,
+  parseGoogleSheetUrl,
+} from '../lib/googleSheets.js';
 
 // Hardcoded for now, per explicit request, this is the one VGMC 20 reaction
 // sheet this feature targets today. Still editable in the field below in case
@@ -19,7 +22,7 @@ export default function VgmcSheetSyncPanel({
   feedbackByVideoId,
 }) {
   const [sheetUrl, setSheetUrl] = useState(DEFAULT_SHEET_URL);
-  const [userColumn, setUserColumn] = useState('');
+  const [columnLetter, setColumnLetter] = useState('');
   const [overwrite, setOverwrite] = useState(false);
   const [status, setStatus] = useState('idle'); // idle | syncing | done | error
   const [result, setResult] = useState(null);
@@ -35,8 +38,10 @@ export default function VgmcSheetSyncPanel({
       setStatus('error');
       return;
     }
-    if (!userColumn.trim()) {
-      setErrorMessage('Enter which column is yours (e.g. "Cal").');
+    if (columnLetterToIndex(columnLetter) === -1) {
+      setErrorMessage(
+        'Enter your column\'s letter (e.g. "Q" or "AA"), not its name.',
+      );
       setStatus('error');
       return;
     }
@@ -73,7 +78,7 @@ export default function VgmcSheetSyncPanel({
         body: JSON.stringify({
           access_token: accessToken,
           sheet_url: sheetUrl,
-          user_column: userColumn.trim(),
+          user_column_letter: columnLetter.trim(),
           overwrite,
           ratings,
         }),
@@ -136,14 +141,14 @@ export default function VgmcSheetSyncPanel({
           <label
             style={{ display: 'block', fontSize: '13px', marginBottom: '4px' }}
           >
-            Your column (e.g. "Cal")
+            Your column's letter (e.g. "A", "B"... "AA", "AB"...)
           </label>
           <input
             type="text"
-            value={userColumn}
-            onChange={(e) => setUserColumn(e.target.value)}
+            value={columnLetter}
+            onChange={(e) => setColumnLetter(e.target.value)}
             disabled={isBusy}
-            placeholder="Cal"
+            placeholder=""
             style={{ width: '100%', marginBottom: '12px' }}
           />
 

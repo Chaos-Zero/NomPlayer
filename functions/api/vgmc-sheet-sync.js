@@ -79,7 +79,7 @@ export async function onRequestPost(context) {
   const {
     access_token: accessToken,
     sheet_url: sheetUrl,
-    user_column: userColumn,
+    user_column_letter: userColumnLetter,
     overwrite,
     ratings,
   } = payload || {};
@@ -100,10 +100,10 @@ export async function onRequestPost(context) {
     );
   }
 
-  const normalizedColumn =
-    typeof userColumn === 'string' ? userColumn.trim() : '';
-  if (!normalizedColumn) {
-    return jsonResponse({ error: 'user_column is required.' }, 400);
+  const normalizedColumnLetter =
+    typeof userColumnLetter === 'string' ? userColumnLetter.trim() : '';
+  if (!normalizedColumnLetter) {
+    return jsonResponse({ error: 'user_column_letter is required.' }, 400);
   }
 
   const feedbackByVideoId = sanitizeRatings(ratings);
@@ -134,7 +134,7 @@ export async function onRequestPost(context) {
     const { updates, skippedFilled, noRatingFound } = buildSheetUpdates({
       rows: grid.rows,
       headerRowIndex: header.headerIndex,
-      userColumn: normalizedColumn,
+      userColumnLetter: normalizedColumnLetter,
       feedbackByVideoId,
       overwrite: Boolean(overwrite),
     });
