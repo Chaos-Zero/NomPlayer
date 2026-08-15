@@ -323,6 +323,36 @@ export function SortByRatingIcon({ className = 'collection-icon' }) {
   );
 }
 
+// Headphones + a down arrow,"you've heard this, send it to the bottom".
+export function CheckDownIcon({ className = 'collection-icon' }) {
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      {/* Arrow drawn first so it sits behind the checkmark, only peeking
+          out past its bottom-right corner. */}
+      <path
+        d="M16.5 11H19.5V16.5H22.5L18 22L13.5 16.5H16.5Z"
+        fill="#facc15"
+        stroke="none"
+      />
+      {/* Same checkmark glyph a playlist row shows once you've listened to
+          it (see .item-status-tick in index.css),nested at its native
+          16x16 viewBox so it's the identical shape, just scaled up to fill
+          most of the icon and drawn on top of the arrow. */}
+      <svg x="1" y="1" width="17" height="17" viewBox="0 0 16 16">
+        <path d="M3.5 8.5 6.6 11.6 12.5 4.9" />
+      </svg>
+    </svg>
+  );
+}
+
 export function UsersIcon({ className = 'collection-icon' }) {
   return (
     <svg className={className} viewBox="0 0 20 20" fill="currentColor">

@@ -160,7 +160,7 @@ describe('PlaylistSidebar', () => {
       channelTitle: 'Channel B',
     };
     const { container } = renderSidebar({
-      // loadIndex deliberately mismatches display order here — the number
+      // loadIndex deliberately mismatches display order here, the number
       // shown must follow where the row actually is (1, 2, ...), not this.
       playlist: [
         { ...video, loadIndex: 1 },
@@ -184,7 +184,7 @@ describe('PlaylistSidebar', () => {
     };
     const { container } = renderSidebar({
       showOriginalOrder: true,
-      // Rows stay in this (shuffled) position — only the number should
+      // Rows stay in this (shuffled) position, only the number should
       // reflect loadIndex now, not this array position.
       playlist: [
         { ...video, loadIndex: 1 },

@@ -89,21 +89,48 @@ export async function fetchSheetGrid(accessToken, spreadsheetId, gid) {
   };
 }
 
-/** First row with any content, the header row we match column names against. */
+const HEADER_ROW_MIN_CELLS = 3;
+const HEADER_ROW_MIN_WIDTH_RATIO = 0.5;
+
+/**
+ * The header row we match column names against. Not just "the first row
+ * with anything in it", a sparse banner/status row above the real headers
+ * (a "last updated" note, a title, etc.) also has *some* content, so that
+ * alone isn't enough to call it the header. A candidate has to actually
+ * look like a header: populated across a real fraction of the sheet's
+ * width, not just one or two stray cells. Otherwise everything downstream
+ * (link-column detection, row matching) ends up reading data one row too
+ * early, and reasoning about the *wrong* row as if it were the header.
+ */
 export function findHeaderRow(rows) {
-  const headerIndex = (rows || []).findIndex((row) =>
-    row.some((cell) => cell.value?.trim()),
+  const rowList = rows || [];
+  const columnCount = rowList.reduce(
+    (max, row) => Math.max(max, row.length),
+    0,
+  );
+  const minCells = Math.max(
+    HEADER_ROW_MIN_CELLS,
+    Math.ceil(columnCount * HEADER_ROW_MIN_WIDTH_RATIO),
+  );
+
+  const headerIndex = rowList.findIndex(
+    (row) => row.filter((cell) => cell.value?.trim()).length >= minCells,
   );
   if (headerIndex === -1) return null;
 
   return {
     headerIndex,
-    headers: rows[headerIndex].map((cell) => cell.value?.trim() || ''),
+    headers: rowList[headerIndex].map((cell) => cell.value?.trim() || ''),
   };
 }
 
 /** Converts a spreadsheet column letter ("A", "Z", "AA", "AB", ...) to a
- * 0-based column index. Returns -1 for anything that isn't purely letters. */
+ * 0-based column index. Returns -1 for anything that isn't purely letters.
+ * Note this accepts any letters-only string, including ones nobody would
+ * actually mean as a column ("CAL" decodes to column 2065), callers that
+ * know the sheet's real width should also range-check the result against
+ * it (see buildSheetUpdates below), since a huge-but-"valid" index just
+ * silently expands the sheet instead of erroring. */
 export function columnLetterToIndex(letters) {
   const normalized = (letters || '').trim().toUpperCase();
   if (!/^[A-Z]+$/.test(normalized)) return -1;
@@ -115,38 +142,148 @@ export function columnLetterToIndex(letters) {
   return index - 1;
 }
 
+/** Reverse of columnLetterToIndex: 0-based column index to letters. */
+export function indexToColumnLetter(index) {
+  let n = index + 1;
+  let letters = '';
+  while (n > 0) {
+    const remainder = (n - 1) % 26;
+    letters = String.fromCharCode(65 + remainder) + letters;
+    n = Math.floor((n - 1) / 26);
+  }
+  return letters;
+}
+
+const LINK_HEADER_PATTERN = /link/i;
+// "LINK IMP" (an internal/backup link column, not the real one) contains
+// "link" too,explicitly excluded from both the header search and the
+// content-sniffing fallback below, rather than relying on either to somehow
+// prefer the other column on its own.
+const LINK_HEADER_EXCLUDE_PATTERN = /imp/i;
+const CONTENT_SNIFF_SAMPLE_SIZE = 15;
+const CONTENT_SNIFF_MIN_SAMPLES = 3;
+const CONTENT_SNIFF_MIN_RATIO = 0.8;
+
+function isExcludedLinkHeader(headerText) {
+  return LINK_HEADER_EXCLUDE_PATTERN.test(headerText || '');
+}
+
+/**
+ * Finds which column holds YouTube links without assuming a fixed letter,
+ * this sheet's structure has already changed once (K, now L), and pinning a
+ * letter in code just means another deploy the next time it moves. Tries the
+ * header row first (any header containing "link", not requiring an exact
+ * match,the real header reads "Link (auto-fill from K2)",but skipping
+ * any header containing "imp", e.g. "LINK IMP"). If nothing matches there,
+ * falls back to sniffing actual cell content (also skipping "imp" headers):
+ * samples the first several data rows per column and picks whichever one is
+ * overwhelmingly (80%+, at least 3 samples) parseable as YouTube links.
+ * Returns -1 if neither approach finds anything.
+ */
+export function findLinkColumnIndex(rows, headerRowIndex) {
+  const headerRow = rows[headerRowIndex] || [];
+  const byHeader = headerRow.findIndex(
+    (cell) =>
+      LINK_HEADER_PATTERN.test(cell?.value || '') &&
+      !isExcludedLinkHeader(cell?.value),
+  );
+  if (byHeader !== -1) return byHeader;
+
+  const dataRows = rows.slice(headerRowIndex + 1);
+  const columnCount = rows.reduce((max, row) => Math.max(max, row.length), 0);
+
+  let bestColumn = -1;
+  let bestRatio = 0;
+
+  for (let col = 0; col < columnCount; col += 1) {
+    if (isExcludedLinkHeader(headerRow[col]?.value)) continue;
+
+    let checked = 0;
+    let matched = 0;
+
+    for (const row of dataRows) {
+      const text = row[col]?.value?.trim();
+      if (!text) continue;
+
+      checked += 1;
+      if (parseYouTubeInput(text)?.videoId) matched += 1;
+      if (checked >= CONTENT_SNIFF_SAMPLE_SIZE) break;
+    }
+
+    if (checked < CONTENT_SNIFF_MIN_SAMPLES) continue;
+
+    const ratio = matched / checked;
+    if (ratio >= CONTENT_SNIFF_MIN_RATIO && ratio > bestRatio) {
+      bestRatio = ratio;
+      bestColumn = col;
+    }
+  }
+
+  return bestColumn;
+}
+
 /**
  * Pure matching pass, no network calls. Walks every existing data row, and for
  * each one whose Link column resolves to a video the current user has rated,
- * queues a cell update for their column. Both columns are identified by
- * letter (e.g. "Q", "AA", "K") rather than header text, the reaction
- * sheet's actual header reads "Link (auto-fill from K2)", not just "Link",
- * so matching on exact header text was fragile; a fixed column letter isn't.
- * Never adds rows: a rated song that isn't already a row in the sheet is
- * simply not matched, by construction, there's nothing to add it *to*.
+ * queues a cell update for their column. The link column is located
+ * automatically (see findLinkColumnIndex) rather than assumed; only the
+ * user's own column still needs to be given as a letter, since there's no
+ * content to sniff it out from. Never adds rows: a rated song that isn't
+ * already a row in the sheet is simply not matched, by construction, there's
+ * nothing to add it *to*. If a song's link shows up in more than one row
+ * (an archived/duplicate row alongside the current one, say), it's skipped
+ * entirely rather than guessed at, see skippedAmbiguous/ambiguousVideoIds
+ * in the return value.
  */
 export function buildSheetUpdates({
   rows,
   headerRowIndex,
-  linkColumnLetter = 'K',
   userColumnLetter,
   feedbackByVideoId,
   overwrite = false,
 }) {
-  const linkColIndex = columnLetterToIndex(linkColumnLetter);
+  const linkColIndex = findLinkColumnIndex(rows, headerRowIndex);
   const userColIndex = columnLetterToIndex(userColumnLetter);
 
   if (userColIndex === -1) {
     throw new Error(`"${userColumnLetter}" isn't a valid column letter.`);
   }
   if (linkColIndex === -1) {
-    throw new Error(`"${linkColumnLetter}" isn't a valid column letter.`);
+    throw new Error(
+      'Couldn\'t find a column with YouTube links in it (checked headers containing "link", and the cells themselves).',
+    );
   }
 
-  const updates = [];
-  let skippedFilled = 0;
-  let noRatingFound = 0;
+  // A word like "Cal" is, letter-wise, indistinguishable from a real (if
+  // huge) column code, columnLetterToIndex has no way to know the sheet
+  // is only ~48 columns wide. Left unchecked, writing to that index just
+  // silently expands the sheet way off to the right instead of erroring,
+  // which is exactly what "no errors, wrong cells" looks like from the
+  // outside. Catch it here, where the sheet's actual width is known.
+  const headerRow = rows[headerRowIndex] || [];
+  const columnCount = rows.reduce((max, row) => Math.max(max, row.length), 0);
+  if (userColIndex >= columnCount) {
+    const matchingHeaderIndex = headerRow.findIndex(
+      (cell) =>
+        (cell?.value || '').trim().toLowerCase() ===
+        userColumnLetter.trim().toLowerCase(),
+    );
+    const hint =
+      matchingHeaderIndex !== -1
+        ? ` Did you mean the letter for the "${headerRow[matchingHeaderIndex].value}" column? That's ${indexToColumnLetter(matchingHeaderIndex)}.`
+        : '';
+    throw new Error(
+      `"${userColumnLetter}" is past the last column in this sheet.${hint}`,
+    );
+  }
 
+  // First pass: group data rows by the video their Link cell resolves to.
+  // Some songs' links show up in more than one row (an archived/duplicate
+  // row from an earlier phase, alongside the current one, say), rather
+  // than guess which row is the "real" one, any video with more than one
+  // matching row is skipped entirely below, so a rating never lands on a
+  // stale row, or gets duplicated across both.
+  const rowIndexesByVideoId = new Map();
   for (
     let rowIndex = headerRowIndex + 1;
     rowIndex < rows.length;
@@ -159,12 +296,33 @@ export function buildSheetUpdates({
     const videoId = parseYouTubeInput(linkText)?.videoId;
     if (!videoId) continue;
 
+    if (!rowIndexesByVideoId.has(videoId)) {
+      rowIndexesByVideoId.set(videoId, []);
+    }
+    rowIndexesByVideoId.get(videoId).push(rowIndex);
+  }
+
+  const updates = [];
+  let skippedFilled = 0;
+  let noRatingFound = 0;
+  let skippedAmbiguous = 0;
+  const ambiguousVideoIds = [];
+
+  for (const [videoId, rowIndexes] of rowIndexesByVideoId) {
     const feedback = feedbackByVideoId[videoId];
     if (!feedback || feedback.rating == null) {
       noRatingFound += 1;
       continue;
     }
 
+    if (rowIndexes.length > 1) {
+      skippedAmbiguous += 1;
+      ambiguousVideoIds.push(videoId);
+      continue;
+    }
+
+    const rowIndex = rowIndexes[0];
+    const row = rows[rowIndex] || [];
     const targetCell = row[userColIndex];
     const hasExistingContent = Boolean(
       targetCell?.value?.trim() || targetCell?.note?.trim(),
@@ -179,10 +337,49 @@ export function buildSheetUpdates({
       columnIndex: userColIndex,
       rating: feedback.rating,
       note: feedback.note || '',
+      videoId,
     });
   }
 
-  return { updates, skippedFilled, noRatingFound };
+  return {
+    updates,
+    skippedFilled,
+    noRatingFound,
+    skippedAmbiguous,
+    ambiguousVideoIds,
+    linkColIndex,
+  };
+}
+
+/**
+ * Re-checks a set of already-computed updates against a fresh read of the
+ * sheet, taken as close to write-time as possible. This is a general
+ * safety net, not tied to any one cause, the sheet could get edited by
+ * someone else, rows could get inserted, anything, the point is just
+ * that the row a video's link lived at when first read isn't *guaranteed*
+ * to still hold that video by the time we actually write to it, so
+ * anything queued against a row whose link has since changed is dropped
+ * here rather than written to what's now a different song.
+ */
+export function filterStaleUpdates({ updates, freshRows, linkColIndex }) {
+  const stillValid = [];
+  let skippedStale = 0;
+
+  for (const update of updates) {
+    const freshLinkText =
+      freshRows[update.rowIndex]?.[linkColIndex]?.value?.trim();
+    const freshVideoId = freshLinkText
+      ? parseYouTubeInput(freshLinkText)?.videoId
+      : null;
+
+    if (freshVideoId === update.videoId) {
+      stillValid.push(update);
+    } else {
+      skippedStale += 1;
+    }
+  }
+
+  return { updates: stillValid, skippedStale };
 }
 
 /** Writes value+note cell updates in one batch request. */

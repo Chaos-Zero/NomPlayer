@@ -24,7 +24,7 @@ import YouTubeIcon from './YouTubeIcon.jsx';
 import ScrollingText from './ScrollingText.jsx';
 import useMediaQuery from '../hooks/useMediaQuery.js';
 import { getDisplayProfileName } from '../lib/playerState.js';
-import { SortByRatingIcon, SpeechBubbleIcon } from './Icons.jsx';
+import { CheckDownIcon, SortByRatingIcon, SpeechBubbleIcon } from './Icons.jsx';
 
 const VGMC_PLAYLIST_ID = import.meta.env.VITE_VGMC_PLAYLIST_ID || '';
 
@@ -421,6 +421,8 @@ export default function PlaylistSidebar({
   isCollapsed = false,
   showOriginalOrder = false,
   onShuffle,
+  onMoveListenedToBottom,
+  isListenedToBottomActive = false,
   onTogglePreview,
   onToggleCollapse,
   onToggleOrderView,
@@ -563,7 +565,7 @@ export default function PlaylistSidebar({
 
   // Scrolls the active row into view once, when landing on a *different*
   // playlist/view (e.g. arriving at the VGMC standings page already cued up
-  // to the next song you haven't heard) — deliberately keyed on the view
+  // to the next song you haven't heard), deliberately keyed on the view
   // itself, not currentIndex, so this never yanks the list out from under
   // someone mid-scroll or mid-listen as playback advances normally.
   useEffect(() => {
@@ -1211,6 +1213,18 @@ export default function PlaylistSidebar({
           )}
           {playlist.length > 0 && (
             <>
+              {isVgmcPlaylistView && (
+                <button
+                  className={`fav-panel-action-btn icon-only${isListenedToBottomActive ? ' active' : ''}`}
+                  type="button"
+                  onClick={onMoveListenedToBottom}
+                  disabled={!isShuffleAvailable}
+                  title="Move started songs to bottom of playlist"
+                  aria-label="Move started songs to bottom of playlist"
+                >
+                  <CheckDownIcon />
+                </button>
+              )}
               {activePlaylistView.type === 'custom-playlist' ? (
                 <div style={{ marginLeft: 8, marginRight: 8, display: 'flex' }}>
                   <PrivacyToggle

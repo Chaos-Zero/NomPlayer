@@ -164,7 +164,7 @@ export default function VgmcStandingsView({
                   >
                     {index + 1}
                   </td>
-                  <td style={{ padding: '6px 8px' }}>{row.game || '—'}</td>
+                  <td style={{ padding: '6px 8px' }}>{row.game || '-'}</td>
                   <td style={{ padding: '6px 8px' }}>
                     {row.song || row.title}
                   </td>

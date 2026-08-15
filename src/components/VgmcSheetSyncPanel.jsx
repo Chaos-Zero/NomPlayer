@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   columnLetterToIndex,
   parseGoogleSheetUrl,
@@ -28,6 +28,14 @@ export default function VgmcSheetSyncPanel({
   const [result, setResult] = useState(null);
   const [errorMessage, setErrorMessage] = useState('');
 
+  useEffect(() => {
+    if (!isOpen) return;
+    setColumnLetter('');
+    setStatus('idle');
+    setResult(null);
+    setErrorMessage('');
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
   const isBusy = status === 'syncing';
@@ -38,9 +46,22 @@ export default function VgmcSheetSyncPanel({
       setStatus('error');
       return;
     }
-    if (columnLetterToIndex(columnLetter) === -1) {
+    const normalizedColumnLetter = columnLetter.trim();
+    if (columnLetterToIndex(normalizedColumnLetter) === -1) {
       setErrorMessage(
-        'Enter your column\'s letter (e.g. "Q" or "AA"), not its name.',
+        'Enter your column\'s letter (e.g. "A", "B"..."AA", "AB").',
+      );
+      setStatus('error');
+      return;
+    }
+    // A real spreadsheet column letter for a sheet this size is 1-2
+    // characters, anything longer is almost always someone typing their
+    // column's actual name (e.g. "Cal") by mistake. That still passes
+    // columnLetterToIndex (it's letters-only), just as some huge,
+    // out-of-range column, so it needs its own check here.
+    if (normalizedColumnLetter.length > 2) {
+      setErrorMessage(
+        `"${normalizedColumnLetter}" looks like a name, not a column letter, try something like "Q" or "AA" instead.`,
       );
       setStatus('error');
       return;
@@ -78,7 +99,7 @@ export default function VgmcSheetSyncPanel({
         body: JSON.stringify({
           access_token: accessToken,
           sheet_url: sheetUrl,
-          user_column_letter: columnLetter.trim(),
+          user_column_letter: normalizedColumnLetter,
           overwrite,
           ratings,
         }),
@@ -120,9 +141,9 @@ export default function VgmcSheetSyncPanel({
             }}
           >
             Matches your rating and comment for each song against the{' '}
-            <strong>Link</strong> column, and fills in your column, only for
-            songs already in the sheet, and only for cells that don't already
-            have something in them (unless you turn that off below).
+            <strong>Link</strong> column, and fills in your specified column.
+            This will only populate empty cells unless the option to overwrite
+            is enabled.
           </p>
 
           <label
@@ -141,7 +162,7 @@ export default function VgmcSheetSyncPanel({
           <label
             style={{ display: 'block', fontSize: '13px', marginBottom: '4px' }}
           >
-            Your column's letter (e.g. "A", "B"... "AA", "AB"...)
+            Your column's letter, not its name (e.g. "A", "B"... "AA", "AB"...)
           </label>
           <input
             type="text"
@@ -149,8 +170,17 @@ export default function VgmcSheetSyncPanel({
             onChange={(e) => setColumnLetter(e.target.value)}
             disabled={isBusy}
             placeholder=""
-            style={{ width: '100%', marginBottom: '12px' }}
+            style={{ width: '100%', marginBottom: '8px' }}
           />
+          <p
+            style={{
+              color: 'var(--warning, #f59e0b)',
+              fontSize: '12px',
+              marginBottom: '12px',
+            }}
+          >
+            ⚠️ Please make sure to double check your column ID before syncing.
+          </p>
 
           <label
             style={{
@@ -187,6 +217,10 @@ export default function VgmcSheetSyncPanel({
               Filled {result.filled} cell{result.filled === 1 ? '' : 's'}.{' '}
               {result.skippedFilled > 0 &&
                 `${result.skippedFilled} already had something and were left alone. `}
+              {result.skippedAmbiguous > 0 &&
+                `${result.skippedAmbiguous} song${result.skippedAmbiguous === 1 ? '' : 's'} appear${result.skippedAmbiguous === 1 ? 's' : ''} in more than one row in the sheet, so ${result.skippedAmbiguous === 1 ? 'it was' : 'they were'} skipped rather than guessed at. `}
+              {result.skippedStale > 0 &&
+                `${result.skippedStale} row${result.skippedStale === 1 ? '' : 's'} changed to a different song between reading and writing, so ${result.skippedStale === 1 ? 'it was' : 'they were'} skipped rather than risk writing to the wrong one. `}
               {result.noRatingFound > 0 &&
                 `${result.noRatingFound} songs in the sheet have no rating from you yet.`}
             </p>

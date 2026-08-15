@@ -1,6 +1,7 @@
 import {
   buildSheetUpdates,
   fetchSheetGrid,
+  filterStaleUpdates,
   findHeaderRow,
   parseGoogleSheetUrl,
   writeSheetUpdates,
@@ -131,13 +132,39 @@ export async function onRequestPost(context) {
       );
     }
 
-    const { updates, skippedFilled, noRatingFound } = buildSheetUpdates({
+    const {
+      updates: candidateUpdates,
+      skippedFilled,
+      noRatingFound,
+      skippedAmbiguous,
+      ambiguousVideoIds,
+      linkColIndex,
+    } = buildSheetUpdates({
       rows: grid.rows,
       headerRowIndex: header.headerIndex,
       userColumnLetter: normalizedColumnLetter,
       feedbackByVideoId,
       overwrite: Boolean(overwrite),
     });
+
+    // Re-read immediately before writing rather than trusting the grid read
+    // above: nothing guarantees the sheet is unchanged between the two, so
+    // don't write to a row whose link has since moved on. See
+    // filterStaleUpdates.
+    let updates = candidateUpdates;
+    let skippedStale = 0;
+    if (candidateUpdates.length > 0) {
+      const freshGrid = await fetchSheetGrid(
+        googleAccessToken,
+        parsedSheet.spreadsheetId,
+        parsedSheet.gid,
+      );
+      ({ updates, skippedStale } = filterStaleUpdates({
+        updates: candidateUpdates,
+        freshRows: freshGrid.rows,
+        linkColIndex,
+      }));
+    }
 
     await writeSheetUpdates(
       googleAccessToken,
@@ -150,6 +177,9 @@ export async function onRequestPost(context) {
       filled: updates.length,
       skippedFilled,
       noRatingFound,
+      skippedAmbiguous,
+      ambiguousVideoIds,
+      skippedStale,
     });
   } catch (error) {
     return jsonResponse({ error: error.message || 'Sync failed.' }, 500);

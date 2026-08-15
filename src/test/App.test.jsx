@@ -914,7 +914,7 @@ describe('App', () => {
     expect(appTestState.videoPlayerProps.isPlaying).toBe(true);
   });
 
-  it('keeps the shuffled row order when toggling "show original order" — only turning shuffle off restores it', () => {
+  it('keeps the shuffled row order when toggling "show original order", only turning shuffle off restores it', () => {
     vi.spyOn(Math, 'random').mockReturnValue(0);
 
     render(<App />);
@@ -956,7 +956,7 @@ describe('App', () => {
     ).toEqual(['Alpha', 'Gamma', 'Beta']);
 
     // "Show original order" only changes which number a row displays (see
-    // PlaylistSidebar's orderNumber tests) — the shuffled row order itself
+    // PlaylistSidebar's orderNumber tests), the shuffled row order itself
     // must stay exactly where it was.
     act(() => {
       appTestState.playlistSidebarProps.onToggleOrderView();

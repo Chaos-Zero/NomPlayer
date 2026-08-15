@@ -359,7 +359,7 @@ export default function AllFeedbackView({
                             'Unknown Track'}
                         </div>
                         <div className="afv-game-title">
-                          {group.track?.canonical_game_title || '—'}
+                          {group.track?.canonical_game_title || '-'}
                         </div>
                         {vgmcLabel && (
                           <div className="afv-vgmc-row">
@@ -427,7 +427,7 @@ export default function AllFeedbackView({
                                     }
                               }
                             >
-                              {e.rating != null ? `★ ${e.rating}` : '—'}
+                              {e.rating != null ? `★ ${e.rating}` : '-'}
                             </span>
                             <span className="afv-preview-user">
                               {getDisplayProfileName(
