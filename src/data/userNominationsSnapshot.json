@@ -1,7 +1,385 @@
 {
-  "exportedAt": "2026-08-14T14:27:58.798Z",
-  "totalCount": 9,
+  "exportedAt": "2026-08-15T01:14:32.331Z",
+  "totalCount": 10,
   "users": [
+    {
+      "user_id": "cd2ef0ef-cee2-437b-a75e-f4230dbf6939",
+      "username": "dc:maxgalactica",
+      "avatar_url": "https://cdn.discordapp.com/avatars/173155987602014208/88b7b5a20a82a07c3a566a6f0b447609.png",
+      "gamefaqs_username": "MaxGalactica",
+      "updated_at": "2026-08-15T00:53:44.030209+00:00",
+      "nominations": [
+        {
+          "title": "Uncharted Waters - Princess Chris",
+          "trackId": "cfdebff9-ce2b-43c2-8161-06e30697a6f9",
+          "videoId": "48WxW_2XDvQ",
+          "gameTitle": "Uncharted Waters",
+          "trackTitle": "Princess Chris",
+          "channelTitle": null,
+          "displayTitle": "Uncharted Waters - Princess Chris"
+        },
+        {
+          "title": "LittleBigPlanet - Volver a Comenzar",
+          "trackId": "0ac437c8-4fb5-4765-9d0e-4add8f493aea",
+          "videoId": "IcQZqRASiYE",
+          "gameTitle": "LittleBigPlanet",
+          "trackTitle": "Volver a Comenzar",
+          "channelTitle": null,
+          "displayTitle": "LittleBigPlanet - Volver a Comenzar"
+        },
+        {
+          "title": "Neotokyo - Imbrium",
+          "trackId": "2a1a9068-b402-4ece-b24b-bdfa4357f25a",
+          "videoId": "ssMT_Sp2mBw",
+          "gameTitle": "Neotokyo",
+          "trackTitle": "Imbrium",
+          "channelTitle": null,
+          "displayTitle": "Neotokyo - Imbrium"
+        },
+        {
+          "title": "Xenoblade Chronicles X - fiKAIeldJOU",
+          "trackId": "7d1e1486-54f7-4003-aeb0-56cb100f87e0",
+          "videoId": "TSoS_Lxg8lI",
+          "gameTitle": "Xenoblade Chronicles X",
+          "trackTitle": "fiKAIeldJOU",
+          "channelTitle": null,
+          "displayTitle": "Xenoblade Chronicles X - fiKAIeldJOU"
+        },
+        {
+          "title": "Red Dead Redemption 2 - Unshaken",
+          "trackId": "50bcf56d-7046-4c83-81c0-0b2f50b46827",
+          "videoId": "cGT8wGzG3nw",
+          "gameTitle": "Red Dead Redemption 2",
+          "trackTitle": "Unshaken",
+          "channelTitle": null,
+          "displayTitle": "Red Dead Redemption 2 - Unshaken"
+        },
+        {
+          "title": "Xenoblade Chronicles - Main Theme",
+          "trackId": "f8376f6d-fab8-4683-b62c-66f3d9b89905",
+          "videoId": "erKkWGfEW9U",
+          "gameTitle": "Xenoblade Chronicles",
+          "trackTitle": "Main Theme",
+          "channelTitle": null,
+          "displayTitle": "Xenoblade Chronicles - Main Theme"
+        },
+        {
+          "title": "CRYMACHINA - Blue Fairy",
+          "trackId": "42df1494-1018-40fb-830c-a6235b5e69d2",
+          "videoId": "TbBHcfBSwVw",
+          "gameTitle": "CRYMACHINA",
+          "trackTitle": "Blue Fairy",
+          "channelTitle": null,
+          "displayTitle": "CRYMACHINA - Blue Fairy"
+        },
+        {
+          "title": "Scarlet Nexus - Welcome to Musubi’s",
+          "trackId": "fb3f340b-c3a2-4526-81ca-75ff1f4dd5d3",
+          "videoId": "v0KDLdBPxtE",
+          "gameTitle": "Scarlet Nexus",
+          "trackTitle": "Welcome to Musubi’s",
+          "channelTitle": null,
+          "displayTitle": "Scarlet Nexus - Welcome to Musubi’s"
+        },
+        {
+          "title": "Neon White - Glass Ocean",
+          "trackId": "be611c54-3e54-4e50-a30e-f513c981bfbb",
+          "videoId": "f8Kjn9qw-rw",
+          "gameTitle": "Neon White",
+          "trackTitle": "Glass Ocean",
+          "channelTitle": null,
+          "displayTitle": "Neon White - Glass Ocean"
+        },
+        {
+          "title": "Ace Combat 7: Skies Unknown - Anchorhead Raid",
+          "trackId": "c4e6f8d3-8976-4b71-a616-0bbb779c86a3",
+          "videoId": "onv6lavhkyA",
+          "gameTitle": "Ace Combat 7: Skies Unknown",
+          "trackTitle": "Anchorhead Raid",
+          "channelTitle": null,
+          "displayTitle": "Ace Combat 7: Skies Unknown - Anchorhead Raid"
+        }
+      ]
+    },
+    {
+      "user_id": "6452d560-7b18-4e7b-8a22-208e09bddc28",
+      "username": "dc:CalzoneB",
+      "avatar_url": "https://images-ext-1.discordapp.net/external/y2Co85kS3Mh3VsdtU2Ac44E2zDM5BfkXeE-zi-5a4FQ/%3Fsize%3D1024/https/cdn.discordapp.com/avatars/268487608680579072/783e089fb3fbb4d845543e17a35ada0e.webp?format=webp&width=745&height=745",
+      "gamefaqs_username": "-Chaos-Zero-",
+      "updated_at": "2026-08-14T21:42:58.034675+00:00",
+      "nominations": [
+        {
+          "title": "Tekken Tag Tournament 2 - School (After School Mix)",
+          "trackId": "9fbeb722-e4dc-444d-bf10-a9b3d96bcc7e",
+          "videoId": "1knbBEEPpig",
+          "gameTitle": "Tekken Tag Tournament 2",
+          "trackTitle": "School (After School Mix)",
+          "channelTitle": null,
+          "displayTitle": "Tekken Tag Tournament 2 - School (After School Mix)"
+        },
+        {
+          "title": "Swarmlake - Swarmlake",
+          "trackId": "8335ba95-8aa6-404a-bc75-3206b1d130fa",
+          "videoId": "YljDiA_Rp1Q",
+          "gameTitle": "Swarmlake",
+          "trackTitle": "Swarmlake",
+          "channelTitle": "Singto Conley",
+          "displayTitle": "Swarmlake - Swarmlake"
+        },
+        {
+          "title": "Alpine Racer 3 - Sunset Rush",
+          "trackId": "cf28aae8-594e-45d9-aa93-c70b9dddf719",
+          "videoId": "KHzlU0GUCh4",
+          "gameTitle": "Alpine Racer 3",
+          "trackTitle": "Sunset Rush",
+          "channelTitle": null,
+          "displayTitle": "Alpine Racer 3 - Sunset Rush"
+        },
+        {
+          "title": "Shovel Knight Dig - One Person's Trash (Magic Landfill)",
+          "trackId": "e7de51d3-a4e4-4eba-928c-c420f81bc110",
+          "videoId": "nNnp6KhYkvU",
+          "gameTitle": "Shovel Knight Dig",
+          "trackTitle": "One Person's Trash (Magic Landfill)",
+          "channelTitle": null,
+          "displayTitle": "Shovel Knight Dig - One Person's Trash (Magic Landfill)"
+        },
+        {
+          "title": "Astro Bot - Marine Serene",
+          "trackId": "1cd881cf-343e-4fa7-abcf-a00a78c885fa",
+          "videoId": "TZ9x6FP8BNw",
+          "gameTitle": "Astro Bot",
+          "trackTitle": "Marine Serene",
+          "channelTitle": "Scraic",
+          "displayTitle": "Astro Bot - Marine Serene"
+        },
+        {
+          "title": "Hyper Light Breaker - Apocalyptic Blues Paean",
+          "trackId": "a35849f4-4482-4a2b-b7ed-e5b97a418717",
+          "videoId": "qfSRCzeiQ0I",
+          "gameTitle": "Hyper Light Breaker",
+          "trackTitle": "Apocalyptic Blues Paean",
+          "channelTitle": "Scraic",
+          "displayTitle": "Hyper Light Breaker - Apocalyptic Blues Paean"
+        },
+        {
+          "title": "Satisfactory - Nostalgium",
+          "trackId": "1af05484-738d-4e80-b046-b70393917613",
+          "videoId": "PPS7fiGA1iI",
+          "gameTitle": "Satisfactory",
+          "trackTitle": "Nostalgium",
+          "channelTitle": "Bartek888_888",
+          "displayTitle": "Satisfactory - Nostalgium"
+        },
+        {
+          "title": "Ape Escape 3 - Mount Amazing 2",
+          "trackId": "dd089c59-8094-4879-8ea6-cce89f3c4ace",
+          "videoId": "XYi-zuFRGUE",
+          "gameTitle": "Ape Escape 3",
+          "trackTitle": "Mount Amazing 2",
+          "channelTitle": "Soichi Terada - Topic",
+          "displayTitle": "Ape Escape 3 - Mount Amazing 2"
+        },
+        {
+          "title": "Dragon Ball Fighterz - West City",
+          "trackId": "b7bbe416-7fec-4cc7-9c08-cac40271c85d",
+          "videoId": "J3FE7YmiNYE",
+          "gameTitle": "Dragon Ball Fighterz",
+          "trackTitle": "West City",
+          "channelTitle": null,
+          "displayTitle": "Dragon Ball Fighterz - West City"
+        },
+        {
+          "title": "Furi - You're Mine",
+          "trackId": "8d16c317-16b9-4922-a432-508463c54dce",
+          "videoId": "gQ5gtInauiI",
+          "gameTitle": "Furi",
+          "trackTitle": "You're Mine",
+          "channelTitle": null,
+          "displayTitle": "Furi - You're Mine"
+        }
+      ]
+    },
+    {
+      "user_id": "018e71e8-6cc8-43c2-8f50-3fd2f7c52fca",
+      "username": "dc:ten8097",
+      "avatar_url": "https://cdn.discordapp.com/avatars/764127786607968287/f60e9d1db34a0f9870ebd7c22042d234.png",
+      "gamefaqs_username": null,
+      "updated_at": "2026-08-14T15:09:33.522864+00:00",
+      "nominations": [
+        {
+          "title": "The King of Fighters '99 - Tears (? Theme)",
+          "trackId": "94aa603e-326f-480b-bfb3-d7c0a0bdce1c",
+          "videoId": "jBSGxhqWctA",
+          "gameTitle": "The King of Fighters '99",
+          "trackTitle": "Tears (? Theme)",
+          "channelTitle": "SNK SOUND TEAM - Topic",
+          "displayTitle": "The King of Fighters '99 - Tears (? Theme)"
+        },
+        {
+          "title": "Advance Wars: Days of Ruin - Mr. Bear ~ Penny",
+          "trackId": "f087403a-bf81-409d-a306-d2305372db4b",
+          "videoId": "zO5WDOkpEtI",
+          "gameTitle": "Advance Wars: Days of Ruin",
+          "trackTitle": "Mr. Bear ~ Penny",
+          "channelTitle": "BlackfireMagnum",
+          "displayTitle": "Advance Wars: Days of Ruin - Mr. Bear ~ Penny"
+        },
+        {
+          "title": "beatmania IIDX 10th Style - No Doubt Get Loud",
+          "trackId": "54538589-88f4-4a3f-9760-167c582a250c",
+          "videoId": "VhmaF7tMWO8",
+          "gameTitle": "beatmania IIDX 10th Style",
+          "trackTitle": "No Doubt Get Loud",
+          "channelTitle": "Best of IIDX animations",
+          "displayTitle": "beatmania IIDX 10th Style - No Doubt Get Loud"
+        },
+        {
+          "title": "Fist of the North Star: Ken's Rage - FAR AWAY",
+          "trackId": "8c32ff9c-0952-45bb-a731-eaa54f2b5637",
+          "videoId": "Hzy74YocTIs",
+          "gameTitle": "Fist of the North Star: Ken's Rage",
+          "trackTitle": "FAR AWAY",
+          "channelTitle": "Nana Tanimura - Topic",
+          "displayTitle": "Fist of the North Star: Ken's Rage - FAR AWAY"
+        },
+        {
+          "title": "Marvel vs. Capcom 3: Fate of Two Worlds - Theme of Taskmaster",
+          "trackId": "21144c3f-8e3e-4db2-b044-10a374c8bae9",
+          "videoId": "PHZWZ7RzE-U",
+          "gameTitle": "Marvel vs. Capcom 3: Fate of Two Worlds",
+          "trackTitle": "Theme of Taskmaster",
+          "channelTitle": "Doopliss",
+          "displayTitle": "Marvel vs. Capcom 3: Fate of Two Worlds - Theme of Taskmaster"
+        },
+        {
+          "title": "Another Bound Neo - Trample Machine (Ending)",
+          "trackId": "1988b594-8976-4c73-a3ab-b3b4d240ca77",
+          "videoId": "77lgyiuAkPw",
+          "gameTitle": "Another Bound Neo",
+          "trackTitle": "Trample Machine (Ending)",
+          "channelTitle": "NecroTheatre2",
+          "displayTitle": "Another Bound Neo - Trample Machine (Ending)"
+        },
+        {
+          "title": "Sharin no Kuni, Himawari no Shoujo - watch out!",
+          "trackId": "6b753235-00c0-43c6-bcf1-7fc29d77e39f",
+          "videoId": "xS0Lro9iW8A",
+          "gameTitle": "Sharin no Kuni, Himawari no Shoujo",
+          "trackTitle": "watch out!",
+          "channelTitle": "Robo",
+          "displayTitle": "Sharin no Kuni, Himawari no Shoujo - watch out!"
+        },
+        {
+          "title": "The Guided Fate Paradox - God and the Illusory Garden",
+          "trackId": "32882521-0f16-4e4a-8338-5d5e6bb71db0",
+          "videoId": "nPE3laf26H8",
+          "gameTitle": "The Guided Fate Paradox",
+          "trackTitle": "God and the Illusory Garden",
+          "channelTitle": "Yōsei Teikoku - Topic",
+          "displayTitle": "The Guided Fate Paradox - God and the Illusory Garden"
+        },
+        {
+          "title": "Yume Nikki Gensou - Return to Reality",
+          "trackId": "b3bd5427-3965-4ad1-8f58-c45866b7fe60",
+          "videoId": "AAj8WXXtIRQ",
+          "gameTitle": "Yume Nikki Gensou",
+          "trackTitle": "Return to Reality",
+          "channelTitle": "Burn Angel",
+          "displayTitle": "Yume Nikki Gensou - Return to Reality"
+        },
+        {
+          "title": "Chaos;Head - Find the Blue",
+          "trackId": "08fdbbce-10b0-4a8e-9ccf-065b4dae66e4",
+          "videoId": "K9hEJZ5T4Ws",
+          "gameTitle": "Chaos;Head",
+          "trackTitle": "Find the Blue",
+          "channelTitle": "ITO Kanako - Topic",
+          "displayTitle": "Chaos;Head - Find the Blue"
+        },
+        {
+          "title": "Black Knight 2000 - Main Theme",
+          "trackId": "47cea2c4-60cb-41d6-8009-9714082d1ffd",
+          "videoId": "FASUZRYs0fM",
+          "gameTitle": "Black Knight 2000",
+          "trackTitle": "Main Theme",
+          "channelTitle": "VGM Hall of Fame",
+          "displayTitle": "Black Knight 2000 - Main Theme"
+        },
+        {
+          "title": "Double Dragon Neon - City Streets 2 (Mango Tango - Neon Jungle)",
+          "trackId": "e8723dde-47c6-4aa0-a4cb-d08aea22457f",
+          "videoId": "lUMhCA8iRls",
+          "gameTitle": "Double Dragon Neon",
+          "trackTitle": "City Streets 2 (Mango Tango - Neon Jungle)",
+          "channelTitle": "Seneloide",
+          "displayTitle": "Double Dragon Neon - City Streets 2 (Mango Tango - Neon Jungle)"
+        },
+        {
+          "title": "Tetrinet - The Dance Of The Spheares",
+          "trackId": "ae821171-7e0c-498e-9419-3f6b34b1a978",
+          "videoId": "n-DurKEVnsE",
+          "gameTitle": "Tetrinet",
+          "trackTitle": "The Dance Of The Spheares",
+          "channelTitle": null,
+          "displayTitle": "Tetrinet - The Dance Of The Spheares"
+        },
+        {
+          "title": "DEEMO - RE:UNION -Duo Blade Against-",
+          "trackId": "2af2bccc-3fdc-47e7-83a6-00130f148407",
+          "videoId": "KrmOKzFMQAA",
+          "gameTitle": "DEEMO",
+          "trackTitle": "RE:UNION -Duo Blade Against-",
+          "channelTitle": "モリモリあつし / 非可逆リズム",
+          "displayTitle": "DEEMO - RE:UNION -Duo Blade Against-"
+        },
+        {
+          "title": "Looney Tunes: Sheep Raider - Track 7",
+          "trackId": "f6f0fdfa-28d2-4d22-8338-046a08f433a3",
+          "videoId": "wwidcxa3fmY",
+          "gameTitle": "Looney Tunes: Sheep Raider",
+          "trackTitle": "Track 7",
+          "channelTitle": "YouTube",
+          "displayTitle": "Looney Tunes: Sheep Raider - Track 7"
+        },
+        {
+          "title": "Library of Ruina - Angela",
+          "trackId": "320eb2a0-a543-42d0-9680-ebf525cac571",
+          "videoId": "YV1uwUziZqQ",
+          "gameTitle": "Library of Ruina",
+          "trackTitle": "Angela",
+          "channelTitle": "산우",
+          "displayTitle": "Library of Ruina - Angela"
+        },
+        {
+          "title": "GENETOS - Origin",
+          "trackId": "1e4ce122-459e-4d62-94bf-ef563b45c461",
+          "videoId": "vdT-uEWwEv8",
+          "gameTitle": "GENETOS",
+          "trackTitle": "Origin",
+          "channelTitle": "Tatsuya Koyama - Topic",
+          "displayTitle": "GENETOS - Origin"
+        },
+        {
+          "title": "Mega Man Network Transmission - Zero Gravity Area (StarMan's Stage)",
+          "trackId": "d608d3ba-a28c-40d8-8ca1-4b2cdf0c6d37",
+          "videoId": "bylo5iC6kkY",
+          "gameTitle": "Mega Man Network Transmission",
+          "trackTitle": "Zero Gravity Area (StarMan's Stage)",
+          "channelTitle": "Frygoon",
+          "displayTitle": "Mega Man Network Transmission - Zero Gravity Area (StarMan's Stage)"
+        },
+        {
+          "title": "DJMAX RESPECT V - Misty Er'A ~One Day~ (Extended Ver.)",
+          "trackId": "19b38b3a-2fba-4103-8b5e-d76bf8698e4e",
+          "videoId": "TavpytwkgPg",
+          "gameTitle": "DJMAX RESPECT V",
+          "trackTitle": "Misty Er'A ~One Day~ (Extended Ver.)",
+          "channelTitle": "Mycin.T - Topic",
+          "displayTitle": "DJMAX RESPECT V - Misty Er'A ~One Day~ (Extended Ver.)"
+        }
+      ]
+    },
     {
       "user_id": "e63d2f90-9be3-4f22-9f10-76cc496817b4",
       "username": "dc:Chaeix",
@@ -201,60 +579,6 @@
       ]
     },
     {
-      "user_id": "6452d560-7b18-4e7b-8a22-208e09bddc28",
-      "username": "dc:CalzoneB",
-      "avatar_url": "https://images-ext-1.discordapp.net/external/y2Co85kS3Mh3VsdtU2Ac44E2zDM5BfkXeE-zi-5a4FQ/%3Fsize%3D1024/https/cdn.discordapp.com/avatars/268487608680579072/783e089fb3fbb4d845543e17a35ada0e.webp?format=webp&width=745&height=745",
-      "gamefaqs_username": "-Chaos-Zero-",
-      "updated_at": "2026-08-13T20:25:35.917548+00:00",
-      "nominations": [
-        {
-          "title": "Tekken Tag Tournament 2 - School (After School Mix)",
-          "trackId": "9fbeb722-e4dc-444d-bf10-a9b3d96bcc7e",
-          "videoId": "1knbBEEPpig",
-          "gameTitle": "Tekken Tag Tournament 2",
-          "trackTitle": "School (After School Mix)",
-          "channelTitle": null,
-          "displayTitle": "Tekken Tag Tournament 2 - School (After School Mix)"
-        },
-        {
-          "title": "Swarmlake - Swarmlake",
-          "trackId": "8335ba95-8aa6-404a-bc75-3206b1d130fa",
-          "videoId": "YljDiA_Rp1Q",
-          "gameTitle": "Swarmlake",
-          "trackTitle": "Swarmlake",
-          "channelTitle": "Singto Conley",
-          "displayTitle": "Swarmlake - Swarmlake"
-        },
-        {
-          "title": "Alpine Racer 3 - Sunset Rush",
-          "trackId": "cf28aae8-594e-45d9-aa93-c70b9dddf719",
-          "videoId": "KHzlU0GUCh4",
-          "gameTitle": "Alpine Racer 3",
-          "trackTitle": "Sunset Rush",
-          "channelTitle": null,
-          "displayTitle": "Alpine Racer 3 - Sunset Rush"
-        },
-        {
-          "title": "Shovel Knight Dig - One Person's Trash (Magic Landfill)",
-          "trackId": "e7de51d3-a4e4-4eba-928c-c420f81bc110",
-          "videoId": "nNnp6KhYkvU",
-          "gameTitle": "Shovel Knight Dig",
-          "trackTitle": "One Person's Trash (Magic Landfill)",
-          "channelTitle": null,
-          "displayTitle": "Shovel Knight Dig - One Person's Trash (Magic Landfill)"
-        },
-        {
-          "title": "Astro Bot - Marine Serene",
-          "trackId": "1cd881cf-343e-4fa7-abcf-a00a78c885fa",
-          "videoId": "TZ9x6FP8BNw",
-          "gameTitle": "Astro Bot",
-          "trackTitle": "Marine Serene",
-          "channelTitle": "Scraic",
-          "displayTitle": "Astro Bot - Marine Serene"
-        }
-      ]
-    },
-    {
       "user_id": "0cd5abff-9c4d-47b7-90f4-d0482144ee8a",
       "username": "dc:acireexists",
       "avatar_url": "https://cdn.discordapp.com/avatars/206514649947045889/1512b3760adc9c33ce64cc8904dc38b7.png",
@@ -350,186 +674,6 @@
           "trackTitle": "Aerodynamics",
           "channelTitle": null,
           "displayTitle": "Airport CEO - Aerodynamics"
-        }
-      ]
-    },
-    {
-      "user_id": "018e71e8-6cc8-43c2-8f50-3fd2f7c52fca",
-      "username": "dc:ten8097",
-      "avatar_url": "https://cdn.discordapp.com/avatars/764127786607968287/f60e9d1db34a0f9870ebd7c22042d234.png",
-      "gamefaqs_username": null,
-      "updated_at": "2026-05-01T20:26:13.066469+00:00",
-      "nominations": [
-        {
-          "title": "The King of Fighters '99 - Tears (? Theme)",
-          "trackId": "94aa603e-326f-480b-bfb3-d7c0a0bdce1c",
-          "videoId": "jBSGxhqWctA",
-          "gameTitle": "The King of Fighters '99",
-          "trackTitle": "Tears (? Theme)",
-          "channelTitle": "SNK SOUND TEAM - Topic",
-          "displayTitle": "The King of Fighters '99 - Tears (? Theme)"
-        },
-        {
-          "title": "Advance Wars: Days of Ruin - Mr. Bear ~ Penny",
-          "trackId": "f087403a-bf81-409d-a306-d2305372db4b",
-          "videoId": "zO5WDOkpEtI",
-          "gameTitle": "Advance Wars: Days of Ruin",
-          "trackTitle": "Mr. Bear ~ Penny",
-          "channelTitle": "BlackfireMagnum",
-          "displayTitle": "Advance Wars: Days of Ruin - Mr. Bear ~ Penny"
-        },
-        {
-          "title": "beatmania IIDX 10th Style - No Doubt Get Loud",
-          "trackId": "54538589-88f4-4a3f-9760-167c582a250c",
-          "videoId": "VhmaF7tMWO8",
-          "gameTitle": "beatmania IIDX 10th Style",
-          "trackTitle": "No Doubt Get Loud",
-          "channelTitle": "Best of IIDX animations",
-          "displayTitle": "beatmania IIDX 10th Style - No Doubt Get Loud"
-        },
-        {
-          "title": "Fist of the North Star: Ken's Rage - FAR AWAY",
-          "trackId": "8c32ff9c-0952-45bb-a731-eaa54f2b5637",
-          "videoId": "Hzy74YocTIs",
-          "gameTitle": "Fist of the North Star: Ken's Rage",
-          "trackTitle": "FAR AWAY",
-          "channelTitle": "Nana Tanimura - Topic",
-          "displayTitle": "Fist of the North Star: Ken's Rage - FAR AWAY"
-        },
-        {
-          "title": "Marvel vs. Capcom 3: Fate of Two Worlds - Theme of Taskmaster",
-          "trackId": "21144c3f-8e3e-4db2-b044-10a374c8bae9",
-          "videoId": "PHZWZ7RzE-U",
-          "gameTitle": "Marvel vs. Capcom 3: Fate of Two Worlds",
-          "trackTitle": "Theme of Taskmaster",
-          "channelTitle": "Doopliss",
-          "displayTitle": "Marvel vs. Capcom 3: Fate of Two Worlds - Theme of Taskmaster"
-        },
-        {
-          "title": "Another Bound Neo - Trample Machine (Ending)",
-          "trackId": "1988b594-8976-4c73-a3ab-b3b4d240ca77",
-          "videoId": "77lgyiuAkPw",
-          "gameTitle": "Another Bound Neo",
-          "trackTitle": "Trample Machine (Ending)",
-          "channelTitle": "NecroTheatre2",
-          "displayTitle": "Another Bound Neo - Trample Machine (Ending)"
-        },
-        {
-          "title": "Sharin no Kuni, Himawari no Shoujo - watch out!",
-          "trackId": "6b753235-00c0-43c6-bcf1-7fc29d77e39f",
-          "videoId": "xS0Lro9iW8A",
-          "gameTitle": "Sharin no Kuni, Himawari no Shoujo",
-          "trackTitle": "watch out!",
-          "channelTitle": "Robo",
-          "displayTitle": "Sharin no Kuni, Himawari no Shoujo - watch out!"
-        },
-        {
-          "title": "The Guided Fate Paradox - God and the Illusory Garden",
-          "trackId": "32882521-0f16-4e4a-8338-5d5e6bb71db0",
-          "videoId": "nPE3laf26H8",
-          "gameTitle": "The Guided Fate Paradox",
-          "trackTitle": "God and the Illusory Garden",
-          "channelTitle": "Yōsei Teikoku - Topic",
-          "displayTitle": "The Guided Fate Paradox - God and the Illusory Garden"
-        },
-        {
-          "title": "Yume Nikki Gensou - Return to Reality",
-          "trackId": "b3bd5427-3965-4ad1-8f58-c45866b7fe60",
-          "videoId": "AAj8WXXtIRQ",
-          "gameTitle": "Yume Nikki Gensou",
-          "trackTitle": "Return to Reality",
-          "channelTitle": "Burn Angel",
-          "displayTitle": "Yume Nikki Gensou - Return to Reality"
-        },
-        {
-          "title": "Chaos;Head - Find the Blue",
-          "trackId": "08fdbbce-10b0-4a8e-9ccf-065b4dae66e4",
-          "videoId": "K9hEJZ5T4Ws",
-          "gameTitle": "Chaos;Head",
-          "trackTitle": "Find the Blue",
-          "channelTitle": "ITO Kanako - Topic",
-          "displayTitle": "Chaos;Head - Find the Blue"
-        },
-        {
-          "title": "Black Knight 2000 - Main Theme",
-          "trackId": "47cea2c4-60cb-41d6-8009-9714082d1ffd",
-          "videoId": "FASUZRYs0fM",
-          "gameTitle": "Black Knight 2000",
-          "trackTitle": "Main Theme",
-          "channelTitle": "VGM Hall of Fame",
-          "displayTitle": "Black Knight 2000 - Main Theme"
-        },
-        {
-          "title": "Double Dragon Neon - City Streets 2 (Mango Tango - Neon Jungle)",
-          "trackId": "e8723dde-47c6-4aa0-a4cb-d08aea22457f",
-          "videoId": "lUMhCA8iRls",
-          "gameTitle": "Double Dragon Neon",
-          "trackTitle": "City Streets 2 (Mango Tango - Neon Jungle)",
-          "channelTitle": "Seneloide",
-          "displayTitle": "Double Dragon Neon - City Streets 2 (Mango Tango - Neon Jungle)"
-        },
-        {
-          "title": "7th Dragon III Code: VFD - Ignith of the Final Attack",
-          "trackId": "91ab23f2-53c1-4726-89c4-2a318ef3a72e",
-          "videoId": "suE19Al3S3o",
-          "gameTitle": "7th Dragon III Code: VFD",
-          "trackTitle": "Ignith of the Final Attack",
-          "channelTitle": "RynerRyn",
-          "displayTitle": "7th Dragon III Code: VFD - Ignith of the Final Attack"
-        },
-        {
-          "title": "DEEMO - RE:UNION -Duo Blade Against-",
-          "trackId": "2af2bccc-3fdc-47e7-83a6-00130f148407",
-          "videoId": "KrmOKzFMQAA",
-          "gameTitle": "DEEMO",
-          "trackTitle": "RE:UNION -Duo Blade Against-",
-          "channelTitle": "モリモリあつし / 非可逆リズム",
-          "displayTitle": "DEEMO - RE:UNION -Duo Blade Against-"
-        },
-        {
-          "title": "Looney Tunes: Sheep Raider - Track 7",
-          "trackId": "f6f0fdfa-28d2-4d22-8338-046a08f433a3",
-          "videoId": "wwidcxa3fmY",
-          "gameTitle": "Looney Tunes: Sheep Raider",
-          "trackTitle": "Track 7",
-          "channelTitle": "YouTube",
-          "displayTitle": "Looney Tunes: Sheep Raider - Track 7"
-        },
-        {
-          "title": "Library of Ruina - Angela",
-          "trackId": "320eb2a0-a543-42d0-9680-ebf525cac571",
-          "videoId": "YV1uwUziZqQ",
-          "gameTitle": "Library of Ruina",
-          "trackTitle": "Angela",
-          "channelTitle": "산우",
-          "displayTitle": "Library of Ruina - Angela"
-        },
-        {
-          "title": "GENETOS - Origin",
-          "trackId": "1e4ce122-459e-4d62-94bf-ef563b45c461",
-          "videoId": "vdT-uEWwEv8",
-          "gameTitle": "GENETOS",
-          "trackTitle": "Origin",
-          "channelTitle": "Tatsuya Koyama - Topic",
-          "displayTitle": "GENETOS - Origin"
-        },
-        {
-          "title": "Mega Man Network Transmission - Zero Gravity Area (StarMan's Stage)",
-          "trackId": "d608d3ba-a28c-40d8-8ca1-4b2cdf0c6d37",
-          "videoId": "bylo5iC6kkY",
-          "gameTitle": "Mega Man Network Transmission",
-          "trackTitle": "Zero Gravity Area (StarMan's Stage)",
-          "channelTitle": "Frygoon",
-          "displayTitle": "Mega Man Network Transmission - Zero Gravity Area (StarMan's Stage)"
-        },
-        {
-          "title": "DJMAX RESPECT V - Misty Er'A ~One Day~ (Extended Ver.)",
-          "trackId": "19b38b3a-2fba-4103-8b5e-d76bf8698e4e",
-          "videoId": "TavpytwkgPg",
-          "gameTitle": "DJMAX RESPECT V",
-          "trackTitle": "Misty Er'A ~One Day~ (Extended Ver.)",
-          "channelTitle": "Mycin.T - Topic",
-          "displayTitle": "DJMAX RESPECT V - Misty Er'A ~One Day~ (Extended Ver.)"
         }
       ]
     },
