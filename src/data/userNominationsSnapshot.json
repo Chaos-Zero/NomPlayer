@@ -1,7 +1,34 @@
 {
-  "exportedAt": "2026-08-15T01:14:32.331Z",
-  "totalCount": 10,
+  "exportedAt": "2026-08-16T18:23:23.218Z",
+  "totalCount": 11,
   "users": [
+    {
+      "user_id": "3cc0d954-c60d-4b77-bafd-10915320019f",
+      "username": "dc:mihark",
+      "avatar_url": "https://cdn.discordapp.com/avatars/236071760053665792/3b3d1ec963845bfbab0404fcf10f69c1.png",
+      "gamefaqs_username": "Mihark",
+      "updated_at": "2026-08-16T11:32:38.875776+00:00",
+      "nominations": [
+        {
+          "title": "Clair Obscur: Expedition 33 - Monoco",
+          "trackId": "0de41efc-d106-46a1-9314-a4f6d1e323e6",
+          "videoId": "ajcSjnooBpA",
+          "gameTitle": "Clair Obscur: Expedition 33",
+          "trackTitle": "Monoco",
+          "channelTitle": null,
+          "displayTitle": "Clair Obscur: Expedition 33 - Monoco"
+        },
+        {
+          "title": "Clair Obscur: Expedition 33 - Une vie à t'aimer",
+          "trackId": "ac86ab48-a5dd-4fa4-bfd2-55517c116b20",
+          "videoId": "3kMbTzomh94",
+          "gameTitle": "Clair Obscur: Expedition 33",
+          "trackTitle": "Une vie à t'aimer",
+          "channelTitle": null,
+          "displayTitle": "Clair Obscur: Expedition 33 - Une vie à t'aimer"
+        }
+      ]
+    },
     {
       "user_id": "cd2ef0ef-cee2-437b-a75e-f4230dbf6939",
       "username": "dc:maxgalactica",
