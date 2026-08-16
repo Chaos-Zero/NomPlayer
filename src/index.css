@@ -5756,6 +5756,40 @@ body {
   flex-shrink: 0;
 }
 
+.playlist-mobile-title-bar {
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-glass);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.playlist-mobile-title-scroll {
+  flex: 1;
+  min-width: 0;
+}
+
+.playlist-mobile-title-scroll .scrolling-text-track {
+  gap: 40px;
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.playlist-mobile-title-count {
+  flex-shrink: 0;
+  font-size: 11px;
+  color: var(--text-muted);
+  background: var(--bg-glass);
+  padding: 2px 8px;
+  border-radius: 99px;
+  border: 1px solid var(--border);
+}
+
 .sidebar-header-main {
   min-width: 0;
   display: flex;
@@ -5905,6 +5939,29 @@ body {
   display: flex;
   flex-direction: column;
   gap: 4px;
+}
+
+@media (max-width: 960px) {
+  /* The dropdown trigger's own wrapper only spans as much width as it
+     needs, so it's too narrow to anchor a menu meant to cover the whole
+     tray. Hand positioning off to .sidebar-header, the full-width row
+     above the playlist list, so the dropdown spans edge to edge. */
+  .community-dropdown-wrapper {
+    position: static;
+  }
+
+  .sidebar-header {
+    position: relative;
+  }
+
+  .community-view-dropdown {
+    left: 12px;
+    right: 12px;
+  }
+
+  .community-view-dropdown-scroll {
+    max-height: min(520px, calc(100dvh - 260px));
+  }
 }
 
 .community-dropdown-divider {
@@ -6138,6 +6195,16 @@ body {
   padding: 2px 8px;
   border-radius: 99px;
   border: 1px solid var(--border);
+}
+
+@media (max-width: 960px) {
+  /* The playlist name and video count both live in the scrolling title
+     bar above the header on mobile (.playlist-mobile-title-bar), so drop
+     the duplicates here to give the row's action icons room to breathe. */
+  .sidebar-title,
+  .sidebar-count {
+    display: none;
+  }
 }
 
 .sidebar-header-actions {
@@ -14049,6 +14116,27 @@ body.is-resizing .resize-handle {
 .theme-light .comment-bubble-btn.has-comments:hover {
   background: rgba(124, 58, 237, 0.1);
   color: #6d28d9;
+}
+
+/* Hide-until-hover only applies where hover is a real, primary input
+   (a mouse). Touch devices never fire :hover reliably, so hiding this
+   there would strand mobile users with no way to open the community
+   dialogue on a track that has no comment or score yet. */
+@media (hover: hover) and (pointer: fine) {
+  .comment-bubble-btn.empty {
+    opacity: 0;
+    visibility: hidden;
+    transition:
+      opacity 0.15s,
+      background 0.2s,
+      color 0.2s;
+  }
+
+  .playlist-item:hover .comment-bubble-btn.empty,
+  .playlist-item:focus-within .comment-bubble-btn.empty {
+    opacity: 1;
+    visibility: visible;
+  }
 }
 
 @media (max-width: 1880px) {

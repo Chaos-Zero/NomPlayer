@@ -286,14 +286,22 @@ function PlaylistItem({
             {video.rating}
           </span>
         )}
-        {commentActivity && (
+        {onShowComments && (
           <button
-            className={`comment-bubble-btn${commentActivity === 'commented' ? ' has-comments' : ' has-rated'}`}
+            className={`comment-bubble-btn${
+              commentActivity === 'commented'
+                ? ' has-comments'
+                : commentActivity === 'rated'
+                  ? ' has-rated'
+                  : ' empty'
+            }`}
             type="button"
             title={
               showRatingInsteadOfComments && video.rating != null
                 ? `Your rating: ${video.rating}, view community comments`
-                : 'View community comments'
+                : commentActivity
+                  ? 'View community comments'
+                  : 'Add a comment or score'
             }
             onClick={(e) => {
               e.stopPropagation();
@@ -322,10 +330,14 @@ function PlaylistItem({
                 onToggleSupport(video);
               }
               const rect = event.currentTarget.getBoundingClientRect();
-              onOpenSupportDropdown(video, {
-                top: rect.top,
-                left: rect.left + rect.width / 2,
-              });
+              onOpenSupportDropdown(
+                video,
+                {
+                  top: rect.top,
+                  left: rect.left + rect.width / 2,
+                },
+                { showRemove: isSupported, supportLevel },
+              );
             }}
             aria-label={supportLabel}
             title={supportTooltip}
@@ -853,486 +865,504 @@ export default function PlaylistSidebar({
     const currentAvatar = isCommunityView ? activeUser?.avatarUrl : null;
 
     return (
-      <div className="sidebar-header">
-        <div
-          className="sidebar-header-main community-dropdown-wrapper"
-          ref={dropdownRef}
-        >
-          <button
-            className={`community-view-trigger${isDropdownOpen ? ' active' : ''}`}
-            onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-            aria-expanded={isDropdownOpen}
-            aria-haspopup="listbox"
-          >
-            <div className="community-view-avatar-slot">
-              {currentAvatar ? (
-                <img
-                  src={currentAvatar}
-                  alt=""
-                  className="community-view-avatar"
-                />
-              ) : (
-                <div className="community-view-avatar-fallback">
-                  {isCommunityView ? (
-                    '👤'
-                  ) : isNominationsView ? (
-                    <StarIcon />
-                  ) : isSupportView ? (
-                    <HeartIcon />
-                  ) : isCommunityPlaylistView ? (
-                    <PlaylistTabIcon />
-                  ) : (
-                    <MusicIcon />
-                  )}
-                </div>
-              )}
-            </div>
-            <div className="community-view-text">
-              <span className="sidebar-title">{displayTitle}</span>
-              <span className="sidebar-count">
-                {playlist.length} {playlist.length === 1 ? 'video' : 'videos'}
-              </span>
-            </div>
-            <span className="community-view-chevron">
-              <ChevronIcon />
+      <>
+        {isMobileLayout && (
+          <div className="playlist-mobile-title-bar">
+            <ScrollingText
+              className="playlist-mobile-title-scroll"
+              text={displayTitle}
+              truncateWhenStatic
+            />
+            <span className="playlist-mobile-title-count">
+              {playlist.length} {playlist.length === 1 ? 'video' : 'videos'}
             </span>
-          </button>
+          </div>
+        )}
+        <div className="sidebar-header">
+          <div
+            className="sidebar-header-main community-dropdown-wrapper"
+            ref={dropdownRef}
+          >
+            <button
+              className={`community-view-trigger${isDropdownOpen ? ' active' : ''}`}
+              onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+              aria-expanded={isDropdownOpen}
+              aria-haspopup="listbox"
+            >
+              <div className="community-view-avatar-slot">
+                {currentAvatar ? (
+                  <img
+                    src={currentAvatar}
+                    alt=""
+                    className="community-view-avatar"
+                  />
+                ) : (
+                  <div className="community-view-avatar-fallback">
+                    {isCommunityView ? (
+                      '👤'
+                    ) : isNominationsView ? (
+                      <StarIcon />
+                    ) : isSupportView ? (
+                      <HeartIcon />
+                    ) : isCommunityPlaylistView ? (
+                      <PlaylistTabIcon />
+                    ) : (
+                      <MusicIcon />
+                    )}
+                  </div>
+                )}
+              </div>
+              <div className="community-view-text">
+                <span className="sidebar-title">{displayTitle}</span>
+                <span className="sidebar-count">
+                  {playlist.length} {playlist.length === 1 ? 'video' : 'videos'}
+                </span>
+              </div>
+              <span className="community-view-chevron">
+                <ChevronIcon />
+              </span>
+            </button>
 
-          {isDropdownOpen && (
-            <div className="community-view-dropdown" role="listbox">
-              {!playlistsExpanded ? (
-                <div className="community-view-dropdown-scroll">
-                  <button
-                    className={`community-option${activePlaylistView.type === 'personal' ? ' selected' : ''}`}
-                    onClick={() => {
-                      onSwitchView({ type: 'personal' });
-                      setIsDropdownOpen(false);
-                    }}
-                    role="option"
-                    aria-selected={activePlaylistView.type === 'personal'}
-                  >
-                    <div className="community-option-avatar">
-                      <div className="community-view-avatar-fallback">
-                        <MusicIcon />
-                      </div>
-                    </div>
-                    <div className="community-option-info">
-                      <span className="community-option-name">My Queue</span>
-                    </div>
-                  </button>
-
-                  <button
-                    className={`community-option${activePlaylistView.type === 'nominations' ? ' selected' : ''}`}
-                    onClick={() => {
-                      onSwitchView({ type: 'nominations' });
-                      setIsDropdownOpen(false);
-                    }}
-                    role="option"
-                    aria-selected={activePlaylistView.type === 'nominations'}
-                  >
-                    <div className="community-option-avatar">
-                      <div className="community-view-avatar-fallback">
-                        <StarIcon />
-                      </div>
-                    </div>
-                    <div className="community-option-info">
-                      <span className="community-option-name">
-                        My Nominations
-                      </span>
-                    </div>
-                  </button>
-
-                  <button
-                    className={`community-option${activePlaylistView.type === 'support' ? ' selected' : ''}`}
-                    onClick={() => {
-                      onSwitchView({ type: 'support' });
-                      setIsDropdownOpen(false);
-                    }}
-                    role="option"
-                    aria-selected={activePlaylistView.type === 'support'}
-                  >
-                    <div className="community-option-avatar">
-                      <div className="community-view-avatar-fallback">
-                        <HeartIcon />
-                      </div>
-                    </div>
-                    <div className="community-option-info">
-                      <span className="community-option-name">
-                        My Support List
-                      </span>
-                    </div>
-                  </button>
-
-                  <div
-                    className={`community-option community-option-expandable${isCommunityPlaylistView ? ' selected' : ''}`}
-                  >
+            {isDropdownOpen && (
+              <div className="community-view-dropdown" role="listbox">
+                {!playlistsExpanded ? (
+                  <div className="community-view-dropdown-scroll">
                     <button
-                      className="community-option-main"
-                      role="option"
-                      aria-selected={isCommunityPlaylistView}
+                      className={`community-option${activePlaylistView.type === 'personal' ? ' selected' : ''}`}
                       onClick={() => {
-                        if (lastCommunityPlaylist) {
-                          if (
-                            lastCommunityPlaylist.type === 'custom-playlist'
-                          ) {
-                            onPlayCustomPlaylist?.(lastCommunityPlaylist.id);
-                          } else {
-                            onSwitchView({
-                              type: 'community-playlist',
-                              videos: lastCommunityPlaylist.videos,
-                              name: lastCommunityPlaylist.name,
-                              id: lastCommunityPlaylist.id,
-                            });
-                          }
-                        } else {
-                          onNavigateToCommunityPlaylists?.();
-                        }
+                        onSwitchView({ type: 'personal' });
                         setIsDropdownOpen(false);
                       }}
+                      role="option"
+                      aria-selected={activePlaylistView.type === 'personal'}
                     >
                       <div className="community-option-avatar">
                         <div className="community-view-avatar-fallback">
-                          <PlaylistTabIcon />
+                          <MusicIcon />
+                        </div>
+                      </div>
+                      <div className="community-option-info">
+                        <span className="community-option-name">My Queue</span>
+                      </div>
+                    </button>
+
+                    <button
+                      className={`community-option${activePlaylistView.type === 'nominations' ? ' selected' : ''}`}
+                      onClick={() => {
+                        onSwitchView({ type: 'nominations' });
+                        setIsDropdownOpen(false);
+                      }}
+                      role="option"
+                      aria-selected={activePlaylistView.type === 'nominations'}
+                    >
+                      <div className="community-option-avatar">
+                        <div className="community-view-avatar-fallback">
+                          <StarIcon />
                         </div>
                       </div>
                       <div className="community-option-info">
                         <span className="community-option-name">
-                          {isCommunityPlaylistView
-                            ? activePlaylistView.name
-                            : lastCommunityPlaylist?.name ||
-                              'Community Playlists'}
+                          My Nominations
                         </span>
-                        {isCommunityPlaylistView && (
-                          <span className="community-option-count">
-                            {activePlaylistView.type === 'custom-playlist'
-                              ? (customPlaylists?.find(
-                                  (p) => p.id === activePlaylistView.id,
-                                )?.videos?.length ?? 0)
-                              : (activePlaylistView.videos?.length ?? 0)}{' '}
-                            tracks
-                          </span>
-                        )}
                       </div>
                     </button>
-                    <button
-                      className="community-option-expand-btn community-option-expand-btn--right"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setPlaylistsExpanded(true);
-                      }}
-                      aria-label="Browse community playlists"
-                    >
-                      <ChevronIcon />
-                    </button>
-                  </div>
 
-                  <div className="community-dropdown-divider">
-                    Community Nominations
-                  </div>
-
-                  {communityNominations.map((item) => (
                     <button
-                      key={item.userId}
-                      className={`community-option${isCommunityView && activePlaylistView.userId === item.userId ? ' selected' : ''}`}
+                      className={`community-option${activePlaylistView.type === 'support' ? ' selected' : ''}`}
                       onClick={() => {
-                        onSwitchView({
-                          type: 'community',
-                          userId: item.userId,
-                        });
+                        onSwitchView({ type: 'support' });
                         setIsDropdownOpen(false);
                       }}
                       role="option"
-                      aria-selected={
-                        isCommunityView &&
-                        activePlaylistView.userId === item.userId
-                      }
+                      aria-selected={activePlaylistView.type === 'support'}
                     >
                       <div className="community-option-avatar">
-                        {item.avatarUrl ? (
-                          <img src={item.avatarUrl} alt="" />
-                        ) : (
-                          <div className="community-view-avatar-fallback">
-                            👤
-                          </div>
-                        )}
+                        <div className="community-view-avatar-fallback">
+                          <HeartIcon />
+                        </div>
                       </div>
                       <div className="community-option-info">
                         <span className="community-option-name">
-                          {getDisplayProfileName(item.username)}
-                        </span>
-                        <span className="community-option-count">
-                          {item.nominations.length} nominations
+                          My Support List
                         </span>
                       </div>
                     </button>
-                  ))}
-                </div>
-              ) : (
-                <div className="community-view-dropdown-scroll community-playlists-panel">
-                  <button
-                    className="community-playlists-back"
-                    onClick={() => setPlaylistsExpanded(false)}
-                  >
-                    <span className="community-playlists-back-chevron">
-                      <ChevronIcon />
-                    </span>
-                    <div className="community-option-info">
-                      <span className="community-option-name">
-                        Back to Menu
-                      </span>
-                    </div>
-                  </button>
 
-                  {sidebarPlaylists === null && (
                     <div
-                      className="community-option-count"
-                      style={{ padding: '8px 16px' }}
+                      className={`community-option community-option-expandable${isCommunityPlaylistView ? ' selected' : ''}`}
                     >
-                      Loading…
-                    </div>
-                  )}
-
-                  {sidebarPlaylists !== null &&
-                    sidebarPlaylists.length === 0 && (
-                      <div
-                        className="community-option-count"
-                        style={{
-                          padding: '8px 16px',
-                          color: 'var(--text-muted)',
+                      <button
+                        className="community-option-main"
+                        role="option"
+                        aria-selected={isCommunityPlaylistView}
+                        onClick={() => {
+                          if (lastCommunityPlaylist) {
+                            if (
+                              lastCommunityPlaylist.type === 'custom-playlist'
+                            ) {
+                              onPlayCustomPlaylist?.(lastCommunityPlaylist.id);
+                            } else {
+                              onSwitchView({
+                                type: 'community-playlist',
+                                videos: lastCommunityPlaylist.videos,
+                                name: lastCommunityPlaylist.name,
+                                id: lastCommunityPlaylist.id,
+                              });
+                            }
+                          } else {
+                            onNavigateToCommunityPlaylists?.();
+                          }
+                          setIsDropdownOpen(false);
                         }}
                       >
-                        No playlists found
+                        <div className="community-option-avatar">
+                          <div className="community-view-avatar-fallback">
+                            <PlaylistTabIcon />
+                          </div>
+                        </div>
+                        <div className="community-option-info">
+                          <span className="community-option-name">
+                            {isCommunityPlaylistView
+                              ? activePlaylistView.name
+                              : lastCommunityPlaylist?.name ||
+                                'Community Playlists'}
+                          </span>
+                          {isCommunityPlaylistView && (
+                            <span className="community-option-count">
+                              {activePlaylistView.type === 'custom-playlist'
+                                ? (customPlaylists?.find(
+                                    (p) => p.id === activePlaylistView.id,
+                                  )?.videos?.length ?? 0)
+                                : (activePlaylistView.videos?.length ?? 0)}{' '}
+                              tracks
+                            </span>
+                          )}
+                        </div>
+                      </button>
+                      <button
+                        className="community-option-expand-btn community-option-expand-btn--right"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setPlaylistsExpanded(true);
+                        }}
+                        aria-label="Browse community playlists"
+                      >
+                        <ChevronIcon />
+                      </button>
+                    </div>
+
+                    <div className="community-dropdown-divider">
+                      Community Nominations
+                    </div>
+
+                    {communityNominations.map((item) => (
+                      <button
+                        key={item.userId}
+                        className={`community-option${isCommunityView && activePlaylistView.userId === item.userId ? ' selected' : ''}`}
+                        onClick={() => {
+                          onSwitchView({
+                            type: 'community',
+                            userId: item.userId,
+                          });
+                          setIsDropdownOpen(false);
+                        }}
+                        role="option"
+                        aria-selected={
+                          isCommunityView &&
+                          activePlaylistView.userId === item.userId
+                        }
+                      >
+                        <div className="community-option-avatar">
+                          {item.avatarUrl ? (
+                            <img src={item.avatarUrl} alt="" />
+                          ) : (
+                            <div className="community-view-avatar-fallback">
+                              👤
+                            </div>
+                          )}
+                        </div>
+                        <div className="community-option-info">
+                          <span className="community-option-name">
+                            {getDisplayProfileName(item.username)}
+                          </span>
+                          <span className="community-option-count">
+                            {item.nominations.length} nominations
+                          </span>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="community-view-dropdown-scroll community-playlists-panel">
+                    <button
+                      className="community-playlists-back"
+                      onClick={() => setPlaylistsExpanded(false)}
+                    >
+                      <span className="community-playlists-back-chevron">
+                        <ChevronIcon />
+                      </span>
+                      <div className="community-option-info">
+                        <span className="community-option-name">
+                          Back to Menu
+                        </span>
+                      </div>
+                    </button>
+
+                    {sidebarPlaylists === null && (
+                      <div
+                        className="community-option-count"
+                        style={{ padding: '8px 16px' }}
+                      >
+                        Loading…
                       </div>
                     )}
 
-                  {(sidebarPlaylists || []).map((pl) => (
-                    <button
-                      key={pl.id}
-                      className={`community-option${isCommunityPlaylistView && activePlaylistView.id === pl.id ? ' selected' : ''}`}
-                      disabled={playlistLoadingId === pl.id}
-                      onClick={async () => {
-                        const isOwn = customPlaylists?.some(
-                          (p) => p.id === pl.id,
-                        );
-                        if (isOwn) {
-                          // Own playlist: play it via onPlayCustomPlaylist so
-                          // both activePlaylistView AND playingPlaylistView are updated.
-                          onPlayCustomPlaylist?.(pl.id);
-                          setIsDropdownOpen(false);
-                          return;
-                        }
-                        if (!supabase) return;
-                        setPlaylistLoadingId(pl.id);
-                        try {
-                          const videos = await fetchPlaylistTracks(pl.id);
-                          if (videos.length) {
-                            // Community playlist: load into view only, don't start playback.
-                            onSwitchView({
-                              type: 'community-playlist',
-                              videos,
-                              name: pl.name,
-                              id: pl.id,
-                            });
+                    {sidebarPlaylists !== null &&
+                      sidebarPlaylists.length === 0 && (
+                        <div
+                          className="community-option-count"
+                          style={{
+                            padding: '8px 16px',
+                            color: 'var(--text-muted)',
+                          }}
+                        >
+                          No playlists found
+                        </div>
+                      )}
+
+                    {(sidebarPlaylists || []).map((pl) => (
+                      <button
+                        key={pl.id}
+                        className={`community-option${isCommunityPlaylistView && activePlaylistView.id === pl.id ? ' selected' : ''}`}
+                        disabled={playlistLoadingId === pl.id}
+                        onClick={async () => {
+                          const isOwn = customPlaylists?.some(
+                            (p) => p.id === pl.id,
+                          );
+                          if (isOwn) {
+                            // Own playlist: play it via onPlayCustomPlaylist so
+                            // both activePlaylistView AND playingPlaylistView are updated.
+                            onPlayCustomPlaylist?.(pl.id);
+                            setIsDropdownOpen(false);
+                            return;
                           }
-                        } finally {
-                          setPlaylistLoadingId(null);
+                          if (!supabase) return;
+                          setPlaylistLoadingId(pl.id);
+                          try {
+                            const videos = await fetchPlaylistTracks(pl.id);
+                            if (videos.length) {
+                              // Community playlist: load into view only, don't start playback.
+                              onSwitchView({
+                                type: 'community-playlist',
+                                videos,
+                                name: pl.name,
+                                id: pl.id,
+                              });
+                            }
+                          } finally {
+                            setPlaylistLoadingId(null);
+                          }
+                          setIsDropdownOpen(false);
+                        }}
+                        role="option"
+                        aria-selected={
+                          isCommunityPlaylistView &&
+                          activePlaylistView.id === pl.id
                         }
+                      >
+                        <div className="community-option-avatar">
+                          <div className="community-view-avatar-fallback">
+                            <PlaylistTabIcon />
+                          </div>
+                        </div>
+                        <div className="community-option-info">
+                          <span className="community-option-name">
+                            {pl.name}
+                          </span>
+                          <span className="community-option-count">
+                            {playlistLoadingId === pl.id
+                              ? 'Loading…'
+                              : `${pl.trackCount} tracks`}
+                          </span>
+                        </div>
+                      </button>
+                    ))}
+
+                    <button
+                      className="community-option-browse"
+                      onClick={() => {
+                        onNavigateToCommunityPlaylists?.();
                         setIsDropdownOpen(false);
                       }}
-                      role="option"
-                      aria-selected={
-                        isCommunityPlaylistView &&
-                        activePlaylistView.id === pl.id
-                      }
                     >
-                      <div className="community-option-avatar">
-                        <div className="community-view-avatar-fallback">
-                          <PlaylistTabIcon />
-                        </div>
-                      </div>
-                      <div className="community-option-info">
-                        <span className="community-option-name">{pl.name}</span>
-                        <span className="community-option-count">
-                          {playlistLoadingId === pl.id
-                            ? 'Loading…'
-                            : `${pl.trackCount} tracks`}
-                        </span>
-                      </div>
+                      Browse all playlists →
                     </button>
-                  ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
 
-                  <button
-                    className="community-option-browse"
-                    onClick={() => {
-                      onNavigateToCommunityPlaylists?.();
-                      setIsDropdownOpen(false);
-                    }}
-                  >
-                    Browse all playlists →
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-
-        <div className="sidebar-header-actions">
-          {/* ... existing actions ... */}
-          {isMobileLayout && (
-            <>
-              <button
-                className={`sidebar-icon-btn shuffle${isShuffleEnabled ? ' active' : ''}${!isShuffleAvailable ? ' disabled' : ''}`}
-                type="button"
-                onClick={isShuffleAvailable ? onShuffle : undefined}
-                disabled={!isShuffleAvailable}
-                aria-label={
-                  isShuffleAvailable
-                    ? 'Shuffle queue'
-                    : 'Add at least 2 tracks to shuffle'
-                }
-                title={
-                  isShuffleAvailable
-                    ? 'Shuffle queue'
-                    : 'Add at least 2 tracks to shuffle'
-                }
-              >
-                🔀
-              </button>
-              <button
-                className={`sidebar-icon-btn preview${isPreviewModeEnabled ? ' active' : ''}`}
-                type="button"
-                onClick={onTogglePreview}
-                disabled={playlist.length === 0}
-                aria-label="Preview mode"
-                aria-pressed={isPreviewModeEnabled}
-                title="Preview mode"
-              >
-                <FastForwardIcon />
-              </button>
-            </>
-          )}
-          {playlist.length > 0 && (
-            <>
-              {isVgmcPlaylistView && (
+          <div className="sidebar-header-actions">
+            {/* ... existing actions ... */}
+            {isMobileLayout && (
+              <>
                 <button
-                  className={`fav-panel-action-btn icon-only${isListenedToBottomActive ? ' active' : ''}`}
+                  className={`sidebar-icon-btn shuffle${isShuffleEnabled ? ' active' : ''}${!isShuffleAvailable ? ' disabled' : ''}`}
                   type="button"
-                  onClick={onMoveListenedToBottom}
+                  onClick={isShuffleAvailable ? onShuffle : undefined}
                   disabled={!isShuffleAvailable}
-                  title="Move started songs to bottom of playlist"
-                  aria-label="Move started songs to bottom of playlist"
-                >
-                  <CheckDownIcon />
-                </button>
-              )}
-              {activePlaylistView.type === 'custom-playlist' ? (
-                <div style={{ marginLeft: 8, marginRight: 8, display: 'flex' }}>
-                  <PrivacyToggle
-                    isPublic={
-                      customPlaylists?.find(
-                        (p) => p.id === activePlaylistView.id,
-                      )?.is_public
-                    }
-                    onToggle={(val) =>
-                      handleTogglePrivacy(activePlaylistView.id, val)
-                    }
-                  />
-                </div>
-              ) : isVgmcPlaylistView ? (
-                <button
-                  className={`fav-panel-action-btn icon-only${rankingSortDirection ? ' active' : ''}`}
-                  type="button"
-                  onClick={() =>
-                    setRankingSortDirection((previousValue) =>
-                      previousValue === null
-                        ? 'desc'
-                        : previousValue === 'desc'
-                          ? 'asc'
-                          : null,
-                    )
+                  aria-label={
+                    isShuffleAvailable
+                      ? 'Shuffle queue'
+                      : 'Add at least 2 tracks to shuffle'
                   }
                   title={
-                    rankingSortDirection === 'desc'
-                      ? 'Sorted by your rating, highest first, click for lowest first'
-                      : rankingSortDirection === 'asc'
-                        ? 'Sorted by your rating, lowest first, click to reset'
-                        : 'Sort by your rating'
+                    isShuffleAvailable
+                      ? 'Shuffle queue'
+                      : 'Add at least 2 tracks to shuffle'
                   }
-                  aria-label="Sort by your rating"
                 >
-                  <SortByRatingIcon />
-                  {rankingSortDirection && (
-                    <span className="sort-direction-arrow" aria-hidden="true">
-                      {rankingSortDirection === 'desc' ? '↓' : '↑'}
-                    </span>
-                  )}
+                  🔀
                 </button>
-              ) : (
+                <button
+                  className={`sidebar-icon-btn preview${isPreviewModeEnabled ? ' active' : ''}`}
+                  type="button"
+                  onClick={onTogglePreview}
+                  disabled={playlist.length === 0}
+                  aria-label="Preview mode"
+                  aria-pressed={isPreviewModeEnabled}
+                  title="Preview mode"
+                >
+                  <FastForwardIcon />
+                </button>
+              </>
+            )}
+            {playlist.length > 0 && (
+              <>
+                {isVgmcPlaylistView && (
+                  <button
+                    className={`fav-panel-action-btn icon-only${isListenedToBottomActive ? ' active' : ''}`}
+                    type="button"
+                    onClick={onMoveListenedToBottom}
+                    disabled={playlist.length < 2}
+                    title="Move started songs to bottom of playlist"
+                    aria-label="Move started songs to bottom of playlist"
+                  >
+                    <CheckDownIcon />
+                  </button>
+                )}
+                {activePlaylistView.type === 'custom-playlist' ? (
+                  <div
+                    style={{ marginLeft: 8, marginRight: 8, display: 'flex' }}
+                  >
+                    <PrivacyToggle
+                      isPublic={
+                        customPlaylists?.find(
+                          (p) => p.id === activePlaylistView.id,
+                        )?.is_public
+                      }
+                      onToggle={(val) =>
+                        handleTogglePrivacy(activePlaylistView.id, val)
+                      }
+                    />
+                  </div>
+                ) : isVgmcPlaylistView ? (
+                  <button
+                    className={`fav-panel-action-btn icon-only${rankingSortDirection ? ' active' : ''}`}
+                    type="button"
+                    onClick={() =>
+                      setRankingSortDirection((previousValue) =>
+                        previousValue === null
+                          ? 'desc'
+                          : previousValue === 'desc'
+                            ? 'asc'
+                            : null,
+                      )
+                    }
+                    title={
+                      rankingSortDirection === 'desc'
+                        ? 'Sorted by your rating, highest first, click for lowest first'
+                        : rankingSortDirection === 'asc'
+                          ? 'Sorted by your rating, lowest first, click to reset'
+                          : 'Sort by your rating'
+                    }
+                    aria-label="Sort by your rating"
+                  >
+                    <SortByRatingIcon />
+                    {rankingSortDirection && (
+                      <span className="sort-direction-arrow" aria-hidden="true">
+                        {rankingSortDirection === 'desc' ? '↓' : '↑'}
+                      </span>
+                    )}
+                  </button>
+                ) : (
+                  <button
+                    className="fav-panel-action-btn icon-only"
+                    type="button"
+                    onClick={() =>
+                      onExport?.(
+                        selectionMode && selectedVideos.length > 0
+                          ? selectedVideos
+                          : playlist,
+                      )
+                    }
+                    title="Export for VGMC"
+                    aria-label="Export for VGMC"
+                  >
+                    <ExportIcon />
+                  </button>
+                )}
                 <button
                   className="fav-panel-action-btn icon-only"
                   type="button"
                   onClick={() =>
-                    onExport?.(
+                    onSavePlaylist?.(
                       selectionMode && selectedVideos.length > 0
                         ? selectedVideos
                         : playlist,
                     )
                   }
-                  title="Export for VGMC"
-                  aria-label="Export for VGMC"
+                  title="Create YT Playlist"
+                  aria-label="Create YT Playlist"
                 >
-                  <ExportIcon />
+                  <YouTubeIcon />
                 </button>
-              )}
-              <button
-                className="fav-panel-action-btn icon-only"
-                type="button"
-                onClick={() =>
-                  onSavePlaylist?.(
-                    selectionMode && selectedVideos.length > 0
-                      ? selectedVideos
-                      : playlist,
-                  )
-                }
-                title="Create YT Playlist"
-                aria-label="Create YT Playlist"
-              >
-                <YouTubeIcon />
-              </button>
-              {(activePlaylistView.type === 'nominations' ||
-                activePlaylistView.type === 'support') && (
+                {(activePlaylistView.type === 'nominations' ||
+                  activePlaylistView.type === 'support') && (
+                  <button
+                    className={`fav-panel-action-btn icon-only${isSortingByRating ? ' active' : ''}`}
+                    type="button"
+                    onClick={() => setIsSortingByRating(!isSortingByRating)}
+                    title="Order by rating"
+                    aria-label="Order by rating"
+                  >
+                    <SortByRatingIcon />
+                  </button>
+                )}
                 <button
-                  className={`fav-panel-action-btn icon-only${isSortingByRating ? ' active' : ''}`}
+                  className={`fav-panel-action-btn${selectionMode ? ' active' : ''}`}
                   type="button"
-                  onClick={() => setIsSortingByRating(!isSortingByRating)}
-                  title="Order by rating"
-                  aria-label="Order by rating"
+                  onClick={handleToggleSelectionMode}
                 >
-                  <SortByRatingIcon />
+                  {selectionMode ? 'Done' : 'Select'}
                 </button>
-              )}
+              </>
+            )}
+            {showMobileHeaderClose && (
               <button
-                className={`fav-panel-action-btn${selectionMode ? ' active' : ''}`}
+                className="btn-close"
                 type="button"
-                onClick={handleToggleSelectionMode}
+                onClick={onToggleCollapse}
+                aria-label="Collapse playlist"
+                title="Collapse playlist"
               >
-                {selectionMode ? 'Done' : 'Select'}
+                ✕
               </button>
-            </>
-          )}
-          {showMobileHeaderClose && (
-            <button
-              className="btn-close"
-              type="button"
-              onClick={onToggleCollapse}
-              aria-label="Collapse playlist"
-              title="Collapse playlist"
-            >
-              ✕
-            </button>
-          )}
+            )}
+          </div>
         </div>
-      </div>
+      </>
     );
   }
 
@@ -1499,8 +1529,8 @@ export default function PlaylistSidebar({
     });
   }
 
-  function handleOpenSupportDropdown(video, position) {
-    onOpenSupportDropdown(video, position);
+  function handleOpenSupportDropdown(video, position, options) {
+    onOpenSupportDropdown(video, position, options);
   }
 
   function handleRemove(videoId) {

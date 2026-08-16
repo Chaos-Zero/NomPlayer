@@ -388,55 +388,11 @@ function moveListenedToBottom(
 }
 
 /**
- * Shuffle and "move started to bottom" are two independent axes, not
- * alternatives fighting over the same order,this combines whichever of
- * them are currently on into the one order shuffleOrderIds actually holds.
- * Neither on: no custom order at all. Shuffle only: plain random shuffle
- * (grouped not-started-first anyway when preferNotStartedFirstWhenShuffling
- * is set,VGMC's existing default). Listened-to-bottom only: fully
- * deterministic, no randomizing. Both: shuffle within each group, so the
- * whole list is still randomized, it just never loses the "heard songs sink
- * to the bottom" grouping in the process.
+ * Shuffle and "move started to bottom" are two separate, mutually exclusive
+ * ways to reorder the queue,turning one on always turns the other off, so
+ * shuffleOrderIds only ever holds one axis's order at a time and pressing
+ * either button can never leave the other looking (or behaving) active.
  */
-function computeCustomOrder({
-  kind,
-  originalIds,
-  listenedStatusById,
-  pinnedVideoId,
-  preferNotStartedFirstWhenShuffling = false,
-}) {
-  const shuffleOn = kind === 'shuffle' || kind === 'both';
-  const listenedOn = kind === 'listened' || kind === 'both';
-
-  if (!shuffleOn && !listenedOn) return [];
-
-  if (shuffleOn) {
-    return listenedOn || preferNotStartedFirstWhenShuffling
-      ? shuffleVideoIdsNotStartedFirst(
-          originalIds,
-          listenedStatusById,
-          pinnedVideoId,
-        )
-      : shuffleVideoIds(originalIds, pinnedVideoId);
-  }
-
-  return moveListenedToBottom(originalIds, listenedStatusById, pinnedVideoId);
-}
-
-/** Toggles one axis (kind: 'shuffle' | 'listened') on/off within the
- * existing combined kind, returning the new combined kind. */
-function toggleCustomOrderAxis(currentKind, axis) {
-  const shuffleOn = currentKind === 'shuffle' || currentKind === 'both';
-  const listenedOn = currentKind === 'listened' || currentKind === 'both';
-
-  const nextShuffleOn = axis === 'shuffle' ? !shuffleOn : shuffleOn;
-  const nextListenedOn = axis === 'listened' ? !listenedOn : listenedOn;
-
-  if (nextShuffleOn && nextListenedOn) return 'both';
-  if (nextShuffleOn) return 'shuffle';
-  if (nextListenedOn) return 'listened';
-  return null;
-}
 
 function mergeListenedStatuses(previousStatus, incomingStatus) {
   const nextStatus = { ...previousStatus };
@@ -691,12 +647,10 @@ export default function App() {
     initialPlayerState.shuffleOrderIds,
   );
   const shuffleOrderIdsRef = useRef([]);
-  // Which custom-order axes are currently combined into shuffleOrderIds,
-  // null | 'shuffle' | 'listened' | 'both'. Shuffle and "move started to
-  // bottom" are independent toggles (see computeCustomOrder/
-  // toggleCustomOrderAxis above) that both happen to write the one
-  // shuffleOrderIds list, so this is what lets each button know whether
-  // its own axis is on without one clobbering the other's.
+  // Which custom order shuffleOrderIds currently holds, null | 'shuffle' |
+  // 'listened'. Shuffle and "move started to bottom" are mutually exclusive
+  // (see handleShufflePlaylist/handleMoveListenedToBottom below), this is
+  // what lets each button know whether it, specifically, is the one active.
   const customOrderKindRef = useRef(
     initialPlayerState.shuffleOrderIds.length > 0 ? 'shuffle' : null,
   );
@@ -2303,16 +2257,13 @@ export default function App() {
     () => shuffleOrderIds.length > 0 && currentPlayOrderIds === shuffleOrderIds,
     [currentPlayOrderIds, shuffleOrderIds],
   );
-  // Shuffle and "move started to bottom" are independent toggles that both
-  // happen to share the one shuffleOrderIds list (see customOrderKind), so
-  // each button's own "am I active" state also needs its own axis of
-  // customOrderKind, not just "is *some* custom order applied right now".
-  const isShuffleEnabled =
-    isCustomOrderActive &&
-    (customOrderKind === 'shuffle' || customOrderKind === 'both');
+  // Shuffle and "move started to bottom" are mutually exclusive but share
+  // the one shuffleOrderIds list (see customOrderKind), so each button's own
+  // "am I active" state needs to check which of the two is actually active,
+  // not just "is *some* custom order applied right now".
+  const isShuffleEnabled = isCustomOrderActive && customOrderKind === 'shuffle';
   const isListenedToBottomActive =
-    isCustomOrderActive &&
-    (customOrderKind === 'listened' || customOrderKind === 'both');
+    isCustomOrderActive && customOrderKind === 'listened';
   const isShuffleAvailable = playingTracks.length >= 2;
 
   const currentDisplayIndex = useMemo(() => {
@@ -4568,19 +4519,14 @@ export default function App() {
   ]);
 
   // ── Shuffle ─────────────────────────────────────────────────────
-  // Shuffle and "move started to bottom" are independent axes (see
-  // computeCustomOrder/toggleCustomOrderAxis above),each handler only
-  // ever toggles its own axis within whatever combined kind is currently
-  // active, so turning one on/off never disturbs the other.
+  // Shuffle and "move started to bottom" are mutually exclusive,each
+  // handler always claims shuffleOrderIds as its own kind (bumping the
+  // other off) when turning on, and clears it entirely when turning off, so
+  // pressing one never leaves the other looking (or behaving) active.
   const handleShufflePlaylist = useCallback(() => {
     hasReachedPlaylistEndRef.current = false;
 
-    const nextKind = toggleCustomOrderAxis(
-      customOrderKindRef.current,
-      'shuffle',
-    );
-
-    if (nextKind === null) {
+    if (customOrderKindRef.current === 'shuffle') {
       shuffleOrderIdsRef.current = [];
       customOrderKindRef.current = null;
       setShuffleOrderIds([]);
@@ -4608,43 +4554,43 @@ export default function App() {
         : originalIds[0];
 
     // VGMC specifically prioritizes songs you haven't listened to yet, so
-    // shuffling surfaces new nominations instead of ones you've already heard.
+    // shuffling surfaces new nominations instead of ones you've already
+    // heard,started/finished songs still get shuffled in, just sunk below
+    // the not-started ones. Once every song has been started this collapses
+    // into a single group, so it's a full shuffle of everything again.
     const isVgmcShuffle =
       Boolean(VGMC_PLAYLIST_ID) &&
       playingPlaylistView.type === 'community-playlist' &&
       playingPlaylistView.id === VGMC_PLAYLIST_ID;
 
-    const nextShuffleOrderIds = computeCustomOrder({
-      kind: nextKind,
-      originalIds,
-      listenedStatusById,
-      pinnedVideoId,
-      preferNotStartedFirstWhenShuffling: isVgmcShuffle,
-    });
+    const nextShuffleOrderIds = isVgmcShuffle
+      ? shuffleVideoIdsNotStartedFirst(
+          originalIds,
+          listenedStatusById,
+          pinnedVideoId,
+        )
+      : shuffleVideoIds(originalIds, pinnedVideoId);
     shuffleOrderIdsRef.current = nextShuffleOrderIds;
-    customOrderKindRef.current = nextKind;
+    customOrderKindRef.current = 'shuffle';
     setShuffleOrderIds(nextShuffleOrderIds);
-    setCustomOrderKind(nextKind);
+    setCustomOrderKind('shuffle');
     setShowOriginalOrder(false);
   }, [transientVideo, playingPlaylistView, listenedStatusById]);
 
   // Deterministic counterpart to shuffle,VGMC-only, sinks anything you've
-  // already started or finished to the bottom. When shuffle is also active,
-  // this composes with it (kind 'both') rather than replacing it: the list
-  // stays randomized, it just keeps started songs grouped at the bottom.
-  // Reuses the exact same shuffleOrderIds mechanism shuffle does (advance
-  // logic, numbering-via-showOriginalOrder, etc. all already handle "some
-  // non-default order is active" generically), so nothing else needs to
-  // know these are different.
+  // already started or finished to the bottom, no randomizing, and always
+  // acts on the VGMC playlist actually being viewed (the button only ever
+  // renders while isVgmcPlaylistView is true, see PlaylistSidebar), not on
+  // whatever happens to be playing elsewhere. Mutually exclusive with
+  // shuffle,turning this on replaces any active shuffle order rather than
+  // combining with it. Reuses the exact same shuffleOrderIds mechanism
+  // shuffle does (advance logic, numbering-via-showOriginalOrder, etc. all
+  // already handle "some non-default order is active" generically), so
+  // nothing else needs to know these are different.
   const handleMoveListenedToBottom = useCallback(() => {
     hasReachedPlaylistEndRef.current = false;
 
-    const nextKind = toggleCustomOrderAxis(
-      customOrderKindRef.current,
-      'listened',
-    );
-
-    if (nextKind === null) {
+    if (customOrderKindRef.current === 'listened') {
       shuffleOrderIdsRef.current = [];
       customOrderKindRef.current = null;
       setShuffleOrderIds([]);
@@ -4653,9 +4599,7 @@ export default function App() {
       return;
     }
 
-    const sourceTracks = transientVideo
-      ? playingTracksRef.current
-      : playlistRef.current;
+    const sourceTracks = activePlaylistView.videos || [];
     const originalIds = sourceTracks.map((video) => video.videoId);
     if (originalIds.length < 2) return;
 
@@ -4667,18 +4611,17 @@ export default function App() {
         ? activeVideoId
         : originalIds[0];
 
-    const nextOrderIds = computeCustomOrder({
-      kind: nextKind,
+    const nextOrderIds = moveListenedToBottom(
       originalIds,
       listenedStatusById,
       pinnedVideoId,
-    });
+    );
     shuffleOrderIdsRef.current = nextOrderIds;
-    customOrderKindRef.current = nextKind;
+    customOrderKindRef.current = 'listened';
     setShuffleOrderIds(nextOrderIds);
-    setCustomOrderKind(nextKind);
+    setCustomOrderKind('listened');
     setShowOriginalOrder(false);
-  }, [transientVideo, listenedStatusById]);
+  }, [activePlaylistView, transientVideo, listenedStatusById]);
 
   const handleTogglePlaylistOrderView = useCallback(() => {
     if (shuffleOrderIdsRef.current.length === 0) return;
@@ -6614,12 +6557,13 @@ export default function App() {
               listenedStatusById={listenedStatusById}
               onToggleSupport={handleToggleSupportFromPlaylist}
               onToggleNomination={handleToggleNominationFromPlaylist}
-              onOpenSupportDropdown={(video, position) =>
+              onOpenSupportDropdown={(video, position, options) =>
                 setSupportLevelDropdown({
                   video,
                   position,
                   direction: 'down',
                   showRemove: false,
+                  ...options,
                 })
               }
               onRemoveFromPlaylist={(videoIdsOrId) => {
@@ -6872,7 +6816,11 @@ export default function App() {
           position={supportLevelDropdown.position}
           direction={supportLevelDropdown.direction}
           showRemove={supportLevelDropdown.showRemove !== false}
-          currentLevel={supportLevelDropdown.video?.supportLevel || 1}
+          currentLevel={
+            supportLevelDropdown.supportLevel ??
+            supportLevelDropdown.video?.supportLevel ??
+            1
+          }
           onClose={() => setSupportLevelDropdown(null)}
           onSelect={(level) => {
             handleToggleSupportFromPlaylist(
