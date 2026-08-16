@@ -5386,6 +5386,24 @@ body {
   font-size: inherit;
 }
 
+.now-playing-previous-row {
+  flex-shrink: 0;
+  padding: 0 12px;
+  margin-bottom: 4px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.now-playing-previous-title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .player-community-activity.empty {
   justify-content: center;
   align-items: center;

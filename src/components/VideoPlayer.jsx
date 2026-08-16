@@ -25,6 +25,7 @@ import {
   PlaylistPlusIcon,
   ShuffleIcon,
   StopwatchIcon,
+  SpeechBubbleIcon,
 } from './Icons.jsx';
 
 const VideoPlayer = forwardRef(function VideoPlayer(
@@ -60,6 +61,8 @@ const VideoPlayer = forwardRef(function VideoPlayer(
     onOpenPlayingList,
     onFeedbackSaved,
     onOpenVgmcSheetSync,
+    previousTrack,
+    onShowComments,
   },
   ref,
 ) {
@@ -370,38 +373,70 @@ const VideoPlayer = forwardRef(function VideoPlayer(
 
   const isFull = variant === 'full';
 
+  const previousTrackTitle = previousTrack
+    ? previousTrack.trackTitle || previousTrack.title || previousTrack.videoId
+    : '';
+
   const nowPlayingListNode =
     showMetadata && isFull ? (
-      <div className="now-playing-list-label">
-        <span className="now-playing-list-text">
-          {playingListLabel ? (
-            <>
-              <span className="now-playing-list-prefix">
-                Now Playing List:{' '}
-              </span>
-              <button
-                className="now-playing-list-btn"
-                type="button"
-                onClick={onOpenPlayingList}
-              >
-                {playingListLabel}
-              </button>
-            </>
-          ) : (
-            <span className="now-playing-list-prefix">Now Playing</span>
+      <>
+        <div className="now-playing-list-label">
+          <span className="now-playing-list-text">
+            {playingListLabel ? (
+              <>
+                <span className="now-playing-list-prefix">
+                  Now Playing List:{' '}
+                </span>
+                <button
+                  className="now-playing-list-btn"
+                  type="button"
+                  onClick={onOpenPlayingList}
+                >
+                  {playingListLabel}
+                </button>
+              </>
+            ) : (
+              <span className="now-playing-list-prefix">Now Playing</span>
+            )}
+          </span>
+          {onOpenVgmcSheetSync && (
+            <button
+              className="vgmc-sheet-sync-btn"
+              type="button"
+              onClick={onOpenVgmcSheetSync}
+              title="Sync your VGMC ratings to the reaction sheet"
+            >
+              Sync your feedback to Reactions Sheet
+            </button>
           )}
-        </span>
-        {onOpenVgmcSheetSync && (
-          <button
-            className="vgmc-sheet-sync-btn"
-            type="button"
-            onClick={onOpenVgmcSheetSync}
-            title="Sync your VGMC ratings to the reaction sheet"
-          >
-            Sync your feedback to Reactions Sheet
-          </button>
+        </div>
+        {previousTrack && (
+          <div className="now-playing-previous-row">
+            <span className="now-playing-list-prefix">Previous Track: </span>
+            <span className="now-playing-previous-title">
+              {previousTrackTitle}
+            </span>
+            {onShowComments && (
+              <button
+                className="comment-bubble-btn"
+                type="button"
+                title="Open the community dialogue for the previous track"
+                onClick={(event) => {
+                  const rect = event.currentTarget.getBoundingClientRect();
+                  onShowComments(previousTrack, {
+                    top: rect.bottom,
+                    left: rect.left,
+                    width: rect.width,
+                    height: rect.height,
+                  });
+                }}
+              >
+                <SpeechBubbleIcon />
+              </button>
+            )}
+          </div>
         )}
-      </div>
+      </>
     ) : null;
 
   const metadataNode =

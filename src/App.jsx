@@ -300,6 +300,20 @@ function appendUniqueVideos(list, videos, blockedIds = new Set()) {
   };
 }
 
+/** "Game - Track" when catalog metadata is available, falling back to the
+ * raw YouTube title otherwise. Shared by the now-playing label and the
+ * previous-track row so both read a video's display title the same way. */
+function getVideoDisplayTitle(video) {
+  if (!video) return '';
+  const hasTrackTitle =
+    typeof video.trackTitle === 'string' && video.trackTitle.trim();
+  const hasGameTitle =
+    typeof video.gameTitle === 'string' && video.gameTitle.trim();
+  if (!hasTrackTitle && !hasGameTitle) return video.title;
+
+  return `${hasGameTitle ? video.gameTitle : ''}${hasGameTitle && hasTrackTitle ? ' - ' : ''}${hasTrackTitle ? video.trackTitle : ''}`;
+}
+
 function resolvePlayOrderIds(playlist, shuffleOrderIds) {
   const originalIds = playlist.map((video) => video.videoId);
   if (shuffleOrderIds.length !== originalIds.length) return originalIds;
@@ -2274,6 +2288,25 @@ export default function App() {
     );
     return index < 0 ? null : index;
   }, [sidebarTracks, transientVideo, currentVideoId]);
+  // The track just before the current one in currentPlayOrderIds, so the
+  // player can offer a quick way back to comment on/rate what was playing
+  // a moment ago without having to find it in the list again.
+  const previousTrack = useMemo(() => {
+    const activeVideoId = transientVideo?.videoId || currentVideoId;
+    if (!activeVideoId || currentPlayOrderIds.length === 0) return null;
+    const index = currentPlayOrderIds.indexOf(activeVideoId);
+    if (index <= 0) return null;
+    const previousVideoId = currentPlayOrderIds[index - 1];
+    return (
+      currentContextTracks.find((video) => video.videoId === previousVideoId) ||
+      null
+    );
+  }, [
+    currentContextTracks,
+    currentPlayOrderIds,
+    transientVideo,
+    currentVideoId,
+  ]);
   const isPlayerPage = activePage === 'player';
   const isDatabasePage = activePage === 'database';
   const isListExplorerPage = activePage === 'listExplorer';
@@ -5850,18 +5883,7 @@ export default function App() {
     : hasDetachedFooter
       ? 'mini'
       : 'hidden';
-  const currentVideoDisplayTitle = (() => {
-    if (!currentVideo) return '';
-    const hasTrackTitle =
-      typeof currentVideo.trackTitle === 'string' &&
-      currentVideo.trackTitle.trim();
-    const hasGameTitle =
-      typeof currentVideo.gameTitle === 'string' &&
-      currentVideo.gameTitle.trim();
-    if (!hasTrackTitle && !hasGameTitle) return currentVideo.title;
-
-    return `${hasGameTitle ? currentVideo.gameTitle : ''}${hasGameTitle && hasTrackTitle ? ' - ' : ''}${hasTrackTitle ? currentVideo.trackTitle : ''}`;
-  })();
+  const currentVideoDisplayTitle = getVideoDisplayTitle(currentVideo);
 
   const currentVideoHasFeedback = useMemo(() => {
     if (!currentVideo?.videoId) return false;
@@ -5923,6 +5945,8 @@ export default function App() {
         userProfile={userProfile}
         onShowToast={showDefaultAppToast}
         onFeedbackSaved={handleFeedbackSaved}
+        previousTrack={previousTrack}
+        onShowComments={handleShowComments}
       />
 
       {isDesktopDetachedFooter && (
