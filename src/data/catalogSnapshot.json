@@ -1,5 +1,5 @@
 {
-  "exportedAt": "2026-08-17T15:40:36.533Z",
+  "exportedAt": "2026-08-17T17:07:13.841Z",
   "totalCount": 10926,
   "tracks": [
     {
@@ -18015,10 +18015,10 @@
       "support_count_3": 0,
       "nomination_count": 0,
       "comment_count": 0,
-      "avg_rating": null,
+      "avg_rating": 3,
       "has_result": false,
-      "total_comments": 0,
-      "average_rating": 0
+      "total_comments": 1,
+      "average_rating": 3
     },
     {
       "track_id": "09d00f6f-4990-44f0-923b-adb0e23685ff",
@@ -230060,8 +230060,8 @@
       "support_count_2": 0,
       "support_count_3": 0,
       "nomination_count": 0,
-      "comment_count": 0,
-      "avg_rating": null,
+      "comment_count": 1,
+      "avg_rating": 3,
       "has_result": false
     },
     {
@@ -303723,7 +303723,7 @@
       "support_count_3": 0,
       "nomination_count": 0,
       "comment_count": 0,
-      "avg_rating": null,
+      "avg_rating": 3,
       "has_result": false
     },
     {
@@ -312292,7 +312292,7 @@
       "support_count_3": 0,
       "nomination_count": 0,
       "comment_count": 0,
-      "avg_rating": null,
+      "avg_rating": 3,
       "has_result": false
     },
     {
@@ -317337,7 +317337,7 @@
       "support_count_3": 0,
       "nomination_count": 0,
       "comment_count": 0,
-      "avg_rating": null,
+      "avg_rating": 5,
       "has_result": false
     },
     {
@@ -363098,7 +363098,7 @@
       "support_count_3": 0,
       "nomination_count": 0,
       "comment_count": 0,
-      "avg_rating": null,
+      "avg_rating": 5,
       "has_result": false
     },
     {
