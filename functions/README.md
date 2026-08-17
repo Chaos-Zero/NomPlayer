@@ -29,12 +29,12 @@ This document provides a categorized list and explanation of the database functi
 
 ## [Search & Retrieval](#search)
 
-| Function                              | Security | Purpose                                                                                              |
-| :------------------------------------ | :------: | :--------------------------------------------------------------------------------------------------- |
-| `search_track_catalog(term, limit)`   |  Stable  | Performs full-text search (GIN-aided) across the `track_catalog` view using `tsvector`.              |
-| `get_dashboard_nomination_lists(...)` | Definer  | Retrieves the most recent nomination lists from all users for the "Recent Activity" feed.            |
-| `get_nomination_user_profiles()`      | Definer  | Lists all users who have active nominations.                                                         |
-| `get_user_youtube_track_listens(...)` | Definer  | Fetches personalized listen history counts and completion stats for a user's YouTube-sourced tracks. |
+| Function                              | Security | Purpose                                                                                            |
+| :------------------------------------ | :------: | :------------------------------------------------------------------------------------------------- |
+| `search_track_catalog(term, limit)`   |  Stable  | Performs full-text search (GIN-aided) across the `track_catalog` view using `tsvector`.            |
+| `get_dashboard_nomination_lists(...)` | Definer  | Retrieves the most recent nomination lists from all users for the "Recent Activity" feed.          |
+| `get_nomination_user_profiles()`      | Definer  | Lists all users who have active nominations.                                                       |
+| `get_track_listens(...)`              | Definer  | Fetches personalized listen history counts and completion stats for a user's tracks, any provider. |
 
 ## [User Management & Onboarding](#user)
 
@@ -46,11 +46,11 @@ This document provides a categorized list and explanation of the database functi
 
 ## [Track Scoring & Ingestion](#tracks)
 
-| Function                           | Security | Purpose                                                                                                     |
-| :--------------------------------- | :------: | :---------------------------------------------------------------------------------------------------------- |
-| `record_youtube_track_listen(...)` | Definer  | Tracks "started" and "completed" events for YouTube videos, updating the `track_user_listen_history` table. |
-| `ingest_track_sources(...)`        | Definer  | Bulk adds new tracks and sources from external video/track data (YouTube, SoundCloud, or Bandcamp).         |
-| `import_vgmc_catalog_row(...)`     | Definer  | Synchronizes curated tournament data with the `tracks` and `tournaments` tables.                            |
+| Function                       | Security | Purpose                                                                                                            |
+| :----------------------------- | :------: | :----------------------------------------------------------------------------------------------------------------- |
+| `record_track_listen(...)`     | Definer  | Tracks "started" and "completed" events for any provider's tracks, updating the `track_user_listen_history` table. |
+| `ingest_track_sources(...)`    | Definer  | Bulk adds new tracks and sources from external video/track data (YouTube, SoundCloud, or Bandcamp).                |
+| `import_vgmc_catalog_row(...)` | Definer  | Synchronizes curated tournament data with the `tracks` and `tournaments` tables.                                   |
 
 ## [Debugging & Admin Tools](#admin)
 

@@ -53,16 +53,14 @@ export default function ListeningHistoryDialog({
     if (!supabase || !authUser) return;
     setMostPlayedLoading(true);
     try {
-      const { data, error } = await supabase.rpc(
-        'get_user_youtube_track_listens',
-      );
+      const { data, error } = await supabase.rpc('get_track_listens');
       if (error) throw error;
 
       const rows = Array.isArray(data) ? data : [];
       const sorted = [...rows]
         .sort((a, b) => b.listen_count - a.listen_count)
         .slice(0, 100);
-      const videoIds = sorted.map((r) => r.youtube_video_id);
+      const videoIds = sorted.map((r) => r.external_id);
 
       const catalogEntries = await fetchTrackCatalogByVideoIds(
         supabase,
@@ -74,9 +72,10 @@ export default function ListeningHistoryDialog({
 
       setMostPlayed(
         sorted.map((row) => {
-          const catalog = catalogByVideoId.get(row.youtube_video_id);
+          const catalog = catalogByVideoId.get(row.external_id);
           return {
-            videoId: row.youtube_video_id,
+            videoId: row.external_id,
+            provider: catalog?.provider || 'youtube',
             trackId: row.track_id,
             listenCount: row.listen_count,
             trackTitle:

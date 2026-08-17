@@ -186,7 +186,7 @@ vi.mock('../lib/playerState.js', () => ({
   fetchUserTrackListenStatuses: vi.fn().mockResolvedValue({}),
   fetchUserPlayerState: vi.fn().mockResolvedValue(null),
   fetchUserProfile: vi.fn().mockResolvedValue(null),
-  recordYouTubeTrackListen: vi.fn(),
+  recordTrackListen: vi.fn(),
   saveUserPlayerState: vi.fn(),
   saveTrackSupport: vi.fn(),
   upsertUserProfile: vi.fn(),

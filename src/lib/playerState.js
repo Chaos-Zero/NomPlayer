@@ -644,9 +644,9 @@ export async function saveUserPlayerState(
 function normalizeTrackListenStatusRow(row) {
   if (!row || typeof row !== 'object') return null;
 
-  const youtubeVideoId =
-    typeof row.youtube_video_id === 'string' && row.youtube_video_id.trim()
-      ? row.youtube_video_id.trim()
+  const videoId =
+    typeof row.external_id === 'string' && row.external_id.trim()
+      ? row.external_id.trim()
       : null;
   const listenStatus =
     row.listen_status === 'complete'
@@ -655,12 +655,12 @@ function normalizeTrackListenStatusRow(row) {
         ? 'partial'
         : null;
 
-  if (!youtubeVideoId || !listenStatus) {
+  if (!videoId || !listenStatus) {
     return null;
   }
 
   return {
-    youtubeVideoId,
+    videoId,
     trackId:
       typeof row.track_id === 'string' && row.track_id.trim()
         ? row.track_id
@@ -693,15 +693,15 @@ function normalizeTrackListenStatusRow(row) {
   };
 }
 
-function normalizeRequestedYoutubeIds(youtubeVideoIds) {
-  if (!Array.isArray(youtubeVideoIds)) {
+function normalizeRequestedIds(videoIds) {
+  if (!Array.isArray(videoIds)) {
     return null;
   }
 
   const normalizedIds = [];
   const seenIds = new Set();
 
-  for (const videoId of youtubeVideoIds) {
+  for (const videoId of videoIds) {
     if (typeof videoId !== 'string') continue;
     const normalizedVideoId = videoId.trim();
     if (!normalizedVideoId || seenIds.has(normalizedVideoId)) continue;
@@ -712,12 +712,9 @@ function normalizeRequestedYoutubeIds(youtubeVideoIds) {
   return normalizedIds.length > 0 ? normalizedIds : null;
 }
 
-export async function fetchUserTrackListenStatuses(
-  supabase,
-  youtubeVideoIds = null,
-) {
-  const { data, error } = await supabase.rpc('get_user_youtube_track_listens', {
-    youtube_video_ids: normalizeRequestedYoutubeIds(youtubeVideoIds),
+export async function fetchUserTrackListenStatuses(supabase, videoIds = null) {
+  const { data, error } = await supabase.rpc('get_track_listens', {
+    external_ids: normalizeRequestedIds(videoIds),
   });
 
   if (error) {
@@ -729,22 +726,21 @@ export async function fetchUserTrackListenStatuses(
     : [];
 
   return rows.reduce((statusById, row) => {
-    statusById[row.youtubeVideoId] = row.listenStatus;
+    statusById[row.videoId] = row.listenStatus;
     return statusById;
   }, {});
 }
 
-export async function recordYouTubeTrackListen(
+export async function recordTrackListen(
   supabase,
-  youtubeVideoId,
+  videoId,
   listenEvent,
   secondsPlayed = 0,
 ) {
-  const normalizedVideoId =
-    typeof youtubeVideoId === 'string' ? youtubeVideoId.trim() : '';
+  const normalizedVideoId = typeof videoId === 'string' ? videoId.trim() : '';
 
-  const { data, error } = await supabase.rpc('record_youtube_track_listen', {
-    youtube_video_id: normalizedVideoId,
+  const { data, error } = await supabase.rpc('record_track_listen', {
+    external_id: normalizedVideoId,
     listen_event: listenEvent,
     seconds_played: secondsPlayed,
   });
@@ -754,7 +750,7 @@ export async function recordYouTubeTrackListen(
   }
 
   return normalizeTrackListenStatusRow({
-    youtube_video_id: normalizedVideoId,
+    external_id: normalizedVideoId,
     ...data,
   });
 }
@@ -813,6 +809,9 @@ export function recordTrackHistory(track) {
     // Add to the beginning
     history.unshift({
       videoId: track.videoId,
+      provider: MEDIA_PROVIDERS.includes(track.provider)
+        ? track.provider
+        : 'youtube',
       title: track.title,
       trackTitle: track.trackTitle,
       gameTitle: track.gameTitle,

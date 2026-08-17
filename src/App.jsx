@@ -177,7 +177,7 @@ import {
   normalizeOptionalProfileValue,
   normalizePersistedPlayerState,
   persistLocalGuestPlayerState,
-  recordYouTubeTrackListen,
+  recordTrackListen,
   saveUserPlayerState,
   saveTrackSupport,
   fetchUserHydratedState,
@@ -451,9 +451,9 @@ function getAuthSyncStorageKey(userId) {
 function normalizeQueuedTrackListenEvent(event) {
   if (!event || typeof event !== 'object') return null;
 
-  const youtubeVideoId =
-    typeof event.youtubeVideoId === 'string' && event.youtubeVideoId.trim()
-      ? event.youtubeVideoId.trim()
+  const videoId =
+    typeof event.videoId === 'string' && event.videoId.trim()
+      ? event.videoId.trim()
       : '';
   const listenEvent =
     event.listenEvent === 'completed'
@@ -467,12 +467,12 @@ function normalizeQueuedTrackListenEvent(event) {
       ? Math.max(0, event.secondsPlayed)
       : 0;
 
-  if (!youtubeVideoId || !listenEvent) {
+  if (!videoId || !listenEvent) {
     return null;
   }
 
   return {
-    youtubeVideoId,
+    videoId,
     listenEvent,
     secondsPlayed,
   };
@@ -486,8 +486,8 @@ function buildQueuedListenStatuses(listenEvents) {
 
       const nextStatus =
         normalizedEvent.listenEvent === 'completed' ? 'complete' : 'partial';
-      statusById[normalizedEvent.youtubeVideoId] =
-        statusById[normalizedEvent.youtubeVideoId] === 'complete' ||
+      statusById[normalizedEvent.videoId] =
+        statusById[normalizedEvent.videoId] === 'complete' ||
         nextStatus === 'complete'
           ? 'complete'
           : 'partial';
@@ -1289,30 +1289,26 @@ export default function App() {
           const queuedEvent = queuedListenEvents[index];
 
           try {
-            const result = await recordYouTubeTrackListen(
+            const result = await recordTrackListen(
               supabase,
-              queuedEvent.youtubeVideoId,
+              queuedEvent.videoId,
               queuedEvent.listenEvent,
               queuedEvent.secondsPlayed,
             );
 
             if (authUserIdRef.current === userId && result?.listenStatus) {
-              loadedListenStatusVideoIdsRef.current.add(
-                queuedEvent.youtubeVideoId,
-              );
+              loadedListenStatusVideoIdsRef.current.add(queuedEvent.videoId);
               startTransition(() => {
                 setListenedStatusById((previousStatus) =>
                   mergeListenedStatuses(previousStatus, {
-                    [queuedEvent.youtubeVideoId]: result.listenStatus,
+                    [queuedEvent.videoId]: result.listenStatus,
                   }),
                 );
               });
             }
           } catch (error) {
             if (isMissingCatalogTrackError(error)) {
-              nonCatalogedListenVideoIdsRef.current.add(
-                queuedEvent.youtubeVideoId,
-              );
+              nonCatalogedListenVideoIdsRef.current.add(queuedEvent.videoId);
               continue;
             }
 
@@ -3658,7 +3654,7 @@ export default function App() {
       queuedTrackListenEventsRef.current = [
         ...queuedTrackListenEventsRef.current,
         {
-          youtubeVideoId: normalizedVideoId,
+          videoId: normalizedVideoId,
           listenEvent,
           secondsPlayed: 0,
         },

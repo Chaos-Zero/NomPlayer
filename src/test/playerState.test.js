@@ -12,7 +12,7 @@ import {
   getDisplayProfileName,
   hasImportableGuestCollections,
   parseStoredProfileUsername,
-  recordYouTubeTrackListen,
+  recordTrackListen,
   mergeGuestCollectionsIntoPlayerState,
   persistLocalGuestPlayerState,
   recordTrackHistory,
@@ -64,6 +64,29 @@ describe('playback history', () => {
     clearTrackHistory();
     expect(getTrackHistory()).toHaveLength(0);
     expect(localStorage.getItem(HISTORY_STORAGE_KEY)).toBeNull();
+  });
+
+  it('records a non-YouTube provider, and defaults an unset/unrecognized one to youtube', () => {
+    recordTrackHistory({
+      videoId: 'https://artist.bandcamp.com/track/song',
+      provider: 'bandcamp',
+      title: 'Song Title',
+    });
+    recordTrackHistory({ videoId: 'v1', title: 'Track 1' });
+    recordTrackHistory({
+      videoId: 'v2',
+      title: 'Track 2',
+      provider: 'spotify',
+    });
+
+    const history = getTrackHistory();
+    expect(history.find((h) => h.videoId === 'v2').provider).toBe('youtube');
+    expect(history.find((h) => h.videoId === 'v1').provider).toBe('youtube');
+    expect(
+      history.find(
+        (h) => h.videoId === 'https://artist.bandcamp.com/track/song',
+      ).provider,
+    ).toBe('bandcamp');
   });
 });
 
@@ -239,13 +262,13 @@ describe('playerState guest import helpers', () => {
     const rpc = vi.fn().mockResolvedValue({
       data: [
         {
-          youtube_video_id: 'alpha1234567',
+          external_id: 'alpha1234567',
           track_id: 'track-alpha',
           listen_status: 'partial',
           listen_count: 1,
         },
         {
-          youtube_video_id: 'beta12345678',
+          external_id: 'https://artist.bandcamp.com/track/song',
           track_id: 'track-beta',
           listen_status: 'complete',
           listen_count: 3,
@@ -257,16 +280,16 @@ describe('playerState guest import helpers', () => {
 
     const result = await fetchUserTrackListenStatuses({ rpc }, [
       'alpha1234567',
-      'beta12345678',
+      'https://artist.bandcamp.com/track/song',
       'alpha1234567',
     ]);
 
-    expect(rpc).toHaveBeenCalledWith('get_user_youtube_track_listens', {
-      youtube_video_ids: ['alpha1234567', 'beta12345678'],
+    expect(rpc).toHaveBeenCalledWith('get_track_listens', {
+      external_ids: ['alpha1234567', 'https://artist.bandcamp.com/track/song'],
     });
     expect(result).toEqual({
       alpha1234567: 'partial',
-      beta12345678: 'complete',
+      'https://artist.bandcamp.com/track/song': 'complete',
     });
   });
 
@@ -282,20 +305,20 @@ describe('playerState guest import helpers', () => {
       error: null,
     });
 
-    const result = await recordYouTubeTrackListen(
+    const result = await recordTrackListen(
       { rpc },
       ' alpha1234567 ',
       'completed',
       241,
     );
 
-    expect(rpc).toHaveBeenCalledWith('record_youtube_track_listen', {
-      youtube_video_id: 'alpha1234567',
+    expect(rpc).toHaveBeenCalledWith('record_track_listen', {
+      external_id: 'alpha1234567',
       listen_event: 'completed',
       seconds_played: 241,
     });
     expect(result).toMatchObject({
-      youtubeVideoId: 'alpha1234567',
+      videoId: 'alpha1234567',
       trackId: 'track-alpha',
       listenStatus: 'complete',
       listenCount: 2,
