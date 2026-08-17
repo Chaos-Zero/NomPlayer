@@ -428,7 +428,13 @@ function SortablePlaylistItem({
 // index.css, shared `.collection-adder*` classes), but the back face is a
 // live filter box instead of a URL-add form, no submit/loading/success state
 // needed, just an input plus a way to close it.
-function PlaylistSearchControl({ tone, query, onQueryChange }) {
+function PlaylistSearchControl({
+  tone,
+  query,
+  onQueryChange,
+  onOpenChange,
+  hidden = false,
+}) {
   const [isOpen, setIsOpen] = useState(false);
   const inputRef = useRef(null);
 
@@ -456,6 +462,12 @@ function PlaylistSearchControl({ tone, query, onQueryChange }) {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onQueryChange]);
 
+  // Lets the parent hide the add-to-queue control (or whatever else shares
+  // this footer) while search is open, same contract as CollectionAdder.
+  useEffect(() => {
+    onOpenChange?.(isOpen);
+  }, [isOpen, onOpenChange]);
+
   function closeSearch() {
     setIsOpen(false);
     onQueryChange('');
@@ -463,7 +475,7 @@ function PlaylistSearchControl({ tone, query, onQueryChange }) {
 
   return (
     <div
-      className={`collection-adder tone-${tone} compact playlist-filter-search${isOpen ? ' open' : ''}`}
+      className={`collection-adder tone-${tone} compact playlist-filter-search${isOpen ? ' open' : ''}${hidden ? ' peer-hidden' : ''}`}
     >
       <div className="collection-adder-shell">
         <div className="collection-adder-stage">
@@ -596,6 +608,10 @@ export default function PlaylistSidebar({
   // null (nomination order) -> 'desc' (highest ranked first) -> 'asc' -> null
   const [rankingSortDirection, setRankingSortDirection] = useState(null);
   const [playlistSearchQuery, setPlaylistSearchQuery] = useState('');
+  // Only one of the footer's two flip-card controls (search, add-to-queue)
+  // is ever open at a time — each hides the other while it's open.
+  const [isFooterSearchOpen, setIsFooterSearchOpen] = useState(false);
+  const [isFooterAddOpen, setIsFooterAddOpen] = useState(false);
   const collapseGestureRef = useRef(null);
   const listContainerRef = useRef(null);
   const supportIds = useMemo(
@@ -1500,6 +1516,8 @@ export default function PlaylistSidebar({
             tone={tone}
             query={playlistSearchQuery}
             onQueryChange={setPlaylistSearchQuery}
+            onOpenChange={setIsFooterSearchOpen}
+            hidden={isFooterAddOpen}
           />
         )}
         {canModifyList && authUser && pendingMetadataCount > 0 && (
@@ -1557,6 +1575,8 @@ export default function PlaylistSidebar({
               addButtonTitle="Add to playlist"
               inputPlaceholder="Paste a YouTube link to add to this playlist…"
               onAddDirectItems={onAddDirectToCustomPlaylist}
+              onOpenChange={setIsFooterAddOpen}
+              hidden={isFooterSearchOpen}
               compact
             />
           ) : (
@@ -1568,6 +1588,8 @@ export default function PlaylistSidebar({
               addButtonAriaLabel="Add to queue"
               addButtonTitle="Add to queue"
               onAddDirectItems={onAddDirectItems}
+              onOpenChange={setIsFooterAddOpen}
+              hidden={isFooterSearchOpen}
               compact
             />
           ))}

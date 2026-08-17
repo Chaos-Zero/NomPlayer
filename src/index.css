@@ -6386,6 +6386,14 @@ body {
   align-items: stretch;
 }
 
+/* The auto margins above exist to push each control to its resting edge;
+   once a control is collapsed to width: 0 for peer-hiding, that pull would
+   otherwise still reserve its margin's worth of space. */
+.playlist-sidebar-add .collection-adder.compact.peer-hidden {
+  margin-left: 0;
+  margin-right: 0;
+}
+
 .playlist-search {
   position: relative;
   width: min(100%, 400px);
@@ -8500,6 +8508,21 @@ button.playlist-search-indicator:hover {
 
 .collection-adder.compact.open .collection-adder-shell {
   width: 100%;
+}
+
+/* Hides this control while a sibling occupying the same footer (e.g. the
+   playlist search box next to the add-to-queue button) is open, so only
+   one flip-card is ever open at once — see the `hidden`/`onOpenChange`
+   props. */
+.collection-adder.compact.peer-hidden {
+  width: 0;
+  min-width: 0;
+  opacity: 0;
+  pointer-events: none;
+  overflow: hidden;
+  transition:
+    width 0.2s ease,
+    opacity 0.15s ease;
 }
 
 .collection-adder.compact .collection-adder-front {

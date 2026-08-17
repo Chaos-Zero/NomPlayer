@@ -33,6 +33,8 @@ export default function CollectionAdder({
   inputPlaceholder = 'Paste a YouTube video or playlist URL…',
   compact = false,
   highlight = false,
+  onOpenChange,
+  hidden = false,
 }) {
   const [urlValue, setUrlValue] = useState('');
   const [isOpen, setIsOpen] = useState(false);
@@ -63,6 +65,13 @@ export default function CollectionAdder({
       window.cancelAnimationFrame(frameId);
     };
   }, [isOpen]);
+
+  // Lets a parent that places this next to another expandable control (e.g.
+  // a search box sharing the same footer) know when to hide that sibling,
+  // so the two never end up open at once.
+  useEffect(() => {
+    onOpenChange?.(isOpen);
+  }, [isOpen, onOpenChange]);
 
   useEffect(
     () => () => {
@@ -225,7 +234,7 @@ export default function CollectionAdder({
 
   return (
     <div
-      className={`collection-adder tone-${tone}${compact ? ' compact' : ''}${isOpen ? ' open' : ''}${showSuccess ? ' success' : ''}${highlight ? ' highlight-pulse' : ''}`}
+      className={`collection-adder tone-${tone}${compact ? ' compact' : ''}${isOpen ? ' open' : ''}${showSuccess ? ' success' : ''}${highlight ? ' highlight-pulse' : ''}${hidden ? ' peer-hidden' : ''}`}
     >
       {toastMessage && (
         <div
