@@ -1756,7 +1756,9 @@ export default function PlaylistSidebar({
               <PlaylistItem
                 key={video.videoId}
                 orderNumber={
-                  (showOriginalOrder ? (video.loadIndex ?? index) : index) + 1
+                  (showOriginalOrder || normalizedPlaylistSearchQuery
+                    ? (video.loadIndex ?? index)
+                    : index) + 1
                 }
                 video={video}
                 isActive={index === currentIndex}
@@ -1797,8 +1799,9 @@ export default function PlaylistSidebar({
                   <SortablePlaylistItem
                     key={video.videoId}
                     orderNumber={
-                      (showOriginalOrder ? (video.loadIndex ?? index) : index) +
-                      1
+                      (showOriginalOrder || normalizedPlaylistSearchQuery
+                        ? (video.loadIndex ?? index)
+                        : index) + 1
                     }
                     video={video}
                     isActive={index === currentIndex}
@@ -1830,7 +1833,9 @@ export default function PlaylistSidebar({
               <PlaylistItem
                 key={video.videoId}
                 orderNumber={
-                  (showOriginalOrder ? (video.loadIndex ?? index) : index) + 1
+                  (showOriginalOrder || normalizedPlaylistSearchQuery
+                    ? (video.loadIndex ?? index)
+                    : index) + 1
                 }
                 video={video}
                 isActive={index === currentIndex}

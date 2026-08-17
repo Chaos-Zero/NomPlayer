@@ -6351,7 +6351,7 @@ body {
 .playlist-sidebar-add {
   position: absolute;
   left: 12px;
-  right: 12px;
+  right: 20px;
   bottom: 12px;
   display: flex;
   align-items: flex-end;
