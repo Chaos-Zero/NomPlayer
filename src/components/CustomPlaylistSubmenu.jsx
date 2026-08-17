@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react';
 import { ChevronRightIcon } from './Icons.jsx';
+import useContextSubmenu from '../hooks/useContextSubmenu.js';
 
 export default function CustomPlaylistSubmenu({
   videos,
@@ -9,7 +10,15 @@ export default function CustomPlaylistSubmenu({
   onClose,
   itemClassName = 'database-context-menu-item',
 }) {
-  const [open, setOpen] = useState(false);
+  const {
+    open,
+    side,
+    wrapRef,
+    submenuRef,
+    handleMouseEnter,
+    handleMouseLeave,
+    toggle,
+  } = useContextSubmenu();
   const [showInput, setShowInput] = useState(false);
   const [name, setName] = useState('');
   const inputRef = useRef(null);
@@ -64,11 +73,18 @@ export default function CustomPlaylistSubmenu({
   }
 
   return (
-    <>
+    <div
+      className="context-submenu-wrap"
+      ref={wrapRef}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+    >
       <button
         className={`${itemClassName}${open ? ' active' : ''}`}
+        type="button"
+        role="menuitem"
         onClick={() => {
-          setOpen((v) => !v);
+          toggle();
           setShowInput(false);
           setName('');
         }}
@@ -80,10 +96,16 @@ export default function CustomPlaylistSubmenu({
       </button>
 
       {open && (
-        <div className="context-playlist-submenu">
+        <div
+          ref={submenuRef}
+          className={`context-side-submenu side-${side}`}
+          role="menu"
+        >
           {!showInput ? (
             <button
-              className={`${itemClassName} context-playlist-submenu-create`}
+              className={`${itemClassName} context-side-submenu-create`}
+              type="button"
+              role="menuitem"
               onClick={() => {
                 setShowInput(true);
                 setTimeout(() => inputRef.current?.focus(), 0);
@@ -110,14 +132,14 @@ export default function CustomPlaylistSubmenu({
             />
           )}
           {customPlaylists.length === 0 && !showInput && (
-            <span className="context-playlist-submenu-empty">
-              No playlists yet
-            </span>
+            <span className="context-side-submenu-empty">No playlists yet</span>
           )}
           {customPlaylists.map((pl) => (
             <button
               key={pl.id}
-              className={`${itemClassName} context-playlist-submenu-item`}
+              className={itemClassName}
+              type="button"
+              role="menuitem"
               onClick={() => addToPlaylist(pl.id)}
             >
               <span>{pl.name}</span>
@@ -128,6 +150,6 @@ export default function CustomPlaylistSubmenu({
           ))}
         </div>
       )}
-    </>
+    </div>
   );
 }

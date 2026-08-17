@@ -56,6 +56,7 @@ import {
   ChevronDownIcon,
 } from './Icons.jsx';
 import { ContextMenuPortal } from './ContextMenuPortal';
+import useContextSubmenu from '../hooks/useContextSubmenu.js';
 import ExportIcon from './ExportIcon.jsx';
 import YouTubeIcon from './YouTubeIcon.jsx';
 import { CommunityPlaylistsView } from './CommunityPlaylistsView.jsx';
@@ -1935,7 +1936,7 @@ export default function ListExplorer({
   const [renameDialog, setRenameDialog] = useState(null); // { id, name }
   const [renameValue, setRenameValue] = useState('');
   const [deleteDialog, setDeleteDialog] = useState(null); // { id, name }
-  const [playlistSubmenuOpen, setPlaylistSubmenuOpen] = useState(false);
+  const playlistSubmenu = useContextSubmenu();
   const [showNewPlaylistInput, setShowNewPlaylistInput] = useState(false);
   const [newPlaylistName, setNewPlaylistName] = useState('');
   const newPlaylistInputRef = useRef(null);
@@ -1984,7 +1985,7 @@ export default function ListExplorer({
 
   const closeContextMenu = () => {
     setContextMenu(null);
-    setPlaylistSubmenuOpen(false);
+    playlistSubmenu.close();
     setShowNewPlaylistInput(false);
     setNewPlaylistName('');
   };
@@ -3291,75 +3292,89 @@ export default function ListExplorer({
               </button>
             )}
 
-            <button
-              className={`database-context-menu-item${playlistSubmenuOpen ? ' active' : ''}`}
-              onClick={() => {
-                setPlaylistSubmenuOpen((v) => !v);
-                setShowNewPlaylistInput(false);
-                setNewPlaylistName('');
-              }}
+            <div
+              className="context-submenu-wrap"
+              ref={playlistSubmenu.wrapRef}
+              onMouseEnter={playlistSubmenu.handleMouseEnter}
+              onMouseLeave={playlistSubmenu.handleMouseLeave}
             >
-              <span>Add to Custom Playlist</span>
-              <ChevronRightIcon
-                className={`context-menu-chevron${playlistSubmenuOpen ? ' open' : ''}`}
-              />
-            </button>
+              <button
+                className={`database-context-menu-item${playlistSubmenu.open ? ' active' : ''}`}
+                onClick={() => {
+                  playlistSubmenu.toggle();
+                  setShowNewPlaylistInput(false);
+                  setNewPlaylistName('');
+                }}
+              >
+                <span>Add to Custom Playlist</span>
+                <ChevronRightIcon
+                  className={`context-menu-chevron${playlistSubmenu.open ? ' open' : ''}`}
+                />
+              </button>
 
-            {playlistSubmenuOpen && (
-              <div className="context-playlist-submenu">
-                {!showNewPlaylistInput ? (
-                  <button
-                    className="database-context-menu-item context-playlist-submenu-create"
-                    onClick={() => {
-                      setShowNewPlaylistInput(true);
-                      setTimeout(() => newPlaylistInputRef.current?.focus(), 0);
-                    }}
-                  >
-                    <span>+ Create New Playlist</span>
-                  </button>
-                ) : (
-                  <input
-                    ref={newPlaylistInputRef}
-                    className="context-playlist-name-input"
-                    type="text"
-                    placeholder="Playlist name…"
-                    value={newPlaylistName}
-                    onChange={(e) => setNewPlaylistName(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter')
-                        handleCreateAndAddPlaylist(
-                          contextMenu.video,
-                          newPlaylistName,
+              {playlistSubmenu.open && (
+                <div
+                  ref={playlistSubmenu.submenuRef}
+                  className={`context-side-submenu side-${playlistSubmenu.side}`}
+                  role="menu"
+                >
+                  {!showNewPlaylistInput ? (
+                    <button
+                      className="database-context-menu-item context-side-submenu-create"
+                      onClick={() => {
+                        setShowNewPlaylistInput(true);
+                        setTimeout(
+                          () => newPlaylistInputRef.current?.focus(),
+                          0,
                         );
-                      if (e.key === 'Escape') {
-                        setShowNewPlaylistInput(false);
-                        setNewPlaylistName('');
-                      }
-                      e.stopPropagation();
-                    }}
-                  />
-                )}
-                {customPlaylists.length === 0 && !showNewPlaylistInput && (
-                  <span className="context-playlist-submenu-empty">
-                    No playlists yet
-                  </span>
-                )}
-                {customPlaylists.map((pl) => (
-                  <button
-                    key={pl.id}
-                    className="database-context-menu-item context-playlist-submenu-item"
-                    onClick={() =>
-                      handleAddToCustomPlaylist(contextMenu.video, pl.id)
-                    }
-                  >
-                    <span>{pl.name}</span>
-                    <span className="context-playlist-submenu-count">
-                      {pl.videos.length}
+                      }}
+                    >
+                      <span>+ Create New Playlist</span>
+                    </button>
+                  ) : (
+                    <input
+                      ref={newPlaylistInputRef}
+                      className="context-playlist-name-input"
+                      type="text"
+                      placeholder="Playlist name…"
+                      value={newPlaylistName}
+                      onChange={(e) => setNewPlaylistName(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter')
+                          handleCreateAndAddPlaylist(
+                            contextMenu.video,
+                            newPlaylistName,
+                          );
+                        if (e.key === 'Escape') {
+                          setShowNewPlaylistInput(false);
+                          setNewPlaylistName('');
+                        }
+                        e.stopPropagation();
+                      }}
+                    />
+                  )}
+                  {customPlaylists.length === 0 && !showNewPlaylistInput && (
+                    <span className="context-side-submenu-empty">
+                      No playlists yet
                     </span>
-                  </button>
-                ))}
-              </div>
-            )}
+                  )}
+                  {customPlaylists.map((pl) => (
+                    <button
+                      key={pl.id}
+                      className="database-context-menu-item"
+                      onClick={() =>
+                        handleAddToCustomPlaylist(contextMenu.video, pl.id)
+                      }
+                    >
+                      <span>{pl.name}</span>
+                      <span className="context-playlist-submenu-count">
+                        {pl.videos.length}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
 
             <div className="context-menu-divider" />
             <button

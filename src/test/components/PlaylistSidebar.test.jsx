@@ -98,7 +98,8 @@ describe('PlaylistSidebar', () => {
       screen.getByRole('menuitem', { name: 'Update Support' }),
     );
     fireEvent.click(screen.getByRole('menuitem', { name: 'Update Support' }));
-    expect(props.onOpenSupportDropdown).toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Possible Support' }));
+    expect(props.onToggleSupport).toHaveBeenCalledWith([video], 1);
 
     fireEvent.contextMenu(screen.getByLabelText('Play Alpha'));
     fireEvent.pointerDown(
@@ -449,7 +450,7 @@ describe('PlaylistSidebar', () => {
 
     // The CustomPlaylistSubmenu should render its toggle button
     expect(
-      screen.getByRole('button', { name: /Add to Custom Playlist/i }),
+      screen.getByRole('menuitem', { name: /Add to Custom Playlist/i }),
     ).toBeInTheDocument();
   });
 });

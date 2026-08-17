@@ -18,6 +18,7 @@ import { CSS } from '@dnd-kit/utilities';
 import { ContextMenuPortal } from './ContextMenuPortal';
 import CollectionAdder from './CollectionAdder.jsx';
 import CustomPlaylistSubmenu from './CustomPlaylistSubmenu.jsx';
+import SupportLevelSubmenu from './SupportLevelSubmenu.jsx';
 import ExportIcon from './ExportIcon.jsx';
 import YouTubeIcon from './YouTubeIcon.jsx';
 import {
@@ -560,7 +561,7 @@ export default function FavouritesPanel({
       const nextValue = !prev;
       if (!nextValue) {
         setSelectedIds([]);
-        setContextMenu(null);
+        closeContextMenu();
       }
       return nextValue;
     });
@@ -577,6 +578,10 @@ export default function FavouritesPanel({
       videos,
       mode,
     });
+  }
+
+  function closeContextMenu() {
+    setContextMenu(null);
   }
 
   function handleOpenContextMenu(event, video) {
@@ -640,13 +645,13 @@ export default function FavouritesPanel({
   function handlePlayNow() {
     if (!contextMenu?.videos[0]) return;
     onPlayNow(contextMenu.videos[0]);
-    setContextMenu(null);
+    closeContextMenu();
   }
 
   function handleAddToCurrentPlaylist() {
     if (!contextMenu?.videos.length) return;
     handleQueueVideos(contextMenu.videos);
-    setContextMenu(null);
+    closeContextMenu();
   }
 
   const showSelectionActions = selectionMode && supportList.length > 0;
@@ -953,7 +958,7 @@ export default function FavouritesPanel({
           <ContextMenuPortal
             x={contextMenu.left}
             y={contextMenu.top}
-            onClose={() => setContextMenu(null)}
+            onClose={closeContextMenu}
             className="support-context-menu"
           >
             {contextMenu.mode === 'single' && (
@@ -966,6 +971,9 @@ export default function FavouritesPanel({
                 Play Now
               </button>
             )}
+
+            <div className="context-menu-divider" />
+
             <button
               className="support-context-menu-item"
               type="button"
@@ -973,54 +981,6 @@ export default function FavouritesPanel({
               onClick={handleAddToCurrentPlaylist}
             >
               Add to Current Playlist
-            </button>
-            <CustomPlaylistSubmenu
-              videos={contextMenu.videos}
-              customPlaylists={customPlaylists}
-              onUpdateCustomPlaylists={onUpdateCustomPlaylists}
-              onShowToast={showToast}
-              onClose={() => setContextMenu(null)}
-              itemClassName="support-context-menu-item"
-            />
-            <div className="context-menu-divider" />
-            {tone !== 'nomination' && (
-              <button
-                className="support-context-menu-item"
-                type="button"
-                role="menuitem"
-                onClick={(event) => {
-                  const rect = event.currentTarget.getBoundingClientRect();
-                  onOpenSupportDropdown(
-                    contextMenu.videos[0],
-                    {
-                      top: rect.top,
-                      left: rect.left + rect.width / 2,
-                    },
-                    contextMenu.videos,
-                  );
-                  setContextMenu(null);
-                }}
-              >
-                Update Support
-              </button>
-            )}
-
-            <button
-              className="support-context-menu-item"
-              type="button"
-              role="menuitem"
-              onClick={() => {
-                const removedIds = contextMenu.videos.map(
-                  (video) => video.videoId,
-                );
-                onRemove(removedIds);
-                setContextMenu(null);
-                if (selectionMode) {
-                  setSelectedIds([]);
-                }
-              }}
-            >
-              {contextRemoveLabel}
             </button>
 
             {tone !== 'nomination' && onToggleNomination && (
@@ -1030,25 +990,86 @@ export default function FavouritesPanel({
                 role="menuitem"
                 onClick={() => {
                   onToggleNomination(contextMenu.videos);
-                  setContextMenu(null);
+                  closeContextMenu();
                 }}
               >
                 Add to Nominations
               </button>
             )}
-            <div className="context-menu-divider" />
-            {authUser && (
+            {tone === 'nomination' && (
               <button
-                className="support-context-menu-item"
+                className="support-context-menu-item danger"
                 type="button"
                 role="menuitem"
                 onClick={() => {
-                  onUpdateMetadata(contextMenu.videos);
-                  setContextMenu(null);
+                  const removedIds = contextMenu.videos.map(
+                    (video) => video.videoId,
+                  );
+                  onRemove(removedIds);
+                  closeContextMenu();
+                  if (selectionMode) {
+                    setSelectedIds([]);
+                  }
                 }}
               >
-                Update Metadata
+                {contextRemoveLabel}
               </button>
+            )}
+
+            {tone !== 'nomination' && onToggleSupport && (
+              <SupportLevelSubmenu
+                videos={contextMenu.videos}
+                currentLevel={contextMenu.videos[0]?.supportLevel || 1}
+                onToggleSupport={onToggleSupport}
+                onClose={closeContextMenu}
+                itemClassName="support-context-menu-item"
+                showRemove={false}
+              />
+            )}
+            {tone !== 'nomination' && (
+              <button
+                className="support-context-menu-item danger"
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  const removedIds = contextMenu.videos.map(
+                    (video) => video.videoId,
+                  );
+                  onRemove(removedIds);
+                  closeContextMenu();
+                  if (selectionMode) {
+                    setSelectedIds([]);
+                  }
+                }}
+              >
+                {contextRemoveLabel}
+              </button>
+            )}
+
+            <CustomPlaylistSubmenu
+              videos={contextMenu.videos}
+              customPlaylists={customPlaylists}
+              onUpdateCustomPlaylists={onUpdateCustomPlaylists}
+              onShowToast={showToast}
+              onClose={closeContextMenu}
+              itemClassName="support-context-menu-item"
+            />
+
+            {authUser && (
+              <>
+                <div className="context-menu-divider" />
+                <button
+                  className="support-context-menu-item"
+                  type="button"
+                  role="menuitem"
+                  onClick={() => {
+                    onUpdateMetadata(contextMenu.videos);
+                    closeContextMenu();
+                  }}
+                >
+                  Update Metadata
+                </button>
+              </>
             )}
           </ContextMenuPortal>
         )}

@@ -84,6 +84,10 @@ export default function TopBar({
   customPlaylists,
   onUpdateCustomPlaylists,
   onShowToast,
+  nominationList,
+  supportList,
+  onToggleNomination,
+  onToggleSupport,
 }) {
   const isMobileLayout = useMediaQuery('(max-width: 960px)');
   const [urlValue, setUrlValue] = useState('');
@@ -717,6 +721,10 @@ export default function TopBar({
               customPlaylists={customPlaylists}
               onUpdateCustomPlaylists={onUpdateCustomPlaylists}
               onShowToast={onShowToast}
+              nominationList={nominationList}
+              supportList={supportList}
+              onToggleNomination={onToggleNomination}
+              onToggleSupport={onToggleSupport}
               className="mobile-header-catalog-search"
               autoFocus={isCatalogSearchOpen}
               onHasQueryChange={setMobileHasQuery}
@@ -923,6 +931,10 @@ export default function TopBar({
                 customPlaylists={customPlaylists}
                 onUpdateCustomPlaylists={onUpdateCustomPlaylists}
                 onShowToast={onShowToast}
+                nominationList={nominationList}
+                supportList={supportList}
+                onToggleNomination={onToggleNomination}
+                onToggleSupport={onToggleSupport}
               />
             </div>
           ) : (

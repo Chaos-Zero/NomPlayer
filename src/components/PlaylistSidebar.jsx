@@ -17,6 +17,7 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import { ContextMenuPortal } from './ContextMenuPortal';
 import CustomPlaylistSubmenu from './CustomPlaylistSubmenu.jsx';
+import SupportLevelSubmenu from './SupportLevelSubmenu.jsx';
 import CollectionAdder from './CollectionAdder.jsx';
 import ExportIcon from './ExportIcon.jsx';
 import PrivacyToggle from './PrivacyToggle.jsx';
@@ -821,7 +822,7 @@ export default function PlaylistSidebar({
       const nextValue = !previousValue;
       if (!nextValue) {
         setSelectedIds([]);
-        setContextMenu(null);
+        closeContextMenu();
       }
       return nextValue;
     });
@@ -1529,18 +1530,22 @@ export default function PlaylistSidebar({
     });
   }
 
+  function closeContextMenu() {
+    setContextMenu(null);
+  }
+
   function handleOpenSupportDropdown(video, position, options) {
     onOpenSupportDropdown(video, position, options);
   }
 
   function handleRemove(videoId) {
     onRemoveFromPlaylist(videoId);
-    setContextMenu(null);
+    closeContextMenu();
   }
 
   function handleUpdateMetadata(videos) {
     onUpdateMetadata(videos);
-    setContextMenu(null);
+    closeContextMenu();
   }
 
   const showOrderToggle = isShuffleEnabled && playlist.length > 1;
@@ -1738,7 +1743,7 @@ export default function PlaylistSidebar({
         <ContextMenuPortal
           x={contextMenu.left}
           y={contextMenu.top}
-          onClose={() => setContextMenu(null)}
+          onClose={closeContextMenu}
           className="playlist-context-menu"
         >
           <button
@@ -1747,73 +1752,13 @@ export default function PlaylistSidebar({
             role="menuitem"
             onClick={() => {
               onSelect(contextMenu.video.videoId, true);
-              setContextMenu(null);
+              closeContextMenu();
             }}
           >
             Play Now
           </button>
 
           <div className="context-menu-divider" />
-
-          {!nominationIds.has(contextMenu.video.videoId) && (
-            <button
-              className="playlist-context-menu-item"
-              type="button"
-              role="menuitem"
-              onClick={(e) => {
-                const rect = e.currentTarget.getBoundingClientRect();
-                onOpenSupportDropdown(contextMenu.video, {
-                  top: rect.top,
-                  left: rect.left,
-                  width: rect.width,
-                  height: rect.height,
-                });
-                setContextMenu(null);
-              }}
-            >
-              Update Support
-            </button>
-          )}
-          {supportIds.has(contextMenu.video.videoId) &&
-            !nominationIds.has(contextMenu.video.videoId) && (
-              <>
-                <div className="context-menu-divider" />
-                <button
-                  className="playlist-context-menu-item danger"
-                  type="button"
-                  role="menuitem"
-                  onClick={() => {
-                    onToggleSupport(contextMenu.video, 0);
-                    setContextMenu(null);
-                  }}
-                >
-                  Remove Support
-                </button>
-              </>
-            )}
-
-          {!nominationIds.has(contextMenu.video.videoId) && (
-            <button
-              className="playlist-context-menu-item"
-              type="button"
-              role="menuitem"
-              onClick={() => {
-                onToggleNomination(contextMenu.video);
-                setContextMenu(null);
-              }}
-            >
-              Add to Nominations
-            </button>
-          )}
-
-          <CustomPlaylistSubmenu
-            videos={contextMenu.videos}
-            customPlaylists={customPlaylists}
-            onUpdateCustomPlaylists={onUpdateCustomPlaylists}
-            onShowToast={onShowToast}
-            onClose={() => setContextMenu(null)}
-            itemClassName="playlist-context-menu-item"
-          />
 
           {activePlaylistView.type === 'community' && (
             <button
@@ -1822,7 +1767,7 @@ export default function PlaylistSidebar({
               role="menuitem"
               onClick={() => {
                 onAddDirectItems(contextMenu.videos);
-                setContextMenu(null);
+                closeContextMenu();
                 if (selectionMode) {
                   setSelectionMode(false);
                 }
@@ -1835,17 +1780,57 @@ export default function PlaylistSidebar({
               to Queue
             </button>
           )}
+
+          {!nominationIds.has(contextMenu.video.videoId) && (
+            <button
+              className="playlist-context-menu-item"
+              type="button"
+              role="menuitem"
+              onClick={() => {
+                onToggleNomination(contextMenu.video);
+                closeContextMenu();
+              }}
+            >
+              Add to Nominations
+            </button>
+          )}
+
+          {!nominationIds.has(contextMenu.video.videoId) && (
+            <SupportLevelSubmenu
+              videos={[contextMenu.video]}
+              currentLevel={
+                supportList.find(
+                  (entry) => entry.videoId === contextMenu.video.videoId,
+                )?.supportLevel || 1
+              }
+              onToggleSupport={onToggleSupport}
+              onClose={closeContextMenu}
+              itemClassName="playlist-context-menu-item"
+            />
+          )}
+
+          <CustomPlaylistSubmenu
+            videos={contextMenu.videos}
+            customPlaylists={customPlaylists}
+            onUpdateCustomPlaylists={onUpdateCustomPlaylists}
+            onShowToast={onShowToast}
+            onClose={closeContextMenu}
+            itemClassName="playlist-context-menu-item"
+          />
           {!isReadOnlyView && activePlaylistView.type !== 'community' && (
             <>
               {authUser && (
-                <button
-                  className="playlist-context-menu-item"
-                  type="button"
-                  role="menuitem"
-                  onClick={() => handleUpdateMetadata(contextMenu.videos)}
-                >
-                  Update Metadata
-                </button>
+                <>
+                  <div className="context-menu-divider" />
+                  <button
+                    className="playlist-context-menu-item"
+                    type="button"
+                    role="menuitem"
+                    onClick={() => handleUpdateMetadata(contextMenu.videos)}
+                  >
+                    Update Metadata
+                  </button>
+                </>
               )}
               <div className="context-menu-divider" />
               <button

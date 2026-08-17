@@ -1,6 +1,7 @@
-import { useDeferredValue, useEffect, useRef, useState } from 'react';
+import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import { ContextMenuPortal } from './ContextMenuPortal';
 import CustomPlaylistSubmenu from './CustomPlaylistSubmenu.jsx';
+import SupportLevelSubmenu from './SupportLevelSubmenu.jsx';
 import {
   getTrackCatalogTournamentSummary,
   mapTrackCatalogEntryToVideo,
@@ -46,6 +47,10 @@ export default function TrackCatalogSearch({
   customPlaylists,
   onUpdateCustomPlaylists,
   onShowToast,
+  nominationList = [],
+  supportList = [],
+  onToggleNomination,
+  onToggleSupport,
   className = '',
   inputId = 'track-catalog-search',
   value,
@@ -73,6 +78,15 @@ export default function TrackCatalogSearch({
 
   const [isFocused, setIsFocused] = useState(autoFocus || false);
   const [contextMenu, setContextMenu] = useState(null);
+
+  function closeContextMenu() {
+    setContextMenu(null);
+  }
+
+  const nominationIds = useMemo(
+    () => new Set(nominationList.map((entry) => entry.videoId)),
+    [nominationList],
+  );
   const [settledQuery, setSettledQuery] = useState('');
   const wrapperRef = useRef(null);
   const inputRef = useRef(null);
@@ -111,7 +125,7 @@ export default function TrackCatalogSearch({
     function handleKeyDown(event) {
       if (event.key === 'Escape') {
         setIsFocused(false);
-        setContextMenu(null);
+        closeContextMenu();
       }
     }
 
@@ -205,7 +219,7 @@ export default function TrackCatalogSearch({
             const nextQuery = event.target.value;
             setQuery(nextQuery);
             setError('');
-            setContextMenu(null);
+            closeContextMenu();
             if (nextQuery.trim().length < 2) {
               setResults([]);
               setSettledQuery('');
@@ -280,7 +294,7 @@ export default function TrackCatalogSearch({
         <ContextMenuPortal
           x={contextMenu.left}
           y={contextMenu.top}
-          onClose={() => setContextMenu(null)}
+          onClose={closeContextMenu}
           className="playlist-context-menu"
         >
           <button
@@ -289,28 +303,62 @@ export default function TrackCatalogSearch({
             role="menuitem"
             onClick={() => {
               handlePlayNow(contextMenu.result);
-              setContextMenu(null);
+              closeContextMenu();
             }}
           >
             Play Now
           </button>
+
+          <div className="context-menu-divider" />
+
           <button
             className="playlist-context-menu-item"
             type="button"
             role="menuitem"
             onClick={() => {
               handleAddToPlaylist(contextMenu.result);
-              setContextMenu(null);
+              closeContextMenu();
             }}
           >
             Add to Queue
           </button>
+
+          {!nominationIds.has(contextMenu.result.videoId) &&
+            onToggleNomination && (
+              <button
+                className="playlist-context-menu-item"
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  onToggleNomination(contextMenu.result.video);
+                  closeContextMenu();
+                }}
+              >
+                Add to Nominations
+              </button>
+            )}
+
+          {!nominationIds.has(contextMenu.result.videoId) &&
+            onToggleSupport && (
+              <SupportLevelSubmenu
+                videos={[contextMenu.result.video]}
+                currentLevel={
+                  supportList.find(
+                    (entry) => entry.videoId === contextMenu.result.videoId,
+                  )?.supportLevel || 1
+                }
+                onToggleSupport={onToggleSupport}
+                onClose={closeContextMenu}
+                itemClassName="playlist-context-menu-item"
+              />
+            )}
+
           <CustomPlaylistSubmenu
             videos={[contextMenu.result.video]}
             customPlaylists={customPlaylists}
             onUpdateCustomPlaylists={onUpdateCustomPlaylists}
             onShowToast={onShowToast}
-            onClose={() => setContextMenu(null)}
+            onClose={closeContextMenu}
             itemClassName="playlist-context-menu-item"
           />
         </ContextMenuPortal>

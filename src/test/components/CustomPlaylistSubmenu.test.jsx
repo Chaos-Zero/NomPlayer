@@ -26,7 +26,7 @@ describe('CustomPlaylistSubmenu', () => {
       />,
     );
     expect(
-      screen.getByRole('button', { name: /Add to Custom Playlist/i }),
+      screen.getByRole('menuitem', { name: /Add to Custom Playlist/i }),
     ).toBeInTheDocument();
   });
 
@@ -40,11 +40,11 @@ describe('CustomPlaylistSubmenu', () => {
     );
 
     fireEvent.click(
-      screen.getByRole('button', { name: /Add to Custom Playlist/i }),
+      screen.getByRole('menuitem', { name: /Add to Custom Playlist/i }),
     );
 
     expect(
-      screen.getByRole('button', { name: /\+ Create New Playlist/i }),
+      screen.getByRole('menuitem', { name: /\+ Create New Playlist/i }),
     ).toBeInTheDocument();
     expect(screen.getByText('Chill Vibes')).toBeInTheDocument();
     expect(screen.getByText('Focus')).toBeInTheDocument();
@@ -60,7 +60,7 @@ describe('CustomPlaylistSubmenu', () => {
     );
 
     fireEvent.click(
-      screen.getByRole('button', { name: /Add to Custom Playlist/i }),
+      screen.getByRole('menuitem', { name: /Add to Custom Playlist/i }),
     );
     expect(screen.getByText('No playlists yet')).toBeInTheDocument();
   });
@@ -81,7 +81,7 @@ describe('CustomPlaylistSubmenu', () => {
     );
 
     fireEvent.click(
-      screen.getByRole('button', { name: /Add to Custom Playlist/i }),
+      screen.getByRole('menuitem', { name: /Add to Custom Playlist/i }),
     );
     fireEvent.click(screen.getByText('Chill Vibes'));
 
@@ -109,7 +109,7 @@ describe('CustomPlaylistSubmenu', () => {
     );
 
     fireEvent.click(
-      screen.getByRole('button', { name: /Add to Custom Playlist/i }),
+      screen.getByRole('menuitem', { name: /Add to Custom Playlist/i }),
     );
     fireEvent.click(screen.getByText('Chill Vibes'));
 
@@ -133,10 +133,10 @@ describe('CustomPlaylistSubmenu', () => {
     );
 
     fireEvent.click(
-      screen.getByRole('button', { name: /Add to Custom Playlist/i }),
+      screen.getByRole('menuitem', { name: /Add to Custom Playlist/i }),
     );
     fireEvent.click(
-      screen.getByRole('button', { name: /\+ Create New Playlist/i }),
+      screen.getByRole('menuitem', { name: /\+ Create New Playlist/i }),
     );
 
     const input = screen.getByPlaceholderText('Playlist name…');
@@ -164,10 +164,10 @@ describe('CustomPlaylistSubmenu', () => {
     );
 
     fireEvent.click(
-      screen.getByRole('button', { name: /Add to Custom Playlist/i }),
+      screen.getByRole('menuitem', { name: /Add to Custom Playlist/i }),
     );
     fireEvent.click(
-      screen.getByRole('button', { name: /\+ Create New Playlist/i }),
+      screen.getByRole('menuitem', { name: /\+ Create New Playlist/i }),
     );
 
     const input = screen.getByPlaceholderText('Playlist name…');
@@ -177,7 +177,7 @@ describe('CustomPlaylistSubmenu', () => {
       screen.queryByPlaceholderText('Playlist name…'),
     ).not.toBeInTheDocument();
     expect(
-      screen.getByRole('button', { name: /\+ Create New Playlist/i }),
+      screen.getByRole('menuitem', { name: /\+ Create New Playlist/i }),
     ).toBeInTheDocument();
   });
 });

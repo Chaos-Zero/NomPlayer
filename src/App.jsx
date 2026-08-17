@@ -6258,6 +6258,10 @@ export default function App() {
           customPlaylists={customPlaylists}
           onUpdateCustomPlaylists={setCustomPlaylists}
           onShowToast={(msg) => showDefaultAppToast(msg, 'dashboard')}
+          nominationList={nominationList}
+          supportList={supportList}
+          onToggleNomination={handleToggleNominationFromPlaylist}
+          onToggleSupport={handleToggleSupportFromPlaylist}
         />
 
         <main
