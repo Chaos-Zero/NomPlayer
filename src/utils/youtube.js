@@ -1,4 +1,24 @@
 const VIDEO_ID_PATTERN = /^[A-Za-z0-9_-]{11}$/;
+// A poster's link sometimes has a couple of stray characters tacked directly onto
+// the id with no separator, e.g. `?v=t1bzqjoZyeQ38` (confirmed live: VGMC thread
+// 81179417 post #11, the "38" isn't a valid part of any id, likely a lost `&t=38s`).
+// YouTube's own watch page is lenient about this, it still resolves and plays
+// `t1bzqjoZyeQ` regardless of what's tacked on after, so rejecting the link
+// outright was too strict, confirmed via oembed on the truncated id. Accept a
+// leading valid id plus a *short* id-charset tail: capped small so this can't
+// reopen the actual bug VIDEO_ID_PATTERN was hardened against, a lost line break
+// merging a whole extra `Game | Song | link` command into the tail. That's always
+// much longer than a few characters and contains spaces/pipes, which this pattern
+// doesn't allow, so it still gets rejected below.
+const VIDEO_ID_WITH_TRAILING_JUNK_PATTERN =
+  /^([A-Za-z0-9_-]{11})[A-Za-z0-9_-]{1,4}$/;
+
+function coerceVideoId(rawValue) {
+  if (!rawValue) return null;
+  if (VIDEO_ID_PATTERN.test(rawValue)) return rawValue;
+  const match = rawValue.match(VIDEO_ID_WITH_TRAILING_JUNK_PATTERN);
+  return match ? match[1] : null;
+}
 
 /**
  * Parse YouTube video ID or playlist ID from a URL or bare ID string.
@@ -12,23 +32,18 @@ export function parseYouTubeInput(input) {
     const url = new URL(str);
     const listId = url.searchParams.get('list');
     // `URLSearchParams.get('v')` happily returns whatever's between `v=` and the
-    // next `&` (or end of string) with no shape validation, if the input has no
-    // `&` at all (e.g. a "link" that accidentally swallowed unrelated trailing
-    // text, found live from a VGMC nomination post whose line breaks got lost
-    // upstream), that's the *entire* rest of the string, not an 11-char id. Only
-    // trust it once it actually looks like one.
-    const rawVideoId = url.searchParams.get('v');
-    const videoId =
-      rawVideoId && VIDEO_ID_PATTERN.test(rawVideoId) ? rawVideoId : null;
+    // next `&` (or end of string) with no shape validation, so this only trusts
+    // it once coerceVideoId has confirmed it's a real id (with at most a short
+    // junk tail).
+    const videoId = coerceVideoId(url.searchParams.get('v'));
 
     if (listId) return { type: 'playlist', playlistId: listId, videoId };
     if (videoId) return { type: 'video', videoId };
 
     // youtu.be short links
     if (url.hostname === 'youtu.be') {
-      const vid = url.pathname.slice(1).split('?')[0];
-      if (vid && VIDEO_ID_PATTERN.test(vid))
-        return { type: 'video', videoId: vid };
+      const vid = coerceVideoId(url.pathname.slice(1).split('?')[0]);
+      if (vid) return { type: 'video', videoId: vid };
     }
   } catch {
     // Not a URL, treat as bare ID
@@ -36,9 +51,10 @@ export function parseYouTubeInput(input) {
     if (/^(PL|RD|UU|LL|FL|OL|WL)[A-Za-z0-9_-]+$/.test(str)) {
       return { type: 'playlist', playlistId: str };
     }
-    // Video ID: 11 chars
-    if (VIDEO_ID_PATTERN.test(str)) {
-      return { type: 'video', videoId: str };
+    // Video ID: 11 chars (plus, same as above, a short junk tail)
+    const videoId = coerceVideoId(str);
+    if (videoId) {
+      return { type: 'video', videoId };
     }
   }
 

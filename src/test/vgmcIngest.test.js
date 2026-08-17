@@ -26,6 +26,20 @@ describe('extractVideoId', () => {
   it('returns null for a non-YouTube link', () => {
     expect(extractVideoId('https://example.com/song.mp3')).toBeNull();
   });
+
+  it('tolerates a short junk tail glued onto an otherwise-valid id (live case: VGMC thread 81179417 post #11)', () => {
+    expect(
+      extractVideoId('https://www.youtube.com/watch?v=t1bzqjoZyeQ38'),
+    ).toBe('t1bzqjoZyeQ');
+  });
+
+  it('still rejects a link that swallowed a whole extra command (lost line break)', () => {
+    expect(
+      extractVideoId(
+        'https://www.youtube.com/watch?v=abc12345678Other Game | Other Song | https://www.youtube.com/watch?v=xyz98765432',
+      ),
+    ).toBeNull();
+  });
 });
 
 describe('parseCommandLine', () => {
