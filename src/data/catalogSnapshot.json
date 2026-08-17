@@ -1,5 +1,5 @@
 {
-  "exportedAt": "2026-08-17T17:07:13.841Z",
+  "exportedAt": "2026-08-17T20:07:51.744Z",
   "totalCount": 10926,
   "tracks": [
     {
@@ -14684,10 +14684,10 @@
       "support_count_3": 0,
       "nomination_count": 0,
       "comment_count": 0,
-      "avg_rating": null,
+      "avg_rating": 5,
       "has_result": false,
-      "total_comments": 0,
-      "average_rating": 0
+      "total_comments": 1,
+      "average_rating": 5
     },
     {
       "track_id": "07fdd4f4-f6b0-43f1-bd61-e7250e26bbc9",
@@ -18470,10 +18470,10 @@
       "support_count_3": 0,
       "nomination_count": 0,
       "comment_count": 0,
-      "avg_rating": null,
+      "avg_rating": 7,
       "has_result": false,
-      "total_comments": 0,
-      "average_rating": 0
+      "total_comments": 1,
+      "average_rating": 7
     },
     {
       "track_id": "0a117520-fa7a-4eca-9c34-64e7b934ed47",
@@ -39313,10 +39313,10 @@
       "support_count_3": 0,
       "nomination_count": 0,
       "comment_count": 0,
-      "avg_rating": null,
+      "avg_rating": 5,
       "has_result": false,
-      "total_comments": 0,
-      "average_rating": 0
+      "total_comments": 1,
+      "average_rating": 5
     },
     {
       "track_id": "1625c805-0bef-46cc-8a54-3d31b8a26fac",
@@ -39875,7 +39875,7 @@
       "comment_count": 0,
       "avg_rating": 3,
       "has_result": false,
-      "total_comments": 1,
+      "total_comments": 2,
       "average_rating": 3
     },
     {
@@ -56829,7 +56829,7 @@
       "support_count_3": 0,
       "nomination_count": 0,
       "comment_count": 0,
-      "avg_rating": null,
+      "avg_rating": 4,
       "has_result": false
     },
     {
@@ -68383,7 +68383,7 @@
       "support_count_3": 0,
       "nomination_count": 0,
       "comment_count": 0,
-      "avg_rating": 4,
+      "avg_rating": 5,
       "has_result": false
     },
     {
@@ -105714,7 +105714,7 @@
       "support_count_3": 0,
       "nomination_count": 0,
       "comment_count": 0,
-      "avg_rating": null,
+      "avg_rating": 4,
       "has_result": false
     },
     {
@@ -131426,7 +131426,7 @@
       "support_count_3": 0,
       "nomination_count": 0,
       "comment_count": 0,
-      "avg_rating": null,
+      "avg_rating": 5,
       "has_result": false
     },
     {
@@ -140882,7 +140882,7 @@
       "support_count_3": 0,
       "nomination_count": 0,
       "comment_count": 0,
-      "avg_rating": null,
+      "avg_rating": 6,
       "has_result": false
     },
     {
@@ -180399,7 +180399,7 @@
       "support_count_3": 0,
       "nomination_count": 0,
       "comment_count": 0,
-      "avg_rating": null,
+      "avg_rating": 5,
       "has_result": false
     },
     {
@@ -188387,7 +188387,7 @@
       "support_count_3": 0,
       "nomination_count": 0,
       "comment_count": 0,
-      "avg_rating": null,
+      "avg_rating": 3,
       "has_result": false
     },
     {
@@ -203660,7 +203660,7 @@
       "support_count_3": 0,
       "nomination_count": 0,
       "comment_count": 0,
-      "avg_rating": null,
+      "avg_rating": 4,
       "has_result": false
     },
     {
@@ -230061,7 +230061,7 @@
       "support_count_3": 0,
       "nomination_count": 0,
       "comment_count": 1,
-      "avg_rating": 3,
+      "avg_rating": 4.5,
       "has_result": false
     },
     {
@@ -238144,12 +238144,12 @@
         }
       ],
       "tournament_count": 1,
-      "support_count_1": 0,
+      "support_count_1": 1,
       "support_count_2": 0,
       "support_count_3": 0,
       "nomination_count": 0,
       "comment_count": 0,
-      "avg_rating": null,
+      "avg_rating": 6,
       "has_result": false
     },
     {
@@ -238500,7 +238500,7 @@
       "support_count_3": 0,
       "nomination_count": 0,
       "comment_count": 0,
-      "avg_rating": null,
+      "avg_rating": 3,
       "has_result": false
     },
     {
@@ -243177,7 +243177,7 @@
       "support_count_3": 0,
       "nomination_count": 0,
       "comment_count": 0,
-      "avg_rating": 3,
+      "avg_rating": 3.5,
       "has_result": false
     },
     {
@@ -245859,7 +245859,7 @@
       "support_count_3": 0,
       "nomination_count": 0,
       "comment_count": 0,
-      "avg_rating": null,
+      "avg_rating": 5,
       "has_result": false
     },
     {
@@ -258725,7 +258725,7 @@
       "support_count_3": 0,
       "nomination_count": 0,
       "comment_count": 0,
-      "avg_rating": null,
+      "avg_rating": 5,
       "has_result": false
     },
     {
@@ -308012,7 +308012,7 @@
       "support_count_3": 0,
       "nomination_count": 0,
       "comment_count": 0,
-      "avg_rating": 4,
+      "avg_rating": 3.5,
       "has_result": false
     },
     {
@@ -312292,7 +312292,7 @@
       "support_count_3": 0,
       "nomination_count": 0,
       "comment_count": 0,
-      "avg_rating": 3,
+      "avg_rating": 4.5,
       "has_result": false
     },
     {
@@ -333421,7 +333421,7 @@
       "support_count_3": 0,
       "nomination_count": 0,
       "comment_count": 0,
-      "avg_rating": null,
+      "avg_rating": 5,
       "has_result": false
     },
     {
@@ -350325,7 +350325,7 @@
       "support_count_3": 0,
       "nomination_count": 0,
       "comment_count": 0,
-      "avg_rating": null,
+      "avg_rating": 3,
       "has_result": false
     },
     {
@@ -360674,7 +360674,7 @@
       "support_count_3": 0,
       "nomination_count": 0,
       "comment_count": 0,
-      "avg_rating": 5,
+      "avg_rating": 4.5,
       "has_result": false
     },
     {
@@ -363093,12 +363093,12 @@
         }
       ],
       "tournament_count": 1,
-      "support_count_1": 0,
+      "support_count_1": 1,
       "support_count_2": 0,
       "support_count_3": 0,
       "nomination_count": 0,
       "comment_count": 0,
-      "avg_rating": 5,
+      "avg_rating": 6,
       "has_result": false
     },
     {
@@ -369645,7 +369645,7 @@
       "support_count_3": 0,
       "nomination_count": 0,
       "comment_count": 0,
-      "avg_rating": null,
+      "avg_rating": 5,
       "has_result": false
     },
     {
@@ -426233,7 +426233,7 @@
       "support_count_3": 0,
       "nomination_count": 0,
       "comment_count": 0,
-      "avg_rating": null,
+      "avg_rating": 6,
       "has_result": false
     },
     {
@@ -438430,7 +438430,7 @@
       "support_count_3": 0,
       "nomination_count": 0,
       "comment_count": 0,
-      "avg_rating": null,
+      "avg_rating": 4,
       "has_result": false
     },
     {
@@ -439630,7 +439630,7 @@
       "support_count_3": 0,
       "nomination_count": 0,
       "comment_count": 0,
-      "avg_rating": 6,
+      "avg_rating": 4.5,
       "has_result": false
     },
     {
@@ -440277,7 +440277,7 @@
       "support_count_3": 0,
       "nomination_count": 0,
       "comment_count": 0,
-      "avg_rating": null,
+      "avg_rating": 5,
       "has_result": false
     },
     {
