@@ -191,7 +191,7 @@ import {
 import {
   fetchTrackCatalogByVideoIds,
   fetchTrackCatalogByTrackIds,
-  ingestYouTubeTrackSources,
+  ingestTrackSources,
   patchCatalogCache,
   getFullCatalog,
   getCachedCatalog,
@@ -1075,13 +1075,13 @@ export default function App() {
         return;
       }
 
-      ingestYouTubeTrackSources(supabase, videos)
+      ingestTrackSources(supabase, videos)
         .then((ingestResult) => {
           if (!Array.isArray(ingestResult) || ingestResult.length === 0) return;
           const updatesMap = {};
           for (const row of ingestResult) {
-            if (row.youtube_video_id && row.track_id) {
-              updatesMap[row.youtube_video_id] = { trackId: row.track_id };
+            if (row.external_id && row.track_id) {
+              updatesMap[row.external_id] = { trackId: row.track_id };
             }
           }
           if (Object.keys(updatesMap).length > 0) {
@@ -1110,13 +1110,13 @@ export default function App() {
     const missing = supportList.filter((v) => !v.trackId);
     if (missing.length === 0) return;
 
-    ingestYouTubeTrackSources(supabase, missing)
+    ingestTrackSources(supabase, missing)
       .then((ingestResult) => {
         if (!Array.isArray(ingestResult) || ingestResult.length === 0) return;
         const updatesMap = {};
         for (const row of ingestResult) {
-          if (row.youtube_video_id && row.track_id) {
-            updatesMap[row.youtube_video_id] = { trackId: row.track_id };
+          if (row.external_id && row.track_id) {
+            updatesMap[row.external_id] = { trackId: row.track_id };
           }
         }
         if (Object.keys(updatesMap).length > 0) {
@@ -1675,7 +1675,7 @@ export default function App() {
         );
 
         if (videosToIngest.length > 0) {
-          await ingestYouTubeTrackSources(supabase, videosToIngest);
+          await ingestTrackSources(supabase, videosToIngest);
         }
 
         const fetchedEntries = await fetchTrackCatalogByVideoIds(
@@ -5106,14 +5106,14 @@ export default function App() {
             (u) => !u.trackId,
           );
           if (newTrackUpdates.length > 0) {
-            const ingestResult = await ingestYouTubeTrackSources(
+            const ingestResult = await ingestTrackSources(
               supabase,
               newTrackUpdates,
             );
             if (Array.isArray(ingestResult)) {
               ingestResult.forEach((row) => {
-                if (row.youtube_video_id) {
-                  trackIdByVideoId[row.youtube_video_id] = row.track_id;
+                if (row.external_id) {
+                  trackIdByVideoId[row.external_id] = row.track_id;
                 }
               });
             }

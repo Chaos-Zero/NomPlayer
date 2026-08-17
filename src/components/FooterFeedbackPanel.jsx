@@ -4,7 +4,7 @@ import {
   upsertUserFeedback,
   deleteUserFeedback,
 } from '../lib/feedback.js';
-import { ingestYouTubeTrackSources } from '../lib/trackCatalog.js';
+import { ingestTrackSources } from '../lib/trackCatalog.js';
 import {
   getDisplayProfileName,
   deriveProfileAvatarUrl,
@@ -298,7 +298,7 @@ export default function FooterFeedbackPanel({
     try {
       let trackId = track.trackId;
       if (!trackId || !/^[0-9a-f-]{36}$/i.test(trackId)) {
-        const ingested = await ingestYouTubeTrackSources(supabase, [track]);
+        const ingested = await ingestTrackSources(supabase, [track]);
         if (ingested && ingested.length > 0) {
           trackId = ingested[0].track_id;
         }
@@ -353,7 +353,7 @@ export default function FooterFeedbackPanel({
     try {
       let trackId = track.trackId;
       if (!trackId || !/^[0-9a-f-]{36}$/i.test(trackId)) {
-        const ingested = await ingestYouTubeTrackSources(supabase, [track]);
+        const ingested = await ingestTrackSources(supabase, [track]);
         if (ingested && ingested.length > 0) {
           trackId = ingested[0].track_id;
         }

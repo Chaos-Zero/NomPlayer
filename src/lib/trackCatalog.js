@@ -1,11 +1,28 @@
-import { getYouTubeThumbnailUrl, parseYouTubeInput } from '../utils/youtube.js';
+import { parseYouTubeInput } from '../utils/youtube.js';
 import { checkContent } from '../utils/profanityFilter.js';
+import { getMediaThumbnailUrl, MEDIA_PROVIDERS } from '../utils/media.js';
 
-function normalizeCatalogVideo(video) {
+const YOUTUBE_ID_PATTERN = /^[A-Za-z0-9_-]{11}$/;
+
+/** True if `externalId` is a shape ingest_track_sources will actually accept
+ * for `provider` — mirrors the RPC's own per-provider validation, so a
+ * doomed-to-be-skipped entry never makes it into the payload at all. */
+function isValidExternalId(provider, externalId) {
+  if (!externalId) return false;
+  return provider === 'youtube'
+    ? YOUTUBE_ID_PATTERN.test(externalId)
+    : /^https?:\/\//i.test(externalId);
+}
+
+function normalizeTrackIngestEntry(video) {
   if (!video || typeof video !== 'object') return null;
 
-  const videoId = typeof video.videoId === 'string' ? video.videoId.trim() : '';
-  if (!/^[A-Za-z0-9_-]{11}$/.test(videoId)) {
+  const externalId =
+    typeof video.videoId === 'string' ? video.videoId.trim() : '';
+  const provider = MEDIA_PROVIDERS.includes(video.provider)
+    ? video.provider
+    : 'youtube';
+  if (!isValidExternalId(provider, externalId)) {
     return null;
   }
 
@@ -21,13 +38,22 @@ function normalizeCatalogVideo(video) {
     typeof video.thumbnail === 'string' && video.thumbnail.trim()
       ? video.thumbnail.trim()
       : null;
+  const cachedDurationSeconds =
+    typeof video.durationSeconds === 'number' && video.durationSeconds > 0
+      ? video.durationSeconds
+      : null;
 
   return {
-    video_id: videoId,
+    provider,
+    external_id: externalId,
     cached_title: cachedTitle,
     cached_channel_title: cachedChannelTitle,
     cached_thumbnail_url: cachedThumbnailUrl,
-    submitted_url: `https://www.youtube.com/watch?v=${videoId}`,
+    cached_duration_seconds: cachedDurationSeconds,
+    submitted_url:
+      provider === 'youtube'
+        ? `https://www.youtube.com/watch?v=${externalId}`
+        : externalId,
   };
 }
 
@@ -93,9 +119,12 @@ function normalizeTrackCatalogEntry(entry) {
       : typeof entry.videoId === 'string'
         ? entry.videoId.trim()
         : '';
-  if (!/^[A-Za-z0-9_-]{11}$/.test(videoId)) {
+  if (!videoId) {
     return null;
   }
+  const provider = MEDIA_PROVIDERS.includes(entry.provider)
+    ? entry.provider
+    : 'youtube';
 
   const tournaments = normalizeTournamentRows(entry.tournaments);
 
@@ -107,6 +136,7 @@ function normalizeTrackCatalogEntry(entry) {
           ? entry.trackId
           : null,
     videoId,
+    provider,
     gameTitle:
       typeof entry.game_title === 'string'
         ? entry.game_title
@@ -150,7 +180,9 @@ function normalizeTrackCatalogEntry(entry) {
         ? entry.source_url
         : typeof entry.sourceUrl === 'string' && entry.sourceUrl
           ? entry.sourceUrl
-          : `https://www.youtube.com/watch?v=${videoId}`,
+          : provider === 'youtube'
+            ? `https://www.youtube.com/watch?v=${videoId}`
+            : videoId,
     submittedUrl:
       typeof entry.submitted_url === 'string'
         ? entry.submitted_url
@@ -205,13 +237,17 @@ export function mapTrackCatalogEntryToVideo(entry) {
 
   return {
     videoId: normalizedEntry.videoId,
+    provider: normalizedEntry.provider,
     title:
       normalizedEntry.displayTitle ||
       normalizedEntry.sourceTitle ||
       normalizedEntry.videoId,
     thumbnail:
       normalizedEntry.sourceThumbnailUrl ||
-      getYouTubeThumbnailUrl(normalizedEntry.videoId),
+      getMediaThumbnailUrl({
+        provider: normalizedEntry.provider,
+        videoId: normalizedEntry.videoId,
+      }),
     channelTitle: normalizedEntry.sourceChannelTitle,
     trackId: normalizedEntry.trackId,
     gameTitle: normalizedEntry.gameTitle,
@@ -246,35 +282,39 @@ export function getTrackCatalogTournamentSummary(entry) {
   return `VGMC ${sequenceNumbers.join(', ')}`;
 }
 
-export function createYouTubeTrackIngestPayload(videos) {
+export function createTrackIngestPayload(videos) {
   if (!Array.isArray(videos)) {
     return [];
   }
 
   const payload = [];
-  const seenVideoIds = new Set();
+  const seenKeys = new Set();
 
   for (const video of videos) {
-    const normalizedVideo = normalizeCatalogVideo(video);
-    if (!normalizedVideo || seenVideoIds.has(normalizedVideo.video_id)) {
+    const normalizedVideo = normalizeTrackIngestEntry(video);
+    if (!normalizedVideo) {
+      continue;
+    }
+    const key = `${normalizedVideo.provider}:${normalizedVideo.external_id}`;
+    if (seenKeys.has(key)) {
       continue;
     }
 
-    seenVideoIds.add(normalizedVideo.video_id);
+    seenKeys.add(key);
     payload.push(normalizedVideo);
   }
 
   return payload;
 }
 
-export async function ingestYouTubeTrackSources(supabase, videos) {
-  const payload = createYouTubeTrackIngestPayload(videos);
+export async function ingestTrackSources(supabase, videos) {
+  const payload = createTrackIngestPayload(videos);
   if (!payload.length) {
     return [];
   }
 
-  const { data, error } = await supabase.rpc('ingest_youtube_track_sources', {
-    youtube_sources: payload,
+  const { data, error } = await supabase.rpc('ingest_track_sources', {
+    sources: payload,
   });
 
   if (error) {
@@ -317,7 +357,7 @@ export async function fetchTrackCatalogByVideoIds(supabase, videoIds) {
             .map((videoId) =>
               typeof videoId === 'string' ? videoId.trim() : '',
             )
-            .filter((videoId) => /^[A-Za-z0-9_-]{11}$/.test(videoId))
+            .filter(Boolean)
         : [],
     ),
   );
@@ -340,6 +380,7 @@ export async function fetchTrackCatalogByVideoIds(supabase, videoIds) {
     .select(
       `
         track_id,
+        provider,
         game_title,
         track_title,
         display_title,
@@ -386,6 +427,7 @@ export async function fetchTrackCatalogByTrackIds(supabase, trackIds) {
     .select(
       `
         track_id,
+        provider,
         game_title,
         track_title,
         display_title,
@@ -422,6 +464,7 @@ export async function fetchSupportedTracks(supabase) {
     .select(
       `
         track_id,
+        provider,
         game_title,
         track_title,
         display_title,
@@ -464,6 +507,7 @@ export async function fetchAllTracks(supabase) {
       .select(
         `
           track_id,
+          provider,
           game_title,
           track_title,
           display_title,
@@ -554,7 +598,7 @@ export async function getFullCatalog(supabase) {
           supabase
             .from('track_catalog')
             .select(
-              `track_id, game_title, track_title, display_title, is_retired,
+              `track_id, provider, game_title, track_title, display_title, is_retired,
                retired_by_tournament_name, source_external_id, source_url,
                submitted_url, source_title, source_channel_title,
                source_thumbnail_url, tournaments, support_count_1,

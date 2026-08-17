@@ -9,8 +9,8 @@ const supabase = createClient(
 );
 
 async function test() {
-  const { data, error } = await supabase.rpc('ingest_youtube_track_sources', {
-    youtube_sources: [{ video_id: 'dQw4w9WgXcQ' }],
+  const { data, error } = await supabase.rpc('ingest_track_sources', {
+    sources: [{ provider: 'youtube', external_id: 'dQw4w9WgXcQ' }],
   });
   console.log('Result:', data, error);
 }

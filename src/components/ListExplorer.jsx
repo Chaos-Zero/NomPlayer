@@ -11,7 +11,7 @@ import {
   getDisplayProfileName,
   deriveProfileAvatarUrl,
 } from '../lib/playerState.js';
-import { ingestYouTubeTrackSources } from '../lib/trackCatalog.js';
+import { ingestTrackSources } from '../lib/trackCatalog.js';
 import { fetchRawCommunityNominations } from '../lib/dashboard.js';
 import {
   fetchCommunityFeedback,
@@ -1714,9 +1714,7 @@ export default function ListExplorer({
       let trackId = trackToDelete.trackId || trackToDelete.id;
       if (!trackId || !/^[0-9a-f-]{36}$/i.test(trackId)) {
         // Ingest if somehow track info lost UUID
-        const ingested = await ingestYouTubeTrackSources(supabase, [
-          trackToDelete,
-        ]);
+        const ingested = await ingestTrackSources(supabase, [trackToDelete]);
         if (ingested && ingested.length > 0) {
           trackId = ingested[0].track_id;
         }
@@ -2781,7 +2779,7 @@ export default function ListExplorer({
               let trackId = selectedTrack.trackId || selectedTrack.id;
               // Ingest if missing UUID
               if (!trackId || !/^[0-9a-f-]{36}$/i.test(trackId)) {
-                const ingested = await ingestYouTubeTrackSources(supabase, [
+                const ingested = await ingestTrackSources(supabase, [
                   selectedTrack,
                 ]);
                 if (ingested && ingested.length > 0) {

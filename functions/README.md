@@ -46,11 +46,11 @@ This document provides a categorized list and explanation of the database functi
 
 ## [Track Scoring & Ingestion](#tracks)
 
-| Function                            | Security | Purpose                                                                                                     |
-| :---------------------------------- | :------: | :---------------------------------------------------------------------------------------------------------- |
-| `record_youtube_track_listen(...)`  | Definer  | Tracks "started" and "completed" events for YouTube videos, updating the `track_user_listen_history` table. |
-| `ingest_youtube_track_sources(...)` | Definer  | Bulk adds new tracks and sources from external video data.                                                  |
-| `import_vgmc_catalog_row(...)`      | Definer  | Synchronizes curated tournament data with the `tracks` and `tournaments` tables.                            |
+| Function                           | Security | Purpose                                                                                                     |
+| :--------------------------------- | :------: | :---------------------------------------------------------------------------------------------------------- |
+| `record_youtube_track_listen(...)` | Definer  | Tracks "started" and "completed" events for YouTube videos, updating the `track_user_listen_history` table. |
+| `ingest_track_sources(...)`        | Definer  | Bulk adds new tracks and sources from external video/track data (YouTube, SoundCloud, or Bandcamp).         |
+| `import_vgmc_catalog_row(...)`     | Definer  | Synchronizes curated tournament data with the `tracks` and `tournaments` tables.                            |
 
 ## [Debugging & Admin Tools](#admin)
 

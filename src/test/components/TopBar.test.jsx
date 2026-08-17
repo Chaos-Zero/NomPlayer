@@ -213,6 +213,7 @@ describe('TopBar', () => {
 
     expect(onCatalogPlayNow).toHaveBeenCalledWith({
       videoId: 'g1234567890',
+      provider: 'youtube',
       title: 'Gamma Game - Skyline',
       thumbnail: 'g.jpg',
       channelTitle: 'Channel G',
@@ -278,6 +279,7 @@ describe('TopBar', () => {
     expect(onAddCatalogToPlaylist).toHaveBeenCalledWith([
       {
         videoId: 'g1234567890',
+        provider: 'youtube',
         title: 'Gamma Game - Skyline',
         thumbnail: 'g.jpg',
         channelTitle: 'Channel G',
