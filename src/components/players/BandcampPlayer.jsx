@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { fetchBandcampMetadata } from '../../utils/bandcamp.js';
+import { resolveBandcampMetadata } from '../../utils/bandcamp.js';
 
 /**
  * Embeds a Bandcamp track/album via its public iframe embed. Bandcamp's
@@ -22,6 +22,15 @@ import { fetchBandcampMetadata } from '../../utils/bandcamp.js';
  * video.embedId/durationSeconds only as an optimistic first-paint value
  * when they happen to already be on the object (e.g. a track just added
  * this session, before any reload round-trip strips them).
+ *
+ * Autoplay: the embed src includes autoplay=1 whenever this mounts while
+ * isPlaying is true (e.g. clicking a track, or auto-advancing into one),
+ * plus allow="autoplay" on the iframe so the browser's autoplay policy
+ * permits it. Browsers generally honour this when it follows a user
+ * gesture in the same tab (which clicking/auto-advancing both count as);
+ * it can still be silently blocked in stricter contexts (e.g. Safari, or
+ * after long tab inactivity) - there's no way to detect that from here, so
+ * it just stays paused with no error in that case.
  */
 export default function BandcampPlayer({
   video,
@@ -35,10 +44,19 @@ export default function BandcampPlayer({
       ? {
           embedId: video.embedId,
           embedType: video.embedType || 'track',
+          albumId: video.albumId || null,
           durationSeconds: video.durationSeconds || null,
         }
       : null,
   );
+  const [resolveError, setResolveError] = useState(null);
+  // Captured once at mount, not read reactively: the iframe's `src` embeds
+  // this value, and changing `src` forces the browser to reload/restart the
+  // iframe from 0:00. Since there's no real pause for Bandcamp (see the
+  // file comment), toggling isPlaying later must not rebuild `src`, or
+  // clicking "pause" would actually restart the track instead of just
+  // freezing our own elapsed-time timer.
+  const initialAutoplayRef = useRef(isPlaying);
   const elapsedBeforePauseRef = useRef(0);
   const resumedAtRef = useRef(null);
   const hasFiredEndRef = useRef(false);
@@ -47,14 +65,26 @@ export default function BandcampPlayer({
 
   useEffect(() => {
     let cancelled = false;
-    fetchBandcampMetadata(video.videoId).then((meta) => {
-      if (cancelled || !meta) return;
-      setResolved({
-        embedId: meta.embedId,
-        embedType: meta.embedType || 'track',
-        durationSeconds: meta.durationSeconds || video.durationSeconds || null,
+    setResolveError(null);
+    resolveBandcampMetadata(video.videoId)
+      .then((meta) => {
+        if (cancelled) return;
+        setResolved({
+          embedId: meta.embedId,
+          embedType: meta.embedType || 'track',
+          albumId: meta.albumId || null,
+          durationSeconds:
+            meta.durationSeconds || video.durationSeconds || null,
+        });
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        // Surfaced instead of leaving the "Loading…" state spinning forever
+        // - a resolve failure (Bandcamp blocking the fetch, page removed,
+        // unexpected page shape) is otherwise silent and undiagnosable.
+        console.error('Failed to resolve Bandcamp track', err);
+        setResolveError(err.message || 'Failed to load this Bandcamp track.');
       });
-    });
     return () => {
       cancelled = true;
     };
@@ -108,6 +138,17 @@ export default function BandcampPlayer({
   }, [resolved, onEnd]);
 
   if (!resolved) {
+    if (resolveError) {
+      return (
+        <div className="player-empty" style={style}>
+          <div className="player-empty-icon">⚠</div>
+          <div className="player-empty-title">
+            Couldn't load this Bandcamp track
+          </div>
+          <div className="player-empty-sub">{resolveError}</div>
+        </div>
+      );
+    }
     return (
       <div className="player-empty" style={style}>
         <div className="player-empty-icon">▶</div>
@@ -116,7 +157,24 @@ export default function BandcampPlayer({
     );
   }
 
-  const src = `https://bandcamp.com/EmbeddedPlayer/${resolved.embedType}=${resolved.embedId}/size=large/bgcol=333333/linkcol=0f91ff/tracklist=false/artwork=small/transparent=true/`;
+  // When a track belongs to an album, including album=<id> alongside
+  // track=<id> (the same combined form Bandcamp's own "Share/Embed" button
+  // generates) makes the "large" card render its intended compact layout;
+  // track= alone renders a much sparser card that stretches to fill
+  // whatever width it's given, leaving a lot of visually empty space (see
+  // .player-iframe-container--bandcamp in index.css for the width cap that
+  // handles the rest of that). bgcol is pinned to match the player's own
+  // fixed black backdrop rather than transparent=true, which - at this
+  // size/param combination - was leaving Bandcamp's default white card
+  // background showing through instead.
+  const albumSegment =
+    resolved.embedType === 'track' && resolved.albumId
+      ? `album=${resolved.albumId}/`
+      : '';
+  const src =
+    `https://bandcamp.com/EmbeddedPlayer/${albumSegment}${resolved.embedType}=${resolved.embedId}` +
+    `/size=large/bgcol=000000/linkcol=0f91ff/tracklist=false/artwork=small` +
+    `/autoplay=${initialAutoplayRef.current ? 1 : 0}/`;
 
   return (
     <iframe

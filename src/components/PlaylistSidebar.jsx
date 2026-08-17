@@ -190,7 +190,7 @@ function PlaylistItem({
 
   return (
     <div
-      className={`playlist-item${isActive ? ' active' : ''}${isFlashing ? ' flash' : ''}${isSelected ? ' selected' : ''}${isRetired ? ' retired' : ''}`}
+      className={`playlist-item${isActive ? ' active' : ''}${isFlashing ? ' flash' : ''}${isSelected ? ' selected' : ''}${isRetired ? ' retired' : ''}${video.provider === 'bandcamp' ? ' provider-bandcamp' : ''}`}
       onClick={() => {
         if (selectionMode) {
           onToggleSelected(video.videoId);

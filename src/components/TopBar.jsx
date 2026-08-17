@@ -18,6 +18,7 @@ import {
   NextIcon,
   PlayIcon,
   PauseIcon,
+  StopIcon,
   ShuffleIcon,
   PlaylistPlusIcon,
   StopwatchIcon,
@@ -573,9 +574,21 @@ export default function TopBar({
           <button
             className="footer-control-btn play-pause"
             onClick={() => setIsPlaying((p) => !p)}
-            title={isPlaying ? 'Pause' : 'Play'}
+            title={
+              isPlaying
+                ? currentVideo?.provider === 'soundcloud'
+                  ? 'Stop'
+                  : 'Pause'
+                : 'Play'
+            }
             id={withIds ? 'play-pause-btn' : undefined}
-            aria-label={isPlaying ? 'Pause' : 'Play'}
+            aria-label={
+              isPlaying
+                ? currentVideo?.provider === 'soundcloud'
+                  ? 'Stop'
+                  : 'Pause'
+                : 'Play'
+            }
             disabled={!canTogglePlayback}
             tabIndex={hidden || hidePlaybackControls ? -1 : 0}
           >
@@ -585,7 +598,11 @@ export default function TopBar({
                 className="transport-icon transport-icon-preview"
               />
             ) : isPlaying ? (
-              <PauseIcon />
+              currentVideo?.provider === 'soundcloud' ? (
+                <StopIcon />
+              ) : (
+                <PauseIcon />
+              )
             ) : (
               <PlayIcon />
             )}

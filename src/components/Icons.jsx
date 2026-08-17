@@ -55,6 +55,19 @@ export function PauseIcon() {
   );
 }
 
+export function StopIcon() {
+  return (
+    <svg
+      className="transport-icon"
+      viewBox="0 0 20 20"
+      aria-hidden="true"
+      fill="currentColor"
+    >
+      <path d="M5.75 5.5C5.75 5.09 6.09 4.75 6.5 4.75H13.5C13.91 4.75 14.25 5.09 14.25 5.5V14.5C14.25 14.91 13.91 15.25 13.5 15.25H6.5C6.09 15.25 5.75 14.91 5.75 14.5V5.5Z" />
+    </svg>
+  );
+}
+
 export function FastForwardIcon() {
   return (
     <svg viewBox="0 0 20 20" aria-hidden="true" fill="currentColor">

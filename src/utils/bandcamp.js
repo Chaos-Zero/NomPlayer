@@ -63,18 +63,35 @@ export function parseBandcampInput(input) {
 
 /**
  * Resolve a Bandcamp page URL to embeddable metadata via our server-side
- * proxy. Returns null on failure (caller falls back to a bare entry using
- * just the page URL, same as YouTube's oEmbed-failure fallback elsewhere).
+ * proxy. Throws with a human-readable reason on failure - used where the
+ * caller wants to explain *why* it couldn't load (see BandcampPlayer.jsx,
+ * which shows the message instead of spinning forever).
+ */
+export async function resolveBandcampMetadata(pageUrl) {
+  const res = await fetch(
+    `/api/bandcamp-resolve?url=${encodeURIComponent(pageUrl)}`,
+  );
+  const data = await res.json().catch(() => null);
+  if (!res.ok) {
+    throw new Error(
+      data?.error || `Bandcamp resolve failed (HTTP ${res.status}).`,
+    );
+  }
+  if (!data || !data.embedId) {
+    throw new Error('Bandcamp resolve returned no embed id.');
+  }
+  return data;
+}
+
+/**
+ * Same as resolveBandcampMetadata, but swallows the failure reason and
+ * returns null - for callers (add-by-URL flows) that just want a silent
+ * fallback rather than a surfaced error, same as YouTube's oEmbed-failure
+ * fallback elsewhere.
  */
 export async function fetchBandcampMetadata(pageUrl) {
   try {
-    const res = await fetch(
-      `/api/bandcamp-resolve?url=${encodeURIComponent(pageUrl)}`,
-    );
-    if (!res.ok) return null;
-    const data = await res.json();
-    if (!data || !data.embedId) return null;
-    return data;
+    return await resolveBandcampMetadata(pageUrl);
   } catch {
     return null;
   }

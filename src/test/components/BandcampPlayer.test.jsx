@@ -2,15 +2,15 @@ import { act, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import BandcampPlayer from '../../components/players/BandcampPlayer.jsx';
 
-const { fetchBandcampMetadata } = vi.hoisted(() => ({
-  fetchBandcampMetadata: vi.fn(),
+const { resolveBandcampMetadata } = vi.hoisted(() => ({
+  resolveBandcampMetadata: vi.fn(),
 }));
 
-vi.mock('../../utils/bandcamp.js', () => ({ fetchBandcampMetadata }));
+vi.mock('../../utils/bandcamp.js', () => ({ resolveBandcampMetadata }));
 
 describe('BandcampPlayer', () => {
   beforeEach(() => {
-    fetchBandcampMetadata.mockReset();
+    resolveBandcampMetadata.mockReset();
   });
 
   afterEach(() => {
@@ -18,7 +18,7 @@ describe('BandcampPlayer', () => {
   });
 
   it('shows a loading state before the resolve call completes', () => {
-    fetchBandcampMetadata.mockReturnValue(new Promise(() => {})); // never resolves
+    resolveBandcampMetadata.mockReturnValue(new Promise(() => {})); // never resolves
     const video = { videoId: 'https://artist.bandcamp.com/track/song' };
 
     render(<BandcampPlayer video={video} isPlaying={true} />);
@@ -27,7 +27,7 @@ describe('BandcampPlayer', () => {
   });
 
   it('renders the embed iframe once resolved, and calls onReady with an adapter', async () => {
-    fetchBandcampMetadata.mockResolvedValue({
+    resolveBandcampMetadata.mockResolvedValue({
       embedId: '1234567890',
       embedType: 'track',
       durationSeconds: 200,
@@ -53,7 +53,7 @@ describe('BandcampPlayer', () => {
   });
 
   it('builds an album= embed src for an album-type resolve', async () => {
-    fetchBandcampMetadata.mockResolvedValue({
+    resolveBandcampMetadata.mockResolvedValue({
       embedId: '999',
       embedType: 'album',
       durationSeconds: null,
@@ -71,8 +71,80 @@ describe('BandcampPlayer', () => {
     expect(container.querySelector('iframe').src).toContain('album=999');
   });
 
+  it('includes both album= and track= when the resolved track belongs to an album', async () => {
+    resolveBandcampMetadata.mockResolvedValue({
+      embedId: '1234567890',
+      embedType: 'track',
+      albumId: '42',
+      durationSeconds: 200,
+    });
+    const video = { videoId: 'https://artist.bandcamp.com/track/song' };
+
+    const { container } = render(
+      <BandcampPlayer video={video} isPlaying={true} />,
+    );
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    const src = container.querySelector('iframe').src;
+    expect(src).toContain('album=42/track=1234567890');
+  });
+
+  it('sets autoplay=1 when isPlaying is true at mount, autoplay=0 otherwise', async () => {
+    resolveBandcampMetadata.mockResolvedValue({
+      embedId: '1',
+      embedType: 'track',
+      durationSeconds: 200,
+    });
+    const video = { videoId: 'https://artist.bandcamp.com/track/song' };
+
+    const { container: playingContainer } = render(
+      <BandcampPlayer video={video} isPlaying={true} />,
+    );
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(playingContainer.querySelector('iframe').src).toContain(
+      'autoplay=1',
+    );
+
+    const { container: pausedContainer } = render(
+      <BandcampPlayer video={video} isPlaying={false} />,
+    );
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(pausedContainer.querySelector('iframe').src).toContain('autoplay=0');
+  });
+
+  it('does not change the iframe src (reload the embed) when isPlaying toggles after mount', async () => {
+    resolveBandcampMetadata.mockResolvedValue({
+      embedId: '1',
+      embedType: 'track',
+      durationSeconds: 200,
+    });
+    const video = { videoId: 'https://artist.bandcamp.com/track/song' };
+
+    const { container, rerender } = render(
+      <BandcampPlayer video={video} isPlaying={true} />,
+    );
+    await act(async () => {
+      await Promise.resolve();
+    });
+    const srcBefore = container.querySelector('iframe').src;
+    expect(srcBefore).toContain('autoplay=1');
+
+    rerender(<BandcampPlayer video={video} isPlaying={false} />);
+    expect(container.querySelector('iframe').src).toBe(srcBefore);
+
+    rerender(<BandcampPlayer video={video} isPlaying={true} />);
+    expect(container.querySelector('iframe').src).toBe(srcBefore);
+  });
+
   it('uses video.embedId/durationSeconds as an optimistic first-paint value, before resolve completes', () => {
-    fetchBandcampMetadata.mockReturnValue(new Promise(() => {}));
+    resolveBandcampMetadata.mockReturnValue(new Promise(() => {}));
     const video = {
       videoId: 'https://artist.bandcamp.com/track/song',
       embedId: '555',
@@ -88,7 +160,7 @@ describe('BandcampPlayer', () => {
   });
 
   it('play/pause/seekTo are no-ops that never throw', async () => {
-    fetchBandcampMetadata.mockResolvedValue({
+    resolveBandcampMetadata.mockResolvedValue({
       embedId: '1',
       embedType: 'track',
       durationSeconds: 200,
@@ -112,7 +184,7 @@ describe('BandcampPlayer', () => {
 
   it('getCurrentTime only accumulates while isPlaying is true', async () => {
     vi.useFakeTimers();
-    fetchBandcampMetadata.mockResolvedValue({
+    resolveBandcampMetadata.mockResolvedValue({
       embedId: '1',
       embedType: 'track',
       durationSeconds: 200,
@@ -153,7 +225,7 @@ describe('BandcampPlayer', () => {
 
   it('fires onEnd once elapsed reaches the known duration', async () => {
     vi.useFakeTimers();
-    fetchBandcampMetadata.mockResolvedValue({
+    resolveBandcampMetadata.mockResolvedValue({
       embedId: '1',
       embedType: 'track',
       durationSeconds: 5,
@@ -182,7 +254,7 @@ describe('BandcampPlayer', () => {
 
   it('never fires onEnd when duration is unknown', async () => {
     vi.useFakeTimers();
-    fetchBandcampMetadata.mockResolvedValue({
+    resolveBandcampMetadata.mockResolvedValue({
       embedId: '1',
       embedType: 'album',
       durationSeconds: null,
@@ -201,5 +273,25 @@ describe('BandcampPlayer', () => {
     });
 
     expect(onEnd).not.toHaveBeenCalled();
+  });
+
+  it('shows an error state instead of spinning forever when resolve fails', async () => {
+    resolveBandcampMetadata.mockRejectedValue(
+      new Error('Bandcamp resolve failed (HTTP 502).'),
+    );
+    const video = { videoId: 'https://artist.bandcamp.com/track/song' };
+
+    render(<BandcampPlayer video={video} isPlaying={true} />);
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(
+      screen.getByText(/Couldn't load this Bandcamp track/i),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText('Bandcamp resolve failed (HTTP 502).'),
+    ).toBeInTheDocument();
   });
 });

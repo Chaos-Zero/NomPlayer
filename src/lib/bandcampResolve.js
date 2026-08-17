@@ -83,16 +83,25 @@ export function parseBandcampPage(html, { expectedType = 'track' } = {}) {
   // extrapolate an "ended" timer from - leave it null and let the player
   // fall back to manual skip for albums.
   let durationSeconds = null;
+  // When a track belongs to an album, Bandcamp's own "Share/Embed" UI
+  // generates a combined `album=<albumId>/track=<trackId>` embed src rather
+  // than `track=<trackId>` alone - the track-only src still works, but
+  // renders its "large" card layout more sparsely (see BandcampPlayer.jsx).
+  let albumId = null;
   if (expectedType === 'track') {
     const rawDuration = tralbum.trackinfo?.[0]?.duration;
     if (typeof rawDuration === 'number' && Number.isFinite(rawDuration)) {
       durationSeconds = Math.round(rawDuration);
+    }
+    if (tralbum.current?.album_id) {
+      albumId = String(tralbum.current.album_id);
     }
   }
 
   return {
     embedId: String(embedId),
     embedType: expectedType,
+    albumId,
     title,
     artist,
     artworkUrl,

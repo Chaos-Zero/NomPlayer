@@ -50,10 +50,53 @@ describe('parseBandcampPage', () => {
     expect(parseBandcampPage(html, { expectedType: 'track' })).toEqual({
       embedId: '1234567890',
       embedType: 'track',
+      albumId: null,
       title: 'Song Title',
       artist: 'Artist Name',
       artworkUrl: 'https://f4.bcbits.com/img/a1234567890_10.jpg',
       durationSeconds: 246,
+    });
+  });
+
+  it('extracts album_id for a track that belongs to an album', () => {
+    const html = buildFixtureHtml({
+      tralbum: {
+        current: { id: 1234567890, title: 'Song Title', album_id: 42 },
+        trackinfo: [{ duration: 100 }],
+      },
+      band: { name: 'Artist Name' },
+    });
+
+    expect(parseBandcampPage(html, { expectedType: 'track' })).toMatchObject({
+      albumId: '42',
+    });
+  });
+
+  it('leaves albumId null for a standalone track (not part of an album)', () => {
+    const html = buildFixtureHtml({
+      tralbum: {
+        current: { id: 1234567890, title: 'Song Title' },
+        trackinfo: [{ duration: 100 }],
+      },
+      band: { name: 'Artist Name' },
+    });
+
+    expect(parseBandcampPage(html, { expectedType: 'track' })).toMatchObject({
+      albumId: null,
+    });
+  });
+
+  it('does not extract albumId for an album embed itself', () => {
+    const html = buildFixtureHtml({
+      tralbum: {
+        current: { id: 42, album_id: 42 },
+        trackinfo: [{ duration: 200 }, { duration: 180 }],
+      },
+      band: { name: 'Artist Name' },
+    });
+
+    expect(parseBandcampPage(html, { expectedType: 'album' })).toMatchObject({
+      albumId: null,
     });
   });
 

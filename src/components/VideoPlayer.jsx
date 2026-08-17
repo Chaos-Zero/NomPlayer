@@ -23,6 +23,7 @@ import {
   NextIcon,
   PlayIcon,
   PauseIcon,
+  StopIcon,
   FastForwardIcon,
   PlaylistPlusIcon,
   ShuffleIcon,
@@ -609,7 +610,14 @@ const VideoPlayer = forwardRef(function VideoPlayer(
     );
 
   const playerIframeNode = (
-    <div className="player-iframe-container" id="player-container">
+    <div
+      className={
+        provider === 'youtube'
+          ? 'player-iframe-container'
+          : `player-iframe-container player-iframe-container--${provider}`
+      }
+      id="player-container"
+    >
       {embedNode}
       {isOverlayEnabled && (
         <div className="player-overlay enabled">
@@ -627,10 +635,30 @@ const VideoPlayer = forwardRef(function VideoPlayer(
               className="btn btn-play player-overlay-btn player-overlay-btn-play"
               type="button"
               onClick={onTogglePlay}
-              title={isPlaying ? 'Pause' : 'Play'}
-              aria-label={isPlaying ? 'Pause' : 'Play'}
+              title={
+                isPlaying
+                  ? provider === 'soundcloud'
+                    ? 'Stop'
+                    : 'Pause'
+                  : 'Play'
+              }
+              aria-label={
+                isPlaying
+                  ? provider === 'soundcloud'
+                    ? 'Stop'
+                    : 'Pause'
+                  : 'Play'
+              }
             >
-              {isPlaying ? <PauseIcon /> : <PlayIcon />}
+              {isPlaying ? (
+                provider === 'soundcloud' ? (
+                  <StopIcon />
+                ) : (
+                  <PauseIcon />
+                )
+              ) : (
+                <PlayIcon />
+              )}
             </button>
             <button
               className="btn btn-icon player-overlay-btn"
@@ -696,7 +724,11 @@ const VideoPlayer = forwardRef(function VideoPlayer(
   );
 
   return (
-    <div className={`player-wrap player-wrap-${variant}`}>
+    <div
+      className={`player-wrap player-wrap-${variant}${
+        provider !== 'youtube' ? ` player-wrap-provider-${provider}` : ''
+      }`}
+    >
       <div className={`player-stage${isFull ? ' has-community-activity' : ''}`}>
         <div className="player-video-stack">
           {isFull && <div className="player-grid-top-spacer" />}

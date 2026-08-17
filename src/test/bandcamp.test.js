@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   fetchBandcampMetadata,
   parseBandcampInput,
+  resolveBandcampMetadata,
   singleTrackEntry,
 } from '../utils/bandcamp.js';
 
@@ -121,6 +122,50 @@ describe('fetchBandcampMetadata', () => {
         'https://artistname.bandcamp.com/track/song-title',
       ),
     ).toBeNull();
+  });
+});
+
+describe('resolveBandcampMetadata', () => {
+  const originalFetch = globalThis.fetch;
+
+  afterEach(() => {
+    globalThis.fetch = originalFetch;
+    vi.restoreAllMocks();
+  });
+
+  it('throws with the proxy-provided error message on an error status', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 502,
+      json: async () => ({ error: 'Bandcamp page returned 403' }),
+    });
+
+    await expect(
+      resolveBandcampMetadata('https://artistname.bandcamp.com/track/song'),
+    ).rejects.toThrow('Bandcamp page returned 403');
+  });
+
+  it('throws a generic status-coded message when the error body has no message', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 502,
+      json: async () => null,
+    });
+
+    await expect(
+      resolveBandcampMetadata('https://artistname.bandcamp.com/track/song'),
+    ).rejects.toThrow('HTTP 502');
+  });
+
+  it('throws when the response has no embedId', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ title: 'Song Title' }),
+    });
+
+    await expect(
+      resolveBandcampMetadata('https://artistname.bandcamp.com/track/song'),
+    ).rejects.toThrow('no embed id');
   });
 });
 

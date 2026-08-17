@@ -89,6 +89,24 @@ describe('PlaylistSidebar', () => {
     expect(props.onOpenSupportDropdown).toHaveBeenCalled();
   });
 
+  it('flags a Bandcamp track with the provider-bandcamp class, plain otherwise', () => {
+    const bandcampVideo = { ...video, provider: 'bandcamp' };
+    const { container } = renderSidebar({ playlist: [bandcampVideo] });
+
+    expect(
+      container.querySelector('.playlist-item.provider-bandcamp'),
+    ).not.toBeNull();
+  });
+
+  it('does not add the provider-bandcamp class for a YouTube track', () => {
+    const { container } = renderSidebar();
+
+    expect(
+      container.querySelector('.playlist-item.provider-bandcamp'),
+    ).toBeNull();
+    expect(container.querySelector('.playlist-item')).not.toBeNull();
+  });
+
   it('shows a context menu with support and remove actions on right click', () => {
     const { props } = renderSidebar();
 

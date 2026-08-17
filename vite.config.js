@@ -79,6 +79,7 @@ export default defineConfig({
     proxy: {
       '/api/vgmc-ingest': 'http://localhost:8788',
       '/api/vgmc-sheet-sync': 'http://localhost:8788',
+      '/api/bandcamp-resolve': 'http://localhost:8788',
     },
   },
   build: {

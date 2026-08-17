@@ -214,6 +214,7 @@ import {
   NextIcon,
   PlayIcon,
   PauseIcon,
+  StopIcon,
   FastForwardIcon,
   PlaylistPlusIcon,
   ShuffleIcon,
@@ -6089,9 +6090,23 @@ export default function App() {
               <button
                 className="footer-control-btn play-pause"
                 onClick={() => handleSetIsPlaying((p) => !p)}
-                title={isPlaying ? 'Pause' : 'Play'}
+                title={
+                  isPlaying
+                    ? currentVideo?.provider === 'soundcloud'
+                      ? 'Stop'
+                      : 'Pause'
+                    : 'Play'
+                }
               >
-                {isPlaying ? <PauseIcon /> : <PlayIcon />}
+                {isPlaying ? (
+                  currentVideo?.provider === 'soundcloud' ? (
+                    <StopIcon />
+                  ) : (
+                    <PauseIcon />
+                  )
+                ) : (
+                  <PlayIcon />
+                )}
               </button>
               <button
                 className="footer-control-btn"

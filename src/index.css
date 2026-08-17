@@ -5165,6 +5165,88 @@ body {
   border: none;
 }
 
+/* SoundCloud's classic widget (visual=false, SoundCloud's own default) and
+   Bandcamp's embed with our params (size=large, artwork=small,
+   tracklist=false) both render at a fixed, much shorter natural height than
+   a 16:9 video — stretching their iframe to fill the standard video box
+   just leaves blank space below the widget. Shrink the full-player box to
+   each provider's natural content height instead. Scoped to the full
+   player only: the mini/footer view already overrides aspect-ratio to fit
+   its own fixed short height, which is already close to these values.
+   The #player-container id is included to outrank
+   .player-stage.has-community-activity .player-iframe-container below (3
+   classes), which would otherwise win the cascade and re-force 16:9. */
+.player-wrap-full #player-container.player-iframe-container--soundcloud {
+  aspect-ratio: auto;
+  height: 166px;
+  max-height: 166px;
+}
+
+/* Bandcamp's "large" card (unlike SoundCloud's horizontal bar) doesn't
+   stretch to fill extra width usefully - given the full player's typical
+   width it just left-aligns a small artwork+title block and leaves a huge
+   stretch of near-empty background beside it. Cap it to its natural card
+   width and center it instead. */
+.player-wrap-full #player-container.player-iframe-container--bandcamp {
+  aspect-ratio: auto;
+  height: 120px;
+  max-height: 120px;
+  width: 400px;
+  max-width: 100%;
+  margin: 0 auto;
+}
+
+/* This layout normally reserves the full player area for a 16:9 video and
+   vertically-centers it with flex-grow spacers above (.player-grid-top-
+   spacer) and below (.player-bottom-content-wrapper, itself ending in a
+   .player-filler spacer) — sized on the assumption that the video is tall
+   enough that this reservation is barely noticeable either way. SoundCloud/
+   Bandcamp's embeds are only ~120-166px tall, so those spacers instead
+   balloon into one large, obviously-empty stretch below the embed. Let the
+   whole stack shrink to its actual content height for these providers
+   instead of stretching to fill the reserved area. Height overrides need
+   !important to outrank the base rules' own !important (see
+   .player-stage.has-community-activity .player-video-stack above), and
+   align-self opts .player-wrap out of .player-surface-full's
+   align-items: stretch, which would otherwise re-expand it regardless of
+   its own height. */
+.player-wrap-full.player-wrap-provider-soundcloud,
+.player-wrap-full.player-wrap-provider-bandcamp {
+  height: auto;
+  align-self: flex-start;
+}
+
+.player-wrap-full.player-wrap-provider-soundcloud
+  .player-stage.has-community-activity,
+.player-wrap-full.player-wrap-provider-bandcamp
+  .player-stage.has-community-activity {
+  height: auto;
+}
+
+.player-wrap-full.player-wrap-provider-soundcloud
+  .player-stage.has-community-activity
+  .player-video-stack,
+.player-wrap-full.player-wrap-provider-bandcamp
+  .player-stage.has-community-activity
+  .player-video-stack {
+  height: auto !important;
+}
+
+.player-wrap-full.player-wrap-provider-soundcloud .player-grid-top-spacer,
+.player-wrap-full.player-wrap-provider-bandcamp .player-grid-top-spacer,
+.player-wrap-full.player-wrap-provider-soundcloud .player-filler,
+.player-wrap-full.player-wrap-provider-bandcamp .player-filler {
+  flex: 0 0 auto;
+  min-height: 0;
+}
+
+.player-wrap-full.player-wrap-provider-soundcloud
+  .player-bottom-content-wrapper,
+.player-wrap-full.player-wrap-provider-bandcamp .player-bottom-content-wrapper {
+  flex: 0 0 auto;
+  max-height: none;
+}
+
 .player-overlay {
   position: absolute;
   inset: 0;
@@ -6648,6 +6730,25 @@ button.playlist-search-indicator:hover {
     linear-gradient(135deg, rgba(110, 34, 160, 0.28), rgba(225, 29, 72, 0.18)),
     rgba(44, 19, 45, 0.92);
   border-color: rgba(244, 114, 182, 0.42);
+}
+
+/* Bandcamp tracks can't be paused/seeked and have no reliable "ended"
+   signal (see BandcampPlayer.jsx) - flag them in any track list so that's
+   not a surprise mid-playback. Light red at rest, deepening to maroon
+   while it's the active/playing track. */
+.playlist-item.provider-bandcamp {
+  background: rgba(239, 68, 68, 0.1);
+  border-color: rgba(239, 68, 68, 0.22);
+}
+
+.playlist-item.provider-bandcamp:hover {
+  background: rgba(239, 68, 68, 0.16);
+  border-color: rgba(239, 68, 68, 0.32);
+}
+
+.playlist-item.provider-bandcamp.active {
+  background: rgba(128, 0, 32, 0.55);
+  border-color: rgba(176, 38, 68, 0.7);
 }
 
 .playlist-item.flash {
