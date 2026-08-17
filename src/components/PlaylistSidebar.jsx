@@ -424,6 +424,90 @@ function SortablePlaylistItem({
   );
 }
 
+// Same flip-card open/close animation as CollectionAdder (see its CSS in
+// index.css, shared `.collection-adder*` classes), but the back face is a
+// live filter box instead of a URL-add form, no submit/loading/success state
+// needed, just an input plus a way to close it.
+function PlaylistSearchControl({ tone, query, onQueryChange }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const inputRef = useRef(null);
+
+  useEffect(() => {
+    if (!isOpen) return undefined;
+
+    const frameId = window.requestAnimationFrame(() => {
+      inputRef.current?.focus();
+    });
+
+    return () => window.cancelAnimationFrame(frameId);
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (!isOpen) return undefined;
+
+    function handleKeyDown(event) {
+      if (event.key === 'Escape') {
+        setIsOpen(false);
+        onQueryChange('');
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onQueryChange]);
+
+  function closeSearch() {
+    setIsOpen(false);
+    onQueryChange('');
+  }
+
+  return (
+    <div
+      className={`collection-adder tone-${tone} compact playlist-filter-search${isOpen ? ' open' : ''}`}
+    >
+      <div className="collection-adder-shell">
+        <div className="collection-adder-stage">
+          <button
+            className="collection-adder-face collection-adder-front"
+            type="button"
+            onClick={() => setIsOpen(true)}
+            aria-label="Search in playlist"
+            title="Search in playlist"
+            tabIndex={isOpen ? -1 : 0}
+          >
+            ⌕
+          </button>
+
+          <form
+            className="collection-adder-face collection-adder-back playlist-filter-search-back"
+            onSubmit={(event) => event.preventDefault()}
+          >
+            <input
+              ref={inputRef}
+              className="collection-adder-input"
+              type="text"
+              role="searchbox"
+              placeholder="Search in Playlist…"
+              value={query}
+              onChange={(event) => onQueryChange(event.target.value)}
+              tabIndex={isOpen ? 0 : -1}
+            />
+            <button
+              className="collection-adder-close"
+              type="button"
+              aria-label="Close playlist search"
+              onClick={closeSearch}
+              tabIndex={isOpen ? 0 : -1}
+            >
+              ✕
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function PlaylistSidebar({
   playlist,
   currentIndex,
@@ -511,6 +595,7 @@ export default function PlaylistSidebar({
   const [isSortingByRating, setIsSortingByRating] = useState(false);
   // null (nomination order) -> 'desc' (highest ranked first) -> 'asc' -> null
   const [rankingSortDirection, setRankingSortDirection] = useState(null);
+  const [playlistSearchQuery, setPlaylistSearchQuery] = useState('');
   const collapseGestureRef = useRef(null);
   const listContainerRef = useRef(null);
   const supportIds = useMemo(
@@ -531,11 +616,15 @@ export default function PlaylistSidebar({
       ),
     [playlist, selectedIds],
   );
+  const normalizedPlaylistSearchQuery = playlistSearchQuery
+    .trim()
+    .toLowerCase();
   const displayPlaylist = useMemo(() => {
+    let list = playlist;
     if (rankingSortDirection) {
       // Your own rating (out of 10), not the community's VGMC support total,
       // that's what the "Total" column on the standings tab already covers.
-      return [...playlist].sort((a, b) => {
+      list = [...playlist].sort((a, b) => {
         const ratingA = a.rating ?? -1;
         const ratingB = b.rating ?? -1;
         const diff =
@@ -545,15 +634,30 @@ export default function PlaylistSidebar({
         if (diff !== 0) return diff;
         return (a.loadIndex ?? 0) - (b.loadIndex ?? 0);
       });
+    } else if (isSortingByRating) {
+      list = [...playlist].sort((a, b) => {
+        const ratingA = a.rating ?? -1;
+        const ratingB = b.rating ?? -1;
+        if (ratingB !== ratingA) return ratingB - ratingA;
+        return (a.loadIndex ?? 0) - (b.loadIndex ?? 0);
+      });
     }
-    if (!isSortingByRating) return playlist;
-    return [...playlist].sort((a, b) => {
-      const ratingA = a.rating ?? -1;
-      const ratingB = b.rating ?? -1;
-      if (ratingB !== ratingA) return ratingB - ratingA;
-      return (a.loadIndex ?? 0) - (b.loadIndex ?? 0);
+
+    // Search only ever narrows *which* rows render, it never reorders them,
+    // so it can't disturb playback order, shuffle, or drag-to-reorder state.
+    if (!normalizedPlaylistSearchQuery) return list;
+    return list.filter((video) => {
+      const { primaryTitle, secondaryTitle } = getPlaylistItemDisplay(video);
+      const haystack =
+        `${primaryTitle || ''} ${secondaryTitle || ''}`.toLowerCase();
+      return haystack.includes(normalizedPlaylistSearchQuery);
     });
-  }, [playlist, isSortingByRating, rankingSortDirection]);
+  }, [
+    playlist,
+    isSortingByRating,
+    rankingSortDirection,
+    normalizedPlaylistSearchQuery,
+  ]);
 
   const selectedVideos = useMemo(
     () => playlist.filter((video) => selectedIdSet.has(video.videoId)),
@@ -575,6 +679,13 @@ export default function PlaylistSidebar({
     setSelectionMode(false);
     setSelectedIds([]);
   }, [activePage]);
+
+  // A filter left over from the last list you were looking at (e.g.
+  // Nominations) would otherwise silently keep hiding rows in whatever list
+  // you switch to next, so clear it whenever the active view changes.
+  useEffect(() => {
+    setPlaylistSearchQuery('');
+  }, [activePlaylistView.type, activePlaylistView.id]);
 
   // Scrolls the active row into view once, when landing on a *different*
   // playlist/view (e.g. arriving at the VGMC standings page already cued up
@@ -1376,10 +1487,22 @@ export default function PlaylistSidebar({
       : isSupportView
         ? 'support'
         : 'playlist';
+    // Search is a read-only view filter, available on every list including
+    // ones you don't own (e.g. someone else's shared/community playlist).
+    // Adding is a mutation, so it stays restricted to lists you can actually
+    // modify, same restriction as before.
+    const canModifyList = !isCommunityView && !isReadOnlyView;
 
     return (
       <div className="playlist-sidebar-add">
-        {authUser && pendingMetadataCount > 0 && (
+        {playlist.length > 0 && (
+          <PlaylistSearchControl
+            tone={tone}
+            query={playlistSearchQuery}
+            onQueryChange={setPlaylistSearchQuery}
+          />
+        )}
+        {canModifyList && authUser && pendingMetadataCount > 0 && (
           <div className="metadata-banner">
             <div className="metadata-banner-text">
               Add metadata to {pendingMetadataCount}{' '}
@@ -1401,32 +1524,32 @@ export default function PlaylistSidebar({
             </div>
           </div>
         )}
-        {isSortingByRating && (isNominationsView || isSupportView) ? (
-          <div
-            className={`collection-adder tone-${tone} compact sorting-active`}
-            key="sorting"
-          >
-            <div className="collection-adder-shell" style={{ height: 42 }}>
-              <div className="collection-adder-stage">
-                <div className="collection-adder-face collection-adder-front">
-                  +
+        {canModifyList &&
+          (isSortingByRating && (isNominationsView || isSupportView) ? (
+            <div
+              className={`collection-adder tone-${tone} compact sorting-active`}
+              key="sorting"
+            >
+              <div className="collection-adder-shell" style={{ height: 42 }}>
+                <div className="collection-adder-stage">
+                  <div className="collection-adder-face collection-adder-front">
+                    +
+                  </div>
+                  <button
+                    className="collection-save-order-back"
+                    type="button"
+                    onClick={() => {
+                      onReorder?.(displayPlaylist);
+                      setIsSortingByRating(false);
+                    }}
+                  >
+                    Save Order
+                  </button>
                 </div>
-                <button
-                  className="collection-save-order-back"
-                  type="button"
-                  onClick={() => {
-                    onReorder?.(displayPlaylist);
-                    setIsSortingByRating(false);
-                  }}
-                >
-                  Save Order
-                </button>
               </div>
             </div>
-          </div>
-        ) : !isCommunityView ? (
-          activePlaylistView.type === 'custom-playlist' &&
-          onAddDirectToCustomPlaylist ? (
+          ) : activePlaylistView.type === 'custom-playlist' &&
+            onAddDirectToCustomPlaylist ? (
             <CollectionAdder
               tone="playlist"
               addButtonLabel="+"
@@ -1447,8 +1570,7 @@ export default function PlaylistSidebar({
               onAddDirectItems={onAddDirectItems}
               compact
             />
-          )
-        ) : null}
+          ))}
       </div>
     );
   }
@@ -1502,7 +1624,7 @@ export default function PlaylistSidebar({
             </div>
           </div>
         )}
-        {!isCollapsed && !isReadOnlyView && renderAddControl()}
+        {!isCollapsed && renderAddControl()}
       </div>
     );
   }
@@ -1738,7 +1860,7 @@ export default function PlaylistSidebar({
           )}
         </div>
       )}
-      {!isCollapsed && !isReadOnlyView && renderAddControl()}
+      {!isCollapsed && renderAddControl()}
       {contextMenu && (
         <ContextMenuPortal
           x={contextMenu.left}

@@ -6354,7 +6354,8 @@ body {
   right: 12px;
   bottom: 12px;
   display: flex;
-  justify-content: flex-end;
+  align-items: flex-end;
+  gap: 8px;
   z-index: 35;
   pointer-events: none;
 }
@@ -6363,7 +6364,19 @@ body {
   pointer-events: auto;
 }
 
-.playlist-sidebar-add .collection-adder.compact {
+/* Pins the search control to the left edge and, via the auto margin on its
+   right, pushes every sibling after it (metadata banner, add-to-queue
+   control) to the right edge as a group — same effect as the old
+   `justify-content: flex-end`, but leaves the search control out of the
+   pack. All of these stay direct children of `.playlist-sidebar-add` (a
+   definite-width, position: absolute box) rather than being nested inside
+   another flex wrapper, so `width: 100%` below resolves against a definite
+   size and the open/close animation grows the right direction. */
+.playlist-sidebar-add .playlist-filter-search {
+  margin-right: auto;
+}
+
+.playlist-sidebar-add .collection-adder.compact:not(.playlist-filter-search) {
   margin-left: auto;
 }
 
