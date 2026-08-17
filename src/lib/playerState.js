@@ -1,4 +1,5 @@
 import { checkContent } from '../utils/profanityFilter.js';
+import { MEDIA_PROVIDERS } from '../utils/media.js';
 export const PLAYER_STATE_STORAGE_KEY = 'yt_player_state';
 export const SUPPORT_LIST_STORAGE_KEY = 'yt_support_list';
 export const NOMINATION_LIST_STORAGE_KEY = 'yt_nominations_list';
@@ -16,10 +17,24 @@ function normalizeVideoEntry(entry) {
 
   return {
     videoId: entry.videoId,
+    // Every video/track object carries which provider it plays through.
+    // Missing/unrecognized defaults to 'youtube' — every entry created
+    // before this field existed (and anything malformed) still plays
+    // correctly as a YouTube video, which was the only provider at the time.
+    provider: MEDIA_PROVIDERS.includes(entry.provider)
+      ? entry.provider
+      : 'youtube',
     title: typeof entry.title === 'string' ? entry.title : 'Untitled video',
     thumbnail: typeof entry.thumbnail === 'string' ? entry.thumbnail : '',
     channelTitle:
       typeof entry.channelTitle === 'string' ? entry.channelTitle : '',
+    // Bandcamp-only: server-resolved track length, cached so the player's
+    // best-effort auto-advance timer (see VideoPlayer/BandcampPlayer) has a
+    // duration immediately without waiting on a fresh resolve call.
+    durationSeconds:
+      typeof entry.durationSeconds === 'number' && entry.durationSeconds > 0
+        ? entry.durationSeconds
+        : null,
     trackId: typeof entry.trackId === 'string' ? entry.trackId : null,
     gameTitle: typeof entry.gameTitle === 'string' ? entry.gameTitle : '',
     trackTitle: typeof entry.trackTitle === 'string' ? entry.trackTitle : '',
@@ -1206,10 +1221,14 @@ export async function syncCustomPlaylists(supabase, userId, customPlaylists) {
       } else if (v.videoId) {
         tracksToInsert.push({
           playlist_id: playlistId,
-          youtube_video_id: v.videoId,
+          provider: MEDIA_PROVIDERS.includes(v.provider)
+            ? v.provider
+            : 'youtube',
+          external_id: v.videoId,
           cached_title: v.title || null,
           cached_channel: v.channelTitle || null,
           cached_thumbnail: v.thumbnail || null,
+          cached_duration_seconds: v.durationSeconds || null,
           order_index: i,
         });
       }

@@ -2331,10 +2331,10 @@ export default function App() {
   const vgmcFeedbackByVideoId = useMemo(() => {
     const map = {};
     for (const row of vgmcStandingsRows) {
-      if (!row.track_id || !row.youtube_video_id) continue;
+      if (!row.track_id || !row.external_id) continue;
       const feedback = userFeedback[row.track_id];
       if (!feedback || feedback.rating == null) continue;
-      map[row.youtube_video_id] = {
+      map[row.external_id] = {
         rating: feedback.rating,
         note: feedback.note || '',
       };
@@ -6951,22 +6951,50 @@ export default function App() {
         feedbackByVideoId={vgmcFeedbackByVideoId}
       />
 
-      {isFeedbackPanelOpen && (feedbackTrack || currentVideo) && (
-        <ModalPortal>
-          <FooterFeedbackPanel
-            track={feedbackTrack || currentVideo}
-            supabase={supabase}
-            authUser={authUser}
-            userProfile={userProfile}
-            anchorRect={feedbackPosition}
-            initialIsEditing={isFeedbackForcedEdit}
-            onClose={handleCloseFeedbackPanel}
-            onShowToast={showDefaultAppToast}
-            onUpdate={refreshUserFeedback}
-            onFeedbackSaved={handleFeedbackSaved}
-          />
-        </ModalPortal>
-      )}
+      {isFeedbackPanelOpen &&
+        (feedbackTrack || currentVideo) &&
+        (() => {
+          const feedbackPanelTrack = feedbackTrack || currentVideo;
+          // Nominated tracks can't be supported (handleToggleSupportFromPlaylist
+          // no-ops on them), so the "Your Support" control only makes sense, and
+          // only renders (see onSetSupportLevel in FooterFeedbackPanel), when the
+          // open track isn't one of those.
+          const feedbackPanelIsNominated = nominationList.some(
+            (entry) => entry.videoId === feedbackPanelTrack.videoId,
+          );
+          const feedbackPanelSupportLevel = feedbackPanelIsNominated
+            ? 0
+            : supportList.find(
+                (entry) => entry.videoId === feedbackPanelTrack.videoId,
+              )?.supportLevel || 0;
+
+          return (
+            <ModalPortal>
+              <FooterFeedbackPanel
+                track={feedbackPanelTrack}
+                supabase={supabase}
+                authUser={authUser}
+                userProfile={userProfile}
+                anchorRect={feedbackPosition}
+                initialIsEditing={isFeedbackForcedEdit}
+                onClose={handleCloseFeedbackPanel}
+                onShowToast={showDefaultAppToast}
+                onUpdate={refreshUserFeedback}
+                onFeedbackSaved={handleFeedbackSaved}
+                supportLevel={feedbackPanelSupportLevel}
+                onSetSupportLevel={
+                  feedbackPanelIsNominated
+                    ? undefined
+                    : (level) =>
+                        handleToggleSupportFromPlaylist(
+                          feedbackPanelTrack,
+                          level,
+                        )
+                }
+              />
+            </ModalPortal>
+          );
+        })()}
     </div>
   );
 }

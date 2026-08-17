@@ -5,7 +5,8 @@ function row(overrides) {
   return {
     id: overrides.id || `row-${overrides.support_points}`,
     track_id: overrides.track_id ?? null,
-    youtube_video_id: overrides.youtube_video_id ?? 'aaaaaaaaaaa',
+    provider: overrides.provider ?? 'youtube',
+    external_id: overrides.external_id ?? 'aaaaaaaaaaa',
     cached_title: overrides.cached_title ?? 'Game - Song',
     nomination_game: overrides.nomination_game ?? 'Game',
     nomination_song: overrides.nomination_song ?? 'Song',
@@ -18,7 +19,7 @@ describe('toPlaylistVideos', () => {
   it('maps rows to the playlist-video shape, skipping rows with no video id', () => {
     const videos = toPlaylistVideos([
       row({
-        youtube_video_id: 'aaaaaaaaaaa',
+        external_id: 'aaaaaaaaaaa',
         cached_title: 'Foo - Bar',
         nomination_game: 'Foo',
         nomination_song: 'Bar',
@@ -26,12 +27,13 @@ describe('toPlaylistVideos', () => {
         order_index: 2,
         track_id: 'track-uuid-1',
       }),
-      { ...row({}), youtube_video_id: null },
+      { ...row({}), external_id: null },
     ]);
 
     expect(videos).toEqual([
       {
         videoId: 'aaaaaaaaaaa',
+        provider: 'youtube',
         title: 'Foo - Bar',
         displayTitle: 'Foo - Bar',
         gameTitle: 'Foo',
@@ -57,7 +59,7 @@ describe('toPlaylistVideos', () => {
     // reconcile_vgmc_playlist had already stored the split correctly.
     const [video] = toPlaylistVideos([
       row({
-        youtube_video_id: 'bbbbbbbbbbb',
+        external_id: 'bbbbbbbbbbb',
         nomination_game: 'Some Game',
         nomination_song: 'Some Song',
       }),
@@ -65,6 +67,19 @@ describe('toPlaylistVideos', () => {
 
     expect(video.gameTitle).toBe('Some Game');
     expect(video.trackTitle).toBe('Some Song');
+  });
+
+  it('carries a non-YouTube provider through, with no thumbnail fallback available', () => {
+    const [video] = toPlaylistVideos([
+      row({
+        provider: 'bandcamp',
+        external_id: 'https://artist.bandcamp.com/track/song',
+      }),
+    ]);
+
+    expect(video.provider).toBe('bandcamp');
+    expect(video.videoId).toBe('https://artist.bandcamp.com/track/song');
+    expect(video.thumbnail).toBe('');
   });
 });
 

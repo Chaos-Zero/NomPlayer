@@ -19,6 +19,8 @@ import {
   getTrackHistory,
   clearTrackHistory,
   HISTORY_STORAGE_KEY,
+  normalizePersistedPlayerState,
+  syncCustomPlaylists,
 } from '../lib/playerState.js';
 
 describe('playback history', () => {
@@ -300,5 +302,165 @@ describe('playerState guest import helpers', () => {
       completionCount: 1,
       totalSecondsPlayed: 241,
     });
+  });
+});
+
+describe('normalizePersistedPlayerState video provider passthrough', () => {
+  it('carries a non-YouTube provider and cached duration through every video list', () => {
+    const bandcampVideo = {
+      videoId: 'https://artist.bandcamp.com/track/song',
+      provider: 'bandcamp',
+      title: 'Song Title',
+      durationSeconds: 245,
+    };
+
+    const normalized = normalizePersistedPlayerState({
+      playlist: [bandcampVideo],
+      customPlaylists: [
+        { id: 'pl-1', name: 'My List', videos: [bandcampVideo] },
+      ],
+    });
+
+    expect(normalized.playlist[0]).toMatchObject({
+      provider: 'bandcamp',
+      durationSeconds: 245,
+    });
+    expect(normalized.customPlaylists[0].videos[0]).toMatchObject({
+      provider: 'bandcamp',
+      durationSeconds: 245,
+    });
+  });
+
+  it('defaults provider to youtube when missing or unrecognized', () => {
+    const normalized = normalizePersistedPlayerState({
+      playlist: [
+        { videoId: 'a1234567890' },
+        { videoId: 'b1234567890', provider: 'spotify' },
+      ],
+    });
+
+    expect(normalized.playlist[0].provider).toBe('youtube');
+    expect(normalized.playlist[1].provider).toBe('youtube');
+  });
+
+  it('drops a non-positive or non-numeric durationSeconds down to null', () => {
+    const normalized = normalizePersistedPlayerState({
+      playlist: [
+        { videoId: 'a1234567890', durationSeconds: 0 },
+        { videoId: 'b1234567890', durationSeconds: '245' },
+      ],
+    });
+
+    expect(normalized.playlist[0].durationSeconds).toBeNull();
+    expect(normalized.playlist[1].durationSeconds).toBeNull();
+  });
+});
+
+describe('syncCustomPlaylists', () => {
+  function createSupabaseMock() {
+    const insertedTracks = [];
+
+    function makeBuilder(resolveValue, overrides = {}) {
+      const builder = {
+        select: vi.fn(() => builder),
+        eq: vi.fn(() => builder),
+        in: vi.fn(() => builder),
+        delete: vi.fn(() => builder),
+        upsert: vi.fn(() => builder),
+        insert: vi.fn((rows) => {
+          insertedTracks.push(...rows);
+          return makeBuilder({ data: null, error: null });
+        }),
+        single: vi.fn().mockResolvedValue({
+          data: { id: 'playlist-uuid-1' },
+          error: null,
+        }),
+        then: (resolve) => Promise.resolve(resolveValue).then(resolve),
+        ...overrides,
+      };
+      return builder;
+    }
+
+    const supabase = {
+      from: vi.fn((table) => {
+        if (table === 'user_playlists') {
+          return makeBuilder({ data: [], error: null });
+        }
+        // user_playlist_tracks: delete-before-insert, both resolve empty.
+        return makeBuilder({ data: null, error: null });
+      }),
+    };
+
+    return { supabase, insertedTracks };
+  }
+
+  it('inserts a raw (non-catalog) video with provider/external_id/cached duration, not the retired youtube_video_id shape', async () => {
+    const { supabase, insertedTracks } = createSupabaseMock();
+
+    await syncCustomPlaylists(supabase, 'user-1', [
+      {
+        id: 'pl-1',
+        name: 'My List',
+        videos: [
+          {
+            videoId: 'https://artist.bandcamp.com/track/song',
+            provider: 'bandcamp',
+            title: 'Song Title',
+            channelTitle: 'Artist Name',
+            thumbnail: 'https://f4.bcbits.com/img/a1_10.jpg',
+            durationSeconds: 245,
+          },
+        ],
+      },
+    ]);
+
+    expect(insertedTracks).toHaveLength(1);
+    expect(insertedTracks[0]).toMatchObject({
+      provider: 'bandcamp',
+      external_id: 'https://artist.bandcamp.com/track/song',
+      cached_title: 'Song Title',
+      cached_channel: 'Artist Name',
+      cached_thumbnail: 'https://f4.bcbits.com/img/a1_10.jpg',
+      cached_duration_seconds: 245,
+    });
+    expect(insertedTracks[0]).not.toHaveProperty('youtube_video_id');
+  });
+
+  it('defaults provider to youtube for a raw entry with no provider field', async () => {
+    const { supabase, insertedTracks } = createSupabaseMock();
+
+    await syncCustomPlaylists(supabase, 'user-1', [
+      {
+        id: 'pl-1',
+        name: 'My List',
+        videos: [{ videoId: 'a1234567890', title: 'A Video' }],
+      },
+    ]);
+
+    expect(insertedTracks[0]).toMatchObject({
+      provider: 'youtube',
+      external_id: 'a1234567890',
+      cached_duration_seconds: null,
+    });
+  });
+
+  it('inserts a catalog-linked video by track_id, untouched by the provider/external_id changes', async () => {
+    const { supabase, insertedTracks } = createSupabaseMock();
+
+    await syncCustomPlaylists(supabase, 'user-1', [
+      {
+        id: 'pl-1',
+        name: 'My List',
+        videos: [{ videoId: 'a1234567890', trackId: 'track-uuid-1' }],
+      },
+    ]);
+
+    expect(insertedTracks).toEqual([
+      {
+        playlist_id: 'playlist-uuid-1',
+        track_id: 'track-uuid-1',
+        order_index: 0,
+      },
+    ]);
   });
 });

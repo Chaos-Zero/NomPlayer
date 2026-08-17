@@ -1,4 +1,4 @@
-import { getYouTubeThumbnailUrl } from '../utils/youtube.js';
+import { getMediaThumbnailUrl } from '../utils/media.js';
 
 // Backs the live VGMC standings homepage view. The scoring itself is computed
 // server-side (src/lib/vgmcIngest.js) and persisted onto user_playlist_tracks by
@@ -13,7 +13,7 @@ export async function fetchVgmcPlaylistTracks(supabase, playlistId) {
   const { data, error } = await supabase
     .from('user_playlist_tracks')
     .select(
-      'id, track_id, youtube_video_id, cached_title, nomination_game, nomination_song, support_points, order_index',
+      'id, track_id, provider, external_id, cached_title, nomination_game, nomination_song, support_points, order_index',
     )
     .eq('playlist_id', playlistId)
     .order('order_index', { ascending: true });
@@ -28,7 +28,8 @@ export async function fetchVgmcPlaylistTracks(supabase, playlistId) {
 function normalizeRow(row) {
   return {
     id: row.id,
-    videoId: row.youtube_video_id,
+    videoId: row.external_id,
+    provider: row.provider || 'youtube',
     title: row.cached_title || 'Untitled track',
     game: row.nomination_game || null,
     song: row.nomination_song || null,
@@ -49,14 +50,18 @@ function normalizeRow(row) {
  * split individually rather than the single display string. */
 export function toPlaylistVideos(rows) {
   return (rows || [])
-    .filter((row) => row && row.youtube_video_id)
+    .filter((row) => row && row.external_id)
     .map((row) => ({
-      videoId: row.youtube_video_id,
+      videoId: row.external_id,
+      provider: row.provider || 'youtube',
       title: row.cached_title || 'Untitled track',
       displayTitle: row.cached_title || '',
       gameTitle: row.nomination_game || '',
       trackTitle: row.nomination_song || '',
-      thumbnail: getYouTubeThumbnailUrl(row.youtube_video_id),
+      thumbnail: getMediaThumbnailUrl({
+        provider: row.provider,
+        videoId: row.external_id,
+      }),
       channelTitle: '',
       // The catalog track this nomination was promoted to (reconcile_vgmc_playlist
       // links it), this is what a personal rating is actually keyed by
@@ -78,7 +83,7 @@ export function toPlaylistVideos(rows) {
  */
 export function partitionStandings(rows) {
   const qualifying = (rows || [])
-    .filter((row) => row && row.youtube_video_id)
+    .filter((row) => row && row.external_id)
     .map(normalizeRow)
     .filter((row) => row.supportPoints > 1)
     .sort(

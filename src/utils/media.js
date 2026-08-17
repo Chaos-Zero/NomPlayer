@@ -19,6 +19,9 @@ import {
   singleTrackEntry as singleBandcampTrackEntry,
 } from './bandcamp.js';
 
+/** Every provider a video/track object's `provider` field can legitimately be. */
+export const MEDIA_PROVIDERS = ['youtube', 'soundcloud', 'bandcamp'];
+
 /**
  * Parse a pasted URL (or, for YouTube, a bare id) against every supported
  * provider in turn. Each provider parser only matches its own hostname

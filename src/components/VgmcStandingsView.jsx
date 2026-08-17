@@ -46,6 +46,7 @@ export default function VgmcStandingsView({
     // playing a standings row never disturbs the real queue/position.
     onPlayNow({
       videoId: row.videoId,
+      provider: row.provider || 'youtube',
       title: row.title,
       gameTitle: row.game || '',
       trackTitle: row.song || '',

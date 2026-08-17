@@ -7,6 +7,7 @@ import React, {
 } from 'react';
 import { getDisplayProfileName } from '../lib/playerState.js';
 import { getYouTubeThumbnailUrl } from '../utils/youtube.js';
+import { getMediaThumbnailUrl } from '../utils/media.js';
 import { SearchIcon, TrashIcon } from './Icons.jsx';
 import PrivacyToggle from './PrivacyToggle.jsx';
 import CreatePlaylistDialog from './CreatePlaylistDialog.jsx';
@@ -473,7 +474,7 @@ export function CommunityPlaylistsView({
           supabase
             .from('user_playlist_tracks')
             .select(
-              'playlist_id, order_index, youtube_video_id, cached_thumbnail, tracks(track_sources(external_id, cached_thumbnail_url, is_primary))',
+              'playlist_id, order_index, provider, external_id, cached_thumbnail, tracks(track_sources(external_id, cached_thumbnail_url, is_primary))',
             )
             .in('playlist_id', playlistIds)
             .order('order_index', { ascending: true })
@@ -487,10 +488,13 @@ export function CommunityPlaylistsView({
                   thumbnailMap[pt.playlist_id] =
                     src.cached_thumbnail_url ||
                     getYouTubeThumbnailUrl(src.external_id);
-                } else if (pt.youtube_video_id) {
+                } else if (pt.external_id) {
                   thumbnailMap[pt.playlist_id] =
                     pt.cached_thumbnail ||
-                    getYouTubeThumbnailUrl(pt.youtube_video_id);
+                    getMediaThumbnailUrl({
+                      provider: pt.provider,
+                      videoId: pt.external_id,
+                    });
                 }
               }
             }),
@@ -565,7 +569,7 @@ export function CommunityPlaylistsView({
     const { data, error } = await supabase
       .from('user_playlist_tracks')
       .select(
-        `id, order_index, track_id, youtube_video_id, cached_title, cached_channel, cached_thumbnail,
+        `id, order_index, track_id, provider, external_id, cached_title, cached_channel, cached_thumbnail,
          tracks (
            id, canonical_game_title, canonical_track_title,
            track_sources (
@@ -608,17 +612,21 @@ export function CommunityPlaylistsView({
             addedAt: new Date().toISOString(),
           };
         }
-        if (pt.youtube_video_id) {
+        if (pt.external_id) {
           return {
             id: pt.id,
-            videoId: pt.youtube_video_id,
+            videoId: pt.external_id,
+            provider: pt.provider || 'youtube',
             trackId: null,
-            title: pt.cached_title || pt.youtube_video_id,
-            displayTitle: pt.cached_title || pt.youtube_video_id,
+            title: pt.cached_title || pt.external_id,
+            displayTitle: pt.cached_title || pt.external_id,
             channelTitle: pt.cached_channel || 'YouTube',
             thumbnail:
               pt.cached_thumbnail ||
-              `https://i.ytimg.com/vi/${pt.youtube_video_id}/mqdefault.jpg`,
+              getMediaThumbnailUrl({
+                provider: pt.provider,
+                videoId: pt.external_id,
+              }),
             gameTitle: '',
             trackTitle: '',
             comment: '',

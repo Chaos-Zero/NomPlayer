@@ -25,6 +25,7 @@ import YouTubeIcon from './YouTubeIcon.jsx';
 import ScrollingText from './ScrollingText.jsx';
 import useMediaQuery from '../hooks/useMediaQuery.js';
 import { getDisplayProfileName } from '../lib/playerState.js';
+import { getMediaThumbnailUrl } from '../utils/media.js';
 import { CheckDownIcon, SortByRatingIcon, SpeechBubbleIcon } from './Icons.jsx';
 
 const VGMC_PLAYLIST_ID = import.meta.env.VITE_VGMC_PLAYLIST_ID || '';
@@ -839,7 +840,7 @@ export default function PlaylistSidebar({
     const { data, error } = await supabase
       .from('user_playlist_tracks')
       .select(
-        `id, order_index, track_id, youtube_video_id, cached_title, cached_channel, cached_thumbnail,
+        `id, order_index, track_id, provider, external_id, cached_title, cached_channel, cached_thumbnail,
          tracks(id, canonical_game_title, canonical_track_title,
            track_sources(external_id, cached_title, cached_channel_title, cached_thumbnail_url, is_primary))`,
       )
@@ -877,17 +878,21 @@ export default function PlaylistSidebar({
             addedAt: new Date().toISOString(),
           };
         }
-        if (pt.youtube_video_id) {
+        if (pt.external_id) {
           return {
             id: pt.id,
-            videoId: pt.youtube_video_id,
+            videoId: pt.external_id,
+            provider: pt.provider || 'youtube',
             trackId: null,
-            title: pt.cached_title || pt.youtube_video_id,
-            displayTitle: pt.cached_title || pt.youtube_video_id,
+            title: pt.cached_title || pt.external_id,
+            displayTitle: pt.cached_title || pt.external_id,
             channelTitle: pt.cached_channel || 'YouTube',
             thumbnail:
               pt.cached_thumbnail ||
-              `https://i.ytimg.com/vi/${pt.youtube_video_id}/mqdefault.jpg`,
+              getMediaThumbnailUrl({
+                provider: pt.provider,
+                videoId: pt.external_id,
+              }),
             gameTitle: '',
             trackTitle: '',
             comment: '',
