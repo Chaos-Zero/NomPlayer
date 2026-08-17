@@ -1,5 +1,5 @@
 {
-  "exportedAt": "2026-08-17T10:39:25.619Z",
+  "exportedAt": "2026-08-17T11:51:54.988Z",
   "totalCount": 10924,
   "tracks": [
     {
@@ -41998,10 +41998,10 @@
       "support_count_3": 0,
       "nomination_count": 0,
       "comment_count": 0,
-      "avg_rating": 4,
+      "avg_rating": 4.5,
       "has_result": false,
-      "total_comments": 1,
-      "average_rating": 4
+      "total_comments": 2,
+      "average_rating": 4.5
     },
     {
       "track_id": "178eee1c-1dea-4390-9f37-de597e65b975",
@@ -118027,7 +118027,7 @@
       "support_count_3": 0,
       "nomination_count": 0,
       "comment_count": 0,
-      "avg_rating": 4,
+      "avg_rating": 5,
       "has_result": false
     },
     {
@@ -404654,7 +404654,7 @@
       "support_count_3": 0,
       "nomination_count": 0,
       "comment_count": 0,
-      "avg_rating": 6,
+      "avg_rating": 5.5,
       "has_result": false
     },
     {
