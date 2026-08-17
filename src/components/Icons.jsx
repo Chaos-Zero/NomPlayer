@@ -353,6 +353,25 @@ export function CheckDownIcon({ className = 'collection-icon' }) {
   );
 }
 
+// Crosshair, "track/locate the currently playing song in the list".
+export function LocateIcon({ className = 'collection-icon' }) {
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <circle cx="12" cy="12" r="7" />
+      <circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none" />
+      <path d="M12 2v3M12 19v3M2 12h3M19 12h3" />
+    </svg>
+  );
+}
+
 export function UsersIcon({ className = 'collection-icon' }) {
   return (
     <svg className={className} viewBox="0 0 20 20" fill="currentColor">

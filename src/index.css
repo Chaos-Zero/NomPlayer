@@ -5774,7 +5774,7 @@ body {
   flex-shrink: 0;
 }
 
-.playlist-mobile-title-bar {
+.playlist-title-bar {
   padding: 8px 16px;
   border-bottom: 1px solid var(--border);
   background: var(--bg-glass);
@@ -5784,12 +5784,12 @@ body {
   gap: 12px;
 }
 
-.playlist-mobile-title-scroll {
+.playlist-title-scroll {
   flex: 1;
   min-width: 0;
 }
 
-.playlist-mobile-title-scroll .scrolling-text-track {
+.playlist-title-scroll .scrolling-text-track {
   gap: 40px;
   color: var(--text-primary);
   font-size: 13px;
@@ -5798,7 +5798,7 @@ body {
   letter-spacing: 0.06em;
 }
 
-.playlist-mobile-title-count {
+.playlist-title-count {
   flex-shrink: 0;
   font-size: 11px;
   color: var(--text-muted);
@@ -6198,31 +6198,16 @@ body {
   background: var(--surface-hover, rgba(255, 255, 255, 0.06));
 }
 
+/* The playlist name and video count live in the scrolling title bar above
+   the header (.playlist-title-bar) now, so this dropdown trigger no longer
+   needs to repeat the specific name, just a static label for what it is:
+   the switcher between your lists (Queue, Nominations, Supports, ...). */
 .sidebar-title {
   font-size: 12px;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.08em;
   color: var(--text-muted);
-}
-
-.sidebar-count {
-  font-size: 11px;
-  color: var(--text-muted);
-  background: var(--bg-glass);
-  padding: 2px 8px;
-  border-radius: 99px;
-  border: 1px solid var(--border);
-}
-
-@media (max-width: 960px) {
-  /* The playlist name and video count both live in the scrolling title
-     bar above the header on mobile (.playlist-mobile-title-bar), so drop
-     the duplicates here to give the row's action icons room to breathe. */
-  .sidebar-title,
-  .sidebar-count {
-    display: none;
-  }
 }
 
 .sidebar-header-actions {

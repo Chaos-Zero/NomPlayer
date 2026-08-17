@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   DndContext,
   closestCenter,
@@ -26,7 +26,12 @@ import ScrollingText from './ScrollingText.jsx';
 import useMediaQuery from '../hooks/useMediaQuery.js';
 import { getDisplayProfileName } from '../lib/playerState.js';
 import { getMediaThumbnailUrl } from '../utils/media.js';
-import { CheckDownIcon, SortByRatingIcon, SpeechBubbleIcon } from './Icons.jsx';
+import {
+  CheckDownIcon,
+  LocateIcon,
+  SortByRatingIcon,
+  SpeechBubbleIcon,
+} from './Icons.jsx';
 
 const VGMC_PLAYLIST_ID = import.meta.env.VITE_VGMC_PLAYLIST_ID || '';
 
@@ -704,18 +709,44 @@ export default function PlaylistSidebar({
     setPlaylistSearchQuery('');
   }, [activePlaylistView.type, activePlaylistView.id]);
 
-  // Scrolls the active row into view once, when landing on a *different*
-  // playlist/view (e.g. arriving at the VGMC standings page already cued up
-  // to the next song you haven't heard), deliberately keyed on the view
-  // itself, not currentIndex, so this never yanks the list out from under
-  // someone mid-scroll or mid-listen as playback advances normally.
-  useEffect(() => {
-    const container = listContainerRef.current;
-    if (!container) return;
+  // "Track current song": user-controlled via the header toggle beside Move
+  // Listened to Bottom, on by default. Simple on/off rather than trying to
+  // infer intent from scroll position, filter state, etc., if it's on, the
+  // active row gets scrolled into view; if you scrolled away on purpose,
+  // turn it off.
+  const [isTrackingActive, setIsTrackingActive] = useState(true);
 
-    const activeEl = container.querySelector('.playlist-item.active');
+  // `isActive={index === currentIndex}` on the rows below compares a
+  // *displayPlaylist* position against an index into the underlying
+  // (unsorted, unfiltered) `playlist`, those only line up while neither sort
+  // nor search has touched the list, so there's nothing reliable to scroll
+  // to while the list is reordered/narrowed away from its natural order.
+  const isPlaylistFilteredOrSorted =
+    isSortingByRating ||
+    Boolean(rankingSortDirection) ||
+    Boolean(normalizedPlaylistSearchQuery);
+
+  const focusActiveRow = useCallback(() => {
+    const container = listContainerRef.current;
+    const activeEl = container?.querySelector('.playlist-item.active');
     activeEl?.scrollIntoView({ block: 'center' });
-  }, [activePlaylistView.type, activePlaylistView.id]);
+  }, []);
+
+  // Scrolls the active row into view on: landing on a different playlist/view,
+  // the current track changing (new track, skip/back), or search/rating-sort
+  // getting cleared (coming out of a filter) - as long as tracking is on and
+  // the list is in its natural order.
+  useEffect(() => {
+    if (!isTrackingActive || isPlaylistFilteredOrSorted) return;
+    focusActiveRow();
+  }, [
+    activePlaylistView.type,
+    activePlaylistView.id,
+    currentIndex,
+    isPlaylistFilteredOrSorted,
+    isTrackingActive,
+    focusActiveRow,
+  ]);
 
   useEffect(() => {
     function clearGesture() {
@@ -999,18 +1030,16 @@ export default function PlaylistSidebar({
 
     return (
       <>
-        {isMobileLayout && (
-          <div className="playlist-mobile-title-bar">
-            <ScrollingText
-              className="playlist-mobile-title-scroll"
-              text={displayTitle}
-              truncateWhenStatic
-            />
-            <span className="playlist-mobile-title-count">
-              {playlist.length} {playlist.length === 1 ? 'video' : 'videos'}
-            </span>
-          </div>
-        )}
+        <div className="playlist-title-bar">
+          <ScrollingText
+            className="playlist-title-scroll"
+            text={displayTitle}
+            truncateWhenStatic
+          />
+          <span className="playlist-title-count">
+            {playlist.length} {playlist.length === 1 ? 'video' : 'videos'}
+          </span>
+        </div>
         <div className="sidebar-header">
           <div
             className="sidebar-header-main community-dropdown-wrapper"
@@ -1045,11 +1074,10 @@ export default function PlaylistSidebar({
                   </div>
                 )}
               </div>
+              {/* Name + count now live in .playlist-title-bar above, so this
+                  trigger just labels what it switches between. */}
               <div className="community-view-text">
-                <span className="sidebar-title">{displayTitle}</span>
-                <span className="sidebar-count">
-                  {playlist.length} {playlist.length === 1 ? 'video' : 'videos'}
-                </span>
+                <span className="sidebar-title">Lists</span>
               </div>
               <span className="community-view-chevron">
                 <ChevronIcon />
@@ -1385,6 +1413,20 @@ export default function PlaylistSidebar({
                     <CheckDownIcon />
                   </button>
                 )}
+                <button
+                  className={`fav-panel-action-btn icon-only${isTrackingActive ? ' active' : ''}`}
+                  type="button"
+                  onClick={() => setIsTrackingActive((previous) => !previous)}
+                  title={
+                    isTrackingActive
+                      ? 'Tracking current song (click to stop)'
+                      : 'Track current song'
+                  }
+                  aria-label="Track current song"
+                  aria-pressed={isTrackingActive}
+                >
+                  <LocateIcon />
+                </button>
                 {activePlaylistView.type === 'custom-playlist' ? (
                   <div
                     style={{ marginLeft: 8, marginRight: 8, display: 'flex' }}

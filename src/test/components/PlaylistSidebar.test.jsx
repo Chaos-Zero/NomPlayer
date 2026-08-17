@@ -227,13 +227,50 @@ describe('PlaylistSidebar', () => {
 
   it('renders the video count beside the title with a desktop select button', () => {
     const { container } = renderSidebar({ isShuffleEnabled: true });
-    const headerMain = container.querySelector('.sidebar-header-main');
+    const titleBar = container.querySelector('.playlist-title-bar');
     const headerActions = container.querySelector('.sidebar-header-actions');
 
-    expect(headerMain).toHaveTextContent('Queue');
-    expect(headerMain).toHaveTextContent('1 video');
-    expect(headerActions?.children).toHaveLength(3);
+    expect(titleBar).toHaveTextContent('Queue');
+    expect(titleBar).toHaveTextContent('1 video');
+    expect(headerActions?.children).toHaveLength(4);
     expect(screen.getByRole('button', { name: 'Select' })).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Track current song' }),
+    ).toBeInTheDocument();
+  });
+
+  it('tracks the active track by default, and stops once toggled off', () => {
+    const twoVideoPlaylist = [
+      { ...video, loadIndex: 0 },
+      {
+        videoId: 'beta12345678',
+        title: 'Beta',
+        thumbnail: 'b.jpg',
+        channelTitle: 'Channel B',
+        loadIndex: 1,
+      },
+    ];
+    const { rerender, props } = renderSidebar({
+      playlist: twoVideoPlaylist,
+      currentIndex: 0,
+    });
+
+    // Tracking is on by default, so mounting already-cued-up scrolls once.
+    expect(Element.prototype.scrollIntoView).toHaveBeenCalledTimes(1);
+
+    // A track change (skip/back, or a new track starting) re-focuses.
+    rerender(<PlaylistSidebar {...props} currentIndex={1} />);
+    expect(Element.prototype.scrollIntoView).toHaveBeenCalledTimes(2);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Track current song' }));
+
+    // Off now, further track changes shouldn't scroll the list around.
+    rerender(<PlaylistSidebar {...props} currentIndex={0} />);
+    expect(Element.prototype.scrollIntoView).toHaveBeenCalledTimes(2);
+
+    // Turning it back on immediately re-focuses the active row.
+    fireEvent.click(screen.getByRole('button', { name: 'Track current song' }));
+    expect(Element.prototype.scrollIntoView).toHaveBeenCalledTimes(3);
   });
 
   it('shows shuffle and preview controls in the mobile playlist header', () => {
