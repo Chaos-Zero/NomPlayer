@@ -5170,7 +5170,7 @@ export default function App() {
                 cached_thumbnail_url_input: update.thumbnail || null,
                 // This admin metadata-editing flow (steps 1-2 above) still only
                 // ever parses/fetches YouTube links (parseYouTubeInput,
-                // singleVideoEntry) — provider-aware editing here is Step 8's
+                // singleVideoEntry) - provider-aware editing here is Step 8's
                 // job, not this one's.
                 provider_input: 'youtube',
               },

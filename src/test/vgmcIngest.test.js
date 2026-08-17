@@ -41,7 +41,7 @@ describe('extractVideoId', () => {
     });
   });
 
-  it('rejects a Bandcamp album URL — a nomination is one song, not a whole album', () => {
+  it('rejects a Bandcamp album URL - a nomination is one song, not a whole album', () => {
     expect(
       extractVideoId('https://artistname.bandcamp.com/album/album-title'),
     ).toBeNull();
