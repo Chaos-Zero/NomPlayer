@@ -63,6 +63,7 @@ const VideoPlayer = forwardRef(function VideoPlayer(
     onOpenVgmcSheetSync,
     previousTrack,
     onShowComments,
+    onPlayPreviousTrack,
   },
   ref,
 ) {
@@ -416,6 +417,16 @@ const VideoPlayer = forwardRef(function VideoPlayer(
             <span className="now-playing-previous-title">
               {previousTrackTitle}
             </span>
+            {onPlayPreviousTrack && (
+              <button
+                className="comment-bubble-btn"
+                type="button"
+                title="Play this track now (doesn't affect the queue)"
+                onClick={() => onPlayPreviousTrack(previousTrack)}
+              >
+                <PlayIcon />
+              </button>
+            )}
             {onShowComments && (
               <button
                 className="comment-bubble-btn"

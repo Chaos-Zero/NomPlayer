@@ -2288,25 +2288,27 @@ export default function App() {
     );
     return index < 0 ? null : index;
   }, [sidebarTracks, transientVideo, currentVideoId]);
-  // The track just before the current one in currentPlayOrderIds, so the
-  // player can offer a quick way back to comment on/rate what was playing
-  // a moment ago without having to find it in the list again.
+  // The track that was actually playing before the current one, per the
+  // user's listening history (see recordTrackHistory/getTrackHistory) rather
+  // than position in the playlist -- so the player can offer a quick way
+  // back to comment on/rate what was really playing a moment ago, even if
+  // that track isn't adjacent to (or isn't even in) the current list.
   const previousTrack = useMemo(() => {
     const activeVideoId = transientVideo?.videoId || currentVideoId;
-    if (!activeVideoId || currentPlayOrderIds.length === 0) return null;
-    const index = currentPlayOrderIds.indexOf(activeVideoId);
-    if (index <= 0) return null;
-    const previousVideoId = currentPlayOrderIds[index - 1];
+    if (!activeVideoId) return null;
+    const history = getTrackHistory();
+    const entry = history.find((item) => item.videoId !== activeVideoId);
+    if (!entry) return null;
+    // Prefer the live track object when it's still around (fresher
+    // metadata/support state); fall back to the history snapshot, which
+    // already carries enough (videoId/trackId/title/trackTitle/gameTitle)
+    // to display and to open comments on.
     return (
-      currentContextTracks.find((video) => video.videoId === previousVideoId) ||
-      null
+      currentContextTracks.find((video) => video.videoId === entry.videoId) ||
+      playlistRef.current.find((video) => video.videoId === entry.videoId) ||
+      entry
     );
-  }, [
-    currentContextTracks,
-    currentPlayOrderIds,
-    transientVideo,
-    currentVideoId,
-  ]);
+  }, [currentContextTracks, transientVideo, currentVideoId]);
   const isPlayerPage = activePage === 'player';
   const isDatabasePage = activePage === 'database';
   const isListExplorerPage = activePage === 'listExplorer';
@@ -5947,6 +5949,12 @@ export default function App() {
         onFeedbackSaved={handleFeedbackSaved}
         previousTrack={previousTrack}
         onShowComments={handleShowComments}
+        // handlePlayNowFromSupportList is the app's generic "play now"
+        // handler (see VgmcStandingsView) -- it plays this transiently and
+        // remembers whatever was actually playing so it resumes once this
+        // ends, so replaying the previous track never disturbs the real
+        // queue/position.
+        onPlayPreviousTrack={handlePlayNowFromSupportList}
       />
 
       {isDesktopDetachedFooter && (

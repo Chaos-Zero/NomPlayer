@@ -191,7 +191,7 @@ vi.mock('../lib/playerState.js', () => ({
   saveTrackSupport: vi.fn(),
   upsertUserProfile: vi.fn(),
   recordTrackHistory: vi.fn(),
-  getTrackHistory: vi.fn().mockResolvedValue([]),
+  getTrackHistory: vi.fn().mockReturnValue([]),
   clearTrackHistory: vi.fn(),
   NOMINATION_LIST_STORAGE_KEY: 'yt_nomination_list',
   SUPPORT_LIST_STORAGE_KEY: 'yt_support_list',
