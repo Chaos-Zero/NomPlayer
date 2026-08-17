@@ -62,7 +62,6 @@ export function SupportItem({
   selectionMode,
   isSelected,
   onToggleSelected,
-  onOpenSupportDropdown,
   itemAriaPrefix,
   removeButtonTitle,
   removeButtonAriaLabel,
@@ -280,11 +279,21 @@ export function SupportItem({
             </span>
           )}
 
-          {commentActivity && (
+          {onShowComments && (
             <button
-              className={`comment-bubble-btn${commentActivity === 'commented' ? ' has-comments' : ' has-rated'}`}
+              className={`comment-bubble-btn${
+                commentActivity === 'commented'
+                  ? ' has-comments'
+                  : commentActivity === 'rated'
+                    ? ' has-rated'
+                    : ' empty'
+              }`}
               type="button"
-              title="View community comments"
+              title={
+                commentActivity
+                  ? 'View community comments'
+                  : 'Add a comment or score'
+              }
               onClick={(e) => {
                 e.stopPropagation();
                 const rect = e.currentTarget.getBoundingClientRect();
@@ -305,17 +314,22 @@ export function SupportItem({
               className={`support-tier-icon-btn level-${video.supportLevel || 1}`}
               onClick={(event) => {
                 event.stopPropagation();
+                // Opens the community tab (same panel the comment bubble opens),
+                // which also has its own "Your Support" control, so this icon no
+                // longer needs its own popover for changing level, right-click ->
+                // Support Level still covers that for anyone who preferred it.
                 const rect = event.currentTarget.getBoundingClientRect();
-                onOpenSupportDropdown(video, {
+                onShowComments?.(video, {
                   top: rect.top,
-                  left: rect.left + rect.width / 2,
+                  left: rect.left,
+                  width: rect.width,
+                  height: rect.height,
                 });
               }}
-              aria-label="Change support level"
-              title="Change support level"
+              aria-label="Open community tab"
+              title="View community support & comments"
               style={{
                 fontSize: '14px',
-                opacity: 0.8,
                 background: 'none',
                 border: 'none',
                 padding: 0,

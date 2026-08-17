@@ -29,6 +29,8 @@ export default function FooterFeedbackPanel({
   onUpdate,
   onClose,
   onFeedbackSaved,
+  supportLevel = 0,
+  onSetSupportLevel,
 }) {
   const [supportersMenu, setSupportersMenu] = useState(null);
   // To keep the popover aligned when the window resizes (e.g. modal centering)
@@ -412,6 +414,54 @@ export default function FooterFeedbackPanel({
       </div>
       <div className="list-explorer-info-content-wrapper footer-feedback-wrapper">
         <div className="list-explorer-info-content">
+          {authUser && onSetSupportLevel && (
+            <section className="list-explorer-info-section">
+              <h4>YOUR SUPPORT</h4>
+              <div className="list-explorer-support-summary">
+                <div className="list-explorer-support-icons your-support-icons">
+                  <button
+                    type="button"
+                    className={`your-support-badge level-1${supportLevel === 1 ? ' active' : ''}`}
+                    onClick={() => onSetSupportLevel(1)}
+                    title="Possible Support"
+                  >
+                    <HeartIcon />
+                    <span>Possible</span>
+                  </button>
+                  <button
+                    type="button"
+                    className={`your-support-badge level-2${supportLevel === 2 ? ' active' : ''}`}
+                    onClick={() => onSetSupportLevel(2)}
+                    title="Likely Support"
+                  >
+                    <HeartIcon />
+                    <span>Likely</span>
+                  </button>
+                  <button
+                    type="button"
+                    className={`your-support-badge level-3${supportLevel === 3 ? ' active' : ''}`}
+                    onClick={() => onSetSupportLevel(3)}
+                    title="Definite Support"
+                  >
+                    <LockIcon />
+                    <span>Definite</span>
+                  </button>
+                  {supportLevel > 0 && (
+                    <button
+                      type="button"
+                      className="your-support-badge remove"
+                      onClick={() => onSetSupportLevel(0)}
+                      title="Remove Support"
+                      aria-label="Remove Support"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
+              </div>
+            </section>
+          )}
+
           {authUser && isEditing && (
             <section className="list-explorer-info-section">
               <div className="section-header-row">

@@ -12682,6 +12682,78 @@ body.is-resizing .resize-handle {
   letter-spacing: -0.01em;
 }
 
+/* "Your Support" control inside the community tab (FooterFeedbackPanel) - unlike
+   .support-badge just above (a read-only count of everyone else's support,
+   click only to see names), these three are always shown and toggle YOUR OWN
+   level, so they need a distinct dim-until-active state rather than always
+   being colored. */
+.your-support-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  font-weight: 700;
+  font-size: 13px;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  font-family: inherit;
+  outline: none;
+  color: var(--text-muted);
+  opacity: 0.55;
+}
+
+.your-support-badge:hover {
+  opacity: 0.9;
+  transform: translateY(-2px);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.your-support-badge svg {
+  width: 14px;
+  height: 14px;
+  filter: drop-shadow(0 0 4px currentColor);
+}
+
+.your-support-badge.level-1.active {
+  opacity: 1;
+  color: #fbbf24;
+  border-color: rgba(251, 191, 36, 0.3);
+  background: rgba(251, 191, 36, 0.08);
+  box-shadow: 0 0 15px rgba(251, 191, 36, 0.1);
+}
+
+.your-support-badge.level-2.active {
+  opacity: 1;
+  color: #ff2d78;
+  border-color: rgba(255, 45, 120, 0.3);
+  background: rgba(255, 45, 120, 0.08);
+  box-shadow: 0 0 15px rgba(255, 45, 120, 0.1);
+}
+
+.your-support-badge.level-3.active {
+  opacity: 1;
+  color: #ffb700;
+  border-color: rgba(255, 183, 0, 0.3);
+  background: rgba(255, 183, 0, 0.08);
+  box-shadow: 0 0 15px rgba(255, 183, 0, 0.1);
+}
+
+.your-support-badge.remove {
+  min-width: auto;
+  padding: 6px 10px;
+  color: var(--text-dim);
+}
+
+.your-support-badge.remove:hover {
+  opacity: 1;
+  color: #ff5470;
+  border-color: rgba(255, 84, 112, 0.3);
+  background: rgba(255, 84, 112, 0.08);
+}
+
 /* Supporters List Popover */
 .supporters-popover {
   background: rgba(18, 18, 24, 0.95);
@@ -12951,6 +13023,33 @@ body.is-resizing .resize-handle {
   width: 14px;
   height: 14px;
   display: block;
+}
+
+/* Always visible (unlike .comment-bubble-btn.empty), but hovering the icon -
+   or anywhere on its row, same "hover the space" affordance as the comment
+   bubble gets from .playlist-item:hover further up - should still make clear
+   it's clickable before you commit to it. */
+.support-tier-icon-btn {
+  opacity: 0.8;
+  border-radius: 4px;
+  transition:
+    opacity 0.2s,
+    background 0.2s,
+    transform 0.15s;
+}
+
+.support-tier-icon-btn:hover,
+.fav-item:hover .support-tier-icon-btn,
+.list-explorer-card:hover .support-tier-icon-btn {
+  opacity: 1;
+  background: rgba(255, 255, 255, 0.1);
+  transform: scale(1.08);
+}
+
+.theme-light .support-tier-icon-btn:hover,
+.theme-light .fav-item:hover .support-tier-icon-btn,
+.theme-light .list-explorer-card:hover .support-tier-icon-btn {
+  background: rgba(0, 0, 0, 0.08);
 }
 
 /* ─── Light Mode Community Activity Overrides ─── */
@@ -14212,7 +14311,11 @@ body.is-resizing .resize-handle {
   }
 
   .playlist-item:hover .comment-bubble-btn.empty,
-  .playlist-item:focus-within .comment-bubble-btn.empty {
+  .playlist-item:focus-within .comment-bubble-btn.empty,
+  .fav-item:hover .comment-bubble-btn.empty,
+  .fav-item:focus-within .comment-bubble-btn.empty,
+  .list-explorer-card:hover .comment-bubble-btn.empty,
+  .list-explorer-card:focus-within .comment-bubble-btn.empty {
     opacity: 1;
     visibility: visible;
   }
