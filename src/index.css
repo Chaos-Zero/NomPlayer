@@ -6351,7 +6351,7 @@ body {
 
 /* Pins the search control to the left edge and, via the auto margin on its
    right, pushes every sibling after it (metadata banner, add-to-queue
-   control) to the right edge as a group — same effect as the old
+   control) to the right edge as a group - same effect as the old
    `justify-content: flex-end`, but leaves the search control out of the
    pack. All of these stay direct children of `.playlist-sidebar-add` (a
    definite-width, position: absolute box) rather than being nested inside
@@ -8497,7 +8497,7 @@ button.playlist-search-indicator:hover {
 
 /* Hides this control while a sibling occupying the same footer (e.g. the
    playlist search box next to the add-to-queue button) is open, so only
-   one flip-card is ever open at once — see the `hidden`/`onOpenChange`
+   one flip-card is ever open at once - see the `hidden`/`onOpenChange`
    props. */
 .collection-adder.compact.peer-hidden {
   width: 0;

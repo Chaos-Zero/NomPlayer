@@ -18,19 +18,43 @@ describe('normalizeKey', () => {
 
 describe('extractVideoId', () => {
   it('extracts an id from a standard watch URL', () => {
-    expect(extractVideoId('https://www.youtube.com/watch?v=abc12345678')).toBe(
-      'abc12345678',
-    );
+    expect(
+      extractVideoId('https://www.youtube.com/watch?v=abc12345678'),
+    ).toEqual({ videoId: 'abc12345678', provider: 'youtube' });
   });
 
-  it('returns null for a non-YouTube link', () => {
+  it('extracts a SoundCloud track permalink', () => {
+    expect(
+      extractVideoId('https://soundcloud.com/artist-name/track-name'),
+    ).toEqual({
+      videoId: 'https://soundcloud.com/artist-name/track-name',
+      provider: 'soundcloud',
+    });
+  });
+
+  it('extracts a Bandcamp track page URL', () => {
+    expect(
+      extractVideoId('https://artistname.bandcamp.com/track/song-title'),
+    ).toEqual({
+      videoId: 'https://artistname.bandcamp.com/track/song-title',
+      provider: 'bandcamp',
+    });
+  });
+
+  it('rejects a Bandcamp album URL — a nomination is one song, not a whole album', () => {
+    expect(
+      extractVideoId('https://artistname.bandcamp.com/album/album-title'),
+    ).toBeNull();
+  });
+
+  it('returns null for an unrecognized link', () => {
     expect(extractVideoId('https://example.com/song.mp3')).toBeNull();
   });
 
-  it('tolerates a short junk tail glued onto an otherwise-valid id (live case: VGMC thread 81179417 post #11)', () => {
+  it('tolerates a short junk tail glued onto an otherwise-valid YouTube id (live case: VGMC thread 81179417 post #11)', () => {
     expect(
       extractVideoId('https://www.youtube.com/watch?v=t1bzqjoZyeQ38'),
-    ).toBe('t1bzqjoZyeQ');
+    ).toEqual({ videoId: 't1bzqjoZyeQ', provider: 'youtube' });
   });
 
   it('still rejects a link that swallowed a whole extra command (lost line break)', () => {
@@ -59,6 +83,24 @@ describe('parseCommandLine', () => {
       game: 'Zelda',
       song: 'Song of Storms',
       videoId: 'abc12345678',
+      provider: 'youtube',
+      sourceKey: 'zelda|song of storms',
+    });
+  });
+
+  it('parses a well-formed add line with a SoundCloud link', () => {
+    expect(
+      parseCommandLine(
+        '+ Zelda | Song of Storms | https://soundcloud.com/artist/track',
+      ),
+    ).toEqual({
+      sign: '+',
+      magnitude: 1,
+      value: 1,
+      game: 'Zelda',
+      song: 'Song of Storms',
+      videoId: 'https://soundcloud.com/artist/track',
+      provider: 'soundcloud',
       sourceKey: 'zelda|song of storms',
     });
   });
@@ -70,6 +112,7 @@ describe('parseCommandLine', () => {
       game: 'Zelda',
       song: 'Song of Storms',
       videoId: null,
+      provider: null,
     });
   });
 
@@ -126,6 +169,28 @@ describe('foldThread', () => {
       {
         source_key: 'zelda|song of storms',
         video_id: 'abc12345678',
+        provider: 'youtube',
+        game: 'Zelda',
+        song: 'Song of Storms',
+        support_points: 1,
+      },
+    ]);
+  });
+
+  it('carries a non-YouTube provider through to the reconcile entry', () => {
+    const records = foldThread([
+      {
+        postId: '1',
+        author: 'alice',
+        text: '+ Zelda | Song of Storms | https://soundcloud.com/artist/track',
+      },
+    ]);
+
+    expect(buildReconcileEntries(records)).toEqual([
+      {
+        source_key: 'zelda|song of storms',
+        video_id: 'https://soundcloud.com/artist/track',
+        provider: 'soundcloud',
         game: 'Zelda',
         song: 'Song of Storms',
         support_points: 1,

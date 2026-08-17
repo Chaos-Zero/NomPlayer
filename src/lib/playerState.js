@@ -18,7 +18,7 @@ function normalizeVideoEntry(entry) {
   return {
     videoId: entry.videoId,
     // Every video/track object carries which provider it plays through.
-    // Missing/unrecognized defaults to 'youtube' — every entry created
+    // Missing/unrecognized defaults to 'youtube' - every entry created
     // before this field existed (and anything malformed) still plays
     // correctly as a YouTube video, which was the only provider at the time.
     provider: MEDIA_PROVIDERS.includes(entry.provider)

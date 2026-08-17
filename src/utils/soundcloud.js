@@ -1,5 +1,5 @@
 // SoundCloud has no bare "id" a user can paste the way a YouTube video id
-// works — a track's only public identifier is its permalink URL
+// works - a track's only public identifier is its permalink URL
 // (soundcloud.com/<user>/<track-slug>). SoundCloud's embed widget and oEmbed
 // endpoint both accept that permalink URL directly, so it doubles as our
 // `videoId` for SoundCloud entries: no numeric-id resolution step needed,
@@ -7,7 +7,7 @@
 
 const SOUNDCLOUD_HOSTS = new Set(['soundcloud.com', 'm.soundcloud.com']);
 
-// Reserved top-level paths that aren't `<user>/<track>` — a track permalink
+// Reserved top-level paths that aren't `<user>/<track>` - a track permalink
 // is always exactly two path segments, so most of these are already excluded
 // by that shape check, but a couple (e.g. `for-you/discover`) legitimately
 // have two segments too and would otherwise false-positive as a track.
@@ -33,7 +33,7 @@ const RESERVED_FIRST_SEGMENTS = new Set([
  * Returns null if the input isn't a recognizable SoundCloud track URL.
  *
  * Playlists ("sets", `/<user>/sets/<slug>`) and non-track pages are
- * deliberately not matched here — three-plus path segments fail the shape
+ * deliberately not matched here - three-plus path segments fail the shape
  * check below. Support for those is a possible future extension, not v1.
  */
 function normalizeSoundCloudTrackUrl(rawValue) {

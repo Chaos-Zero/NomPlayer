@@ -5157,7 +5157,7 @@ export default function App() {
               {
                 canonical_game_title_input: update.gameTitle,
                 canonical_track_title_input: update.trackTitle,
-                youtube_video_id_input: update.videoId,
+                external_id_input: update.videoId,
                 submitted_url_input: update.submittedUrl,
                 nomination_contest_number: null,
                 is_retired_input: false,
@@ -5168,6 +5168,11 @@ export default function App() {
                 cached_title_input: update.title || null,
                 cached_channel_title_input: update.channelTitle || null,
                 cached_thumbnail_url_input: update.thumbnail || null,
+                // This admin metadata-editing flow (steps 1-2 above) still only
+                // ever parses/fetches YouTube links (parseYouTubeInput,
+                // singleVideoEntry) — provider-aware editing here is Step 8's
+                // job, not this one's.
+                provider_input: 'youtube',
               },
             );
 

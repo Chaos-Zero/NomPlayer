@@ -1,4 +1,4 @@
-import { parseYouTubeInput } from '../utils/youtube.js';
+import { parseMediaInput } from '../utils/media.js';
 
 // Server-side parser/fold for the GameFAQs VGMC nomination-thread convention:
 //
@@ -26,12 +26,19 @@ export function normalizeKey(game, song) {
   return `${normalizeText(game)}|${normalizeText(song)}`;
 }
 
+/**
+ * Resolve a nomination line's link to a single playable item, across any
+ * supported provider. Rejects a playlist (YouTube) or album (Bandcamp) link
+ * - a nomination is one song, not a whole list, even though those link
+ * shapes are fine elsewhere (general playback add-by-URL).
+ * Returns { videoId, provider } or null.
+ */
 export function extractVideoId(rawLink) {
-  const parsed = parseYouTubeInput((rawLink || '').trim());
-  if (parsed && parsed.type === 'video' && parsed.videoId) {
-    return parsed.videoId;
+  const parsed = parseMediaInput((rawLink || '').trim());
+  if (!parsed || (parsed.type !== 'video' && parsed.type !== 'track')) {
+    return null;
   }
-  return null;
+  return { videoId: parsed.videoId, provider: parsed.provider || 'youtube' };
 }
 
 /**
@@ -41,8 +48,8 @@ export function extractVideoId(rawLink) {
  * that's the natural ceiling, there's no `+++`).
  *
  * Returns null for anything that isn't a well-formed command line, including a
- * '+'/'++' line whose link doesn't resolve to a YouTube video id, since you can't
- * nominate or support a song with no playable link.
+ * '+'/'++' line whose link doesn't resolve to a playable YouTube/SoundCloud/
+ * Bandcamp track, since you can't nominate or support a song with no playable link.
  */
 export function parseCommandLine(line) {
   if (typeof line !== 'string') return null;
@@ -59,8 +66,8 @@ export function parseCommandLine(line) {
   const magnitude = signRun.length;
   const value = sign === '+' ? magnitude : -magnitude;
 
-  const videoId = extractVideoId(rawLink);
-  if (sign === '+' && !videoId) return null;
+  const media = extractVideoId(rawLink);
+  if (sign === '+' && !media) return null;
 
   return {
     sign,
@@ -68,7 +75,9 @@ export function parseCommandLine(line) {
     value,
     game,
     song,
-    videoId, // may be null on a well-formed '-'/'--' line with a stale/invalid link
+    // both null on a well-formed '-'/'--' line with a stale/invalid link
+    videoId: media?.videoId ?? null,
+    provider: media?.provider ?? null,
     sourceKey: normalizeKey(game, song),
   };
 }
@@ -134,8 +143,16 @@ export function foldThread(posts) {
       const command = parseCommandLine(line);
       if (!command) continue;
 
-      const { sign, magnitude, value, sourceKey, game, song, videoId } =
-        command;
+      const {
+        sign,
+        magnitude,
+        value,
+        sourceKey,
+        game,
+        song,
+        videoId,
+        provider,
+      } = command;
       const existing = records.get(sourceKey);
 
       if (sign === '+') {
@@ -154,6 +171,7 @@ export function foldThread(posts) {
           existing.present = true;
           if (isOwnerAction) {
             existing.videoId = videoId;
+            existing.provider = provider;
             existing.game = game;
             existing.song = song;
             existing.owner = post.author;
@@ -167,6 +185,7 @@ export function foldThread(posts) {
             game,
             song,
             videoId,
+            provider,
             present: true,
             owner: post.author,
             ordinal: nextOrdinal++,
@@ -211,6 +230,7 @@ export function buildReconcileEntries(records) {
     .map((record) => ({
       source_key: record.sourceKey,
       video_id: record.videoId,
+      provider: record.provider || 'youtube',
       game: record.game,
       song: record.song,
       support_points: supportPoints(record),

@@ -8,7 +8,7 @@
 // (undocumented, but stable and widely relied on).
 //
 // This module only extracts the handful of fields we need to build an
-// embed src and cache display metadata — it does not attempt to be a
+// embed src and cache display metadata - it does not attempt to be a
 // general Bandcamp page parser.
 
 const NAMED_HTML_ENTITIES = {
@@ -80,7 +80,7 @@ export function parseBandcampPage(html, { expectedType = 'track' } = {}) {
 
   // A duration only means something for a single track; an album embed
   // plays multiple tracks back to back, so there's no one number to
-  // extrapolate an "ended" timer from — leave it null and let the player
+  // extrapolate an "ended" timer from - leave it null and let the player
   // fall back to manual skip for albums.
   let durationSeconds = null;
   if (expectedType === 'track') {
@@ -105,7 +105,7 @@ const BROWSER_USER_AGENT =
 
 /**
  * Fetch a Bandcamp page and resolve it to embeddable metadata.
- * `parsedInput` is the result of parseBandcampInput() — its `type` tells
+ * `parsedInput` is the result of parseBandcampInput() - its `type` tells
  * us whether we're resolving a track or an album page.
  * Throws on a non-ok fetch or an unparseable page; callers decide how to
  * surface that (see functions/api/bandcamp-resolve.js).

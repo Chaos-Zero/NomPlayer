@@ -37,7 +37,7 @@ describe('parseSoundCloudInput', () => {
     });
   });
 
-  it('rejects a "sets" (playlist) URL — not supported yet', () => {
+  it('rejects a "sets" (playlist) URL - not supported yet', () => {
     expect(
       parseSoundCloudInput(
         'https://soundcloud.com/artist-name/sets/album-name',

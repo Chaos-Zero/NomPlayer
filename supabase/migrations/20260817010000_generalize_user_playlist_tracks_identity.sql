@@ -160,7 +160,7 @@ GRANT EXECUTE ON FUNCTION public.get_user_hydrated_state(uuid) TO authenticated;
 
 -- Note on public.get_allotment_stats_by_video_ids (20260417160000): it also
 -- hardcodes `track_sources.provider = 'youtube'`, but deliberately left as
--- is here — its contract is specifically "batch stats lookup by YouTube
+-- is here - its contract is specifically "batch stats lookup by YouTube
 -- video id array" (param name video_ids, no provider param), it has no
 -- current callers in this codebase, and the filter is a correct defensive
 -- measure for that YouTube-specific contract rather than an arbitrary

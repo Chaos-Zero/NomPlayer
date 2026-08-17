@@ -215,7 +215,7 @@ to authenticated;
 -- entry would search-match fine but silently normalize back to a YouTube
 -- default (wrong thumbnail fallback, wrong link, wrong player choice) once
 -- rendered. Adding a column changes the function's return type, which
--- CREATE OR REPLACE can't do in place — drop it first.
+-- CREATE OR REPLACE can't do in place - drop it first.
 DROP FUNCTION IF EXISTS public.search_track_catalog_slim(text, integer);
 
 CREATE FUNCTION public.search_track_catalog_slim(

@@ -4,7 +4,7 @@ import { resolveBandcampUrl } from '../../src/lib/bandcampResolve.js';
 // Resolves a Bandcamp track/album page to embeddable metadata (numeric
 // embed id, title, artist, artwork, duration). Runs server-side because
 // Bandcamp's page isn't fetchable cross-origin from the browser and its
-// oEmbed endpoint doesn't expose duration at all — see src/lib/
+// oEmbed endpoint doesn't expose duration at all - see src/lib/
 // bandcampResolve.js for how the page itself is parsed.
 //
 // `parseBandcampInput` also doubles as this endpoint's allow-list: only a

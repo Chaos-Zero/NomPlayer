@@ -67,7 +67,7 @@ describe('track catalog helpers', () => {
         thumbnail: 'https://f4.bcbits.com/img/a1_10.jpg',
         durationSeconds: 245,
       },
-      // Same external_id string as a *different* provider — must not be
+      // Same external_id string as a *different* provider - must not be
       // deduped against the entry above, dedup is scoped per provider.
       {
         videoId: 'https://artist.bandcamp.com/track/song',

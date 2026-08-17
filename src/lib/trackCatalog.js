@@ -5,7 +5,7 @@ import { getMediaThumbnailUrl, MEDIA_PROVIDERS } from '../utils/media.js';
 const YOUTUBE_ID_PATTERN = /^[A-Za-z0-9_-]{11}$/;
 
 /** True if `externalId` is a shape ingest_track_sources will actually accept
- * for `provider` — mirrors the RPC's own per-provider validation, so a
+ * for `provider` - mirrors the RPC's own per-provider validation, so a
  * doomed-to-be-skipped entry never makes it into the payload at all. */
 function isValidExternalId(provider, externalId) {
   if (!externalId) return false;

@@ -615,7 +615,7 @@ export default function PlaylistSidebar({
   const [rankingSortDirection, setRankingSortDirection] = useState(null);
   const [playlistSearchQuery, setPlaylistSearchQuery] = useState('');
   // Only one of the footer's two flip-card controls (search, add-to-queue)
-  // is ever open at a time — each hides the other while it's open.
+  // is ever open at a time - each hides the other while it's open.
   const [isFooterSearchOpen, setIsFooterSearchOpen] = useState(false);
   const [isFooterAddOpen, setIsFooterAddOpen] = useState(false);
   const collapseGestureRef = useRef(null);
@@ -1968,7 +1968,7 @@ export default function PlaylistSidebar({
 
           {/* Adding to the queue is always an action on *your own* queue, so
               unlike nominating/supporting/custom-playlist actions below it's
-              never restricted by who owns the list currently being viewed —
+              never restricted by who owns the list currently being viewed -
               only 'personal' (the queue itself) has no reason to offer it. */}
           {activePlaylistView.type !== 'personal' && (
             <button

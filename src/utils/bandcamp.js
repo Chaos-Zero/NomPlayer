@@ -8,7 +8,7 @@
 // track/album page for its own player to use.
 //
 // The canonical page URL itself (not the numeric id) is what we store as
-// `videoId` / `external_id` — it's stable, human-recognizable, and doesn't
+// `videoId` / `external_id` - it's stable, human-recognizable, and doesn't
 // require a resolve step just to record "this playlist has this link in it".
 // The numeric id + duration are resolved once at add-time and cached
 // alongside the entry so playback never needs to re-resolve.
@@ -88,7 +88,7 @@ export async function singleTrackEntry(pageUrl) {
   const meta = await fetchBandcampMetadata(pageUrl);
 
   if (!meta) {
-    // Resolve failed — fall back to a bare entry so the link can still be
+    // Resolve failed - fall back to a bare entry so the link can still be
     // added; the player will retry resolving on playback.
     return {
       videoId: pageUrl,

@@ -41,7 +41,7 @@ export function parseMediaInput(input) {
  * "start playing here" id, ready to hand to a playlist/queue loader.
  *
  * Playlist-type results are YouTube-only today (SoundCloud sets and
- * Bandcamp albums aren't wired up as multi-track adds yet — a Bandcamp
+ * Bandcamp albums aren't wired up as multi-track adds yet - a Bandcamp
  * "album" URL still resolves as a single playable entry via its own
  * embed, just not expanded track-by-track).
  */
@@ -72,7 +72,7 @@ export async function fetchMediaItems(parsed, { apiKey } = {}) {
  * Thumbnail for any provider's video/track object. A cached thumbnail URL
  * (set at add-time, e.g. from oEmbed or the Bandcamp resolver) always wins;
  * only YouTube has a predictable CDN URL to fall back to when none is
- * cached — SoundCloud/Bandcamp entries with no cached thumbnail just have
+ * cached - SoundCloud/Bandcamp entries with no cached thumbnail just have
  * none.
  */
 export function getMediaThumbnailUrl(video) {
