@@ -200,6 +200,56 @@ describe('PlaylistSidebar', () => {
     expect(numbers).toEqual(['2', '1']);
   });
 
+  it('keeps the active row on the actually-playing track when sorted by rating, not whatever lands on its old position', () => {
+    const x = { ...video, rating: 2 }; // videoId 'alpha1234567', currently playing
+    const y = {
+      videoId: 'beta12345678',
+      title: 'Beta',
+      thumbnail: 'b.jpg',
+      channelTitle: 'Channel B',
+      rating: 9,
+    };
+    const { container } = renderSidebar({
+      playlist: [x, y],
+      currentIndex: 0, // X is playing
+      activePlaylistView: { type: 'support' },
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Order by rating' }));
+
+    // Y (higher rating) now renders first, but X is still what's playing.
+    const rows = [...container.querySelectorAll('.playlist-item')];
+    const activeRows = rows.filter((row) => row.classList.contains('active'));
+
+    expect(activeRows).toHaveLength(1);
+    expect(activeRows[0]).toHaveTextContent('Alpha');
+    expect(rows[0]).toHaveTextContent('Beta');
+    expect(rows[0]).not.toHaveClass('active');
+  });
+
+  it('re-focuses the active row when toggling rating sort, now that isActive stays correct while sorted', () => {
+    const x = { ...video, rating: 2 };
+    const y = {
+      videoId: 'beta12345678',
+      title: 'Beta',
+      thumbnail: 'b.jpg',
+      channelTitle: 'Channel B',
+      rating: 9,
+    };
+    renderSidebar({
+      playlist: [x, y],
+      currentIndex: 0,
+      activePlaylistView: { type: 'support' },
+    });
+
+    // Tracking is on by default, mounting already-cued-up scrolls once.
+    expect(Element.prototype.scrollIntoView).toHaveBeenCalledTimes(1);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Order by rating' }));
+
+    expect(Element.prototype.scrollIntoView).toHaveBeenCalledTimes(2);
+  });
+
   it('toggles the playlist view mode when shuffle is active', () => {
     const { container, props } = renderSidebar({
       isShuffleEnabled: true,

@@ -681,6 +681,13 @@ export default function PlaylistSidebar({
     normalizedPlaylistSearchQuery,
   ]);
 
+  // `currentIndex` is an index into `playlist` (the natural, unsorted and
+  // unfiltered order), never into `displayPlaylist`. Resolving it to the
+  // actual playing video's id here, once, lets every row below match by
+  // identity instead of position, position is meaningless once search or
+  // rating-sort has reordered/narrowed what's rendered.
+  const currentVideoId = playlist[currentIndex]?.videoId ?? null;
+
   const selectedVideos = useMemo(
     () => playlist.filter((video) => selectedIdSet.has(video.videoId)),
     [playlist, selectedIdSet],
@@ -716,11 +723,10 @@ export default function PlaylistSidebar({
   // turn it off.
   const [isTrackingActive, setIsTrackingActive] = useState(true);
 
-  // `isActive={index === currentIndex}` on the rows below compares a
-  // *displayPlaylist* position against an index into the underlying
-  // (unsorted, unfiltered) `playlist`, those only line up while neither sort
-  // nor search has touched the list, so there's nothing reliable to scroll
-  // to while the list is reordered/narrowed away from its natural order.
+  // Rows below resolve `isActive` by video id (see `currentVideoId` above),
+  // not position, so it's correct even while sorted/filtered - which means
+  // tracking can safely follow the active row through a sort/search change
+  // too, not just the natural order.
   const isPlaylistFilteredOrSorted =
     isSortingByRating ||
     Boolean(rankingSortDirection) ||
@@ -733,11 +739,11 @@ export default function PlaylistSidebar({
   }, []);
 
   // Scrolls the active row into view on: landing on a different playlist/view,
-  // the current track changing (new track, skip/back), or search/rating-sort
-  // getting cleared (coming out of a filter) - as long as tracking is on and
-  // the list is in its natural order.
+  // the current track changing (new track, skip/back), or the list being
+  // reordered/narrowed by search or rating-sort (including toggling one of
+  // those on/off) - as long as tracking is on.
   useEffect(() => {
-    if (!isTrackingActive || isPlaylistFilteredOrSorted) return;
+    if (!isTrackingActive) return;
     focusActiveRow();
   }, [
     activePlaylistView.type,
@@ -1846,7 +1852,9 @@ export default function PlaylistSidebar({
                     : index) + 1
                 }
                 video={video}
-                isActive={index === currentIndex}
+                isActive={
+                  video.videoId != null && video.videoId === currentVideoId
+                }
                 isFlashing={flashIds.has(video.videoId)}
                 listenedStatus={listenedStatusById[video.videoId] || null}
                 onSelect={onSelect}
@@ -1889,7 +1897,9 @@ export default function PlaylistSidebar({
                         : index) + 1
                     }
                     video={video}
-                    isActive={index === currentIndex}
+                    isActive={
+                      video.videoId != null && video.videoId === currentVideoId
+                    }
                     isFlashing={flashIds.has(video.videoId)}
                     listenedStatus={listenedStatusById[video.videoId] || null}
                     onSelect={onSelect}
@@ -1923,7 +1933,9 @@ export default function PlaylistSidebar({
                     : index) + 1
                 }
                 video={video}
-                isActive={index === currentIndex}
+                isActive={
+                  video.videoId != null && video.videoId === currentVideoId
+                }
                 isFlashing={flashIds.has(video.videoId)}
                 listenedStatus={listenedStatusById[video.videoId] || null}
                 onSelect={onSelect}
