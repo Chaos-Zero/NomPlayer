@@ -53,6 +53,22 @@ vi.mock('react-youtube', async () => {
   return { default: MockYouTube };
 });
 
+const soundCloudMockCalls = vi.hoisted(() => []);
+vi.mock('../../components/players/SoundCloudPlayer.jsx', () => ({
+  default: (props) => {
+    soundCloudMockCalls.push(props);
+    return <div data-testid={`soundcloud-${props.video.videoId}`} />;
+  },
+}));
+
+const bandcampMockCalls = vi.hoisted(() => []);
+vi.mock('../../components/players/BandcampPlayer.jsx', () => ({
+  default: (props) => {
+    bandcampMockCalls.push(props);
+    return <div data-testid={`bandcamp-${props.video.videoId}`} />;
+  },
+}));
+
 describe('VideoPlayer', () => {
   const originalVisibilityStateDescriptor = Object.getOwnPropertyDescriptor(
     document,
@@ -65,6 +81,8 @@ describe('VideoPlayer', () => {
     youtubeMockState.destroyedById.clear();
     youtubeMockState.stateChangeHandlers.clear();
     youtubeMockState.playerStates.clear();
+    soundCloudMockCalls.length = 0;
+    bandcampMockCalls.length = 0;
     hasFocusMock = vi.spyOn(document, 'hasFocus').mockReturnValue(true);
   });
 
@@ -269,5 +287,65 @@ describe('VideoPlayer', () => {
     });
 
     expect(onPlaybackChange).toHaveBeenCalledWith(true);
+  });
+
+  describe('provider dispatch', () => {
+    it('renders SoundCloudPlayer for a soundcloud track, passing video and isPlaying through', () => {
+      const video = {
+        videoId: 'https://soundcloud.com/artist/track',
+        provider: 'soundcloud',
+        title: 'Track',
+      };
+
+      render(<VideoPlayer video={video} isPlaying={true} />);
+
+      expect(
+        screen.getByTestId('soundcloud-https://soundcloud.com/artist/track'),
+      ).toBeInTheDocument();
+      expect(soundCloudMockCalls).toHaveLength(1);
+      expect(soundCloudMockCalls[0]).toMatchObject({ video, isPlaying: true });
+    });
+
+    it('renders BandcampPlayer for a bandcamp track, passing video and isPlaying through', () => {
+      const video = {
+        videoId: 'https://artist.bandcamp.com/track/song',
+        provider: 'bandcamp',
+        title: 'Song',
+      };
+
+      render(<VideoPlayer video={video} isPlaying={false} />);
+
+      expect(
+        screen.getByTestId('bandcamp-https://artist.bandcamp.com/track/song'),
+      ).toBeInTheDocument();
+      expect(bandcampMockCalls).toHaveLength(1);
+      expect(bandcampMockCalls[0]).toMatchObject({ video, isPlaying: false });
+    });
+
+    it('falls back to the YouTube embed for an unrecognized/missing provider', () => {
+      const video = { videoId: 'alpha1234567', provider: 'spotify' };
+
+      render(<VideoPlayer video={video} isPlaying={true} />);
+
+      expect(screen.getByTestId('youtube-alpha1234567')).toBeInTheDocument();
+      expect(soundCloudMockCalls).toHaveLength(0);
+      expect(bandcampMockCalls).toHaveLength(0);
+    });
+
+    it('links directly to the canonical URL for a non-YouTube "now playing" track, not a youtube.com URL', () => {
+      const video = {
+        videoId: 'https://artist.bandcamp.com/track/song',
+        provider: 'bandcamp',
+        title: 'Song',
+      };
+
+      render(<VideoPlayer video={video} isPlaying={true} />);
+
+      expect(
+        screen.getByRole('link', {
+          name: 'https://artist.bandcamp.com/track/song',
+        }),
+      ).toHaveAttribute('href', 'https://artist.bandcamp.com/track/song');
+    });
   });
 });

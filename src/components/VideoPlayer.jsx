@@ -7,6 +7,8 @@ import {
 } from 'react';
 import YouTube from 'react-youtube';
 import CommunityActivity from './CommunityActivity.jsx';
+import SoundCloudPlayer from './players/SoundCloudPlayer.jsx';
+import BandcampPlayer from './players/BandcampPlayer.jsx';
 
 function safelyControlPlayer(player, methodName, args = []) {
   try {
@@ -83,8 +85,13 @@ const VideoPlayer = forwardRef(function VideoPlayer(
   const pauseVerificationTimeoutRef = useRef(0);
   const isOverlayEnabled = false;
   const videoId = video?.videoId ?? null;
+  const provider = video?.provider || 'youtube';
+  // SoundCloud/Bandcamp ids are already the canonical page URL; only
+  // YouTube needs one built from a bare id.
   const videoUrl = videoId
-    ? `https://www.youtube.com/watch?v=${videoId}`
+    ? provider === 'youtube'
+      ? `https://www.youtube.com/watch?v=${videoId}`
+      : videoId
     : null;
   const supportLabel = isNominated
     ? 'Nomination tracks cannot be changed from the player'
@@ -569,8 +576,27 @@ const VideoPlayer = forwardRef(function VideoPlayer(
       </div>
     ) : null;
 
-  const playerIframeNode = (
-    <div className="player-iframe-container" id="player-container">
+  const embedNode =
+    provider === 'soundcloud' ? (
+      <SoundCloudPlayer
+        key={video.videoId}
+        video={video}
+        isPlaying={isPlaying}
+        onReady={handleReady}
+        onEnd={handleEnd}
+        onStateChange={handleStateChange}
+        style={{ width: '100%', height: '100%' }}
+      />
+    ) : provider === 'bandcamp' ? (
+      <BandcampPlayer
+        key={video.videoId}
+        video={video}
+        isPlaying={isPlaying}
+        onReady={handleReady}
+        onEnd={handleEnd}
+        style={{ width: '100%', height: '100%' }}
+      />
+    ) : (
       <YouTube
         key={video.videoId}
         videoId={video.videoId}
@@ -580,6 +606,11 @@ const VideoPlayer = forwardRef(function VideoPlayer(
         onStateChange={handleStateChange}
         style={{ width: '100%', height: '100%' }}
       />
+    );
+
+  const playerIframeNode = (
+    <div className="player-iframe-container" id="player-container">
+      {embedNode}
       {isOverlayEnabled && (
         <div className="player-overlay enabled">
           <div className="player-overlay-main-controls">
