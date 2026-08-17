@@ -207,12 +207,8 @@ import {
 } from './lib/vgmcStandings.js';
 import { reportError } from './lib/errorReporter.js';
 import { getSupabaseClient, isSupabaseConfigured } from './lib/supabase.js';
-import {
-  formatTime,
-  getYouTubeThumbnailUrl,
-  parseYouTubeInput,
-  singleVideoEntry,
-} from './utils/youtube.js';
+import { formatTime, getYouTubeThumbnailUrl } from './utils/youtube.js';
+import { fetchMediaItems, parseMediaInput } from './utils/media.js';
 import {
   PreviousIcon,
   NextIcon,
@@ -5044,9 +5040,10 @@ export default function App() {
 
   const handleSaveTrackMetadata = useCallback(
     async (metadataUpdates) => {
-      // 1. Process updates and identify YouTube ID changes
+      // 1. Process updates and identify link/provider changes
       const processedUpdates = metadataUpdates.map((update) => {
         let finalVideoId = update.videoId;
+        let finalProvider = update.provider || 'youtube';
         let finalUrl = update.currentUrl;
 
         if (
@@ -5054,9 +5051,10 @@ export default function App() {
           update.videoUrl.trim() &&
           update.videoUrl !== update.currentUrl
         ) {
-          const parsed = parseYouTubeInput(update.videoUrl);
+          const parsed = parseMediaInput(update.videoUrl);
           if (parsed && parsed.videoId) {
             finalVideoId = parsed.videoId;
+            finalProvider = parsed.provider || 'youtube';
             finalUrl = update.videoUrl;
           }
         }
@@ -5064,26 +5062,33 @@ export default function App() {
         return {
           ...update,
           videoId: finalVideoId,
+          provider: finalProvider,
           submittedUrl: finalUrl,
           hasChangedId: finalVideoId !== update.videoId,
         };
       });
 
-      // 2. Fetch fresh YouTube metadata for any track where the ID changed
+      // 2. Fetch fresh metadata (any provider) for any track where the link changed
       const updatesWithYouTubeMeta = await Promise.all(
         processedUpdates.map(async (update) => {
           if (update.hasChangedId) {
             try {
-              const ytMeta = await singleVideoEntry(update.videoId);
-              return {
-                ...update,
-                title: ytMeta.title,
-                channelTitle: ytMeta.channelTitle,
-                thumbnail: ytMeta.thumbnail,
-              };
+              const { items } = await fetchMediaItems({
+                provider: update.provider,
+                videoId: update.videoId,
+              });
+              const meta = items[0];
+              if (meta) {
+                return {
+                  ...update,
+                  title: meta.title,
+                  channelTitle: meta.channelTitle,
+                  thumbnail: meta.thumbnail,
+                };
+              }
             } catch (err) {
               console.error(
-                'Failed to fetch YouTube metadata for',
+                'Failed to fetch metadata for',
                 update.videoId,
                 err,
               );
@@ -5164,11 +5169,7 @@ export default function App() {
                 cached_title_input: update.title || null,
                 cached_channel_title_input: update.channelTitle || null,
                 cached_thumbnail_url_input: update.thumbnail || null,
-                // This admin metadata-editing flow (steps 1-2 above) still only
-                // ever parses/fetches YouTube links (parseYouTubeInput,
-                // singleVideoEntry) - provider-aware editing here is Step 8's
-                // job, not this one's.
-                provider_input: 'youtube',
+                provider_input: update.provider || 'youtube',
               },
             );
 

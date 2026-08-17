@@ -1,6 +1,9 @@
-import { parseYouTubeInput } from '../utils/youtube.js';
 import { checkContent } from '../utils/profanityFilter.js';
-import { getMediaThumbnailUrl, MEDIA_PROVIDERS } from '../utils/media.js';
+import {
+  getMediaThumbnailUrl,
+  MEDIA_PROVIDERS,
+  parseMediaInput,
+} from '../utils/media.js';
 
 const YOUTUBE_ID_PATTERN = /^[A-Za-z0-9_-]{11}$/;
 
@@ -755,17 +758,24 @@ export function patchCatalogCache(updates = [], deletedTrackIds = []) {
       if (!update) return entry;
 
       let videoId = update.videoId || entry.videoId;
+      let provider = update.provider || entry.provider || 'youtube';
       if (!update.videoId && update.sourceUrl) {
-        const parsed = parseYouTubeInput(update.sourceUrl);
-        if (parsed?.type === 'video' && parsed.videoId) {
+        const parsed = parseMediaInput(update.sourceUrl);
+        if (parsed && parsed.type !== 'playlist' && parsed.videoId) {
           videoId = parsed.videoId;
+          provider = parsed.provider || 'youtube';
         }
       }
+      const canonicalUrl =
+        provider === 'youtube'
+          ? `https://www.youtube.com/watch?v=${videoId}`
+          : videoId;
 
       return {
         ...entry,
         trackId: update.trackId || entry.trackId,
         videoId: videoId,
+        provider,
         gameTitle:
           update.gameTitle !== undefined ? update.gameTitle : entry.gameTitle,
         trackTitle:
@@ -778,10 +788,8 @@ export function patchCatalogCache(updates = [], deletedTrackIds = []) {
             : `${update.gameTitle || entry.gameTitle} - ${update.trackTitle || entry.trackTitle}`,
         sourceThumbnailUrl: update.thumbnail || entry.sourceThumbnailUrl,
         sourceChannelTitle: update.channelTitle || entry.sourceChannelTitle,
-        sourceUrl:
-          update.sourceUrl || `https://www.youtube.com/watch?v=${videoId}`,
-        submittedUrl:
-          update.sourceUrl || `https://www.youtube.com/watch?v=${videoId}`,
+        sourceUrl: update.sourceUrl || canonicalUrl,
+        submittedUrl: update.sourceUrl || canonicalUrl,
         tournaments:
           update.tournaments !== undefined
             ? update.tournaments
@@ -983,9 +991,10 @@ export async function bulkUpdateTracks(supabase, updatesMap) {
     if (fields.sourceUrl !== undefined) {
       sourcePayload.source_url = fields.sourceUrl;
       sourcePayload.submitted_url = fields.sourceUrl;
-      const parsed = parseYouTubeInput(fields.sourceUrl);
-      if (parsed?.type === 'video' && parsed.videoId) {
+      const parsed = parseMediaInput(fields.sourceUrl);
+      if (parsed && parsed.type !== 'playlist' && parsed.videoId) {
         sourcePayload.external_id = parsed.videoId;
+        sourcePayload.provider = parsed.provider || 'youtube';
       }
     }
 
@@ -1173,15 +1182,29 @@ export async function mergeTracks(
   }
 
   // 2. Update primary track source
-  const youtubeData = parseYouTubeInput(
+  const parsedSource = parseMediaInput(
     finalValues.sourceUrl || targetTrack.sourceUrl,
   );
-  if (youtubeData?.videoId) {
+  const mergedProvider =
+    finalValues.provider ||
+    targetTrack.provider ||
+    parsedSource?.provider ||
+    'youtube';
+  if (
+    parsedSource &&
+    parsedSource.type !== 'playlist' &&
+    parsedSource.videoId
+  ) {
+    const canonicalSourceUrl =
+      mergedProvider === 'youtube'
+        ? `https://www.youtube.com/watch?v=${parsedSource.videoId}`
+        : parsedSource.videoId;
     const { error: sourceUpdateError } = await supabase
       .from('track_sources')
       .update({
-        external_id: youtubeData.videoId,
-        source_url: `https://www.youtube.com/watch?v=${youtubeData.videoId}`,
+        provider: mergedProvider,
+        external_id: parsedSource.videoId,
+        source_url: canonicalSourceUrl,
         submitted_url: finalValues.sourceUrl || targetTrack.sourceUrl,
         updated_at: new Date().toISOString(),
       })
@@ -1299,7 +1322,8 @@ export async function mergeTracks(
     [
       {
         trackId: targetTrack.trackId,
-        videoId: youtubeData?.videoId || targetTrack.videoId,
+        videoId: parsedSource?.videoId || targetTrack.videoId,
+        provider: mergedProvider,
         gameTitle: finalValues.gameTitle || targetTrack.gameTitle,
         trackTitle: finalValues.trackTitle || targetTrack.trackTitle,
         sourceUrl: finalValues.sourceUrl || targetTrack.sourceUrl,

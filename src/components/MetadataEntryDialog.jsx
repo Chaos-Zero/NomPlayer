@@ -14,10 +14,15 @@ export default function MetadataEntryDialog({
     if (isOpen) {
       setMetadata(
         tracks.map((track) => {
-          const currentUrl = `https://www.youtube.com/watch?v=${track.videoId}`;
+          const provider = track.provider || 'youtube';
+          const currentUrl =
+            provider === 'youtube'
+              ? `https://www.youtube.com/watch?v=${track.videoId}`
+              : track.videoId;
           return {
             oldVideoId: track.videoId,
             videoId: track.videoId,
+            provider,
             trackId: track.trackId,
             title: track.title,
             currentUrl,
@@ -134,7 +139,17 @@ export default function MetadataEntryDialog({
                       }
                     />
                   </div>
-                  <div className="metadata-input-group">
+                  <div
+                    className="metadata-input-group"
+                    // Searching YouTube to find/correct a link only makes
+                    // sense when the track's own source is YouTube — for a
+                    // SoundCloud/Bandcamp track, the URL field above is
+                    // already how you'd paste in a corrected link.
+                    style={{
+                      visibility:
+                        track.provider === 'youtube' ? 'visible' : 'hidden',
+                    }}
+                  >
                     <a
                       href={`https://www.youtube.com/results?search_query=${encodeURIComponent(
                         `${track.gameTitle} OST ${track.trackTitle}`.trim() ||

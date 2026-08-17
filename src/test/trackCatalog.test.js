@@ -1,12 +1,66 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+// getFullCatalog seeds its module-level cache from a dynamic import of the
+// real catalog snapshot — mock it so patchCatalogCache/bulkUpdateTracks/
+// mergeTracks tests below get a small, deterministic seed instead of
+// depending on (or touching) any real data or database.
+vi.mock('../data/catalogSnapshot.json', () => ({
+  default: {
+    exportedAt: '2020-01-01T00:00:00.000Z',
+    tracks: [
+      {
+        track_id: 'track-1',
+        provider: 'youtube',
+        source_external_id: 'a1234567890',
+        game_title: 'Game A',
+        track_title: 'Song A',
+        display_title: 'Game A - Song A',
+        source_url: 'https://www.youtube.com/watch?v=a1234567890',
+        submitted_url: 'https://www.youtube.com/watch?v=a1234567890',
+        is_retired: false,
+        tournaments: [],
+      },
+      {
+        track_id: 'track-2',
+        provider: 'bandcamp',
+        source_external_id: 'https://artist.bandcamp.com/track/song-b',
+        game_title: 'Game B',
+        track_title: 'Song B',
+        display_title: 'Game B - Song B',
+        source_url: 'https://artist.bandcamp.com/track/song-b',
+        submitted_url: 'https://artist.bandcamp.com/track/song-b',
+        is_retired: false,
+        tournaments: [],
+      },
+    ],
+  },
+}));
+
 import {
+  bulkUpdateTracks,
+  clearCatalogCache,
   createTrackIngestPayload,
   fetchTrackCatalogByVideoIds,
+  getCachedCatalog,
+  getFullCatalog,
   getTrackCatalogTournamentSummary,
   ingestTrackSources,
   mapTrackCatalogEntryToVideo,
+  mergeTracks,
+  patchCatalogCache,
   searchTrackCatalog,
 } from '../lib/trackCatalog.js';
+
+/** Chainable, thenable mock matching supabase-js's query builder shape —
+ * every .eq() call returns the same builder, and awaiting the builder at
+ * any point in the chain resolves to `result`. */
+function makeUpdateBuilder(result) {
+  const builder = {
+    eq: vi.fn(() => builder),
+    then: (resolve) => Promise.resolve(result).then(resolve),
+  };
+  return builder;
+}
 
 describe('track catalog helpers', () => {
   it('builds a deduplicated ingest payload from YouTube video entries', () => {
@@ -272,5 +326,226 @@ describe('track catalog helpers', () => {
       provider: 'soundcloud',
       thumbnail: '',
     });
+  });
+});
+
+describe('patchCatalogCache', () => {
+  beforeEach(() => {
+    clearCatalogCache();
+  });
+
+  it('is a no-op when the cache has not been populated yet', () => {
+    expect(() =>
+      patchCatalogCache([{ trackId: 'track-1', gameTitle: 'X' }]),
+    ).not.toThrow();
+    expect(getCachedCatalog()).toBeNull();
+  });
+
+  it('patches provider/videoId/sourceUrl for an entry matched by videoId', async () => {
+    await getFullCatalog(null);
+
+    patchCatalogCache([
+      {
+        videoId: 'https://artist.bandcamp.com/track/song-b',
+        provider: 'bandcamp',
+        gameTitle: 'Game B Updated',
+      },
+    ]);
+
+    const patched = getCachedCatalog().find((t) => t.trackId === 'track-2');
+    expect(patched).toMatchObject({
+      gameTitle: 'Game B Updated',
+      provider: 'bandcamp',
+      sourceUrl: 'https://artist.bandcamp.com/track/song-b',
+    });
+  });
+
+  it('derives videoId/provider from a YouTube sourceUrl when no explicit videoId is given', async () => {
+    await getFullCatalog(null);
+
+    patchCatalogCache([
+      { trackId: 'track-1', sourceUrl: 'https://youtu.be/z9876543210' },
+    ]);
+
+    const patched = getCachedCatalog().find((t) => t.trackId === 'track-1');
+    expect(patched).toMatchObject({
+      videoId: 'z9876543210',
+      provider: 'youtube',
+      sourceUrl: 'https://youtu.be/z9876543210',
+    });
+  });
+
+  it('derives videoId/provider from a Bandcamp sourceUrl when no explicit videoId is given', async () => {
+    await getFullCatalog(null);
+
+    patchCatalogCache([
+      {
+        trackId: 'track-1',
+        sourceUrl: 'https://another-artist.bandcamp.com/track/new-song',
+      },
+    ]);
+
+    const patched = getCachedCatalog().find((t) => t.trackId === 'track-1');
+    expect(patched).toMatchObject({
+      videoId: 'https://another-artist.bandcamp.com/track/new-song',
+      provider: 'bandcamp',
+    });
+  });
+
+  it('leaves an unmatched entry alone', async () => {
+    await getFullCatalog(null);
+
+    patchCatalogCache([{ trackId: 'no-such-track', gameTitle: 'Ignored' }]);
+
+    const untouched = getCachedCatalog().find((t) => t.trackId === 'track-1');
+    expect(untouched.gameTitle).toBe('Game A');
+  });
+});
+
+describe('bulkUpdateTracks', () => {
+  beforeEach(() => {
+    // Ensures the patchCatalogCache call inside bulkUpdateTracks safely
+    // no-ops (cache not seeded) rather than patching a cache these tests
+    // don't care about.
+    clearCatalogCache();
+  });
+
+  function createMockSupabase() {
+    const updateCalls = { tracks: [], track_sources: [] };
+    const supabase = {
+      from: vi.fn((table) => ({
+        update: vi.fn((payload) => {
+          updateCalls[table].push(payload);
+          return makeUpdateBuilder({ error: null, count: 1 });
+        }),
+      })),
+    };
+    return { supabase, updateCalls };
+  }
+
+  it('writes provider + external_id to track_sources when sourceUrl is a SoundCloud link', async () => {
+    const { supabase, updateCalls } = createMockSupabase();
+
+    await bulkUpdateTracks(supabase, {
+      'track-1': { sourceUrl: 'https://soundcloud.com/artist/track' },
+    });
+
+    expect(updateCalls.track_sources[0]).toMatchObject({
+      source_url: 'https://soundcloud.com/artist/track',
+      submitted_url: 'https://soundcloud.com/artist/track',
+      external_id: 'https://soundcloud.com/artist/track',
+      provider: 'soundcloud',
+    });
+  });
+
+  it('writes provider + external_id to track_sources when sourceUrl is a YouTube link', async () => {
+    const { supabase, updateCalls } = createMockSupabase();
+
+    await bulkUpdateTracks(supabase, {
+      'track-1': { sourceUrl: 'https://www.youtube.com/watch?v=a1234567890' },
+    });
+
+    expect(updateCalls.track_sources[0]).toMatchObject({
+      external_id: 'a1234567890',
+      provider: 'youtube',
+    });
+  });
+
+  it('does not set provider/external_id when the sourceUrl is unparseable', async () => {
+    const { supabase, updateCalls } = createMockSupabase();
+
+    await bulkUpdateTracks(supabase, {
+      'track-1': { sourceUrl: 'not a real link' },
+    });
+
+    expect(updateCalls.track_sources[0]).not.toHaveProperty('provider');
+    expect(updateCalls.track_sources[0]).not.toHaveProperty('external_id');
+  });
+});
+
+describe('mergeTracks', () => {
+  beforeEach(async () => {
+    clearCatalogCache();
+    // mergeTracks reads memoryCatalog directly (not guarded like
+    // patchCatalogCache is), so it needs a non-null cache to not throw —
+    // an empty catalog is enough since these tests only assert on the
+    // Supabase calls, not the resulting cache contents.
+    await getFullCatalog(null);
+  });
+
+  afterEach(() => {
+    clearCatalogCache();
+  });
+
+  function createMockSupabase() {
+    const updateCalls = { tracks: [], track_sources: [] };
+    const supabase = {
+      rpc: vi.fn().mockResolvedValue({ error: null }),
+      from: vi.fn((table) => ({
+        update: vi.fn((payload) => {
+          updateCalls[table].push(payload);
+          return makeUpdateBuilder({ error: null });
+        }),
+      })),
+    };
+    return { supabase, updateCalls };
+  }
+
+  it('writes provider + canonical source_url to track_sources for a Bandcamp merge target', async () => {
+    const { supabase, updateCalls } = createMockSupabase();
+
+    await mergeTracks(
+      supabase,
+      { trackId: 'track-1', gameTitle: 'Game', trackTitle: 'Song' },
+      [], // no source tracks being merged away
+      {
+        gameTitle: 'Game',
+        trackTitle: 'Song',
+        sourceUrl: 'https://artist.bandcamp.com/track/song',
+        provider: 'bandcamp',
+      },
+    );
+
+    expect(updateCalls.track_sources[0]).toMatchObject({
+      provider: 'bandcamp',
+      external_id: 'https://artist.bandcamp.com/track/song',
+      source_url: 'https://artist.bandcamp.com/track/song',
+    });
+  });
+
+  it('builds a canonical YouTube watch URL for a YouTube merge target', async () => {
+    const { supabase, updateCalls } = createMockSupabase();
+
+    await mergeTracks(
+      supabase,
+      { trackId: 'track-1', gameTitle: 'Game', trackTitle: 'Song' },
+      [],
+      {
+        gameTitle: 'Game',
+        trackTitle: 'Song',
+        sourceUrl: 'https://youtu.be/b1234567890',
+        provider: 'youtube',
+      },
+    );
+
+    expect(updateCalls.track_sources[0]).toMatchObject({
+      provider: 'youtube',
+      external_id: 'b1234567890',
+      source_url: 'https://www.youtube.com/watch?v=b1234567890',
+      submitted_url: 'https://youtu.be/b1234567890',
+    });
+  });
+
+  it('skips the track_sources update when the merged sourceUrl is unparseable', async () => {
+    const { supabase, updateCalls } = createMockSupabase();
+
+    await mergeTracks(
+      supabase,
+      { trackId: 'track-1', gameTitle: 'Game', trackTitle: 'Song' },
+      [],
+      { gameTitle: 'Game', trackTitle: 'Song', sourceUrl: 'not a real link' },
+    );
+
+    expect(updateCalls.track_sources).toHaveLength(0);
   });
 });
