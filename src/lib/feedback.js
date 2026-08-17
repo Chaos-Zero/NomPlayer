@@ -121,7 +121,7 @@ export async function fetchRecentComments(supabase, limit = 20) {
         id,
         canonical_game_title,
         canonical_track_title,
-        track_sources (external_id)
+        track_sources (provider, external_id)
       )
     `,
     )
@@ -148,7 +148,7 @@ export async function fetchAllCommunityFeedback(supabase) {
         id,
         canonical_game_title,
         canonical_track_title,
-        track_sources (external_id)
+        track_sources (provider, external_id)
       )
     `,
     )

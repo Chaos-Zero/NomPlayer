@@ -1,9 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import {
-  parseYouTubeInput,
-  fetchPlaylistItems,
-  singleVideoEntry,
-} from '../utils/youtube.js';
+import { fetchMediaItems, parseMediaInput } from '../utils/media.js';
 
 const SUCCESS_FLASH_MS = 1000;
 const API_KEY = import.meta.env.VITE_YT_API_KEY || '';
@@ -140,7 +136,7 @@ export default function CollectionAdder({
     const trimmedUrl = urlValue.trim();
     if (!trimmedUrl) return;
 
-    const parsed = parseYouTubeInput(trimmedUrl);
+    const parsed = parseMediaInput(trimmedUrl);
     if (!parsed) {
       setError('Could not recognise that URL or ID');
       return;
@@ -154,20 +150,12 @@ export default function CollectionAdder({
     setLoading(true);
 
     try {
-      let items = [];
+      const { items } = await fetchMediaItems(parsed, { apiKey: API_KEY });
+      if (requestId !== activeRequestRef.current) return;
 
-      if (parsed.type === 'video') {
-        const item = await singleVideoEntry(parsed.videoId);
-        if (requestId !== activeRequestRef.current) return;
-        items = [item];
-      } else {
-        items = await fetchPlaylistItems(parsed.playlistId, API_KEY);
-        if (requestId !== activeRequestRef.current) return;
-
-        if (items.length === 0) {
-          setError('Playlist is empty or private.');
-          return;
-        }
+      if (items.length === 0) {
+        setError('Playlist is empty or private.');
+        return;
       }
 
       const addResult = await onAddDirectItems(items);

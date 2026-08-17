@@ -131,7 +131,9 @@ describe('FavouritesPanel', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Load' }));
 
     await waitFor(() => {
-      expect(props.onAddDirectItems).toHaveBeenCalledWith([loadedVideo]);
+      expect(props.onAddDirectItems).toHaveBeenCalledWith([
+        { ...loadedVideo, provider: 'youtube' },
+      ]);
     });
   });
 

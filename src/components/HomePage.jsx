@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import DiscordIcon from './DiscordIcon.jsx';
 import ScrollingText from './ScrollingText.jsx';
-import { getYouTubeThumbnailUrl } from '../utils/youtube.js';
 import { getMediaThumbnailUrl } from '../utils/media.js';
 import useMediaQuery from '../hooks/useMediaQuery.js';
 import {
@@ -114,7 +113,7 @@ async function fetchHomeCplPage(supabase, authUserId, page) {
       supabase
         .from('user_playlist_tracks')
         .select(
-          'playlist_id, order_index, provider, external_id, cached_thumbnail, tracks(track_sources(external_id, cached_thumbnail_url, is_primary))',
+          'playlist_id, order_index, provider, external_id, cached_thumbnail, tracks(track_sources(provider, external_id, cached_thumbnail_url, is_primary))',
         )
         .in('playlist_id', playlistIds)
         .order('order_index', { ascending: true })
@@ -128,7 +127,10 @@ async function fetchHomeCplPage(supabase, authUserId, page) {
             if (src) {
               thumbnailMap[pt.playlist_id] =
                 src.cached_thumbnail_url ||
-                getYouTubeThumbnailUrl(src.external_id);
+                getMediaThumbnailUrl({
+                  provider: src.provider,
+                  videoId: src.external_id,
+                });
             } else if (pt.external_id) {
               thumbnailMap[pt.playlist_id] =
                 pt.cached_thumbnail ||
@@ -157,7 +159,7 @@ async function fetchHomeCplTracks(supabase, playlistId) {
        tracks (
          id, canonical_game_title, canonical_track_title,
          track_sources (
-           external_id, cached_title, cached_channel_title,
+           provider, external_id, cached_title, cached_channel_title,
            cached_thumbnail_url, is_primary
          )
        )`,
@@ -175,6 +177,7 @@ async function fetchHomeCplTracks(supabase, playlistId) {
         if (!src) return null;
         return {
           videoId: src.external_id,
+          provider: src.provider || 'youtube',
           trackId: pt.track_id,
           title:
             src.cached_title ||
@@ -183,10 +186,15 @@ async function fetchHomeCplTracks(supabase, playlistId) {
               .join(' – '),
           displayTitle:
             track.canonical_track_title || src.cached_title || src.external_id,
-          channelTitle: src.cached_channel_title || 'YouTube',
+          channelTitle:
+            src.cached_channel_title ||
+            (!src.provider || src.provider === 'youtube' ? 'YouTube' : ''),
           thumbnail:
             src.cached_thumbnail_url ||
-            `https://i.ytimg.com/vi/${src.external_id}/mqdefault.jpg`,
+            getMediaThumbnailUrl({
+              provider: src.provider,
+              videoId: src.external_id,
+            }),
           gameTitle: track.canonical_game_title,
           trackTitle: track.canonical_track_title,
           comment: '',
@@ -892,7 +900,10 @@ function NominatorInfoPanel({
                 const thumb =
                   meta?.sourceThumbnailUrl ||
                   video.thumbnail ||
-                  `https://i.ytimg.com/vi/${video.videoId}/mqdefault.jpg`;
+                  getMediaThumbnailUrl({
+                    provider: meta?.provider || video.provider,
+                    videoId: video.videoId,
+                  });
                 return (
                   <div
                     key={video.videoId}
@@ -2032,11 +2043,16 @@ export default function HomePage({
         const s3 = meta.supportCount3 || 0;
         return {
           videoId: meta.videoId,
+          provider: meta.provider || 'youtube',
           title: meta.trackTitle
             ? `${meta.gameTitle} - ${meta.trackTitle}`
             : meta.displayTitle || 'Unknown Track',
           thumbnail:
-            meta.sourceThumbnailUrl || getYouTubeThumbnailUrl(meta.videoId),
+            meta.sourceThumbnailUrl ||
+            getMediaThumbnailUrl({
+              provider: meta.provider,
+              videoId: meta.videoId,
+            }),
           supportCount1: s1,
           supportCount2: s2,
           supportCount3: s3,
@@ -2070,13 +2086,17 @@ export default function HomePage({
         const s3 = meta.supportCount3 || 0;
         return {
           ...video,
+          provider: meta.provider || video.provider || 'youtube',
           title: meta.trackTitle
             ? `${meta.gameTitle} - ${meta.trackTitle}`
             : video.title || meta.displayTitle || 'Unknown Track',
           thumbnail:
             meta.sourceThumbnailUrl ||
             video.thumbnail ||
-            getYouTubeThumbnailUrl(video.videoId),
+            getMediaThumbnailUrl({
+              provider: meta.provider || video.provider,
+              videoId: video.videoId,
+            }),
           supportCount1: s1,
           supportCount2: s2,
           supportCount3: s3,
@@ -2108,10 +2128,13 @@ export default function HomePage({
         const s3 = meta.supportCount3 || 0;
         return {
           videoId: id,
+          provider: meta.provider || 'youtube',
           title: meta.trackTitle
             ? `${meta.gameTitle} - ${meta.trackTitle}`
             : meta.displayTitle || 'Unknown Track',
-          thumbnail: meta.sourceThumbnailUrl || getYouTubeThumbnailUrl(id),
+          thumbnail:
+            meta.sourceThumbnailUrl ||
+            getMediaThumbnailUrl({ provider: meta.provider, videoId: id }),
           supportCount1: s1,
           supportCount2: s2,
           supportCount3: s3,
@@ -2165,9 +2188,14 @@ export default function HomePage({
     const fallbackPool = unplacedFallbackTracks
       .map((track) => ({
         videoId: track.videoId,
+        provider: track.provider || 'youtube',
         title: track.displayTitle,
         thumbnail:
-          track.sourceThumbnailUrl || getYouTubeThumbnailUrl(track.videoId),
+          track.sourceThumbnailUrl ||
+          getMediaThumbnailUrl({
+            provider: track.provider,
+            videoId: track.videoId,
+          }),
         isFallback: true,
         supportCount1: track.supportCount1,
         supportCount2: track.supportCount2,

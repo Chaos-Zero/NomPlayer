@@ -1,4 +1,4 @@
-import { parseYouTubeInput } from '../utils/youtube.js';
+import { parseMediaInput } from '../utils/media.js';
 
 // Shared Google Sheets logic for the VGMC "reaction sheet" sync feature, pure
 // parsing/matching plus plain fetch() calls against the Sheets REST API, with no
@@ -169,15 +169,16 @@ function isExcludedLinkHeader(headerText) {
 }
 
 /**
- * Finds which column holds YouTube links without assuming a fixed letter,
- * this sheet's structure has already changed once (K, now L), and pinning a
- * letter in code just means another deploy the next time it moves. Tries the
- * header row first (any header containing "link", not requiring an exact
- * match,the real header reads "Link (auto-fill from K2)",but skipping
- * any header containing "imp", e.g. "LINK IMP"). If nothing matches there,
- * falls back to sniffing actual cell content (also skipping "imp" headers):
- * samples the first several data rows per column and picks whichever one is
- * overwhelmingly (80%+, at least 3 samples) parseable as YouTube links.
+ * Finds which column holds track links (YouTube/SoundCloud/Bandcamp) without
+ * assuming a fixed letter, this sheet's structure has already changed once
+ * (K, now L), and pinning a letter in code just means another deploy the
+ * next time it moves. Tries the header row first (any header containing
+ * "link", not requiring an exact match,the real header reads "Link
+ * (auto-fill from K2)",but skipping any header containing "imp", e.g.
+ * "LINK IMP"). If nothing matches there, falls back to sniffing actual cell
+ * content (also skipping "imp" headers): samples the first several data
+ * rows per column and picks whichever one is overwhelmingly (80%+, at least
+ * 3 samples) parseable as a recognized track link.
  * Returns -1 if neither approach finds anything.
  */
 export function findLinkColumnIndex(rows, headerRowIndex) {
@@ -206,7 +207,7 @@ export function findLinkColumnIndex(rows, headerRowIndex) {
       if (!text) continue;
 
       checked += 1;
-      if (parseYouTubeInput(text)?.videoId) matched += 1;
+      if (parseMediaInput(text)?.videoId) matched += 1;
       if (checked >= CONTENT_SNIFF_SAMPLE_SIZE) break;
     }
 
@@ -293,7 +294,7 @@ export function buildSheetUpdates({
     const linkText = row[linkColIndex]?.value?.trim();
     if (!linkText) continue;
 
-    const videoId = parseYouTubeInput(linkText)?.videoId;
+    const videoId = parseMediaInput(linkText)?.videoId;
     if (!videoId) continue;
 
     if (!rowIndexesByVideoId.has(videoId)) {
@@ -369,7 +370,7 @@ export function filterStaleUpdates({ updates, freshRows, linkColIndex }) {
     const freshLinkText =
       freshRows[update.rowIndex]?.[linkColIndex]?.value?.trim();
     const freshVideoId = freshLinkText
-      ? parseYouTubeInput(freshLinkText)?.videoId
+      ? parseMediaInput(freshLinkText)?.videoId
       : null;
 
     if (freshVideoId === update.videoId) {

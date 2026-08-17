@@ -6,7 +6,6 @@ import React, {
   useRef,
 } from 'react';
 import { getDisplayProfileName } from '../lib/playerState.js';
-import { getYouTubeThumbnailUrl } from '../utils/youtube.js';
 import { getMediaThumbnailUrl } from '../utils/media.js';
 import { SearchIcon, TrashIcon } from './Icons.jsx';
 import PrivacyToggle from './PrivacyToggle.jsx';
@@ -474,7 +473,7 @@ export function CommunityPlaylistsView({
           supabase
             .from('user_playlist_tracks')
             .select(
-              'playlist_id, order_index, provider, external_id, cached_thumbnail, tracks(track_sources(external_id, cached_thumbnail_url, is_primary))',
+              'playlist_id, order_index, provider, external_id, cached_thumbnail, tracks(track_sources(provider, external_id, cached_thumbnail_url, is_primary))',
             )
             .in('playlist_id', playlistIds)
             .order('order_index', { ascending: true })
@@ -487,7 +486,10 @@ export function CommunityPlaylistsView({
                 if (src) {
                   thumbnailMap[pt.playlist_id] =
                     src.cached_thumbnail_url ||
-                    getYouTubeThumbnailUrl(src.external_id);
+                    getMediaThumbnailUrl({
+                      provider: src.provider,
+                      videoId: src.external_id,
+                    });
                 } else if (pt.external_id) {
                   thumbnailMap[pt.playlist_id] =
                     pt.cached_thumbnail ||
@@ -573,7 +575,7 @@ export function CommunityPlaylistsView({
          tracks (
            id, canonical_game_title, canonical_track_title,
            track_sources (
-             external_id, cached_title, cached_channel_title,
+             provider, external_id, cached_title, cached_channel_title,
              cached_thumbnail_url, is_primary
            )
          )`,
@@ -592,6 +594,7 @@ export function CommunityPlaylistsView({
           return {
             id: pt.id,
             videoId: src.external_id,
+            provider: src.provider || 'youtube',
             trackId: pt.track_id,
             title:
               src.cached_title ||
@@ -602,10 +605,15 @@ export function CommunityPlaylistsView({
               track.canonical_track_title ||
               src.cached_title ||
               src.external_id,
-            channelTitle: src.cached_channel_title || 'YouTube',
+            channelTitle:
+              src.cached_channel_title ||
+              (!src.provider || src.provider === 'youtube' ? 'YouTube' : ''),
             thumbnail:
               src.cached_thumbnail_url ||
-              `https://i.ytimg.com/vi/${src.external_id}/mqdefault.jpg`,
+              getMediaThumbnailUrl({
+                provider: src.provider,
+                videoId: src.external_id,
+              }),
             gameTitle: track.canonical_game_title,
             trackTitle: track.canonical_track_title,
             comment: '',

@@ -10088,7 +10088,10 @@ body.is-resizing .resize-handle {
   text-decoration: underline;
 }
 
-.youtube-link {
+.source-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
   color: var(--primary);
   text-decoration: none;
   font-weight: 600;
@@ -10096,9 +10099,16 @@ body.is-resizing .resize-handle {
   transition: all 0.2s;
 }
 
-.youtube-link:hover {
+.source-link:hover {
   text-decoration: underline;
   color: var(--primary-light);
+}
+
+.source-link-icon {
+  flex: none;
+  width: 13px;
+  height: 13px;
+  opacity: 0.85;
 }
 
 .btn-playback {

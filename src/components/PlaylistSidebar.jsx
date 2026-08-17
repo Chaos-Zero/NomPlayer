@@ -873,7 +873,7 @@ export default function PlaylistSidebar({
       .select(
         `id, order_index, track_id, provider, external_id, cached_title, cached_channel, cached_thumbnail,
          tracks(id, canonical_game_title, canonical_track_title,
-           track_sources(external_id, cached_title, cached_channel_title, cached_thumbnail_url, is_primary))`,
+           track_sources(provider, external_id, cached_title, cached_channel_title, cached_thumbnail_url, is_primary))`,
       )
       .eq('playlist_id', playlistId)
       .order('order_index');
@@ -889,6 +889,7 @@ export default function PlaylistSidebar({
           return {
             id: pt.id,
             videoId: src.external_id,
+            provider: src.provider || 'youtube',
             trackId: pt.track_id,
             title:
               src.cached_title ||
@@ -899,10 +900,15 @@ export default function PlaylistSidebar({
               track.canonical_track_title ||
               src.cached_title ||
               src.external_id,
-            channelTitle: src.cached_channel_title || 'YouTube',
+            channelTitle:
+              src.cached_channel_title ||
+              (!src.provider || src.provider === 'youtube' ? 'YouTube' : ''),
             thumbnail:
               src.cached_thumbnail_url ||
-              `https://i.ytimg.com/vi/${src.external_id}/mqdefault.jpg`,
+              getMediaThumbnailUrl({
+                provider: src.provider,
+                videoId: src.external_id,
+              }),
             gameTitle: track.canonical_game_title,
             trackTitle: track.canonical_track_title,
             comment: '',

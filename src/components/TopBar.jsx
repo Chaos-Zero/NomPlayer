@@ -5,11 +5,7 @@ import {
   useRef,
   useState,
 } from 'react';
-import {
-  parseYouTubeInput,
-  fetchPlaylistItems,
-  singleVideoEntry,
-} from '../utils/youtube.js';
+import { fetchMediaItems, parseMediaInput } from '../utils/media.js';
 import useMediaQuery from '../hooks/useMediaQuery.js';
 import ScrollingText from './ScrollingText.jsx';
 import TrackCatalogSearch from './TrackCatalogSearch.jsx';
@@ -481,7 +477,7 @@ export default function TopBar({
     const trimmedUrl = urlValue.trim();
     if (!trimmedUrl) return;
 
-    const parsed = parseYouTubeInput(trimmedUrl);
+    const parsed = parseMediaInput(trimmedUrl);
     if (!parsed) {
       setError('Could not recognise that URL or ID');
       return;
@@ -494,21 +490,18 @@ export default function TopBar({
     setError('');
     setLoading(true);
     try {
-      if (parsed.type === 'video') {
-        const item = await singleVideoEntry(parsed.videoId);
-        if (requestId !== activeRequestRef.current) return;
-        onLoad([item], { mode: 'append', autoplay: true });
+      const { items, startVideoId } = await fetchMediaItems(parsed, {
+        apiKey: API_KEY,
+      });
+      if (requestId !== activeRequestRef.current) return;
+      if (items.length === 0) {
+        setError('Playlist is empty or private.');
       } else {
-        const items = await fetchPlaylistItems(parsed.playlistId, API_KEY);
-        if (requestId !== activeRequestRef.current) return;
-        if (items.length === 0) {
-          setError('Playlist is empty or private.');
-        } else {
-          onLoad(items, {
-            mode: 'append',
-            startVideoId: parsed.videoId || null,
-          });
-        }
+        onLoad(items, {
+          mode: 'append',
+          autoplay: parsed.type !== 'playlist',
+          startVideoId: startVideoId || null,
+        });
       }
 
       if (requestId === activeRequestRef.current) {

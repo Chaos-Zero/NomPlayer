@@ -9,7 +9,14 @@ export default function ExportVgmcModal({ isOpen, tracks, onClose }) {
     .map((track) => {
       const game = track.gameTitle || 'Metadata Needed';
       const title = track.trackTitle || track.title || 'Unknown Track';
-      const url = `https://www.youtube.com/watch?v=${track.videoId}`;
+      // SoundCloud/Bandcamp ids are already the canonical page URL; only
+      // YouTube needs one built from a bare id. This has to match a link
+      // reconcile_vgmc_playlist's parser can actually resolve — see
+      // extractVideoId in src/lib/vgmcIngest.js.
+      const url =
+        !track.provider || track.provider === 'youtube'
+          ? `https://www.youtube.com/watch?v=${track.videoId}`
+          : track.videoId;
       return `+ ${game} | ${title} | ${url}`;
     })
     .join('\n');

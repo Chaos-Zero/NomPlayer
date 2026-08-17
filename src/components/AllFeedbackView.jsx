@@ -3,6 +3,7 @@ import { useVirtualizer } from '@tanstack/react-virtual';
 import { DotLottieReact } from '@lottiefiles/dotlottie-react';
 import { fetchAllCommunityFeedback } from '../lib/feedback.js';
 import { getDisplayProfileName } from '../lib/playerState.js';
+import { getMediaThumbnailUrl } from '../utils/media.js';
 
 const SORT_OPTIONS = [
   { id: 'date', label: 'Latest Activity' },
@@ -85,6 +86,7 @@ export default function AllFeedbackView({
           latestDate: new Date(0),
           vgmcNumbers: vgmcByTrackId[track_id] || [],
           videoId: tracks?.track_sources?.[0]?.external_id || null,
+          provider: tracks?.track_sources?.[0]?.provider || 'youtube',
         };
       }
       groups[track_id].entries.push(entry);
@@ -299,7 +301,10 @@ export default function AllFeedbackView({
             {virtualItems.map((vRow) => {
               const group = sorted[vRow.index];
               const thumb = group.videoId
-                ? `https://i.ytimg.com/vi/${group.videoId}/mqdefault.jpg`
+                ? getMediaThumbnailUrl({
+                    provider: group.provider,
+                    videoId: group.videoId,
+                  })
                 : null;
               const vgmcLabel =
                 group.vgmcNumbers.length > 0

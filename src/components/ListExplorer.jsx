@@ -64,10 +64,10 @@ import AllFeedbackView from './AllFeedbackView.jsx';
 import CreatePlaylistDialog from './CreatePlaylistDialog.jsx';
 import DeletePlaylistConfirmDialog from './DeletePlaylistConfirmDialog.jsx';
 import {
-  parseYouTubeInput,
-  fetchPlaylistItems,
-  singleVideoEntry,
-} from '../utils/youtube.js';
+  fetchMediaItems,
+  getMediaThumbnailUrl,
+  parseMediaInput,
+} from '../utils/media.js';
 
 function PlaylistPlusIcon() {
   return (
@@ -1144,7 +1144,10 @@ function CommentsView({
     // Fallback for track info if needed
     const sources = track?.track_sources || [];
     const videoId = sources[0]?.external_id;
-    const thumbnail = `https://i.ytimg.com/vi/${videoId}/mqdefault.jpg`;
+    const thumbnail = getMediaThumbnailUrl({
+      provider: sources[0]?.provider,
+      videoId,
+    });
 
     return (
       <Motion.div
@@ -1622,7 +1625,7 @@ export default function ListExplorer({
             thumbnail:
               n.thumbnail ||
               n.cached_thumbnail_url ||
-              `https://i.ytimg.com/vi/${videoId}/mqdefault.jpg`,
+              getMediaThumbnailUrl({ provider: n.provider, videoId }),
           });
         }
       });
@@ -1666,7 +1669,10 @@ export default function ListExplorer({
               n.thumbnail ||
               n.cached_thumbnail_url ||
               n.sourceThumbnailUrl ||
-              `https://i.ytimg.com/vi/${n.videoId || n.video_id || n.id}/mqdefault.jpg`,
+              getMediaThumbnailUrl({
+                provider: n.provider,
+                videoId: n.videoId || n.video_id || n.id,
+              }),
             comment: n.comment || '',
           })),
         },
@@ -2197,50 +2203,36 @@ export default function ListExplorer({
   };
 
   const handleAddByUrl = async (id, url) => {
-    const parsed = parseYouTubeInput(url);
+    const parsed = parseMediaInput(url);
     if (!parsed) {
-      onShowToast('Invalid YouTube URL', 'error');
+      onShowToast('Invalid URL', 'error');
       return;
     }
 
     const currentList = getListById(id);
-    const targetVideos = [];
+    let targetVideos = [];
 
     if (parsed.type === 'playlist') {
       onShowToast('Fetching playlist items...');
-      try {
-        const apiKey = import.meta.env.VITE_YT_API_KEY;
-        const items = await fetchPlaylistItems(parsed.playlistId, apiKey);
-        if (items.length === 0) {
-          onShowToast('Playlist is empty or private', 'error');
-          return;
-        }
-        targetVideos.push(...items);
-      } catch (err) {
-        console.error('Playlist fetch failed:', err);
-        onShowToast(
-          err.message === 'NO_API_KEY'
-            ? 'YouTube API key missing'
-            : 'Failed to fetch playlist items',
-          'error',
-        );
+    }
+
+    try {
+      const apiKey = import.meta.env.VITE_YT_API_KEY;
+      const { items } = await fetchMediaItems(parsed, { apiKey });
+      if (items.length === 0) {
+        onShowToast('Playlist is empty or private', 'error');
         return;
       }
-    } else {
-      try {
-        const entry = await singleVideoEntry(parsed.videoId);
-        targetVideos.push(entry);
-      } catch (err) {
-        console.error('Single video metadata fetch failed:', err);
-        // Fallback if oEmbed fails
-        targetVideos.push({
-          videoId: parsed.videoId,
-          title: 'YouTube Track',
-          displayTitle: 'YouTube Track',
-          channelTitle: 'YouTube',
-          thumbnail: `https://i.ytimg.com/vi/${parsed.videoId}/mqdefault.jpg`,
-        });
-      }
+      targetVideos = items;
+    } catch (err) {
+      console.error('Failed to fetch media metadata:', err);
+      onShowToast(
+        err.message === 'NO_API_KEY'
+          ? 'YouTube API key missing'
+          : 'Failed to fetch playlist items',
+        'error',
+      );
+      return;
     }
 
     const nextList = [...currentList];

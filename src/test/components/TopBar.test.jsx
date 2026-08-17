@@ -346,11 +346,67 @@ describe('TopBar', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Load' }));
 
     await waitFor(() => {
-      expect(props.onLoad).toHaveBeenCalledWith([item], {
-        mode: 'append',
-        autoplay: true,
-      });
+      expect(props.onLoad).toHaveBeenCalledWith(
+        [{ ...item, provider: 'youtube' }],
+        {
+          mode: 'append',
+          autoplay: true,
+          startVideoId: item.videoId,
+        },
+      );
     });
+  });
+
+  it('loads a SoundCloud track pasted into the same "add by URL" box, via the real media dispatcher', async () => {
+    // vi.clearAllMocks (beforeEach) only clears call history, not a
+    // previously-set mockReturnValue — an earlier test's YouTube stub would
+    // otherwise leak in here. Force it back to "not a YouTube URL" so this
+    // genuinely falls through to parseMediaInput's real, unmocked
+    // SoundCloud/Bandcamp branches, exercising the actual dispatcher wiring.
+    parseYouTubeInput.mockReturnValue(null);
+
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        title: 'Great Track',
+        thumbnail_url: 'https://i1.sndcdn.com/artworks-abc.jpg',
+        author_name: 'Great Artist',
+      }),
+    });
+
+    try {
+      const { props } = renderTopBar();
+      fireEvent.change(openLoader(), {
+        target: { value: 'https://soundcloud.com/artist-name/track-name' },
+      });
+      fireEvent.click(screen.getByRole('button', { name: 'Load' }));
+
+      await waitFor(() => {
+        expect(props.onLoad).toHaveBeenCalledWith(
+          [
+            {
+              videoId: 'https://soundcloud.com/artist-name/track-name',
+              provider: 'soundcloud',
+              title: 'Great Track',
+              thumbnail: 'https://i1.sndcdn.com/artworks-abc.jpg',
+              channelTitle: 'Great Artist',
+            },
+          ],
+          {
+            mode: 'append',
+            autoplay: true,
+            startVideoId: 'https://soundcloud.com/artist-name/track-name',
+          },
+        );
+      });
+
+      // Confirms this genuinely went through parseMediaInput's SoundCloud
+      // branch, not the mocked YouTube parser.
+      expect(singleVideoEntry).not.toHaveBeenCalled();
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
   });
 
   it('flashes a success tick after a valid load completes', async () => {
@@ -375,10 +431,14 @@ describe('TopBar', () => {
       await Promise.resolve();
     });
 
-    expect(props.onLoad).toHaveBeenCalledWith([item], {
-      mode: 'append',
-      autoplay: true,
-    });
+    expect(props.onLoad).toHaveBeenCalledWith(
+      [{ ...item, provider: 'youtube' }],
+      {
+        mode: 'append',
+        autoplay: true,
+        startVideoId: item.videoId,
+      },
+    );
     expect(
       screen.getByRole('button', { name: 'Load successful' }),
     ).toHaveTextContent('✓');
@@ -428,10 +488,14 @@ describe('TopBar', () => {
     });
 
     await waitFor(() => {
-      expect(props.onLoad).toHaveBeenCalledWith([secondItem], {
-        mode: 'append',
-        autoplay: true,
-      });
+      expect(props.onLoad).toHaveBeenCalledWith(
+        [{ ...secondItem, provider: 'youtube' }],
+        {
+          mode: 'append',
+          autoplay: true,
+          startVideoId: secondItem.videoId,
+        },
+      );
     });
 
     await act(async () => {
@@ -473,10 +537,14 @@ describe('TopBar', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Load' }));
 
     await waitFor(() => {
-      expect(props.onLoad).toHaveBeenCalledWith(items, {
-        mode: 'append',
-        startVideoId: 'beta12345678',
-      });
+      expect(props.onLoad).toHaveBeenCalledWith(
+        items.map((item) => ({ ...item, provider: 'youtube' })),
+        {
+          mode: 'append',
+          autoplay: false,
+          startVideoId: 'beta12345678',
+        },
+      );
     });
   });
 });

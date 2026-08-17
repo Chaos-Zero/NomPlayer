@@ -8,6 +8,9 @@ import {
 } from 'react';
 import { getDisplayProfileName } from '../lib/playerState.js';
 import { ContextMenuPortal } from './ContextMenuPortal';
+import YouTubeIcon from './YouTubeIcon.jsx';
+import SoundCloudIcon from './SoundCloudIcon.jsx';
+import BandcampIcon from './BandcampIcon.jsx';
 import {
   fetchFilteredTracks,
   fetchMaxVgmcNumber,
@@ -25,6 +28,16 @@ import CustomPlaylistSubmenu from './CustomPlaylistSubmenu.jsx';
 import { DotLottieReact } from '@lottiefiles/dotlottie-react';
 import useMediaQuery from '../hooks/useMediaQuery.js';
 import { useVirtualizer } from '@tanstack/react-virtual';
+
+function SourceProviderIcon({ provider }) {
+  if (provider === 'soundcloud') {
+    return <SoundCloudIcon className="source-link-icon" />;
+  }
+  if (provider === 'bandcamp') {
+    return <BandcampIcon className="source-link-icon" />;
+  }
+  return <YouTubeIcon className="source-link-icon" />;
+}
 
 const VIEW_MODES = [
   { id: 'all', label: 'All Tracks' },
@@ -449,8 +462,9 @@ const TrackRow = memo(
             href={track.sourceUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="youtube-link"
+            className="source-link"
           >
+            <SourceProviderIcon provider={track.provider} />
             {track.sourceUrl}
           </a>
         </td>
