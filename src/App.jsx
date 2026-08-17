@@ -5444,15 +5444,43 @@ export default function App() {
     [applyCatalogMetadataToVideo, markVideoStarted, transientVideo],
   );
 
+  // Which list (if any) `video` actually lives in right now, so a transient
+  // "play this now" can put the app back into that list's own view instead
+  // of leaving playingPlaylistView pointed at whatever it last happened to
+  // be (see the bug this fixes: clicking "previous track" played the right
+  // song, but once it ended playback fell into the personal queue instead
+  // of continuing through the nominations/support/custom playlist it was
+  // actually playing from, in that list's own displayed order).
+  const resolveSourceViewForVideo = useCallback(
+    (video) => {
+      if (!video?.videoId) return null;
+      if (enrichedNominationList.some((v) => v.videoId === video.videoId)) {
+        return { type: 'nominations' };
+      }
+      if (enrichedSupportList.some((v) => v.videoId === video.videoId)) {
+        return { type: 'support' };
+      }
+      const owningCustomPlaylist = customPlaylists.find((pl) =>
+        (pl.videos || []).some((v) => v.videoId === video.videoId),
+      );
+      if (owningCustomPlaylist) {
+        return { type: 'custom-playlist', id: owningCustomPlaylist.id };
+      }
+      return null;
+    },
+    [enrichedNominationList, enrichedSupportList, customPlaylists],
+  );
+
   const handlePlayNowFromSupportList = useCallback(
     (video) => {
-      const nextVideo = applyCatalogMetadataToVideo(video);
+      const baseVideo = applyCatalogMetadataToVideo(video);
       hasReachedPlaylistEndRef.current = false;
       const resolvedPlayOrderIds = resolvePlayOrderIds(
         playlistRef.current,
         shuffleOrderIdsRef.current,
       );
       const activeVideoId = currentVideoIdRef.current;
+      let nextVideo = baseVideo;
 
       if (!transientVideo) {
         if (resolvedPlayOrderIds.length === 0) {
@@ -5470,13 +5498,55 @@ export default function App() {
               ? activeVideoId
               : (resolvedPlayOrderIds[0] ?? null);
         }
+
+        // Not already mid-way through some other list's transient session,
+        // so this is the moment to (re)establish which list this video is
+        // actually playing from -- matching the order the user currently
+        // sees it in (nominations/support sort, custom playlist order,
+        // etc.), not the queue's. If it doesn't live in any of those, it's
+        // a one-off (e.g. VGMC standings), so make sure a stale view from
+        // an earlier session isn't left lingering.
+        const resolvedSourceView = resolveSourceViewForVideo(baseVideo);
+        setPlayingPlaylistView(resolvedSourceView || { type: 'personal' });
+
+        // handleNext/handleVideoEnd only keep advancing within the transient
+        // list (instead of falling back to the queue) when the transient
+        // video's own `source` marks it as belonging to one -- the exact
+        // same `${type}-view` convention handleSidebarSelect and
+        // handlePlayCommunityPlaylist already tag their videos with. Without
+        // this, the song shown/played is right, but it plays as an
+        // untagged one-off, so the moment it ends playback falls through to
+        // the queue instead of continuing through this list.
+        if (resolvedSourceView) {
+          nextVideo = {
+            ...baseVideo,
+            source: `${resolvedSourceView.type}-view`,
+          };
+        }
+      } else {
+        // Already mid a transient session (e.g. clicking "previous" again
+        // while deep in Nominations) -- carry that same session's source
+        // (and community-view user id, if any) onto the new video so
+        // advancement keeps working. playingPlaylistView already correctly
+        // names this session and must not be reset here.
+        nextVideo = {
+          ...baseVideo,
+          source: transientVideo.source,
+          communityUserId: transientVideo.communityUserId,
+        };
       }
 
       setTransientVideo(nextVideo);
       setIsPlaying(true);
       markVideoStarted(nextVideo.videoId);
     },
-    [applyCatalogMetadataToVideo, isPlaying, transientVideo, markVideoStarted],
+    [
+      applyCatalogMetadataToVideo,
+      isPlaying,
+      transientVideo,
+      markVideoStarted,
+      resolveSourceViewForVideo,
+    ],
   );
 
   const handleSetIsPlaying = useCallback(

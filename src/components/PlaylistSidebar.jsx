@@ -1752,6 +1752,16 @@ export default function PlaylistSidebar({
           >
             Select all
           </button>
+          {activePlaylistView.type !== 'personal' && (
+            <button
+              className="fav-panel-action-btn selection-accent"
+              type="button"
+              onClick={() => onAddDirectItems(selectedVideos)}
+              disabled={selectedVideos.length === 0}
+            >
+              Add to Queue
+            </button>
+          )}
           {!isReadOnlyView && (
             <button
               className="fav-panel-action-btn selection-accent"
@@ -1909,7 +1919,11 @@ export default function PlaylistSidebar({
 
           <div className="context-menu-divider" />
 
-          {activePlaylistView.type === 'community' && (
+          {/* Adding to the queue is always an action on *your own* queue, so
+              unlike nominating/supporting/custom-playlist actions below it's
+              never restricted by who owns the list currently being viewed —
+              only 'personal' (the queue itself) has no reason to offer it. */}
+          {activePlaylistView.type !== 'personal' && (
             <button
               className="playlist-context-menu-item"
               type="button"
