@@ -10,10 +10,18 @@ const VIDEO_ID_PATTERN = /^[A-Za-z0-9_-]{11}$/;
 // merging a whole extra `Game | Song | link` command into the tail. That's always
 // much longer than a few characters and contains spaces/pipes, which this pattern
 // doesn't allow, so it still gets rejected below.
+//
+// Deliberately NOT applied to a bare (non-URL) id string below, that leniency is
+// specific to how a real browser resolves YouTube's `v=`/path segment, it has no
+// equivalent for someone just typing/pasting a token, and being lenient there
+// backfired immediately: a literal placeholder left in a post, `Youtube_Link` (12
+// id-charset characters, no URL at all), was accepted as id `Youtube_Lin` and
+// synced into a live playlist as a nomination for a video that doesn't exist.
 const VIDEO_ID_WITH_TRAILING_JUNK_PATTERN =
   /^([A-Za-z0-9_-]{11})[A-Za-z0-9_-]{1,4}$/;
 
-function coerceVideoId(rawValue) {
+/** Only for a value pulled out of an actual URL (query param or path segment). */
+function coerceVideoIdFromUrlPart(rawValue) {
   if (!rawValue) return null;
   if (VIDEO_ID_PATTERN.test(rawValue)) return rawValue;
   const match = rawValue.match(VIDEO_ID_WITH_TRAILING_JUNK_PATTERN);
@@ -33,16 +41,16 @@ export function parseYouTubeInput(input) {
     const listId = url.searchParams.get('list');
     // `URLSearchParams.get('v')` happily returns whatever's between `v=` and the
     // next `&` (or end of string) with no shape validation, so this only trusts
-    // it once coerceVideoId has confirmed it's a real id (with at most a short
-    // junk tail).
-    const videoId = coerceVideoId(url.searchParams.get('v'));
+    // it once coerceVideoIdFromUrlPart has confirmed it's a real id (with at most
+    // a short junk tail).
+    const videoId = coerceVideoIdFromUrlPart(url.searchParams.get('v'));
 
     if (listId) return { type: 'playlist', playlistId: listId, videoId };
     if (videoId) return { type: 'video', videoId };
 
     // youtu.be short links
     if (url.hostname === 'youtu.be') {
-      const vid = coerceVideoId(url.pathname.slice(1).split('?')[0]);
+      const vid = coerceVideoIdFromUrlPart(url.pathname.slice(1).split('?')[0]);
       if (vid) return { type: 'video', videoId: vid };
     }
   } catch {
@@ -51,10 +59,10 @@ export function parseYouTubeInput(input) {
     if (/^(PL|RD|UU|LL|FL|OL|WL)[A-Za-z0-9_-]+$/.test(str)) {
       return { type: 'playlist', playlistId: str };
     }
-    // Video ID: 11 chars (plus, same as above, a short junk tail)
-    const videoId = coerceVideoId(str);
-    if (videoId) {
-      return { type: 'video', videoId };
+    // Video ID: exactly 11 chars, no junk-tail leniency here, see the comment on
+    // VIDEO_ID_WITH_TRAILING_JUNK_PATTERN above.
+    if (VIDEO_ID_PATTERN.test(str)) {
+      return { type: 'video', videoId: str };
     }
   }
 

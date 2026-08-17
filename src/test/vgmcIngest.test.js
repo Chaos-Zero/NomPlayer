@@ -40,6 +40,10 @@ describe('extractVideoId', () => {
       ),
     ).toBeNull();
   });
+
+  it('rejects a literal placeholder left in a post, even though it happens to be id-charset-only (live regression: a "Youtube_Link" template line got synced as a nomination)', () => {
+    expect(extractVideoId('Youtube_Link')).toBeNull();
+  });
 });
 
 describe('parseCommandLine', () => {
