@@ -564,6 +564,44 @@ export async function findTrackInCatalog(supabase, videoId) {
   return found || null;
 }
 
+/**
+ * Lightweight source for the "has comments/rating" activity badge shown
+ * around the app (homepage, favourites panels). Queries track_catalog
+ * directly for just the columns that badge needs, instead of going through
+ * getFullCatalog() - which would mean downloading and normalizing the
+ * entire multi-thousand-track snapshot (several MB) just to compute a small
+ * videoId -> 'commented' | 'rated' map. track_catalog is a live view, so
+ * deleted tracks are simply absent - no separate track_deletions check
+ * needed here the way getFullCatalog needs one to patch its point-in-time
+ * snapshot file.
+ */
+export async function fetchCatalogActivityMap(supabase) {
+  const map = new Map();
+  if (!supabase) return map;
+
+  const { data, error } = await supabase
+    .from('track_catalog')
+    .select('source_external_id, comment_count, avg_rating')
+    .or('comment_count.gt.0,avg_rating.not.is.null');
+
+  if (error || !data) return map;
+
+  for (const row of data) {
+    const videoId =
+      typeof row.source_external_id === 'string'
+        ? row.source_external_id.trim()
+        : '';
+    if (!videoId) continue;
+    if (Number(row.comment_count) > 0) {
+      map.set(videoId, 'commented');
+    } else if (row.avg_rating != null) {
+      map.set(videoId, 'rated');
+    }
+  }
+
+  return map;
+}
+
 let memoryCatalog = null;
 let activeCatalogPromise = null;
 let catalogStatsLoaded = false;

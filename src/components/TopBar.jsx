@@ -1,4 +1,5 @@
 import {
+  memo,
   useCallback,
   useEffect,
   useLayoutEffect,
@@ -34,7 +35,7 @@ import {
 const API_KEY = import.meta.env.VITE_YT_API_KEY || '';
 const SUCCESS_FLASH_MS = 1000;
 
-export default function TopBar({
+function TopBar({
   theme,
   onToggleTheme,
   isPlaying,
@@ -229,7 +230,15 @@ export default function TopBar({
   );
 
   useEffect(() => {
+    // This effect syncs mobileKeyboardOffset with the external
+    // visualViewport API; the early setState(0) calls below are its
+    // "nothing to observe" branches (no listeners to attach), not state
+    // derived from this render, so they can't be hoisted out to a
+    // render-phase adjustment without duplicating the
+    // isMobileLayout/effectiveInputOpen condition into a second,
+    // separately-maintained copy.
     if (!isMobileLayout || !effectiveInputOpen) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setMobileKeyboardOffset(0);
       return undefined;
     }
@@ -271,7 +280,13 @@ export default function TopBar({
   }, [effectiveInputOpen, isMobileLayout]);
 
   useLayoutEffect(() => {
+    // Syncs mobileDetachedPlayerVars with real getBoundingClientRect()
+    // measurements of DOM nodes outside this component - can't run during
+    // render, needs painted layout. setMobileDetachedPlayerVars({}) below
+    // is this effect's own "nothing to measure" branch, same reasoning as
+    // the visualViewport effect above.
     if (!isMobileLayout || !hasMobileDetachedPlayer) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setMobileDetachedPlayerVars({});
       return undefined;
     }
@@ -370,7 +385,12 @@ export default function TopBar({
   }, [hasMobileDetachedPlayer, isMobileLayout]);
 
   useEffect(() => {
+    // Syncs controlsOffset with real getBoundingClientRect() measurements
+    // of the topbar/form/zone DOM nodes to resolve collisions; the
+    // setControlsOffset(0) below is this effect's "not applicable on
+    // mobile" branch, same reasoning as the two effects above.
     if (isMobileLayout) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setControlsOffset(0);
       return undefined;
     }
@@ -1063,3 +1083,9 @@ export default function TopBar({
     </div>
   );
 }
+
+// Re-renders on every playback-progress tick and other frequent App state
+// changes otherwise, despite most of its props barely ever changing - see
+// App.jsx's footerProgressRef comment for the same reasoning applied to the
+// player itself.
+export default memo(TopBar);

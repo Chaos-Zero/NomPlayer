@@ -178,6 +178,7 @@ vi.mock('../lib/trackCatalog.js', () => ({
   ingestTrackSources: vi.fn().mockResolvedValue([]),
   searchTrackCatalog: vi.fn().mockResolvedValue([]),
   getFullCatalog: vi.fn().mockResolvedValue([]),
+  fetchCatalogActivityMap: vi.fn().mockResolvedValue(new Map()),
   clearCatalogCache: vi.fn(),
   mapTrackCatalogEntryToVideo: (entry) => entry,
 }));
