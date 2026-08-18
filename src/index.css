@@ -17412,29 +17412,27 @@ body.is-resizing .resize-handle {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  color: var(--text-secondary);
+  color: var(--text-primary);
   border-top: 1px solid var(--border);
   border-bottom: 1px solid var(--border);
-  background: var(--bg-surface-hover);
+  /* --bg-deep, not --bg-surface-hover: hover is a lighter tint meant for
+     "you're about to interact with this", which made these section headers
+     read as barely-there rather than as headings. --bg-deep is darker than
+     the row background in both themes, so the break actually stands out -
+     and paired with text-primary (was text-secondary) the existing
+     font-weight: 700 finally reads as bold instead of just slightly heavier
+     grey text.
+
+     Solid, not rgba(): this row is sticky (see the base rule above) and pins
+     itself over rows scrolling underneath it, so a translucent tint would
+     let them show/blend through instead of being fully covered - only fine
+     back when this was just a divider that scrolled past like any other
+     row. */
+  background: var(--bg-deep);
 }
 
 .vgmc-standings-section:first-child td {
   border-top: none;
-}
-
-/* --bg-surface-hover sits almost flush against the page background in light
-   mode (#f8fafc on #f8fafc), so the section break barely reads there even
-   though it's plenty visible against the dark palette. Give light mode its
-   own, visibly darker shade instead of reusing that token.
-
-   Solid, not rgba(): this row is sticky (see the base rule above) and pins
-   itself over rows scrolling underneath it, so a translucent tint would let
-   them show/blend through instead of being fully covered - only fine back
-   when this was just a divider that scrolled past like any other row. Value
-   is --bg-deep, the flattened equivalent of the rgba(15, 23, 42, 0.06) this
-   used to be. */
-.theme-light .vgmc-standings-section td {
-  background: var(--bg-deep);
 }
 
 @media (max-width: 960px) {
