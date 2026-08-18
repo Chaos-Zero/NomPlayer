@@ -1460,6 +1460,7 @@ export default function ListExplorer({
   onPlayCommunityPlaylist,
   catalogTrackByVideoId,
   initialView = 'lists',
+  initialFilterNominations = false,
   onRefreshFeedback,
   onShowComments,
   refreshKey,
@@ -1493,11 +1494,21 @@ export default function ListExplorer({
   const [dragButton, setDragButton] = useState(0);
   const gridRef = useRef(null);
   const hasAutoOpenedCustomPlaylists = useRef(false);
+  const hasAutoSelectedCustomPlaylist = useRef(false);
   const [showCustomPlaylists, setShowCustomPlaylists] = useState(false);
 
-  // Set the first active custom playlist on load if none selected
+  // Set the first active custom playlist on load if none selected. Latched
+  // via a ref (same shape as the "auto-show" effect right below it) so this
+  // only ever fires once, on first hydration - later drops back to no
+  // active playlist (e.g. deleting the last one) are deliberate and already
+  // handled explicitly at their own call sites (create/delete), not here.
   useEffect(() => {
-    if (!activeCustomPlaylistId && (customPlaylists?.length || 0) > 0) {
+    if (
+      !hasAutoSelectedCustomPlaylist.current &&
+      !activeCustomPlaylistId &&
+      (customPlaylists?.length || 0) > 0
+    ) {
+      hasAutoSelectedCustomPlaylist.current = true;
       setActiveCustomPlaylistId(customPlaylists[0].id);
     }
   }, [customPlaylists, activeCustomPlaylistId]);
@@ -1513,12 +1524,15 @@ export default function ListExplorer({
     }
   }, [customPlaylists]);
 
-  // Reset selection when switching views
-  useEffect(() => {
+  // Reset selection when switching views - explorerView only ever changes
+  // here (ViewSelectorDropdown's onChange), so this resets it directly
+  // instead of syncing it via an effect that fires setState on every switch.
+  const handleChangeExplorerView = (nextView) => {
+    setExplorerView(nextView);
     setSelectedTrackId(null);
     setSelectedColumnId(null);
     setIsEditingInfo(false);
-  }, [explorerView]);
+  };
 
   const activeCustomPlaylist = useMemo(() => {
     return (
@@ -1940,7 +1954,21 @@ export default function ListExplorer({
   const [renameDialog, setRenameDialog] = useState(null); // { id, name }
   const [renameValue, setRenameValue] = useState('');
   const [deleteDialog, setDeleteDialog] = useState(null); // { id, name }
-  const playlistSubmenu = useContextSubmenu();
+  // Destructured (rather than kept as one `playlistSubmenu` object, as
+  // SupportLevelSubmenu.jsx/CustomPlaylistSubmenu.jsx also do) so the linter
+  // can trace wrapRef/submenuRef back to their useRef() calls - accessed via
+  // a `.foo` property path instead, it can't prove they're plain refs and
+  // flags every read as an unsafe access during render.
+  const {
+    open: isPlaylistSubmenuOpen,
+    side: playlistSubmenuSide,
+    wrapRef: playlistSubmenuWrapRef,
+    submenuRef: playlistSubmenuSubmenuRef,
+    handleMouseEnter: handlePlaylistSubmenuMouseEnter,
+    handleMouseLeave: handlePlaylistSubmenuMouseLeave,
+    toggle: togglePlaylistSubmenu,
+    close: closePlaylistSubmenu,
+  } = useContextSubmenu();
   const [showNewPlaylistInput, setShowNewPlaylistInput] = useState(false);
   const [newPlaylistName, setNewPlaylistName] = useState('');
   const newPlaylistInputRef = useRef(null);
@@ -1989,7 +2017,7 @@ export default function ListExplorer({
 
   const closeContextMenu = () => {
     setContextMenu(null);
-    playlistSubmenu.close();
+    closePlaylistSubmenu();
     setShowNewPlaylistInput(false);
     setNewPlaylistName('');
   };
@@ -2377,6 +2405,11 @@ export default function ListExplorer({
   // Fetch community data when selection changes
   useEffect(() => {
     if (!selectedTrackId || !supabase) {
+      // Clears the previous track's community data the moment selection is
+      // lost, rather than leaving it to display stale until something else
+      // triggers a render - part of the same fetch-on-ID-change effect
+      // below, not a standalone derive-during-render case.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setCommunityData({ feedback: [], supports: {}, tournaments: [] });
       return;
     }
@@ -2655,7 +2688,7 @@ export default function ListExplorer({
           <h1>List Explorer</h1>
           <ViewSelectorDropdown
             value={explorerView}
-            onChange={setExplorerView}
+            onChange={handleChangeExplorerView}
           />
         </div>
         <div className="list-explorer-global-actions">
@@ -3195,6 +3228,7 @@ export default function ListExplorer({
                     onPlayNow={onPlayNow}
                     nominationVideoIds={nominationVideoIds}
                     supportVideoIds={supportVideoIds}
+                    initialFilterNominations={initialFilterNominations}
                   />
                 )}
               </Motion.div>
@@ -3284,28 +3318,28 @@ export default function ListExplorer({
 
             <div
               className="context-submenu-wrap"
-              ref={playlistSubmenu.wrapRef}
-              onMouseEnter={playlistSubmenu.handleMouseEnter}
-              onMouseLeave={playlistSubmenu.handleMouseLeave}
+              ref={playlistSubmenuWrapRef}
+              onMouseEnter={handlePlaylistSubmenuMouseEnter}
+              onMouseLeave={handlePlaylistSubmenuMouseLeave}
             >
               <button
-                className={`database-context-menu-item${playlistSubmenu.open ? ' active' : ''}`}
+                className={`database-context-menu-item${isPlaylistSubmenuOpen ? ' active' : ''}`}
                 onClick={() => {
-                  playlistSubmenu.toggle();
+                  togglePlaylistSubmenu();
                   setShowNewPlaylistInput(false);
                   setNewPlaylistName('');
                 }}
               >
                 <span>Add to Custom Playlist</span>
                 <ChevronRightIcon
-                  className={`context-menu-chevron${playlistSubmenu.open ? ' open' : ''}`}
+                  className={`context-menu-chevron${isPlaylistSubmenuOpen ? ' open' : ''}`}
                 />
               </button>
 
-              {playlistSubmenu.open && (
+              {isPlaylistSubmenuOpen && (
                 <div
-                  ref={playlistSubmenu.submenuRef}
-                  className={`context-side-submenu side-${playlistSubmenu.side}`}
+                  ref={playlistSubmenuSubmenuRef}
+                  className={`context-side-submenu side-${playlistSubmenuSide}`}
                   role="menu"
                 >
                   {!showNewPlaylistInput ? (

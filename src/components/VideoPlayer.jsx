@@ -64,6 +64,7 @@ const VideoPlayer = forwardRef(function VideoPlayer(
     onOpenPlayingList,
     onFeedbackSaved,
     onOpenVgmcSheetSync,
+    onOpenNominationFeedback,
     previousTrack,
     onShowComments,
     onPlayPreviousTrack,
@@ -419,38 +420,54 @@ const VideoPlayer = forwardRef(function VideoPlayer(
             </button>
           )}
         </div>
-        {previousTrack && (
+        {(previousTrack || onOpenNominationFeedback) && (
           <div className="now-playing-previous-row">
-            <span className="now-playing-list-prefix">Previous Track: </span>
-            <span className="now-playing-previous-title">
-              {previousTrackTitle}
-            </span>
-            {onPlayPreviousTrack && (
-              <button
-                className="comment-bubble-btn"
-                type="button"
-                title="Play this track now (doesn't affect the queue)"
-                onClick={() => onPlayPreviousTrack(previousTrack)}
-              >
-                <PlayIcon />
-              </button>
+            {previousTrack && (
+              <>
+                <span className="now-playing-list-prefix">
+                  Previous Track:{' '}
+                </span>
+                <span className="now-playing-previous-title">
+                  {previousTrackTitle}
+                </span>
+                {onPlayPreviousTrack && (
+                  <button
+                    className="comment-bubble-btn"
+                    type="button"
+                    title="Play this track now (doesn't affect the queue)"
+                    onClick={() => onPlayPreviousTrack(previousTrack)}
+                  >
+                    <PlayIcon />
+                  </button>
+                )}
+                {onShowComments && (
+                  <button
+                    className="comment-bubble-btn"
+                    type="button"
+                    title="Open the community dialogue for the previous track"
+                    onClick={(event) => {
+                      const rect = event.currentTarget.getBoundingClientRect();
+                      onShowComments(previousTrack, {
+                        top: rect.bottom,
+                        left: rect.left,
+                        width: rect.width,
+                        height: rect.height,
+                      });
+                    }}
+                  >
+                    <SpeechBubbleIcon />
+                  </button>
+                )}
+              </>
             )}
-            {onShowComments && (
+            {onOpenNominationFeedback && (
               <button
-                className="comment-bubble-btn"
+                className="vgmc-sheet-sync-btn nomination-feedback-btn"
                 type="button"
-                title="Open the community dialogue for the previous track"
-                onClick={(event) => {
-                  const rect = event.currentTarget.getBoundingClientRect();
-                  onShowComments(previousTrack, {
-                    top: rect.bottom,
-                    left: rect.left,
-                    width: rect.width,
-                    height: rect.height,
-                  });
-                }}
+                onClick={onOpenNominationFeedback}
+                title="See ratings & comments left on tracks you've nominated"
               >
-                <SpeechBubbleIcon />
+                Check your Nomination feedback
               </button>
             )}
           </div>

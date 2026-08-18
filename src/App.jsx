@@ -137,6 +137,7 @@ function VgmcStandingsDrawer({
   );
 }
 import VideoPlayer from './components/VideoPlayer.jsx';
+import FooterProgressBar from './components/FooterProgressBar.jsx';
 import PlaylistSidebar from './components/PlaylistSidebar.jsx';
 import FavouritesPanel from './components/FavouritesPanel.jsx';
 import AuthDialog from './components/AuthDialog.jsx';
@@ -198,6 +199,7 @@ import {
   mapTrackCatalogEntryToVideo,
   mergeTracks,
   findTrackInCatalog,
+  fetchCatalogActivityMap,
 } from './lib/trackCatalog.js';
 import { fetchUserFeedback } from './lib/feedback.js';
 import { fetchDashboardNominationUpdates } from './lib/dashboard.js';
@@ -207,7 +209,7 @@ import {
 } from './lib/vgmcStandings.js';
 import { reportError } from './lib/errorReporter.js';
 import { getSupabaseClient, isSupabaseConfigured } from './lib/supabase.js';
-import { formatTime, getYouTubeThumbnailUrl } from './utils/youtube.js';
+import { getYouTubeThumbnailUrl } from './utils/youtube.js';
 import { fetchMediaItems, parseMediaInput } from './utils/media.js';
 import {
   PreviousIcon,
@@ -843,8 +845,13 @@ export default function App() {
   const [isUserHydrated, setIsUserHydrated] = useState(!isSupabaseConfigured);
   const [isAuthSubmitting, setIsAuthSubmitting] = useState(false);
   const [authDialogMode, setAuthDialogMode] = useState(null);
-  const [footerCurrentTime, setFooterCurrentTime] = useState(0);
-  const [footerDuration, setFooterDuration] = useState(0);
+  // Deliberately refs, not state - see FooterProgressBar.jsx for why.
+  const footerProgressRef = useRef({ currentTime: 0, duration: 0 });
+  const footerProgressListenersRef = useRef(new Set());
+  const subscribeFooterProgress = useCallback((listener) => {
+    footerProgressListenersRef.current.add(listener);
+    return () => footerProgressListenersRef.current.delete(listener);
+  }, []);
   const videoPlayerRef = useRef(null);
   const [authMessage, setAuthMessage] = useState('');
   const [authError, setAuthError] = useState('');
@@ -1590,27 +1597,24 @@ export default function App() {
     }
   }, [authUser]);
 
-  // Warm the catalog cache as early as possible so it's ready before login.
-  // getFullCatalog is idempotent, subsequent calls return the cached result instantly.
-  useEffect(() => {
-    if (supabase) getFullCatalog(supabase).catch(() => {});
-  }, [supabase]);
-
+  // Activity badges (homepage, favourites panels) only need a tiny
+  // videoId -> 'commented' | 'rated' map, so they're fed straight from a
+  // dedicated slim query. This intentionally does NOT warm the full
+  // getFullCatalog() snapshot - that's several MB and only actually needed
+  // once the user opens the Database view or logs in (hydrateAuthenticatedUser
+  // kicks it off then); loading it here would tax every visitor's CPU/RAM up
+  // front for a feature that only needs three columns.
   useEffect(() => {
     if (!supabase) return;
-    getFullCatalog(supabase)
-      .then((catalog) => {
-        const map = new Map();
-        for (const entry of catalog) {
-          if (entry.commentCount > 0) {
-            map.set(entry.videoId, 'commented');
-          } else if (entry.avgRating != null) {
-            map.set(entry.videoId, 'rated');
-          }
-        }
-        setCatalogActivityByVideoId(map);
+    let cancelled = false;
+    fetchCatalogActivityMap(supabase)
+      .then((map) => {
+        if (!cancelled) setCatalogActivityByVideoId(map);
       })
       .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
   }, [supabase]);
 
   // Pure function of catalogActivityByVideoId + userFeedback (nothing else
@@ -2425,9 +2429,8 @@ export default function App() {
     // progress/duration the player reports once it loads (handleProgressUpdate
     // below) - a reset tied to currentVideo?.videoId changing, not derived
     // from anything read during this render.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setFooterCurrentTime(0);
-    setFooterDuration(0);
+    footerProgressRef.current = { currentTime: 0, duration: 0 };
+    footerProgressListenersRef.current.forEach((listener) => listener());
   }, [currentVideo?.videoId]);
   const getCatalogTrackForVideo = useCallback(
     (video) => {
@@ -3057,6 +3060,14 @@ export default function App() {
     (message, type = 'success') => {
       showDefaultAppToast(message, type);
     },
+    [showDefaultAppToast],
+  );
+
+  // Same 'dashboard'-toned toast TopBar and HomePage both fire, as one
+  // stable callback shared between them instead of each inlining its own
+  // arrow function (which would defeat memoizing those components).
+  const handleShowDashboardToneToast = useCallback(
+    (message) => showDefaultAppToast(message, 'dashboard'),
     [showDefaultAppToast],
   );
 
@@ -4740,6 +4751,40 @@ export default function App() {
     setShowNominationsList(false);
   }, []);
 
+  // Adapts the open/close handlers above onto the boolean-or-updater
+  // setShowSupportList/setShowNominationsList API TopBar expects (mirroring a
+  // useState setter), as stable callbacks - passing a fresh inline function
+  // here every render would defeat memoizing TopBar.
+  const handleSetShowSupportList = useCallback(
+    (value) => {
+      const nextValue =
+        typeof value === 'function' ? value(showSupportList) : value;
+      if (nextValue) {
+        handleOpenSupportList();
+      } else {
+        handleRequestCloseSupportList();
+      }
+    },
+    [showSupportList, handleOpenSupportList, handleRequestCloseSupportList],
+  );
+
+  const handleSetShowNominationsList = useCallback(
+    (value) => {
+      const nextValue =
+        typeof value === 'function' ? value(showNominationsList) : value;
+      if (nextValue) {
+        handleOpenNominationsList();
+      } else {
+        handleRequestCloseNominationsList();
+      }
+    },
+    [
+      showNominationsList,
+      handleOpenNominationsList,
+      handleRequestCloseNominationsList,
+    ],
+  );
+
   const handleOpenNominationsWithHighlight = useCallback(() => {
     handleOpenNominationsList();
     setIsAddNominationHighlighted(true);
@@ -5304,6 +5349,17 @@ export default function App() {
     setManualMetadataTracks(null);
   }, []);
 
+  // Shared by every "needs metadata" banner (playlist sidebar, favourites
+  // panels) so passing them down doesn't hand memoized components a fresh
+  // function each render.
+  const handleOpenMetadataBanner = useCallback(() => {
+    setShowMetadataDialog(true);
+  }, []);
+
+  const handleDismissMetadataBanner = useCallback(() => {
+    setTracksNeedingMetadata([]);
+  }, []);
+
   const handleReorderNominationList = useCallback((newOrder) => {
     setNominationList(newOrder);
   }, []);
@@ -5482,6 +5538,83 @@ export default function App() {
     },
     [activePlaylistView.id, customPlaylists, setCustomPlaylists],
   );
+
+  // The sidebar always shows whichever list is "active" (personal queue,
+  // nominations, support, or a custom playlist), so reorder/remove need to
+  // route to that list's own state. Stable callbacks - PlaylistSidebar is
+  // memoized and always mounted, so a fresh inline function here would
+  // defeat that on every render.
+  const handleReorderActivePlaylistView = useCallback(
+    (newTracks) => {
+      if (activePlaylistView.type === 'nominations') {
+        handleReorderNominationList(newTracks);
+      } else if (activePlaylistView.type === 'support') {
+        handleReorderSupportList(newTracks);
+      } else if (activePlaylistView.type === 'custom-playlist') {
+        setCustomPlaylists((prev) =>
+          prev.map((p) =>
+            p.id === activePlaylistView.id ? { ...p, videos: newTracks } : p,
+          ),
+        );
+      } else {
+        handleReorderPlaylist(newTracks);
+      }
+    },
+    [
+      activePlaylistView.type,
+      activePlaylistView.id,
+      handleReorderNominationList,
+      handleReorderSupportList,
+      handleReorderPlaylist,
+    ],
+  );
+
+  const handleRemoveFromActivePlaylistView = useCallback(
+    (videoIdsOrId) => {
+      if (activePlaylistView.type === 'custom-playlist') {
+        const ids = new Set(
+          Array.isArray(videoIdsOrId) ? videoIdsOrId : [videoIdsOrId],
+        );
+        setCustomPlaylists((prev) =>
+          prev.map((p) =>
+            p.id === activePlaylistView.id
+              ? {
+                  ...p,
+                  videos: p.videos.filter((v) => !ids.has(v.videoId)),
+                }
+              : p,
+          ),
+        );
+      } else {
+        handleRemoveFromPlaylist(videoIdsOrId);
+      }
+    },
+    [activePlaylistView.type, activePlaylistView.id, handleRemoveFromPlaylist],
+  );
+
+  const handlePlaylistSidebarToggleCollapse = useCallback(() => {
+    if (isPlayerLikePage) {
+      setIsPlaylistCollapsed((previousValue) => !previousValue);
+      return;
+    }
+    setIsDesktopOverlayPlaylistOpen((previousValue) => !previousValue);
+  }, [isPlayerLikePage]);
+
+  // The common shape every support dropdown trigger wants (HomePage,
+  // ListExplorer, PlaylistSidebar, the support favourites panel): default
+  // placement/remove-affordance, overridable via an optional 3rd arg. One
+  // stable callback shared between them instead of each inlining its own
+  // arrow function, which would defeat memoizing whichever of them are
+  // memoized.
+  const handleOpenSupportDropdown = useCallback((video, position, options) => {
+    setSupportLevelDropdown({
+      video,
+      position,
+      direction: 'down',
+      showRemove: false,
+      ...options,
+    });
+  }, []);
 
   const handlePlayCatalogTrack = useCallback(
     (video) => {
@@ -5962,20 +6095,51 @@ export default function App() {
     handleNavigate('player');
   }, [handleNavigate]);
 
+  // Stable handlers for the mobile nav toggle, passed to both SiteNavigation
+  // and TopBar - inlining these at each call site (as they were previously)
+  // hands memoized children a new function every render, defeating the memo.
+  const handleToggleMobileNav = useCallback(() => {
+    setIsMobileNavOpen((previousValue) => !previousValue);
+  }, []);
+
+  const handleCloseMobileNav = useCallback(() => {
+    setIsMobileNavOpen(false);
+  }, []);
+
   const [explorerInitialView, setExplorerInitialView] = useState('lists');
+  // Only the nomination-feedback entry point (below) wants the Comments &
+  // Ratings page to land with "My Nominations" pre-selected - every other
+  // way into the explorer should reset it, same as explorerInitialView.
+  const [
+    explorerInitialFilterNominations,
+    setExplorerInitialFilterNominations,
+  ] = useState(false);
 
   const handleNavigateToCommunityPlaylists = useCallback(() => {
     setExplorerInitialView('community-playlists');
+    setExplorerInitialFilterNominations(false);
     handleNavigate('listExplorer');
   }, [handleNavigate]);
 
   const handleNavigateToExplorer = useCallback(() => {
     setExplorerInitialView('lists');
+    setExplorerInitialFilterNominations(false);
     handleNavigate('listExplorer');
   }, [handleNavigate]);
 
   const handleNavigateToExplorerComments = useCallback(() => {
     setExplorerInitialView('comments');
+    setExplorerInitialFilterNominations(false);
+    handleNavigate('listExplorer');
+  }, [handleNavigate]);
+
+  // VGMC standings page's "Check your Nomination feedback" button - same
+  // Comments & Ratings view as handleNavigateToExplorerComments, but also
+  // pre-selects the "My Nominations" filter within AllFeedbackView so
+  // nominators land straight on feedback for tracks they nominated.
+  const handleNavigateToNominationFeedback = useCallback(() => {
+    setExplorerInitialView('comments');
+    setExplorerInitialFilterNominations(true);
     handleNavigate('listExplorer');
   }, [handleNavigate]);
 
@@ -6026,13 +6190,17 @@ export default function App() {
   }, [currentVideo?.videoId, globalActivityByVideoId]);
 
   const handleProgressUpdate = useCallback(({ currentTime, duration }) => {
-    setFooterCurrentTime(currentTime);
-    setFooterDuration(duration);
+    footerProgressRef.current = { currentTime, duration };
+    footerProgressListenersRef.current.forEach((listener) => listener());
   }, []);
 
   const handleSeek = useCallback((e) => {
     const newTime = parseFloat(e.target.value);
-    setFooterCurrentTime(newTime);
+    footerProgressRef.current = {
+      ...footerProgressRef.current,
+      currentTime: newTime,
+    };
+    footerProgressListenersRef.current.forEach((listener) => listener());
     videoPlayerRef.current?.seekTo(newTime);
   }, []);
 
@@ -6074,6 +6242,9 @@ export default function App() {
         onOpenPlayingList={handleOpenPlayingList}
         onOpenVgmcSheetSync={
           isVgmcStandingsPage ? () => setIsVgmcSheetSyncOpen(true) : undefined
+        }
+        onOpenNominationFeedback={
+          isVgmcStandingsPage ? handleNavigateToNominationFeedback : undefined
         }
         supabase={supabase}
         authUser={authUser}
@@ -6186,23 +6357,11 @@ export default function App() {
                 />
               </button>
             </div>
-            <div className="footer-progress-row">
-              <span className="footer-time-label">
-                {formatTime(footerCurrentTime)}
-              </span>
-              <input
-                type="range"
-                className="footer-progress-slider"
-                min={0}
-                max={footerDuration || 0}
-                step={0.1}
-                value={footerCurrentTime}
-                onChange={handleSeek}
-              />
-              <span className="footer-time-label">
-                {formatTime(footerDuration)}
-              </span>
-            </div>
+            <FooterProgressBar
+              progressRef={footerProgressRef}
+              subscribe={subscribeFooterProgress}
+              onSeek={handleSeek}
+            />
           </div>
 
           {/* Right Block: Actions */}
@@ -6312,10 +6471,8 @@ export default function App() {
           onNavigate={handleNavigate}
           authUser={authUser}
           isMenuOpen={isMobileNavOpen}
-          onToggleMenu={() =>
-            setIsMobileNavOpen((previousValue) => !previousValue)
-          }
-          onCloseMenu={() => setIsMobileNavOpen(false)}
+          onToggleMenu={handleToggleMobileNav}
+          onCloseMenu={handleCloseMobileNav}
         />
       )}
 
@@ -6338,41 +6495,9 @@ export default function App() {
           onNext={handleNext}
           canTogglePlayback={canTogglePlayback}
           showSupportList={showSupportList}
-          setShowSupportList={(value) => {
-            if (typeof value === 'function') {
-              const nextValue = value(showSupportList);
-              if (nextValue) {
-                handleOpenSupportList();
-              } else {
-                handleRequestCloseSupportList();
-              }
-              return;
-            }
-
-            if (value) {
-              handleOpenSupportList();
-            } else {
-              handleRequestCloseSupportList();
-            }
-          }}
+          setShowSupportList={handleSetShowSupportList}
           showNominationsList={showNominationsList}
-          setShowNominationsList={(value) => {
-            if (typeof value === 'function') {
-              const nextValue = value(showNominationsList);
-              if (nextValue) {
-                handleOpenNominationsList();
-              } else {
-                handleRequestCloseNominationsList();
-              }
-              return;
-            }
-
-            if (value) {
-              handleOpenNominationsList();
-            } else {
-              handleRequestCloseNominationsList();
-            }
-          }}
+          setShowNominationsList={handleSetShowNominationsList}
           isShuffleEnabled={isShuffleEnabled}
           isShuffleAvailable={isShuffleAvailable}
           onShuffle={handleShufflePlaylist}
@@ -6396,7 +6521,7 @@ export default function App() {
           isMobileDetachedPlayerEntering={
             isMobileDetachedFooter && isDetachedFooterEntering
           }
-          onNavigateToPlayer={() => handleNavigate('player')}
+          onNavigateToPlayer={handleNavigateToPlayer}
           authUser={authUser}
           userProfile={userProfile}
           isAuthAvailable={isSupabaseConfigured}
@@ -6405,14 +6530,12 @@ export default function App() {
           onOpenSettings={handleOpenSettings}
           onLogout={handleLogout}
           isMenuOpen={isMobileNavOpen}
-          onToggleMenu={() =>
-            setIsMobileNavOpen((previousValue) => !previousValue)
-          }
+          onToggleMenu={handleToggleMobileNav}
           onExport={handleOpenExportModal}
           onSavePlaylist={handleCreateYTPlaylist}
           customPlaylists={customPlaylists}
           onUpdateCustomPlaylists={setCustomPlaylists}
-          onShowToast={(msg) => showDefaultAppToast(msg, 'dashboard')}
+          onShowToast={handleShowDashboardToneToast}
           nominationList={nominationList}
           supportList={supportList}
           onToggleNomination={handleToggleNominationFromPlaylist}
@@ -6544,14 +6667,7 @@ export default function App() {
                     onPlayPlaylist={handlePlayCommunityPlaylist}
                     onToggleSupport={handleToggleSupportFromPlaylist}
                     onToggleNomination={handleToggleNominationFromPlaylist}
-                    onOpenSupportDropdown={(video, position) =>
-                      setSupportLevelDropdown({
-                        video,
-                        position,
-                        direction: 'down',
-                        showRemove: false,
-                      })
-                    }
+                    onOpenSupportDropdown={handleOpenSupportDropdown}
                     onShowComments={handleShowComments}
                     onNavigateToPlayer={handleNavigateToPlayer}
                     onNavigateToExplorer={handleNavigateToExplorer}
@@ -6564,9 +6680,7 @@ export default function App() {
                     onNavigateToDatabase={handleNavigateToDatabase}
                     onOpenPlaylist={handleTogglePlaylist}
                     onOpenNominationsAdding={handleOpenNominationsWithHighlight}
-                    onShowToast={(message) =>
-                      showDefaultAppToast(message, 'dashboard')
-                    }
+                    onShowToast={handleShowDashboardToneToast}
                     onUpdateMetadata={handleOpenMetadataUpdate}
                     catalogMetadata={catalogTrackByVideoId}
                     lastMetadataUpdateBatch={lastMetadataUpdateBatch}
@@ -6657,14 +6771,7 @@ export default function App() {
                     userProfile={userProfile}
                     supabase={supabase}
                     onUpdateMetadata={handleOpenMetadataUpdate}
-                    onOpenSupportDropdown={(video, position) =>
-                      setSupportLevelDropdown({
-                        video,
-                        position,
-                        direction: 'down',
-                        showRemove: false,
-                      })
-                    }
+                    onOpenSupportDropdown={handleOpenSupportDropdown}
                     onExport={handleOpenExportModal}
                     onSavePlaylist={handleCreateYTPlaylist}
                     onPlayExplorerList={handlePlayExplorerList}
@@ -6674,6 +6781,7 @@ export default function App() {
                     onPlayCommunityPlaylist={handlePlayCommunityPlaylist}
                     catalogTrackByVideoId={catalogTrackByVideoId}
                     initialView={explorerInitialView}
+                    initialFilterNominations={explorerInitialFilterNominations}
                     onRefreshFeedback={refreshUserFeedback}
                     refreshKey={feedbackRefreshKey}
                     onShowComments={handleShowComments}
@@ -6725,68 +6833,17 @@ export default function App() {
               onMoveListenedToBottom={handleMoveListenedToBottom}
               isListenedToBottomActive={isListenedToBottomActive}
               onTogglePreview={handleTogglePreviewMode}
-              onToggleCollapse={() => {
-                if (isPlayerLikePage) {
-                  setIsPlaylistCollapsed((previousValue) => !previousValue);
-                  return;
-                }
-
-                setIsDesktopOverlayPlaylistOpen(
-                  (previousValue) => !previousValue,
-                );
-              }}
+              onToggleCollapse={handlePlaylistSidebarToggleCollapse}
               onToggleOrderView={handleTogglePlaylistOrderView}
               onSelect={handleSidebarSelect}
-              onReorder={(newTracks) => {
-                if (activePlaylistView.type === 'nominations') {
-                  handleReorderNominationList(newTracks);
-                } else if (activePlaylistView.type === 'support') {
-                  handleReorderSupportList(newTracks);
-                } else if (activePlaylistView.type === 'custom-playlist') {
-                  setCustomPlaylists((prev) =>
-                    prev.map((p) =>
-                      p.id === activePlaylistView.id
-                        ? { ...p, videos: newTracks }
-                        : p,
-                    ),
-                  );
-                } else {
-                  handleReorderPlaylist(newTracks);
-                }
-              }}
+              onReorder={handleReorderActivePlaylistView}
               supportList={supportList}
               nominationList={nominationList}
               listenedStatusById={listenedStatusById}
               onToggleSupport={handleToggleSupportFromPlaylist}
               onToggleNomination={handleToggleNominationFromPlaylist}
-              onOpenSupportDropdown={(video, position, options) =>
-                setSupportLevelDropdown({
-                  video,
-                  position,
-                  direction: 'down',
-                  showRemove: false,
-                  ...options,
-                })
-              }
-              onRemoveFromPlaylist={(videoIdsOrId) => {
-                if (activePlaylistView.type === 'custom-playlist') {
-                  const ids = new Set(
-                    Array.isArray(videoIdsOrId) ? videoIdsOrId : [videoIdsOrId],
-                  );
-                  setCustomPlaylists((prev) =>
-                    prev.map((p) =>
-                      p.id === activePlaylistView.id
-                        ? {
-                            ...p,
-                            videos: p.videos.filter((v) => !ids.has(v.videoId)),
-                          }
-                        : p,
-                    ),
-                  );
-                } else {
-                  handleRemoveFromPlaylist(videoIdsOrId);
-                }
-              }}
+              onOpenSupportDropdown={handleOpenSupportDropdown}
+              onRemoveFromPlaylist={handleRemoveFromActivePlaylistView}
               onAddDirectItems={handleQueueFromSupportList}
               onAddDirectToCustomPlaylist={
                 activePlaylistView.type === 'custom-playlist'
@@ -6795,8 +6852,8 @@ export default function App() {
               }
               retiredVideoIds={retiredVideoIds}
               pendingMetadataCount={tracksNeedingMetadata.length}
-              onOpenMetadataDialog={() => setShowMetadataDialog(true)}
-              onDismissMetadataBanner={() => setTracksNeedingMetadata([])}
+              onOpenMetadataDialog={handleOpenMetadataBanner}
+              onDismissMetadataBanner={handleDismissMetadataBanner}
               onUpdateMetadata={handleOpenMetadataUpdate}
               authUser={authUser}
               onExport={handleOpenExportModal}
@@ -6815,7 +6872,7 @@ export default function App() {
               }
               customPlaylists={customPlaylists}
               onUpdateCustomPlaylists={setCustomPlaylists}
-              onShowToast={(msg) => showDefaultAppToast(msg, 'dashboard')}
+              onShowToast={handleShowDashboardToneToast}
             />
             {!effectivePlaylistCollapsed && apiKeyMissing && (
               <div className="api-key-notice">
@@ -6883,17 +6940,10 @@ export default function App() {
           addButtonLabel="Add Supports"
           onAddDirectItems={handleAddManyToSupportList}
           pendingMetadataCount={tracksNeedingMetadata.length}
-          onOpenMetadataDialog={() => setShowMetadataDialog(true)}
-          onDismissMetadataBanner={() => setTracksNeedingMetadata([])}
+          onOpenMetadataDialog={handleOpenMetadataBanner}
+          onDismissMetadataBanner={handleDismissMetadataBanner}
           onUpdateMetadata={handleOpenMetadataUpdate}
-          onOpenSupportDropdown={(video, position) =>
-            setSupportLevelDropdown({
-              video,
-              position,
-              direction: 'down',
-              showRemove: false,
-            })
-          }
+          onOpenSupportDropdown={handleOpenSupportDropdown}
           authUser={authUser}
           onExport={handleOpenExportModal}
           onSavePlaylist={handleCreateYTPlaylist}
@@ -6931,8 +6981,8 @@ export default function App() {
           addButtonLabel="Add Nominations"
           onAddDirectItems={handleAddManyToNominationList}
           pendingMetadataCount={tracksNeedingMetadata.length}
-          onOpenMetadataDialog={() => setShowMetadataDialog(true)}
-          onDismissMetadataBanner={() => setTracksNeedingMetadata([])}
+          onOpenMetadataDialog={handleOpenMetadataBanner}
+          onDismissMetadataBanner={handleDismissMetadataBanner}
           onUpdateMetadata={handleOpenMetadataUpdate}
           authUser={authUser}
           onExport={handleOpenExportModal}

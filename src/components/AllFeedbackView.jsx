@@ -49,6 +49,7 @@ export default function AllFeedbackView({
   onSelectTrack,
   nominationVideoIds = null,
   supportVideoIds = null,
+  initialFilterNominations = false,
 }) {
   const [entries, setEntries] = useState([]);
   const [vgmcByTrackId, setVgmcByTrackId] = useState({});
@@ -57,7 +58,9 @@ export default function AllFeedbackView({
   const [sortAsc, setSortAsc] = useState(false);
   const [vgmcFilter, setVgmcFilter] = useState('');
   const [userFilter, setUserFilter] = useState('');
-  const [filterNominations, setFilterNominations] = useState(false);
+  const [filterNominations, setFilterNominations] = useState(
+    initialFilterNominations,
+  );
   const [filterSupports, setFilterSupports] = useState(false);
 
   const parentRef = useRef(null);

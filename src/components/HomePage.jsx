@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import DiscordIcon from './DiscordIcon.jsx';
 import ScrollingText from './ScrollingText.jsx';
@@ -255,6 +255,13 @@ function HomeCommunityPlaylistsStrip({
   useEffect(() => {
     if (!isAuthReady || !supabase) return;
     let isActive = true;
+    // Fetching data from an external system (Supabase), with the isLoading
+    // flag flipped for the duration - React's own data-fetching effect
+    // example (react.dev/learn/you-might-not-need-an-effect#fetching-data)
+    // does the exact same thing. Needed on re-runs too, not just mount: the
+    // effect re-fires when authUserId changes (login/logout), and isLoading
+    // may already be false from a previous completed fetch by then.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setIsLoading(true);
     fetchHomeCplPage(supabase, authUserId, 0)
       .then((data) => {
@@ -1696,7 +1703,7 @@ function HeroLeaderboard({
   );
 }
 
-export default function HomePage({
+function HomePage({
   supabase,
   authUser = null,
   currentPlaylist = [],
@@ -2017,6 +2024,11 @@ export default function HomePage({
       listenedStatusById[videoId] === 'partial' ||
       (authUser?.id && nominators?.some((n) => n.userId === authUser.id))
     ) {
+      // fastSpotlightCandidate isn't purely derived from these deps - it's
+      // independently written elsewhere (picked fresh, patched, or cleared
+      // by user actions), so this can only invalidate it, not replace those
+      // writes with a plain computed value.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setFastSpotlightCandidate(null);
     }
   }, [
@@ -2235,6 +2247,13 @@ export default function HomePage({
     const uniquePool = Array.from(uniqueMap.values());
 
     // 5. Commit to persistent state
+    //
+    // Can't be a plain computed value (useMemo): step 2 shuffles with
+    // Math.random(), and the whole point of "persistent" here (see the
+    // effect's name and the length-guard at its top) is to pick this pool
+    // once and then hold it stable - a memo would reshuffle it on every
+    // dependency change instead.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setPersistentDiscoveryItems(uniquePool.slice(0, 44));
   }, [
     currentPlaylistIds,
@@ -2270,6 +2289,11 @@ export default function HomePage({
       (c) => c.videoId === featuredDiscoveryId,
     );
     if (!isValid) {
+      // Deliberately "sticky": featuredDiscoveryId should stay put across
+      // re-renders (not track spotlightPool[0] on every change, which is
+      // what a plain computed value would do) and only move when the
+      // current pin actually falls out of the pool.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setFeaturedDiscoveryId(spotlightPool[0].videoId);
     }
   }, [spotlightPool, featuredDiscoveryId, isShowingFallback]);
@@ -2647,13 +2671,23 @@ export default function HomePage({
     ],
   );
 
-  useEffect(() => {
+  // Resets mobileCollapsedSections (which toggleMobileSection below then
+  // lets the user customize) back to the mode-appropriate defaults whenever
+  // the mobile/desktop breakpoint is crossed. This is pure "state derived
+  // from a prop that also needs to be user-overridable afterward", so it's
+  // adjusted directly during render (react.dev's documented pattern for
+  // this exact case) rather than via an effect - one render instead of a
+  // committed-then-immediately-superseded one.
+  const [prevIsMobileLayoutForCollapse, setPrevIsMobileLayoutForCollapse] =
+    useState(isMobileLayout);
+  if (isMobileLayout !== prevIsMobileLayoutForCollapse) {
+    setPrevIsMobileLayoutForCollapse(isMobileLayout);
     setMobileCollapsedSections(
       isMobileLayout
         ? MOBILE_DASHBOARD_COLLAPSE_DEFAULTS
         : DESKTOP_DASHBOARD_COLLAPSE_DEFAULTS,
     );
-  }, [isMobileLayout]);
+  }
 
   const toggleMobileSection = useCallback((sectionKey) => {
     setMobileCollapsedSections((previousState) => ({
@@ -3573,3 +3607,9 @@ export default function HomePage({
     </div>
   );
 }
+
+// The default landing page - re-rendered on every App state change
+// otherwise (playback progress, unrelated dialogs, etc.) despite most of
+// its props rarely changing. See App.jsx's handleOpenSupportDropdown and
+// friends, which this depends on to make memoization actually stick.
+export default memo(HomePage);

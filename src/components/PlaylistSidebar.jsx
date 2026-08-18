@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   DndContext,
   closestCenter,
@@ -15,6 +15,7 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import { useVirtualizer } from '@tanstack/react-virtual';
 import { ContextMenuPortal } from './ContextMenuPortal';
 import CustomPlaylistSubmenu from './CustomPlaylistSubmenu.jsx';
 import SupportLevelSubmenu from './SupportLevelSubmenu.jsx';
@@ -34,6 +35,13 @@ import {
 } from './Icons.jsx';
 
 const VGMC_PLAYLIST_ID = import.meta.env.VITE_VGMC_PLAYLIST_ID || '';
+
+// Passed to PlaylistItem as onToggleSelected outside of selection mode,
+// where it's unreachable (PlaylistItem only calls it when selectionMode is
+// true) but still a prop PlaylistItem's memo() has to compare - a shared
+// reference so it doesn't defeat that memo on every render the way a fresh
+// inline () => {} would.
+const noop = () => {};
 
 function FastForwardIcon() {
   return (
@@ -128,7 +136,11 @@ function getPlaylistItemDisplay(video) {
   };
 }
 
-function PlaylistItem({
+// Memoized: a large playlist renders one of these per track, and most of
+// them get identical props again whenever the list re-renders for a reason
+// that only actually touches one or two rows (e.g. listenedStatusById
+// gaining an entry for whichever track just finished).
+const PlaylistItem = memo(function PlaylistItem({
   orderNumber,
   video,
   isActive,
@@ -356,9 +368,11 @@ function PlaylistItem({
       </div>
     </div>
   );
-}
+});
 
-function SortablePlaylistItem({
+// Same reasoning as PlaylistItem above, for the draggable variant used
+// while the list is reorderable.
+const SortablePlaylistItem = memo(function SortablePlaylistItem({
   orderNumber,
   video,
   isActive,
@@ -421,14 +435,14 @@ function SortablePlaylistItem({
         onOpenContextMenu={onOpenContextMenu}
         selectionMode={false}
         isSelected={false}
-        onToggleSelected={() => {}}
+        onToggleSelected={noop}
         commentActivity={commentActivity}
         onShowComments={onShowComments}
         showRatingInsteadOfComments={showRatingInsteadOfComments}
       />
     </div>
   );
-}
+});
 
 // Same flip-card open/close animation as CollectionAdder (see its CSS in
 // index.css, shared `.collection-adder*` classes), but the back face is a
@@ -526,7 +540,7 @@ function PlaylistSearchControl({
   );
 }
 
-export default function PlaylistSidebar({
+function PlaylistSidebar({
   playlist,
   currentIndex,
   flashVideoIds = [],
@@ -624,6 +638,14 @@ export default function PlaylistSidebar({
     () => new Set(supportList.map((entry) => entry.videoId)),
     [supportList],
   );
+  // Each row looks up its own supportLevel while rendering; a linear
+  // supportList.find() per row makes that an O(playlist x supportList) scan
+  // over the whole list on every render. Building this map once keeps each
+  // row's lookup O(1).
+  const supportLevelByVideoId = useMemo(
+    () => new Map(supportList.map((entry) => [entry.videoId, entry])),
+    [supportList],
+  );
   const nominationIds = useMemo(
     () => new Set(nominationList.map((entry) => entry.videoId)),
     [nominationList],
@@ -681,6 +703,35 @@ export default function PlaylistSidebar({
     normalizedPlaylistSearchQuery,
   ]);
 
+  // Windows all three render paths (multi-select mode, drag-to-reorder, and
+  // read-only community-playlist previews) down to just the rows actually
+  // in view, so a long playlist doesn't cost hundreds of live DOM nodes.
+  // Shared across all three paths since they all render displayPlaylist at
+  // the same row height; only one is ever mounted at a time. The
+  // drag-to-reorder path pairs this with dnd-kit the same way
+  // ListExplorer.jsx already does for its columns - SortableContext gets
+  // every id so it knows the full order, only the rows actually on screen
+  // get mounted/measured. Row slot is 68px: .playlist-item's padding (8px x2) plus
+  // its 45px thumbnail plus its 1px transparent border x2, plus the 4px
+  // gap the flex layout normally puts between rows (reproduced per-row
+  // below via paddingBottom, since that gap doesn't exist between
+  // absolutely-positioned siblings). .playlist-item-title is
+  // single-line/ellipsized (see index.css) so this is also the real
+  // height - no per-row remeasurement needed.
+  // eslint-disable-next-line react-hooks/incompatible-library
+  const rowVirtualizer = useVirtualizer({
+    count: displayPlaylist.length,
+    getScrollElement: () => listContainerRef.current,
+    estimateSize: () => 68,
+    overscan: 8,
+    // Without this, the virtualizer's first render assumes a 0-height
+    // viewport (its real height is only known once the ResizeObserver it
+    // sets up internally reports back) and renders nothing until then - a
+    // guessed-tall-enough starting rect means there's a full list on
+    // screen immediately instead of a one-frame flash of empty space.
+    initialRect: { width: 0, height: 800 },
+  });
+
   // `currentIndex` is an index into `playlist` (the natural, unsorted and
   // unfiltered order), never into `displayPlaylist`. Resolving it to the
   // actual playing video's id here, once, lets every row below match by
@@ -732,11 +783,19 @@ export default function PlaylistSidebar({
     Boolean(rankingSortDirection) ||
     Boolean(normalizedPlaylistSearchQuery);
 
+  // Was a container.querySelector('.playlist-item.active') + scrollIntoView()
+  // - broke once the list was windowed, since the active row usually isn't
+  // even mounted (that's the whole point of virtualizing). scrollToIndex
+  // asks the virtualizer to scroll there directly, which works whether or
+  // not the row currently has a DOM node.
   const focusActiveRow = useCallback(() => {
-    const container = listContainerRef.current;
-    const activeEl = container?.querySelector('.playlist-item.active');
-    activeEl?.scrollIntoView({ block: 'center' });
-  }, []);
+    if (!listContainerRef.current) return;
+    const activeIndex = displayPlaylist.findIndex(
+      (video) => video.videoId != null && video.videoId === currentVideoId,
+    );
+    if (activeIndex === -1) return;
+    rowVirtualizer.scrollToIndex(activeIndex, { align: 'center' });
+  }, [displayPlaylist, currentVideoId, rowVirtualizer]);
 
   // Scrolls the active row into view on: landing on a different playlist/view,
   // the current track changing (new track, skip/back), or the list being
@@ -1843,122 +1902,219 @@ export default function PlaylistSidebar({
       {!isCollapsed && (
         <div className="playlist-list" role="list" ref={listContainerRef}>
           {selectionMode ? (
-            displayPlaylist.map((video, index) => (
-              <PlaylistItem
-                key={video.videoId}
-                orderNumber={
-                  (showOriginalOrder || normalizedPlaylistSearchQuery
-                    ? (video.loadIndex ?? index)
-                    : index) + 1
-                }
-                video={video}
-                isActive={
-                  video.videoId != null && video.videoId === currentVideoId
-                }
-                isFlashing={flashIds.has(video.videoId)}
-                listenedStatus={listenedStatusById[video.videoId] || null}
-                onSelect={onSelect}
-                isSupported={supportIds.has(video.videoId)}
-                supportLevel={
-                  supportList.find((entry) => entry.videoId === video.videoId)
-                    ?.supportLevel || 1
-                }
-                isNominated={nominationIds.has(video.videoId)}
-                isRetired={retiredVideoIds.has(video.videoId)}
-                onToggleSupport={onToggleSupport}
-                onOpenSupportDropdown={handleOpenSupportDropdown}
-                onOpenContextMenu={handleOpenContextMenu}
-                selectionMode={true}
-                isSelected={selectedIdSet.has(video.videoId)}
-                onToggleSelected={handleToggleSelected}
-                commentActivity={
-                  globalActivityByVideoId.get(video.videoId) ?? null
-                }
-                onShowComments={onShowComments}
-                showRatingInsteadOfComments={isVgmcPlaylistView}
-              />
-            ))
+            <div
+              style={{
+                position: 'relative',
+                // .playlist-list lays its children out with display: flex,
+                // and this div's own children are all position: absolute
+                // (so they don't contribute to its content size) - without
+                // flexShrink: 0, the flex algorithm's default shrink
+                // behavior can compress this below the height it's actually
+                // asking for, which is the one thing genuinely different
+                // from before virtualization (many naturally-sized flex
+                // children instead of one explicitly-sized one).
+                flexShrink: 0,
+                height: `${rowVirtualizer.getTotalSize()}px`,
+              }}
+            >
+              {rowVirtualizer.getVirtualItems().map((virtualItem) => {
+                const { index } = virtualItem;
+                const video = displayPlaylist[index];
+                if (!video) return null;
+                return (
+                  <div
+                    key={video.videoId}
+                    style={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      width: '100%',
+                      paddingBottom: '4px',
+                      transform: `translateY(${virtualItem.start}px)`,
+                    }}
+                  >
+                    <PlaylistItem
+                      orderNumber={
+                        (showOriginalOrder || normalizedPlaylistSearchQuery
+                          ? (video.loadIndex ?? index)
+                          : index) + 1
+                      }
+                      video={video}
+                      isActive={
+                        video.videoId != null &&
+                        video.videoId === currentVideoId
+                      }
+                      isFlashing={flashIds.has(video.videoId)}
+                      listenedStatus={listenedStatusById[video.videoId] || null}
+                      onSelect={onSelect}
+                      isSupported={supportIds.has(video.videoId)}
+                      supportLevel={
+                        supportLevelByVideoId.get(video.videoId)
+                          ?.supportLevel || 1
+                      }
+                      isNominated={nominationIds.has(video.videoId)}
+                      isRetired={retiredVideoIds.has(video.videoId)}
+                      onToggleSupport={onToggleSupport}
+                      onOpenSupportDropdown={handleOpenSupportDropdown}
+                      onOpenContextMenu={handleOpenContextMenu}
+                      selectionMode={true}
+                      isSelected={selectedIdSet.has(video.videoId)}
+                      onToggleSelected={handleToggleSelected}
+                      commentActivity={
+                        globalActivityByVideoId.get(video.videoId) ?? null
+                      }
+                      onShowComments={onShowComments}
+                      showRatingInsteadOfComments={isVgmcPlaylistView}
+                    />
+                  </div>
+                );
+              })}
+            </div>
           ) : canReorder ? (
             <DndContext
               sensors={sensors}
               collisionDetection={closestCenter}
               onDragEnd={handleDragEnd}
             >
+              {/* SortableContext gets the full ordered id list regardless of
+                  what's actually mounted below - dnd-kit needs that to know
+                  the target order, it doesn't need every id to have a live
+                  DOM node. Same windowing technique as the two branches
+                  above, proven together with dnd-kit already in
+                  ListExplorer.jsx (its columns are both sortable and
+                  virtualized the same way). */}
               <SortableContext
                 items={displayPlaylist.map((video) => video.videoId)}
                 strategy={verticalListSortingStrategy}
               >
-                {displayPlaylist.map((video, index) => (
-                  <SortablePlaylistItem
-                    key={video.videoId}
-                    orderNumber={
-                      (showOriginalOrder || normalizedPlaylistSearchQuery
-                        ? (video.loadIndex ?? index)
-                        : index) + 1
-                    }
-                    video={video}
-                    isActive={
-                      video.videoId != null && video.videoId === currentVideoId
-                    }
-                    isFlashing={flashIds.has(video.videoId)}
-                    listenedStatus={listenedStatusById[video.videoId] || null}
-                    onSelect={onSelect}
-                    isSupported={supportIds.has(video.videoId)}
-                    supportLevel={
-                      supportList.find(
-                        (entry) => entry.videoId === video.videoId,
-                      )?.supportLevel || 1
-                    }
-                    isNominated={nominationIds.has(video.videoId)}
-                    isRetired={retiredVideoIds.has(video.videoId)}
-                    onToggleSupport={onToggleSupport}
-                    onOpenSupportDropdown={handleOpenSupportDropdown}
-                    onOpenContextMenu={handleOpenContextMenu}
-                    commentActivity={
-                      globalActivityByVideoId.get(video.videoId) ?? null
-                    }
-                    onShowComments={onShowComments}
-                    showRatingInsteadOfComments={isVgmcPlaylistView}
-                  />
-                ))}
+                {/* flexShrink: 0 here for the same reason as the
+                    selectionMode branch above - its children are all
+                    position: absolute, so nothing stops the flex
+                    algorithm's default shrink from compressing this below
+                    its actual requested height. */}
+                <div
+                  style={{
+                    position: 'relative',
+                    flexShrink: 0,
+                    height: `${rowVirtualizer.getTotalSize()}px`,
+                  }}
+                >
+                  {rowVirtualizer.getVirtualItems().map((virtualItem) => {
+                    const { index } = virtualItem;
+                    const video = displayPlaylist[index];
+                    if (!video) return null;
+                    return (
+                      <div
+                        key={video.videoId}
+                        style={{
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          width: '100%',
+                          paddingBottom: '4px',
+                          transform: `translateY(${virtualItem.start}px)`,
+                        }}
+                      >
+                        <SortablePlaylistItem
+                          orderNumber={
+                            (showOriginalOrder || normalizedPlaylistSearchQuery
+                              ? (video.loadIndex ?? index)
+                              : index) + 1
+                          }
+                          video={video}
+                          isActive={
+                            video.videoId != null &&
+                            video.videoId === currentVideoId
+                          }
+                          isFlashing={flashIds.has(video.videoId)}
+                          listenedStatus={
+                            listenedStatusById[video.videoId] || null
+                          }
+                          onSelect={onSelect}
+                          isSupported={supportIds.has(video.videoId)}
+                          supportLevel={
+                            supportLevelByVideoId.get(video.videoId)
+                              ?.supportLevel || 1
+                          }
+                          isNominated={nominationIds.has(video.videoId)}
+                          isRetired={retiredVideoIds.has(video.videoId)}
+                          onToggleSupport={onToggleSupport}
+                          onOpenSupportDropdown={handleOpenSupportDropdown}
+                          onOpenContextMenu={handleOpenContextMenu}
+                          commentActivity={
+                            globalActivityByVideoId.get(video.videoId) ?? null
+                          }
+                          onShowComments={onShowComments}
+                          showRatingInsteadOfComments={isVgmcPlaylistView}
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
               </SortableContext>
             </DndContext>
           ) : (
-            displayPlaylist.map((video, index) => (
-              <PlaylistItem
-                key={video.videoId}
-                orderNumber={
-                  (showOriginalOrder || normalizedPlaylistSearchQuery
-                    ? (video.loadIndex ?? index)
-                    : index) + 1
-                }
-                video={video}
-                isActive={
-                  video.videoId != null && video.videoId === currentVideoId
-                }
-                isFlashing={flashIds.has(video.videoId)}
-                listenedStatus={listenedStatusById[video.videoId] || null}
-                onSelect={onSelect}
-                isSupported={supportIds.has(video.videoId)}
-                supportLevel={
-                  supportList.find((entry) => entry.videoId === video.videoId)
-                    ?.supportLevel || 1
-                }
-                isNominated={nominationIds.has(video.videoId)}
-                isRetired={retiredVideoIds.has(video.videoId)}
-                onToggleSupport={onToggleSupport}
-                onOpenSupportDropdown={handleOpenSupportDropdown}
-                onOpenContextMenu={handleOpenContextMenu}
-                selectionMode={false}
-                isSelected={false}
-                onToggleSelected={() => {}}
-                commentActivity={
-                  globalActivityByVideoId.get(video.videoId) ?? null
-                }
-                onShowComments={onShowComments}
-                showRatingInsteadOfComments={isVgmcPlaylistView}
-              />
-            ))
+            // Same flexShrink: 0 reasoning as the other two branches above.
+            <div
+              style={{
+                position: 'relative',
+                flexShrink: 0,
+                height: `${rowVirtualizer.getTotalSize()}px`,
+              }}
+            >
+              {rowVirtualizer.getVirtualItems().map((virtualItem) => {
+                const { index } = virtualItem;
+                const video = displayPlaylist[index];
+                if (!video) return null;
+                return (
+                  <div
+                    key={video.videoId}
+                    style={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      width: '100%',
+                      paddingBottom: '4px',
+                      transform: `translateY(${virtualItem.start}px)`,
+                    }}
+                  >
+                    <PlaylistItem
+                      orderNumber={
+                        (showOriginalOrder || normalizedPlaylistSearchQuery
+                          ? (video.loadIndex ?? index)
+                          : index) + 1
+                      }
+                      video={video}
+                      isActive={
+                        video.videoId != null &&
+                        video.videoId === currentVideoId
+                      }
+                      isFlashing={flashIds.has(video.videoId)}
+                      listenedStatus={listenedStatusById[video.videoId] || null}
+                      onSelect={onSelect}
+                      isSupported={supportIds.has(video.videoId)}
+                      supportLevel={
+                        supportLevelByVideoId.get(video.videoId)
+                          ?.supportLevel || 1
+                      }
+                      isNominated={nominationIds.has(video.videoId)}
+                      isRetired={retiredVideoIds.has(video.videoId)}
+                      onToggleSupport={onToggleSupport}
+                      onOpenSupportDropdown={handleOpenSupportDropdown}
+                      onOpenContextMenu={handleOpenContextMenu}
+                      selectionMode={false}
+                      isSelected={false}
+                      onToggleSelected={noop}
+                      commentActivity={
+                        globalActivityByVideoId.get(video.videoId) ?? null
+                      }
+                      onShowComments={onShowComments}
+                      showRatingInsteadOfComments={isVgmcPlaylistView}
+                    />
+                  </div>
+                );
+              })}
+            </div>
           )}
         </div>
       )}
@@ -2027,9 +2183,8 @@ export default function PlaylistSidebar({
             <SupportLevelSubmenu
               videos={[contextMenu.video]}
               currentLevel={
-                supportList.find(
-                  (entry) => entry.videoId === contextMenu.video.videoId,
-                )?.supportLevel || 1
+                supportLevelByVideoId.get(contextMenu.video.videoId)
+                  ?.supportLevel || 1
               }
               onToggleSupport={onToggleSupport}
               onClose={closeContextMenu}
@@ -2078,3 +2233,9 @@ export default function PlaylistSidebar({
     </div>
   );
 }
+
+// Always mounted and re-rendered on every App state change otherwise
+// (playback progress, unrelated dialogs, etc.) despite most of its props
+// rarely changing - see App.jsx's stable handleReorderActivePlaylistView
+// and friends, which this depends on to make memoization actually stick.
+export default memo(PlaylistSidebar);
