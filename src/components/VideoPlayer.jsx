@@ -493,7 +493,24 @@ const VideoPlayer = forwardRef(function VideoPlayer(
                           style={{ marginTop: 0 }}
                         />
                       )}
-                      <span>{video.gameTitle}</span>
+                      {/* OST search, not a link to the game itself - there's
+                          no canonical "game page" to send this to, but "Game
+                          Title OST" on YouTube is exactly what someone
+                          clicking a game name here is usually after. Same
+                          href pattern as the OST search button in
+                          MetadataEntryDialog. */}
+                      <a
+                        className="now-playing-subtitle-link"
+                        href={`https://www.youtube.com/results?search_query=${encodeURIComponent(
+                          `${video.gameTitle} OST`,
+                        )}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        title={`Search YouTube for "${video.gameTitle} OST"`}
+                        onClick={(event) => event.stopPropagation()}
+                      >
+                        {video.gameTitle}
+                      </a>
                     </div>
                   )}
                   {video.trackTitle && (
