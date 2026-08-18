@@ -88,6 +88,17 @@ export default function VgmcStandingsView({
         minHeight: 0,
         overflow: 'hidden',
         background: 'var(--bg-card)',
+        // border-box, not the content-box default: without it, this div's
+        // "16px padding" is ADDED on top of the 100% width instead of eating
+        // into it, so it quietly asks its App.jsx wrapper for 32px more than
+        // that wrapper's own minWidth floor was sized to give it (see the
+        // "Floor matches..." comment there). The wrapper's overflow: hidden
+        // hid the shortfall as clipping rather than a scrollbar, but it also
+        // meant the table below was landing right on its own min-width with
+        // zero margin - one rounding pixel from tipping into a horizontal
+        // scrollbar. border-box makes width:100% mean the full box including
+        // padding, so the numbers actually match.
+        boxSizing: 'border-box',
       }}
     >
       <div
@@ -136,7 +147,13 @@ export default function VgmcStandingsView({
         </button>
       </div>
 
-      <div style={{ overflowY: 'auto', overflowX: 'auto', flex: 1 }}>
+      {/* overflowX hidden, not auto: the table below is sized (fixed layout +
+          min-width, see .vgmc-standings-table) to always fit the width this
+          pane guarantees it, so a horizontal scrollbar should never be
+          needed - hidden makes that a hard guarantee instead of "shouldn't
+          happen", silently clipping the rare stray pixel instead of ever
+          surfacing a scrollbar. */}
+      <div style={{ overflowY: 'auto', overflowX: 'hidden', flex: 1 }}>
         {visibleRows.length === 0 ? (
           <p
             style={{
@@ -221,10 +238,18 @@ export default function VgmcStandingsView({
                     >
                       {item.rank}
                     </td>
-                    <td style={{ padding: '6px 8px' }}>
+                    {/* overflowWrap so a long, space-less title (a long
+                        compound game name, a CJK title, ...) wraps inside its
+                        fixed-width column instead of forcing the column - and
+                        with it the table - wider than the pane provides. */}
+                    <td
+                      style={{ padding: '6px 8px', overflowWrap: 'anywhere' }}
+                    >
                       {item.row.game || '-'}
                     </td>
-                    <td style={{ padding: '6px 8px' }}>
+                    <td
+                      style={{ padding: '6px 8px', overflowWrap: 'anywhere' }}
+                    >
                       {item.row.song || item.row.title}
                     </td>
                     <td

@@ -6500,15 +6500,18 @@ export default function App() {
                   key="vgmc-standings"
                   style={{
                     width: '33%',
-                    // Floor matches the standings table's own min-width (320px,
+                    // Floor is the standings table's own min-width (320px,
                     // see .vgmc-standings-table in index.css) plus
-                    // VgmcStandingsView's own 16px horizontal padding on each
-                    // side. `overflow: hidden` below means this wrapper won't
-                    // grow to fit its content on its own (that's what the
-                    // default flex min-content sizing would otherwise do), so
-                    // the floor has to be set explicitly here rather than left
-                    // to the child to enforce.
-                    minWidth: '352px',
+                    // VgmcStandingsView's 16px horizontal padding on each side
+                    // (now border-box, so that's included rather than added
+                    // on top - see VgmcStandingsView), plus a 16px safety
+                    // margin so the table never lands exactly on its own
+                    // floor. `overflow: hidden` below means this wrapper
+                    // won't grow to fit its content on its own (that's what
+                    // the default flex min-content sizing would otherwise
+                    // do), so the floor has to be set explicitly here rather
+                    // than left to the child to enforce.
+                    minWidth: '368px',
                     maxWidth: '420px',
                     flexShrink: 0,
                     borderRight: '1px solid var(--border)',

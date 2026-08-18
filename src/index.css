@@ -17407,11 +17407,12 @@ body.is-resizing .resize-handle {
   position: sticky;
   top: var(--vgmc-standings-header-h);
   z-index: 1;
-  padding: 8px 8px 4px;
+  padding: 14px 8px;
   font-size: 11px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.04em;
+  text-align: center;
   color: var(--text-primary);
   border-top: 1px solid var(--border);
   border-bottom: 1px solid var(--border);
@@ -17423,12 +17424,16 @@ body.is-resizing .resize-handle {
      font-weight: 700 finally reads as bold instead of just slightly heavier
      grey text.
 
-     Solid, not rgba(): this row is sticky (see the base rule above) and pins
-     itself over rows scrolling underneath it, so a translucent tint would
-     let them show/blend through instead of being fully covered - only fine
-     back when this was just a divider that scrolled past like any other
-     row. */
-  background: var(--bg-deep);
+     Layered, not a single flat color: this row is sticky (see the base rule
+     above) and pins itself over rows scrolling underneath it, so a lone
+     translucent background would let them show/blend through instead of
+     being fully covered - only fine back when this was just a divider that
+     scrolled past like any other row. Stacking --accent-dim (already a
+     low-opacity purple, reused from the row-hover tint) on top of the solid
+     --bg-deep gets the purple hue without losing that opacity - both layers
+     paint on this element, so the composite is still fully opaque. */
+  background:
+    linear-gradient(var(--accent-dim), var(--accent-dim)), var(--bg-deep);
 }
 
 .vgmc-standings-section:first-child td {
@@ -17437,7 +17442,7 @@ body.is-resizing .resize-handle {
 
 @media (max-width: 960px) {
   .vgmc-standings-section td {
-    padding: 10px 8px 6px;
+    padding: 16px 8px;
     font-size: 12px;
   }
 }
@@ -17471,8 +17476,14 @@ body.is-resizing .resize-handle {
   background: var(--bg-table-striped);
 }
 
+/* Brighter than --accent-dim (used elsewhere for subtle tints, e.g. the
+   section headers above) on purpose: this is the one interactive highlight
+   in the list, so it needs to read as "hovering a song" at a glance rather
+   than blend in with the other purple washes on the page. Own rgba() off
+   --accent-rgb instead of reusing --accent-dim so bumping this doesn't
+   brighten every other spot that token feeds. */
 .vgmc-standings-row:hover {
-  background: var(--accent-dim);
+  background: rgba(var(--accent-rgb), 0.28);
 }
 
 /* Supporter headcount, the standings table's "Supporters" column. See
