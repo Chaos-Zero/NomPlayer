@@ -5491,6 +5491,13 @@ body {
   white-space: nowrap;
 }
 
+/* Pushes the button to the row's right edge regardless of whether the
+   previous-track controls before it are present (see VideoPlayer.jsx -
+   this row renders even with no previous track yet). */
+.nomination-feedback-btn {
+  margin-left: auto;
+}
+
 .player-community-activity.empty {
   justify-content: center;
   align-items: center;

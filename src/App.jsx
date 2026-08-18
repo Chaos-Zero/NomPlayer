@@ -6107,19 +6107,39 @@ export default function App() {
   }, []);
 
   const [explorerInitialView, setExplorerInitialView] = useState('lists');
+  // Only the nomination-feedback entry point (below) wants the Comments &
+  // Ratings page to land with "My Nominations" pre-selected - every other
+  // way into the explorer should reset it, same as explorerInitialView.
+  const [
+    explorerInitialFilterNominations,
+    setExplorerInitialFilterNominations,
+  ] = useState(false);
 
   const handleNavigateToCommunityPlaylists = useCallback(() => {
     setExplorerInitialView('community-playlists');
+    setExplorerInitialFilterNominations(false);
     handleNavigate('listExplorer');
   }, [handleNavigate]);
 
   const handleNavigateToExplorer = useCallback(() => {
     setExplorerInitialView('lists');
+    setExplorerInitialFilterNominations(false);
     handleNavigate('listExplorer');
   }, [handleNavigate]);
 
   const handleNavigateToExplorerComments = useCallback(() => {
     setExplorerInitialView('comments');
+    setExplorerInitialFilterNominations(false);
+    handleNavigate('listExplorer');
+  }, [handleNavigate]);
+
+  // VGMC standings page's "Check your Nomination feedback" button - same
+  // Comments & Ratings view as handleNavigateToExplorerComments, but also
+  // pre-selects the "My Nominations" filter within AllFeedbackView so
+  // nominators land straight on feedback for tracks they nominated.
+  const handleNavigateToNominationFeedback = useCallback(() => {
+    setExplorerInitialView('comments');
+    setExplorerInitialFilterNominations(true);
     handleNavigate('listExplorer');
   }, [handleNavigate]);
 
@@ -6222,6 +6242,9 @@ export default function App() {
         onOpenPlayingList={handleOpenPlayingList}
         onOpenVgmcSheetSync={
           isVgmcStandingsPage ? () => setIsVgmcSheetSyncOpen(true) : undefined
+        }
+        onOpenNominationFeedback={
+          isVgmcStandingsPage ? handleNavigateToNominationFeedback : undefined
         }
         supabase={supabase}
         authUser={authUser}
@@ -6758,6 +6781,7 @@ export default function App() {
                     onPlayCommunityPlaylist={handlePlayCommunityPlaylist}
                     catalogTrackByVideoId={catalogTrackByVideoId}
                     initialView={explorerInitialView}
+                    initialFilterNominations={explorerInitialFilterNominations}
                     onRefreshFeedback={refreshUserFeedback}
                     refreshKey={feedbackRefreshKey}
                     onShowComments={handleShowComments}
