@@ -39,6 +39,28 @@ export default function VgmcStandingsView({
   const { standings, locked } = useMemo(() => partitionStandings(rows), [rows]);
   const visibleRows = activeSubTab === 'locked' ? locked : standings;
 
+  // Both standings/locked are already sorted highest-points-first (see
+  // partitionStandings), so a simple "points changed since the last row" scan
+  // is enough to break the list into point-value sections, no re-sorting or
+  // grouping-by-key needed. Rank numbering (#) stays continuous across
+  // sections, it reflects overall standing, not position within a section.
+  const sections = useMemo(() => {
+    const items = [];
+    let lastPoints = null;
+    visibleRows.forEach((row, index) => {
+      if (row.supportPoints !== lastPoints) {
+        items.push({
+          type: 'header',
+          key: `header-${row.supportPoints}`,
+          points: row.supportPoints,
+        });
+        lastPoints = row.supportPoints;
+      }
+      items.push({ type: 'row', key: row.id, row, rank: index + 1 });
+    });
+    return items;
+  }, [visibleRows]);
+
   function handlePlayRow(row) {
     if (!onPlayNow || !row.videoId) return;
     // handlePlayNowFromSupportList (App.jsx) plays this transiently, it remembers
@@ -142,68 +164,78 @@ export default function VgmcStandingsView({
                 <th style={{ padding: '4px 8px', width: '2.5em' }}>#</th>
                 <th style={{ padding: '4px 8px' }}>Game</th>
                 <th style={{ padding: '4px 8px' }}>Song</th>
-                <th style={{ padding: '4px 8px', textAlign: 'right' }}>
-                  Total
+                <th style={{ padding: '4px 8px', textAlign: 'center' }}>
+                  Supporters
                 </th>
                 <th style={{ padding: '4px 8px', width: '2.5em' }} />
               </tr>
             </thead>
             <tbody>
-              {visibleRows.map((row, index) => (
-                <tr
-                  key={row.id}
-                  style={{
-                    borderTop: '1px solid var(--border)',
-                    fontSize: '13px',
-                  }}
-                >
-                  <td
+              {sections.map((item) =>
+                item.type === 'header' ? (
+                  <tr key={item.key} className="vgmc-standings-section">
+                    <td colSpan={5}>
+                      {item.points} Support{item.points === 1 ? '' : 's'}
+                    </td>
+                  </tr>
+                ) : (
+                  <tr
+                    key={item.key}
+                    className="vgmc-standings-row"
+                    // Double-click plays the song, same as the per-row play
+                    // button, just a faster path for anyone already scanning
+                    // the table with a mouse. handlePlayRow no-ops without a
+                    // videoId, so this is safe on any row.
+                    onDoubleClick={() => handlePlayRow(item.row)}
                     style={{
-                      padding: '6px 8px',
-                      color: 'var(--text-secondary)',
+                      borderTop: '1px solid var(--border)',
+                      fontSize: '13px',
                     }}
                   >
-                    {index + 1}
-                  </td>
-                  <td style={{ padding: '6px 8px' }}>{row.game || '-'}</td>
-                  <td style={{ padding: '6px 8px' }}>
-                    {row.song || row.title}
-                  </td>
-                  <td
-                    style={{
-                      padding: '6px 8px',
-                      textAlign: 'right',
-                    }}
-                    // Points and voter headcount are different numbers (a ++
-                    // counts double toward points but is still one person), so
-                    // spell that out for anyone hovering rather than leaving
-                    // the badge to speak for itself.
-                    title={`${row.supportPoints} support point${row.supportPoints === 1 ? '' : 's'} from ${row.supportVoters} ${row.supportVoters === 1 ? 'person' : 'people'}`}
-                  >
-                    <span
-                      className="vgmc-standings-total"
-                      style={{ fontWeight: 600 }}
+                    <td
+                      style={{
+                        padding: '6px 8px',
+                        color: 'var(--text-secondary)',
+                      }}
                     >
-                      {row.supportPoints}
-                    </span>
-                    <span className="vgmc-standings-voters">
-                      <UsersIcon className="vgmc-standings-voters-icon" />
-                      {row.supportVoters}
-                    </span>
-                  </td>
-                  <td style={{ padding: '6px 8px', textAlign: 'center' }}>
-                    <button
-                      type="button"
-                      className="vgmc-standings-play-btn"
-                      onClick={() => handlePlayRow(row)}
-                      aria-label={`Play "${row.song || row.title}" now`}
-                      title={`Play "${row.song || row.title}" now`}
+                      {item.rank}
+                    </td>
+                    <td style={{ padding: '6px 8px' }}>
+                      {item.row.game || '-'}
+                    </td>
+                    <td style={{ padding: '6px 8px' }}>
+                      {item.row.song || item.row.title}
+                    </td>
+                    <td
+                      style={{
+                        padding: '6px 8px',
+                        textAlign: 'center',
+                      }}
+                      // The section header already carries the point total;
+                      // this column is purely headcount, but points are still
+                      // worth spelling out on hover since a ++ counts double
+                      // toward points while still being one person.
+                      title={`${item.row.supportPoints} support point${item.row.supportPoints === 1 ? '' : 's'} from ${item.row.supportVoters} ${item.row.supportVoters === 1 ? 'person' : 'people'}`}
                     >
-                      <PlayIcon />
-                    </button>
-                  </td>
-                </tr>
-              ))}
+                      <span className="vgmc-standings-voters">
+                        <UsersIcon className="vgmc-standings-voters-icon" />
+                        {item.row.supportVoters}
+                      </span>
+                    </td>
+                    <td style={{ padding: '6px 8px', textAlign: 'center' }}>
+                      <button
+                        type="button"
+                        className="vgmc-standings-play-btn"
+                        onClick={() => handlePlayRow(item.row)}
+                        aria-label={`Play "${item.row.song || item.row.title}" now`}
+                        title={`Play "${item.row.song || item.row.title}" now`}
+                      >
+                        <PlayIcon />
+                      </button>
+                    </td>
+                  </tr>
+                ),
+              )}
             </tbody>
           </table>
         )}

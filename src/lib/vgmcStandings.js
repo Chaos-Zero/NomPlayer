@@ -84,6 +84,13 @@ export function toPlaylistVideos(rows) {
  * a nomination submitted with `++`, which starts at 2), sorted highest-first;
  * `locked` is everything at 7+. Disjoint tabs, once a song locks in it moves
  * out of Current Standings entirely rather than continuing to show in both.
+ *
+ * Sort is points first (that's the section a song lands in, see
+ * VgmcStandingsView's "N Supports" section headers), then, within a tied
+ * point total, by supporterCount descending, since two songs can reach the
+ * same point total from a different number of people (e.g. one ++ vs two
+ * +'s), and the one more people backed should rank higher. Nomination order
+ * is the final tiebreak, for songs tied on both.
  */
 export function partitionStandings(rows) {
   const qualifying = (rows || [])
@@ -92,7 +99,9 @@ export function partitionStandings(rows) {
     .filter((row) => row.supportPoints > 1)
     .sort(
       (a, b) =>
-        b.supportPoints - a.supportPoints || a.orderIndex - b.orderIndex,
+        b.supportPoints - a.supportPoints ||
+        b.supportVoters - a.supportVoters ||
+        a.orderIndex - b.orderIndex,
     );
 
   return {

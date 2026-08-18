@@ -150,6 +150,39 @@ describe('partitionStandings', () => {
     expect(standings.map((r) => r.id)).toEqual(['b', 'a']);
   });
 
+  it('within the same point total, ranks the song with more supporters higher', () => {
+    const { standings } = partitionStandings([
+      row({
+        id: 'fewer',
+        support_points: 5,
+        support_voters: 2,
+        order_index: 0,
+      }),
+      row({ id: 'more', support_points: 5, support_voters: 3, order_index: 1 }),
+    ]);
+
+    expect(standings.map((r) => r.id)).toEqual(['more', 'fewer']);
+  });
+
+  it('falls back to nomination order when both points and supporters tie', () => {
+    const { standings } = partitionStandings([
+      row({
+        id: 'second',
+        support_points: 5,
+        support_voters: 2,
+        order_index: 5,
+      }),
+      row({
+        id: 'first',
+        support_points: 5,
+        support_voters: 2,
+        order_index: 1,
+      }),
+    ]);
+
+    expect(standings.map((r) => r.id)).toEqual(['first', 'second']);
+  });
+
   it('carries supportVoters through separately from supportPoints', () => {
     // Mirrors the ++/++/+ example: 5 points from 3 distinct people.
     const { standings } = partitionStandings([

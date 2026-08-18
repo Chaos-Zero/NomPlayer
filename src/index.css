@@ -17377,39 +17377,81 @@ body.is-resizing .resize-handle {
   transform: scale(0.88);
 }
 
-/* Voter-count badge next to the Total column, see VgmcStandingsView: total
-   support points come first (in vgmc-standings-total, the row's existing bold
-   number), this sits right after it as a small muted "N people" pill so the
-   two numbers (points vs. distinct voters) never get read as the same
-   quantity. */
+/* Section-break row in the standings table (VgmcStandingsView), one per
+   distinct point total ("5 Supports"), the list is already sorted
+   highest-first so these fall out of a single pass with no re-grouping. Sits
+   between vgmc-standings-play-btn and the voter-count rules below since all
+   three style the same table. */
+.vgmc-standings-section td {
+  padding: 8px 8px 4px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-secondary);
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-surface-hover);
+}
+
+.vgmc-standings-section:first-child td {
+  border-top: none;
+}
+
+/* --bg-surface-hover sits almost flush against the page background in light
+   mode (#f8fafc on #f8fafc), so the section break barely reads there even
+   though it's plenty visible against the dark palette. Give light mode its
+   own, visibly darker shade instead of reusing that token. */
+.theme-light .vgmc-standings-section td {
+  background: rgba(15, 23, 42, 0.06);
+}
+
+@media (max-width: 960px) {
+  .vgmc-standings-section td {
+    padding: 10px 8px 6px;
+    font-size: 12px;
+  }
+}
+
+/* A standings row doubles as a play button, mirroring the dedicated
+   vgmc-standings-play-btn control it sits next to, see the row's
+   onDoubleClick in VgmcStandingsView. The pointer cursor + hover tint are the
+   only hint that's there, since a double-click has no visible affordance of
+   its own. */
+.vgmc-standings-row {
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.vgmc-standings-row:hover {
+  background: var(--bg-surface-hover);
+}
+
+/* Supporter headcount, the standings table's "Supporters" column. See
+   partitionStandings for why this - not raw support points - decides ranking
+   within a section: two songs can reach the same point total from a
+   different number of people. */
 .vgmc-standings-voters {
   display: inline-flex;
   align-items: center;
-  gap: 3px;
-  margin-left: 6px;
-  padding: 1px 6px;
-  border-radius: 999px;
-  background: var(--bg-surface-hover);
-  color: var(--text-secondary);
-  font-size: 11px;
+  gap: 4px;
   font-weight: 600;
-  vertical-align: middle;
 }
 
 .vgmc-standings-voters-icon {
-  width: 11px;
-  height: 11px;
+  width: 12px;
+  height: 12px;
+  color: var(--text-secondary);
 }
 
 @media (max-width: 960px) {
   .vgmc-standings-voters {
-    font-size: 12px;
-    padding: 2px 7px;
+    font-size: 14px;
   }
 
   .vgmc-standings-voters-icon {
-    width: 12px;
-    height: 12px;
+    width: 13px;
+    height: 13px;
   }
 }
 
