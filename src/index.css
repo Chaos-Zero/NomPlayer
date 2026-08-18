@@ -7491,31 +7491,22 @@ button.playlist-search-indicator:hover {
   }
 }
 
-.fav-panel-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 16px 20px;
+.fav-panel-title-bar {
+  padding: 8px 20px;
   border-bottom: 1px solid var(--border);
+  background: var(--bg-glass);
   flex-shrink: 0;
-}
-
-.fav-panel-title {
   display: flex;
   align-items: center;
-  gap: 10px;
-  font-size: 16px;
-  font-weight: 600;
-}
-
-.fav-panel-title span {
-  font-size: 20px;
+  gap: 12px;
 }
 
 .fav-panel-title-icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  font-size: 18px;
+  flex-shrink: 0;
 }
 
 .fav-panel.support .fav-panel-title-icon {
@@ -7524,6 +7515,39 @@ button.playlist-search-indicator:hover {
 
 .fav-panel.nomination .fav-panel-title-icon {
   color: var(--accent-light);
+}
+
+.fav-panel-title-scroll {
+  flex: 1;
+  min-width: 0;
+}
+
+.fav-panel-title-scroll .scrolling-text-track {
+  gap: 40px;
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.fav-panel-title-count {
+  flex-shrink: 0;
+  font-size: 11px;
+  color: var(--text-muted);
+  background: var(--bg-glass);
+  padding: 2px 8px;
+  border-radius: 99px;
+  border: 1px solid var(--border);
+}
+
+.fav-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
 }
 
 .fav-panel-actions {
@@ -7578,6 +7602,48 @@ button.playlist-search-indicator:hover {
   font-size: 8px;
   font-weight: 800;
   line-height: 1;
+}
+
+.support-level-filter-wrapper {
+  position: relative;
+  display: inline-flex;
+}
+
+.support-level-filter-summary {
+  padding: 4px 4px 8px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border);
+}
+
+.support-level-filter-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 36px;
+  padding: 0 8px;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition:
+    background var(--transition),
+    color var(--transition);
+}
+
+.support-level-filter-option:hover {
+  background: var(--bg-glass-hover);
+  color: var(--text-primary);
+}
+
+.support-level-filter-option input[type='checkbox'] {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  accent-color: var(--gold);
 }
 
 .fav-panel-action-btn.selection-accent {
@@ -17309,6 +17375,42 @@ body.is-resizing .resize-handle {
 
 .vgmc-standings-play-btn:active {
   transform: scale(0.88);
+}
+
+/* Voter-count badge next to the Total column, see VgmcStandingsView: total
+   support points come first (in vgmc-standings-total, the row's existing bold
+   number), this sits right after it as a small muted "N people" pill so the
+   two numbers (points vs. distinct voters) never get read as the same
+   quantity. */
+.vgmc-standings-voters {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  margin-left: 6px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--bg-surface-hover);
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 600;
+  vertical-align: middle;
+}
+
+.vgmc-standings-voters-icon {
+  width: 11px;
+  height: 11px;
+}
+
+@media (max-width: 960px) {
+  .vgmc-standings-voters {
+    font-size: 12px;
+    padding: 2px 7px;
+  }
+
+  .vgmc-standings-voters-icon {
+    width: 12px;
+    height: 12px;
+  }
 }
 
 /* Mobile: standings live in a full-width drawer (see VgmcStandingsDrawer), so

@@ -13,7 +13,7 @@ export async function fetchVgmcPlaylistTracks(supabase, playlistId) {
   const { data, error } = await supabase
     .from('user_playlist_tracks')
     .select(
-      'id, track_id, provider, external_id, cached_title, nomination_game, nomination_song, support_points, order_index',
+      'id, track_id, provider, external_id, cached_title, nomination_game, nomination_song, support_points, support_voters, order_index',
     )
     .eq('playlist_id', playlistId)
     .order('order_index', { ascending: true });
@@ -34,6 +34,10 @@ function normalizeRow(row) {
     game: row.nomination_game || null,
     song: row.nomination_song || null,
     supportPoints: Number.isFinite(row.support_points) ? row.support_points : 0,
+    // Distinct authors behind supportPoints, see support_voters on
+    // buildReconcileEntries (src/lib/vgmcIngest.js). Older rows synced before
+    // that column existed read as 0 here rather than throwing the row out.
+    supportVoters: Number.isFinite(row.support_voters) ? row.support_voters : 0,
     orderIndex: Number.isFinite(row.order_index) ? row.order_index : 0,
   };
 }

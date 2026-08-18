@@ -152,6 +152,62 @@ export function HeartIcon({ className = 'collection-icon' }) {
   );
 }
 
+// Heart + a direction arrow, composed exactly like CheckDownIcon below:
+// the arrow is drawn first so it sits behind the heart, only peeking out
+// past its bottom-right (desc) or top-right (asc) corner.
+export function SupportOrderIcon({
+  className = 'collection-icon',
+  direction = 'desc',
+}) {
+  const arrowPath =
+    direction === 'asc'
+      ? 'M16.5 22H19.5V16.5H22.5L18 11L13.5 16.5H16.5Z'
+      : 'M16.5 11H19.5V16.5H22.5L18 22L13.5 16.5H16.5Z';
+
+  return (
+    <svg className={className} viewBox="0 0 24 24">
+      <path d={arrowPath} fill="#facc15" />
+      {/* Same heart glyph as HeartIcon above, nested at its native 20x20
+          viewBox so it's the identical shape, just scaled up to fill most
+          of the icon and drawn on top of the arrow. */}
+      <svg x="1" y="1" width="17" height="17" viewBox="0 0 20 20">
+        <path
+          fill="currentColor"
+          d="M9.653 16.915l-.005-.003-.019-.01a20.759 20.759 0 0 1-1.162-.682 22.045 22.045 0 0 1-2.582-1.9C4.045 12.733 2 10.352 2 7.5a4.5 4.5 0 0 1 8-2.828A4.5 4.5 0 0 1 18 7.5c0 2.852-2.044 5.233-3.885 6.82a22.049 22.049 0 0 1-3.744 2.582 20.77 20.77 0 0 1-1.162.682l-.019.01-.005.003L9.653 16.915z"
+        />
+      </svg>
+    </svg>
+  );
+}
+
+// Star + a direction arrow, composed exactly like SupportOrderIcon above:
+// the arrow sits behind the star, peeking out past its bottom-right (desc)
+// or top-right (asc) corner.
+export function RatingOrderIcon({
+  className = 'collection-icon',
+  direction = 'desc',
+}) {
+  const arrowPath =
+    direction === 'asc'
+      ? 'M16.5 22H19.5V16.5H22.5L18 11L13.5 16.5H16.5Z'
+      : 'M16.5 11H19.5V16.5H22.5L18 22L13.5 16.5H16.5Z';
+
+  return (
+    <svg className={className} viewBox="0 0 24 24">
+      <path d={arrowPath} fill="#facc15" />
+      {/* Same star glyph as StarIcon below, nested at its native 20x20
+          viewBox so it's the identical shape, just scaled up to fill most
+          of the icon and drawn on top of the arrow. */}
+      <svg x="1" y="1" width="17" height="17" viewBox="0 0 20 20">
+        <path
+          fill="currentColor"
+          d="M10 2l2.35 4.76 5.26.76-3.81 3.71.9 5.24L10 14.12l-4.7 2.47.9-5.24-3.81-3.71 5.26-.76L10 2z"
+        />
+      </svg>
+    </svg>
+  );
+}
+
 export function HeartEmptyIcon({ className = 'collection-icon' }) {
   return (
     <svg
@@ -315,6 +371,23 @@ export function FilterIcon({ className = 'collection-icon' }) {
         d="M3 5a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6 10a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zM9 15a1 1 0 011-1h0a1 1 0 110 2h0a1 1 0 01-1-1z"
         clipRule="evenodd"
       />
+    </svg>
+  );
+}
+
+// Solid eye: the lens shape has its iris ring cut out via an evenodd
+// hole (so it reads clearly at 16px instead of thinning into a stroke
+// outline that .collection-icon's `fill: currentColor` would flatten into
+// a blob), with a solid pupil dot drawn back in on top.
+export function EyeIcon({ className = 'collection-icon' }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24">
+      <path
+        fillRule="evenodd"
+        clipRule="evenodd"
+        d="M12.001 3.75c4.973 0 9.19 3.226 10.677 7.697.12.362.12.752 0 1.113-1.487 4.471-5.705 7.697-10.677 7.697-4.972 0-9.189-3.226-10.677-7.697a1.762 1.762 0 0 1 0-1.113C2.812 6.976 7.029 3.75 12.001 3.75Zm0 3.5a4.75 4.75 0 1 0 0 9.5 4.75 4.75 0 0 0 0-9.5Z"
+      />
+      <circle cx="12" cy="12" r="2.75" fill="currentColor" />
     </svg>
   );
 }

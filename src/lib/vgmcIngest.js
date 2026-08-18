@@ -222,7 +222,15 @@ export function supportPoints(record) {
   return total;
 }
 
-/** Maps a folded record set to the ordered payload reconcile_vgmc_playlist expects. */
+/** Maps a folded record set to the ordered payload reconcile_vgmc_playlist expects.
+ *
+ * `support_voters` is `record.votes.size`, the count of distinct authors with a
+ * nonzero-history entry in the record's vote map (an author who ever cast a
+ * +/++/-/-- on this song has an entry, even if their running total later nets to
+ * 0). It's a headcount, deliberately separate from `support_points`: a song with
+ * two ++'s and one + reads as 5 points from 3 people, not 5 points from some
+ * unknown number of double-counted votes. See VgmcStandingsView for where this
+ * is displayed. */
 export function buildReconcileEntries(records) {
   return [...records.values()]
     .filter((record) => record.present && record.videoId)
@@ -234,5 +242,6 @@ export function buildReconcileEntries(records) {
       game: record.game,
       song: record.song,
       support_points: supportPoints(record),
+      support_voters: record.votes.size,
     }));
 }

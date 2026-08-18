@@ -11,6 +11,7 @@ function row(overrides) {
     nomination_game: overrides.nomination_game ?? 'Game',
     nomination_song: overrides.nomination_song ?? 'Song',
     support_points: overrides.support_points ?? 0,
+    support_voters: overrides.support_voters ?? 0,
     order_index: overrides.order_index ?? 0,
   };
 }
@@ -147,5 +148,23 @@ describe('partitionStandings', () => {
     ]);
 
     expect(standings.map((r) => r.id)).toEqual(['b', 'a']);
+  });
+
+  it('carries supportVoters through separately from supportPoints', () => {
+    // Mirrors the ++/++/+ example: 5 points from 3 distinct people.
+    const { standings } = partitionStandings([
+      row({ id: 'a', support_points: 5, support_voters: 3 }),
+    ]);
+
+    expect(standings[0].supportPoints).toBe(5);
+    expect(standings[0].supportVoters).toBe(3);
+  });
+
+  it('defaults supportVoters to 0 for a row synced before that column existed', () => {
+    const { standings } = partitionStandings([
+      { ...row({ id: 'a', support_points: 2 }), support_voters: null },
+    ]);
+
+    expect(standings[0].supportVoters).toBe(0);
   });
 });

@@ -173,6 +173,7 @@ describe('foldThread', () => {
         game: 'Zelda',
         song: 'Song of Storms',
         support_points: 1,
+        support_voters: 1,
       },
     ]);
   });
@@ -194,6 +195,7 @@ describe('foldThread', () => {
         game: 'Zelda',
         song: 'Song of Storms',
         support_points: 1,
+        support_voters: 1,
       },
     ]);
   });
@@ -537,6 +539,50 @@ describe('foldThread', () => {
     const record = records.get('game a|song a');
     expect(record.present).toBe(true);
     expect(supportPoints(record)).toBe(0);
+  });
+
+  it('support_voters counts distinct authors, not total point weight', () => {
+    // Two ++'s and one + -> 5 points, but only 3 people cast them.
+    const records = foldThread([
+      {
+        postId: '1',
+        author: 'alice',
+        text: '++ Game A | Song A | https://youtu.be/aaaaaaaaaaa',
+      },
+      {
+        postId: '2',
+        author: 'bob',
+        text: '++ Game A | Song A | https://youtu.be/aaaaaaaaaaa',
+      },
+      {
+        postId: '3',
+        author: 'carol',
+        text: '+ Game A | Song A | https://youtu.be/aaaaaaaaaaa',
+      },
+    ]);
+
+    const entry = buildReconcileEntries(records)[0];
+    expect(entry.support_points).toBe(5);
+    expect(entry.support_voters).toBe(3);
+  });
+
+  it('support_voters does not grow when the same author votes again (clamped, not duplicated)', () => {
+    const records = foldThread([
+      {
+        postId: '1',
+        author: 'alice',
+        text: '+ Game A | Song A | https://youtu.be/aaaaaaaaaaa',
+      },
+      {
+        postId: '2',
+        author: 'alice',
+        text: '+ Game A | Song A | https://youtu.be/aaaaaaaaaaa',
+      },
+    ]);
+
+    const entry = buildReconcileEntries(records)[0];
+    expect(entry.support_points).toBe(2);
+    expect(entry.support_voters).toBe(1);
   });
 });
 

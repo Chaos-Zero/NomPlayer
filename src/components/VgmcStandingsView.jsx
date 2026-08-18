@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { partitionStandings } from '../lib/vgmcStandings.js';
-import { PlayIcon } from './Icons.jsx';
+import { PlayIcon, UsersIcon } from './Icons.jsx';
 
 const SUB_TABS = [
   { id: 'standings', label: 'Current Standings' },
@@ -173,10 +173,23 @@ export default function VgmcStandingsView({
                     style={{
                       padding: '6px 8px',
                       textAlign: 'right',
-                      fontWeight: 600,
                     }}
+                    // Points and voter headcount are different numbers (a ++
+                    // counts double toward points but is still one person), so
+                    // spell that out for anyone hovering rather than leaving
+                    // the badge to speak for itself.
+                    title={`${row.supportPoints} support point${row.supportPoints === 1 ? '' : 's'} from ${row.supportVoters} ${row.supportVoters === 1 ? 'person' : 'people'}`}
                   >
-                    {row.supportPoints}
+                    <span
+                      className="vgmc-standings-total"
+                      style={{ fontWeight: 600 }}
+                    >
+                      {row.supportPoints}
+                    </span>
+                    <span className="vgmc-standings-voters">
+                      <UsersIcon className="vgmc-standings-voters-icon" />
+                      {row.supportVoters}
+                    </span>
                   </td>
                   <td style={{ padding: '6px 8px', textAlign: 'center' }}>
                     <button

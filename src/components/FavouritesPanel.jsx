@@ -21,15 +21,23 @@ import CustomPlaylistSubmenu from './CustomPlaylistSubmenu.jsx';
 import SupportLevelSubmenu from './SupportLevelSubmenu.jsx';
 import ExportIcon from './ExportIcon.jsx';
 import YouTubeIcon from './YouTubeIcon.jsx';
+import ScrollingText from './ScrollingText.jsx';
 import {
   HeartIcon,
+  SupportOrderIcon,
+  RatingOrderIcon,
   LockIcon,
-  StarIcon,
   SpeechBubbleIcon,
-  XIcon,
-  SortByRatingIcon,
+  EyeIcon,
   PlayIcon,
 } from './Icons.jsx';
+
+const SUPPORT_LEVELS = [1, 2, 3];
+const SUPPORT_LEVEL_LABELS = {
+  1: 'Possible Support',
+  2: 'Likely Support',
+  3: 'Definite Support',
+};
 
 const PANEL_CLOSE_MS = 240;
 
@@ -433,6 +441,68 @@ export function SortableSupportItem({
   );
 }
 
+/** Eye-button popover for the support list: checkboxes for which support
+ * levels (Possible/Likely/Definite) stay visible. Closes on outside click
+ * or Escape, same convention as SupportLevelDropdown. */
+function SupportLevelFilterDropdown({
+  selectedLevels,
+  onToggleLevel,
+  onClose,
+}) {
+  const menuRef = useRef(null);
+
+  useEffect(() => {
+    function handlePointerDown(event) {
+      if (menuRef.current && !menuRef.current.contains(event.target)) {
+        onClose();
+      }
+    }
+    function handleKeyDown(event) {
+      if (event.key === 'Escape') onClose();
+    }
+
+    window.addEventListener('pointerdown', handlePointerDown);
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('pointerdown', handlePointerDown);
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [onClose]);
+
+  return (
+    <div
+      ref={menuRef}
+      className="user-menu-popover support-level-filter-dropdown"
+      role="menu"
+    >
+      <div className="user-menu-summary support-level-filter-summary">
+        Show support levels
+      </div>
+      {SUPPORT_LEVELS.map((level) => (
+        <label key={level} className="support-level-filter-option">
+          <input
+            type="checkbox"
+            checked={selectedLevels.has(level)}
+            onChange={() => onToggleLevel(level)}
+          />
+          <span
+            className={`item-fav-btn supported level-${level}`}
+            style={{
+              width: '18px',
+              height: '18px',
+              display: 'inline-flex',
+              opacity: 1,
+            }}
+          >
+            {level === 3 ? <LockIcon /> : <HeartIcon />}
+          </span>
+          {SUPPORT_LEVEL_LABELS[level]}
+        </label>
+      ))}
+    </div>
+  );
+}
+
 export default function FavouritesPanel({
   supportList,
   onReorder,
@@ -482,8 +552,18 @@ export default function FavouritesPanel({
   const [selectedIds, setSelectedIds] = useState([]);
   const [contextMenu, setContextMenu] = useState(null);
   const [toastMessage, setToastMessage] = useState('');
-  const [isSortingByRating, setIsSortingByRating] = useState(false);
   const [showSupportBreakdown, setShowSupportBreakdown] = useState(false);
+  // null (list order) -> 'desc' (highest first) -> 'asc' (lowest first) -> null,
+  // same three-state cycle as the VGMC playlist's rating-sort direction button.
+  const [ratingSortDirection, setRatingSortDirection] = useState(null);
+  // Support-list only, same cycle as ratingSortDirection.
+  const [supportLevelSortDirection, setSupportLevelSortDirection] =
+    useState(null);
+  const [visibleSupportLevels, setVisibleSupportLevels] = useState(
+    () => new Set(SUPPORT_LEVELS),
+  );
+  const [showLevelFilterMenu, setShowLevelFilterMenu] = useState(false);
+  const isSupportTone = tone === 'support';
   const toastTimeoutRef = useRef(null);
 
   const selectedIdSet = useMemo(() => new Set(selectedIds), [selectedIds]);
@@ -502,19 +582,69 @@ export default function FavouritesPanel({
   }, [supportList]);
 
   const displayList = useMemo(() => {
-    if (!isSortingByRating) return supportList;
+    let list = supportList;
 
-    return [...supportList].sort((a, b) => {
-      const ratingA = a.rating ?? -1;
-      const ratingB = b.rating ?? -1;
-      if (ratingB !== ratingA) return ratingB - ratingA;
-      // Stable sort using original index for ties
-      return (
-        (originalIndexMap.get(a.videoId) || 0) -
-        (originalIndexMap.get(b.videoId) || 0)
+    if (isSupportTone && visibleSupportLevels.size < SUPPORT_LEVELS.length) {
+      list = list.filter((video) =>
+        visibleSupportLevels.has(video.supportLevel || 1),
       );
-    });
-  }, [isSortingByRating, supportList, originalIndexMap]);
+    }
+
+    if (isSupportTone && supportLevelSortDirection) {
+      list = [...list].sort((a, b) => {
+        const levelA = a.supportLevel || 1;
+        const levelB = b.supportLevel || 1;
+        const diff =
+          supportLevelSortDirection === 'desc'
+            ? levelB - levelA
+            : levelA - levelB;
+        if (diff !== 0) return diff;
+        // Stable sort using original index for ties
+        return (
+          (originalIndexMap.get(a.videoId) || 0) -
+          (originalIndexMap.get(b.videoId) || 0)
+        );
+      });
+    } else if (ratingSortDirection) {
+      list = [...list].sort((a, b) => {
+        const ratingA = a.rating ?? -1;
+        const ratingB = b.rating ?? -1;
+        const diff =
+          ratingSortDirection === 'desc'
+            ? ratingB - ratingA
+            : ratingA - ratingB;
+        if (diff !== 0) return diff;
+        // Stable sort using original index for ties
+        return (
+          (originalIndexMap.get(a.videoId) || 0) -
+          (originalIndexMap.get(b.videoId) || 0)
+        );
+      });
+    }
+
+    return list;
+  }, [
+    supportList,
+    isSupportTone,
+    visibleSupportLevels,
+    supportLevelSortDirection,
+    ratingSortDirection,
+    originalIndexMap,
+  ]);
+
+  // Reorders only the videos currently visible under the level filter,
+  // leaving any filtered-out videos pinned at their existing positions -
+  // otherwise "Save Order" while filtered would drop the hidden ones.
+  function applyDisplayOrder(sortedVisibleList) {
+    if (sortedVisibleList.length === supportList.length) {
+      return sortedVisibleList;
+    }
+    const visibleIds = new Set(sortedVisibleList.map((v) => v.videoId));
+    let cursor = 0;
+    return supportList.map((video) =>
+      visibleIds.has(video.videoId) ? sortedVisibleList[cursor++] : video,
+    );
+  }
 
   useEffect(
     () => () => {
@@ -582,7 +712,9 @@ export default function FavouritesPanel({
   }
 
   function handleSelectAll() {
-    setSelectedIds(supportList.map((video) => video.videoId));
+    // Only what the level filter is currently showing, not everything
+    // underneath it.
+    setSelectedIds(displayList.map((video) => video.videoId));
   }
 
   function openContextMenu(event, videos, mode) {
@@ -689,23 +821,18 @@ export default function FavouritesPanel({
             {toastMessage}
           </div>
         )}
+        <div className="fav-panel-title-bar">
+          <span className="fav-panel-title-icon">{titleIcon}</span>
+          <ScrollingText
+            className="fav-panel-title-scroll"
+            text={title}
+            truncateWhenStatic
+          />
+          <span className="fav-panel-title-count">
+            {supportList.length} {supportList.length === 1 ? 'video' : 'videos'}
+          </span>
+        </div>
         <div className="fav-panel-header">
-          <div className="fav-panel-title">
-            <span className="fav-panel-title-icon">{titleIcon}</span>
-            {title}
-            <span
-              style={{
-                fontSize: 12,
-                color: 'var(--text-muted)',
-                background: 'var(--bg-glass)',
-                padding: '2px 8px',
-                borderRadius: 99,
-                border: '1px solid var(--border)',
-              }}
-            >
-              {supportList.length}
-            </span>
-          </div>
           <div className="fav-panel-actions">
             {supportList.length > 0 && (
               <>
@@ -717,21 +844,6 @@ export default function FavouritesPanel({
                   aria-label="Start list in sidebar"
                 >
                   <PlayIcon />
-                </button>
-                <button
-                  className="fav-panel-action-btn icon-only"
-                  type="button"
-                  onClick={() =>
-                    onExport?.(
-                      selectionMode && selectedVideos.length > 0
-                        ? selectedVideos
-                        : supportList,
-                    )
-                  }
-                  title="Export for VGMC"
-                  aria-label="Export for VGMC"
-                >
-                  <ExportIcon />
                 </button>
                 <button
                   className="fav-panel-action-btn icon-only"
@@ -749,6 +861,111 @@ export default function FavouritesPanel({
                   <YouTubeIcon />
                 </button>
                 <button
+                  className="fav-panel-action-btn icon-only"
+                  type="button"
+                  onClick={() =>
+                    onExport?.(
+                      selectionMode && selectedVideos.length > 0
+                        ? selectedVideos
+                        : supportList,
+                    )
+                  }
+                  title="Export for VGMC"
+                  aria-label="Export for VGMC"
+                >
+                  <ExportIcon />
+                </button>
+                {isSupportTone && (
+                  <div className="support-level-filter-wrapper">
+                    <button
+                      className={`fav-panel-action-btn icon-only${visibleSupportLevels.size < SUPPORT_LEVELS.length ? ' active' : ''}`}
+                      type="button"
+                      onClick={() => setShowLevelFilterMenu((v) => !v)}
+                      title="Filter by support level"
+                      aria-label="Filter by support level"
+                      aria-haspopup="true"
+                      aria-expanded={showLevelFilterMenu}
+                    >
+                      <EyeIcon />
+                    </button>
+                    {showLevelFilterMenu && (
+                      <SupportLevelFilterDropdown
+                        selectedLevels={visibleSupportLevels}
+                        onToggleLevel={(level) => {
+                          setVisibleSupportLevels((previousValue) => {
+                            const next = new Set(previousValue);
+                            if (next.has(level)) {
+                              next.delete(level);
+                            } else {
+                              next.add(level);
+                            }
+                            return next;
+                          });
+                        }}
+                        onClose={() => setShowLevelFilterMenu(false)}
+                      />
+                    )}
+                  </div>
+                )}
+                {isSupportTone && (
+                  <button
+                    className={`fav-panel-action-btn icon-only${supportLevelSortDirection ? ' active' : ''}`}
+                    type="button"
+                    onClick={() => {
+                      setSupportLevelSortDirection((previousValue) =>
+                        previousValue === null
+                          ? 'desc'
+                          : previousValue === 'desc'
+                            ? 'asc'
+                            : null,
+                      );
+                      setRatingSortDirection(null);
+                      if (selectionMode) setSelectionMode(false);
+                    }}
+                    title={
+                      supportLevelSortDirection === 'desc'
+                        ? 'Sorted by support level, highest first, click for lowest first'
+                        : supportLevelSortDirection === 'asc'
+                          ? 'Sorted by support level, lowest first, click to reset'
+                          : 'Order by support level'
+                    }
+                    aria-label="Order by support level"
+                  >
+                    <SupportOrderIcon
+                      direction={
+                        supportLevelSortDirection === 'asc' ? 'asc' : 'desc'
+                      }
+                    />
+                  </button>
+                )}
+                <button
+                  className={`fav-panel-action-btn icon-only${ratingSortDirection ? ' active' : ''}`}
+                  type="button"
+                  onClick={() => {
+                    setRatingSortDirection((previousValue) =>
+                      previousValue === null
+                        ? 'desc'
+                        : previousValue === 'desc'
+                          ? 'asc'
+                          : null,
+                    );
+                    setSupportLevelSortDirection(null);
+                    if (selectionMode) setSelectionMode(false);
+                  }}
+                  title={
+                    ratingSortDirection === 'desc'
+                      ? 'Sorted by your rating, highest first, click for lowest first'
+                      : ratingSortDirection === 'asc'
+                        ? 'Sorted by your rating, lowest first, click to reset'
+                        : 'Order by rating'
+                  }
+                  aria-label="Order by rating"
+                >
+                  <RatingOrderIcon
+                    direction={ratingSortDirection === 'asc' ? 'asc' : 'desc'}
+                  />
+                </button>
+                <button
                   className={`fav-panel-action-btn${showSupportBreakdown ? ' active' : ''}`}
                   type="button"
                   onClick={() => setShowSupportBreakdown((v) => !v)}
@@ -764,22 +981,6 @@ export default function FavouritesPanel({
                   }
                 >
                   {showSupportBreakdown ? 'Total' : 'Breakdown'}
-                </button>
-                <button
-                  className={`fav-panel-action-btn icon-only${isSortingByRating ? ' active' : ''}`}
-                  type="button"
-                  onClick={() => {
-                    setIsSortingByRating(!isSortingByRating);
-                    if (selectionMode) setSelectionMode(false);
-                  }}
-                  title={
-                    isSortingByRating ? 'Cancel sorting' : 'Order by rating'
-                  }
-                  aria-label={
-                    isSortingByRating ? 'Cancel sorting' : 'Order by rating'
-                  }
-                >
-                  {isSortingByRating ? <XIcon /> : <SortByRatingIcon />}
                 </button>
                 <button
                   className={`fav-panel-action-btn${selectionMode ? ' active' : ''}`}
@@ -847,6 +1048,22 @@ export default function FavouritesPanel({
                 {emptyTitle}
               </div>
               <div className="fav-hint">{emptyHint}</div>
+            </div>
+          ) : displayList.length === 0 ? (
+            <div className="fav-empty">
+              <div className="fav-empty-icon">👁️</div>
+              <div
+                style={{
+                  fontSize: 14,
+                  color: 'var(--text-secondary)',
+                  fontWeight: 500,
+                }}
+              >
+                No songs at the selected support levels
+              </div>
+              <div className="fav-hint">
+                Open the filter and check a level to show it again.
+              </div>
             </div>
           ) : selectionMode ? (
             displayList.map((video) => (
@@ -934,7 +1151,7 @@ export default function FavouritesPanel({
               </div>
             </div>
           )}
-          {isSortingByRating ? (
+          {ratingSortDirection || supportLevelSortDirection ? (
             <div
               className={`collection-adder tone-${tone} sorting-active`}
               key="sorting"
@@ -948,9 +1165,17 @@ export default function FavouritesPanel({
                     className="collection-save-order-back"
                     type="button"
                     onClick={() => {
-                      onReorder?.(displayList);
-                      setIsSortingByRating(false);
-                      showToast('Support list reordered by rating');
+                      onReorder?.(applyDisplayOrder(displayList));
+                      const reorderedBySupportLevel = Boolean(
+                        supportLevelSortDirection,
+                      );
+                      setRatingSortDirection(null);
+                      setSupportLevelSortDirection(null);
+                      showToast(
+                        reorderedBySupportLevel
+                          ? 'Support list reordered by support level'
+                          : 'Support list reordered by rating',
+                      );
                     }}
                   >
                     Save Order
