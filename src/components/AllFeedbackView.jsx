@@ -194,12 +194,22 @@ export default function AllFeedbackView({
     return list;
   }, [filtered, sortBy, sortAsc]);
 
+  // getItemKey ties each row's measured height to its trackId instead of
+  // its array index - without it, re-sorting/filtering reorders which track
+  // lands at a given index, but the virtualizer's cached height for that
+  // index (measured for whatever *used to* be there) gets applied to the
+  // new occupant until it's next resized, leaving a gap (cache taller than
+  // the new row) or an overlap (cache shorter, e.g. a row with fewer
+  // preview comments than what previously measured that slot). Rows here
+  // vary a lot in height (0-3 comment previews), unlike the fixed-height
+  // lists elsewhere in the app, which is why only this one needs it.
   // eslint-disable-next-line react-hooks/incompatible-library
   const rowVirtualizer = useVirtualizer({
     count: sorted.length,
     getScrollElement: () => parentRef.current,
     estimateSize: () => 100,
     overscan: 6,
+    getItemKey: (index) => sorted[index]?.trackId ?? index,
   });
 
   const virtualItems = rowVirtualizer.getVirtualItems();
@@ -327,135 +337,144 @@ export default function AllFeedbackView({
                     top: 0,
                     left: 0,
                     width: '100%',
+                    // Reproduces the 3px+3px vertical gap .afv-row used to
+                    // get from its own margin, but as padding on this
+                    // wrapper - see the .afv-row CSS comment for why margin
+                    // has to live here and not on the measured element.
+                    paddingBottom: '6px',
                     transform: `translateY(${vRow.start}px)`,
                   }}
-                  className="afv-row"
-                  onClick={() => {
-                    if (group.videoId) {
-                      onSelectTrack?.({
-                        videoId: group.videoId,
-                        trackId: group.trackId,
-                      });
-                    }
-                  }}
-                  onDoubleClick={() => {
-                    if (group.videoId) {
-                      onPlayNow?.({
-                        videoId: group.videoId,
-                        canonical_track_title:
-                          group.track?.canonical_track_title,
-                        canonical_game_title: group.track?.canonical_game_title,
-                      });
-                    }
-                  }}
                 >
-                  <div className="afv-row-main">
-                    <div className="afv-row-left">
-                      {thumb ? (
-                        <img
-                          src={thumb}
-                          alt=""
-                          className="afv-thumb"
-                          loading="lazy"
-                        />
-                      ) : (
-                        <div className="afv-thumb afv-thumb-placeholder" />
-                      )}
-                      <div className="afv-track-info">
-                        <div className="afv-song-title">
-                          {group.track?.canonical_track_title ||
-                            'Unknown Track'}
-                        </div>
-                        <div className="afv-game-title">
-                          {group.track?.canonical_game_title || '-'}
-                        </div>
-                        {vgmcLabel && (
-                          <div className="afv-vgmc-row">
-                            {group.vgmcNumbers.slice(0, 3).map((n) => (
-                              <span key={n} className="afv-vgmc-badge">
-                                VGMC {n}
-                              </span>
-                            ))}
-                          </div>
+                  <div
+                    className={`afv-row${vRow.index % 2 === 1 ? ' afv-row-alt' : ''}`}
+                    onClick={() => {
+                      if (group.videoId) {
+                        onSelectTrack?.({
+                          videoId: group.videoId,
+                          trackId: group.trackId,
+                        });
+                      }
+                    }}
+                    onDoubleClick={() => {
+                      if (group.videoId) {
+                        onPlayNow?.({
+                          videoId: group.videoId,
+                          canonical_track_title:
+                            group.track?.canonical_track_title,
+                          canonical_game_title:
+                            group.track?.canonical_game_title,
+                        });
+                      }
+                    }}
+                  >
+                    <div className="afv-row-main">
+                      <div className="afv-row-left">
+                        {thumb ? (
+                          <img
+                            src={thumb}
+                            alt=""
+                            className="afv-thumb"
+                            loading="lazy"
+                          />
+                        ) : (
+                          <div className="afv-thumb afv-thumb-placeholder" />
                         )}
+                        <div className="afv-track-info">
+                          <div className="afv-song-title">
+                            {group.track?.canonical_track_title ||
+                              'Unknown Track'}
+                          </div>
+                          <div className="afv-game-title">
+                            {group.track?.canonical_game_title || '-'}
+                          </div>
+                          {vgmcLabel && (
+                            <div className="afv-vgmc-row">
+                              {group.vgmcNumbers.slice(0, 3).map((n) => (
+                                <span key={n} className="afv-vgmc-badge">
+                                  VGMC {n}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
                       </div>
+
+                      <div className="afv-row-right">
+                        <span className="afv-entry-counts">
+                          {group.ratingCount > 0 && (
+                            <span>
+                              {group.ratingCount} rating
+                              {group.ratingCount !== 1 ? 's' : ''}
+                            </span>
+                          )}
+                          {group.ratingCount > 0 && group.commentCount > 0 && (
+                            <span className="afv-dot">&middot;</span>
+                          )}
+                          {group.commentCount > 0 && (
+                            <span>
+                              {group.commentCount} comment
+                              {group.commentCount !== 1 ? 's' : ''}
+                            </span>
+                          )}
+                        </span>
+                        <div className="afv-date">
+                          {group.latestDate.toLocaleDateString(undefined, {
+                            month: 'short',
+                            day: 'numeric',
+                            year: 'numeric',
+                          })}
+                        </div>
+                      </div>
+                      {group.avgRating != null && (
+                        <RatingBadge rating={group.avgRating} />
+                      )}
                     </div>
 
-                    <div className="afv-row-right">
-                      <span className="afv-entry-counts">
-                        {group.ratingCount > 0 && (
-                          <span>
-                            {group.ratingCount} rating
-                            {group.ratingCount !== 1 ? 's' : ''}
-                          </span>
-                        )}
-                        {group.ratingCount > 0 && group.commentCount > 0 && (
-                          <span className="afv-dot">&middot;</span>
-                        )}
-                        {group.commentCount > 0 && (
-                          <span>
-                            {group.commentCount} comment
-                            {group.commentCount !== 1 ? 's' : ''}
-                          </span>
-                        )}
-                      </span>
-                      <div className="afv-date">
-                        {group.latestDate.toLocaleDateString(undefined, {
-                          month: 'short',
-                          day: 'numeric',
-                          year: 'numeric',
+                    {group.entries.length > 0 && (
+                      <div className="afv-previews">
+                        {group.entries.slice(0, 3).map((e, i) => {
+                          const hue =
+                            e.rating != null
+                              ? Math.round((e.rating / 10) * 120)
+                              : null;
+                          return (
+                            <div key={i} className="afv-preview-entry">
+                              <span
+                                className="afv-preview-rating"
+                                style={
+                                  hue != null
+                                    ? {
+                                        background: `hsl(${hue},60%,28%)`,
+                                        color: `hsl(${hue},80%,75%)`,
+                                      }
+                                    : {
+                                        background: 'rgba(255,255,255,0.06)',
+                                        color: 'var(--text-muted)',
+                                      }
+                                }
+                              >
+                                {e.rating != null ? `★ ${e.rating}` : '-'}
+                              </span>
+                              <span className="afv-preview-user">
+                                {getDisplayProfileName(
+                                  e.profiles?.username,
+                                  'Anonymous',
+                                )}
+                              </span>
+                              <span className="afv-preview-note">
+                                {e.note || ''}
+                              </span>
+                            </div>
+                          );
                         })}
+                        {group.entries.length > 3 && (
+                          <span className="afv-more">
+                            +{group.entries.length - 3} more
+                          </span>
+                        )}
                       </div>
-                    </div>
-                    {group.avgRating != null && (
-                      <RatingBadge rating={group.avgRating} />
                     )}
                   </div>
-
-                  {group.entries.length > 0 && (
-                    <div className="afv-previews">
-                      {group.entries.slice(0, 3).map((e, i) => {
-                        const hue =
-                          e.rating != null
-                            ? Math.round((e.rating / 10) * 120)
-                            : null;
-                        return (
-                          <div key={i} className="afv-preview-entry">
-                            <span
-                              className="afv-preview-rating"
-                              style={
-                                hue != null
-                                  ? {
-                                      background: `hsl(${hue},60%,28%)`,
-                                      color: `hsl(${hue},80%,75%)`,
-                                    }
-                                  : {
-                                      background: 'rgba(255,255,255,0.06)',
-                                      color: 'var(--text-muted)',
-                                    }
-                              }
-                            >
-                              {e.rating != null ? `★ ${e.rating}` : '-'}
-                            </span>
-                            <span className="afv-preview-user">
-                              {getDisplayProfileName(
-                                e.profiles?.username,
-                                'Anonymous',
-                              )}
-                            </span>
-                            <span className="afv-preview-note">
-                              {e.note || ''}
-                            </span>
-                          </div>
-                        );
-                      })}
-                      {group.entries.length > 3 && (
-                        <span className="afv-more">
-                          +{group.entries.length - 3} more
-                        </span>
-                      )}
-                    </div>
-                  )}
                 </div>
               );
             })}

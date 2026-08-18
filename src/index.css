@@ -16882,8 +16882,15 @@ body.is-resizing .resize-handle {
     sans-serif;
 }
 
+/* Vertical margin deliberately left off (the wrapper the virtualizer
+   measures - see AllFeedbackView.jsx - carries it instead, as inline
+   paddingBottom): the virtualizer measures via getBoundingClientRect(),
+   which excludes an element's own margin, so vertical margin here would go
+   uncounted and rows would creep closer together than their measured
+   height says, eventually overlapping. Horizontal margin is fine here since
+   it doesn't affect the measured height. */
 .afv-row {
-  margin: 3px 12px;
+  margin: 0 12px;
   padding: 10px 14px;
   border: 1px solid var(--border);
   border-radius: 0;
@@ -16894,7 +16901,10 @@ body.is-resizing .resize-handle {
   background: rgba(255, 255, 255, 0.02);
 }
 
-.afv-row:nth-child(even) {
+/* Class-based, not :nth-child(even) - each row is now the sole child of its
+   own measured wrapper div (see AllFeedbackView.jsx), so nth-child would
+   always see it as a first child and never match. */
+.afv-row.afv-row-alt {
   background: rgba(255, 255, 255, 0.045);
 }
 
@@ -17105,7 +17115,7 @@ body.is-resizing .resize-handle {
   border-color: rgba(0, 0, 0, 0.1);
 }
 
-.theme-light .afv-row:nth-child(even) {
+.theme-light .afv-row.afv-row-alt {
   background: rgba(0, 0, 0, 0.045);
 }
 
