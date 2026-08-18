@@ -9,7 +9,7 @@
       "strict_min_version": "115.0"
     }
   },
-  "permissions": ["storage"],
+  "permissions": ["storage", "alarms", "tabs"],
   "host_permissions": [
     "https://gamefaqs.gamespot.com/*",
     "https://*.supabase.co/*",

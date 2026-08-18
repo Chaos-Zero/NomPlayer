@@ -4,6 +4,7 @@
   const SESSION_KEY = 'nomplayer_vgmc_session';
   const STATUS_KEY = 'nomplayer_vgmc_status';
   const TOPICS_KEY = 'nomplayer_vgmc_followed_topics';
+  const SETTINGS_KEY = 'nomplayer_vgmc_settings';
 
   async function getSession() {
     const stored = await browser.storage.local.get(SESSION_KEY);
@@ -27,6 +28,8 @@
         lastSyncedAt: null,
         lastAcceptedPosts: null,
         lastPlaylistSize: null,
+        lastAutoReloadAt: null,
+        lastAutoReloadTabCount: null,
       }
     );
   }
@@ -67,6 +70,27 @@
     return next;
   }
 
+  // Auto-reload: periodically reloads every followed topic's open tab (see
+  // background.js's alarm), so new posts get picked up without you needing to
+  // manually revisit/refresh the thread. Off by default, opt-in, since it's a
+  // behavior change (a tab you left open starts navigating itself) rather than
+  // something that should surprise an existing install.
+  async function getSettings() {
+    const stored = await browser.storage.local.get(SETTINGS_KEY);
+    return {
+      autoReloadEnabled: false,
+      autoReloadDelayMinutes: 15,
+      ...stored[SETTINGS_KEY],
+    };
+  }
+
+  async function setSettings(patch) {
+    const current = await getSettings();
+    const next = { ...current, ...patch };
+    await browser.storage.local.set({ [SETTINGS_KEY]: next });
+    return next;
+  }
+
   self.NomplayerStorage = {
     getSession,
     setSession,
@@ -77,5 +101,7 @@
     isTopicFollowed,
     addFollowedTopic,
     removeFollowedTopic,
+    getSettings,
+    setSettings,
   };
 })();

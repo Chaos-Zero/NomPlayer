@@ -90,6 +90,30 @@
       #track-active-tab {
         margin-top: 8px;
       }
+      .checkbox-row {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-weight: normal;
+      }
+      .checkbox-row input {
+        width: auto;
+        margin: 0;
+      }
+      #auto-reload-delay-row {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        margin-top: 6px;
+      }
+      #auto-reload-delay-row input {
+        width: 56px;
+        flex: none;
+      }
+      #settings-hint {
+        color: #666;
+        margin: 4px 0 0;
+      }
     </style>
   </head>
   <body>
@@ -125,6 +149,22 @@
         NomPlayer", or:
       </p>
       <button id="track-active-tab">Track this tab</button>
+
+      <h2>Settings</h2>
+      <label class="checkbox-row">
+        <input type="checkbox" id="auto-reload-enabled" />
+        Automatically reload followed topics
+      </label>
+      <div id="auto-reload-delay-row">
+        Every
+        <input id="auto-reload-delay" type="number" min="1" step="1" />
+        minute(s)
+      </div>
+      <p id="settings-hint">
+        Only reloads a followed topic's tab if you already have it open
+        somewhere, it won't open one for you, and never steals focus.
+      </p>
+      <p id="auto-reload-status" class="hint"></p>
     </div>
 
     <script src="config.js"></script>

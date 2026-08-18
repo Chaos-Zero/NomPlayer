@@ -4,7 +4,7 @@ import { ReloadIcon } from './Icons.jsx';
 
 const SUB_TABS = [
   { id: 'standings', label: 'Current Standings' },
-  { id: 'locked', label: 'Locked (7+)' },
+  { id: 'locked', label: 'Locked Noms' },
 ];
 
 function tabButtonStyle(isActive) {

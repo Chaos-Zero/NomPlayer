@@ -78,6 +78,21 @@ small "NomPlayer: syncing…" badge confirms it), and **Sync now** in the popup 
 it on demand. The popup's "Followed topics" list shows everything you're tracking with
 a ✕ to stop following a topic (e.g. once a thread's closed and replaced).
 
+## Auto-reload
+
+Off by default. The popup's **Settings** section has an "Automatically reload followed
+topics" toggle and a delay (in minutes, 1 minimum). When on, `background.js` reloads
+every open tab sitting on a followed topic on that interval - a plain reload is the
+entire trigger, `content-script.js`'s `init()` already re-extracts on every page load,
+so this is what turns "syncs when you happen to reload the page" into "stays synced on
+its own" for as long as you leave the thread open somewhere, e.g. in a background
+window on a machine you leave running.
+
+It never opens a tab for you (only reloads ones already open) and never steals focus
+(`tabs.reload()` doesn't touch which tab/window is active) - safe to enable on a
+machine you're actively using for other things, it just quietly refreshes a tab
+sitting in the background.
+
 ## Files
 
 | File                    | Runs where                 | Responsibility                                                              |

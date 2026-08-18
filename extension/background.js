@@ -114,6 +114,79 @@ async function findActiveGameFaqsTab() {
   return tabs[0] || null;
 }
 
+// --- Auto-reload -------------------------------------------------------------------
+// Periodically reloads whichever open tabs are sitting on a followed topic, so new
+// posts get picked up on their own - content-script.js's init() already re-runs
+// extraction on every page load, a plain tab reload is the entire trigger, no new
+// content-script logic needed. Deliberately does not open a tab for a followed topic
+// that isn't already open somewhere; this is "keep the thread open and let it refresh
+// itself", not "go open threads for me".
+const AUTO_RELOAD_ALARM_NAME = 'vgmc-auto-reload';
+
+// Same shape as content-script.js's TOPIC_URL_PATTERN, kept as its own copy - that
+// one runs in the page context, this runs in the background context, no shared
+// module system between "classic script" background/content scripts to import it
+// from instead.
+const TOPIC_URL_PATTERN = /\/boards\/(\d+)-([^/]+)\/(\d+)/;
+
+function extractTopicIdFromUrl(url) {
+  const match = (url || '').match(TOPIC_URL_PATTERN);
+  return match ? match[3] : null;
+}
+
+async function findFollowedTopicTabs() {
+  const followedTopics = await NomplayerStorage.getFollowedTopics();
+  if (followedTopics.length === 0) return [];
+
+  const followedTopicIds = new Set(followedTopics.map((t) => t.topicId));
+  const tabs = await browser.tabs.query({
+    url: 'https://gamefaqs.gamespot.com/boards/*',
+  });
+
+  return tabs.filter((tab) =>
+    followedTopicIds.has(extractTopicIdFromUrl(tab.url)),
+  );
+}
+
+async function reloadFollowedTopicTabs() {
+  const tabs = await findFollowedTopicTabs();
+  // tabs.reload() only affects the tab's content, never which tab/window is
+  // focused, so this never steals focus from whatever you're actually doing.
+  await Promise.all(tabs.map((tab) => browser.tabs.reload(tab.id)));
+  await NomplayerStorage.setStatus({
+    lastAutoReloadAt: new Date().toISOString(),
+    lastAutoReloadTabCount: tabs.length,
+  });
+}
+
+async function scheduleAutoReload() {
+  await browser.alarms.clear(AUTO_RELOAD_ALARM_NAME);
+
+  const settings = await NomplayerStorage.getSettings();
+  if (!settings.autoReloadEnabled) return;
+
+  // browser.alarms enforces a 1-minute floor on periodInMinutes itself, clamped
+  // here too so the popup's own display of the value (and any dev/unpacked build
+  // that's more permissive) can't imply a sub-1-minute cadence it won't actually get.
+  const periodInMinutes = Math.max(
+    1,
+    Math.round(settings.autoReloadDelayMinutes),
+  );
+  browser.alarms.create(AUTO_RELOAD_ALARM_NAME, { periodInMinutes });
+}
+
+browser.alarms.onAlarm.addListener((alarm) => {
+  if (alarm.name === AUTO_RELOAD_ALARM_NAME) {
+    reloadFollowedTopicTabs();
+  }
+});
+
+// Re-applies the schedule whenever the background script (re)starts, e.g. the
+// browser restarting or the extension reloading - alarms don't survive that on
+// their own, this is what makes "auto-reload enabled" actually durable rather than
+// only lasting until the next restart.
+scheduleAutoReload();
+
 async function requestSyncFromActiveTab() {
   const tab = await findActiveGameFaqsTab();
   if (!tab) {
@@ -182,6 +255,18 @@ browser.runtime.onMessage.addListener((message) => {
 
     case 'VGMC_REMOVE_FOLLOWED_TOPIC':
       return NomplayerStorage.removeFollowedTopic(message.topicId);
+
+    case 'VGMC_GET_SETTINGS':
+      return NomplayerStorage.getSettings();
+
+    case 'VGMC_SET_SETTINGS':
+      return NomplayerStorage.setSettings(message.patch).then((next) => {
+        // Reschedule immediately rather than waiting for the next background
+        // script restart to notice - toggling this off (or changing the delay)
+        // should take effect right away, not "eventually".
+        scheduleAutoReload();
+        return next;
+      });
 
     default:
       return undefined;
