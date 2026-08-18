@@ -703,13 +703,15 @@ function PlaylistSidebar({
     normalizedPlaylistSearchQuery,
   ]);
 
-  // Windows the non-drag-and-drop render paths (multi-select mode, and
+  // Windows all three render paths (multi-select mode, drag-to-reorder, and
   // read-only community-playlist previews) down to just the rows actually
-  // in view, so a long playlist doesn't cost hundreds of live DOM nodes in
-  // those modes. Deliberately NOT used for the drag-to-reorder path below -
-  // dnd-kit needs its sortable items mounted to measure them for collision
-  // detection, and combining that with windowing needs its own dedicated
-  // verification. Row slot is 68px: .playlist-item's padding (8px x2) plus
+  // in view, so a long playlist doesn't cost hundreds of live DOM nodes.
+  // Shared across all three paths since they all render displayPlaylist at
+  // the same row height; only one is ever mounted at a time. The
+  // drag-to-reorder path pairs this with dnd-kit the same way
+  // ListExplorer.jsx already does for its columns - SortableContext gets
+  // every id so it knows the full order, only the rows actually on screen
+  // get mounted/measured. Row slot is 68px: .playlist-item's padding (8px x2) plus
   // its 45px thumbnail plus its 1px transparent border x2, plus the 4px
   // gap the flex layout normally puts between rows (reproduced per-row
   // below via paddingBottom, since that gap doesn't exist between
@@ -1957,42 +1959,75 @@ function PlaylistSidebar({
               collisionDetection={closestCenter}
               onDragEnd={handleDragEnd}
             >
+              {/* SortableContext gets the full ordered id list regardless of
+                  what's actually mounted below - dnd-kit needs that to know
+                  the target order, it doesn't need every id to have a live
+                  DOM node. Same windowing technique as the two branches
+                  above, proven together with dnd-kit already in
+                  ListExplorer.jsx (its columns are both sortable and
+                  virtualized the same way). */}
               <SortableContext
                 items={displayPlaylist.map((video) => video.videoId)}
                 strategy={verticalListSortingStrategy}
               >
-                {displayPlaylist.map((video, index) => (
-                  <SortablePlaylistItem
-                    key={video.videoId}
-                    orderNumber={
-                      (showOriginalOrder || normalizedPlaylistSearchQuery
-                        ? (video.loadIndex ?? index)
-                        : index) + 1
-                    }
-                    video={video}
-                    isActive={
-                      video.videoId != null && video.videoId === currentVideoId
-                    }
-                    isFlashing={flashIds.has(video.videoId)}
-                    listenedStatus={listenedStatusById[video.videoId] || null}
-                    onSelect={onSelect}
-                    isSupported={supportIds.has(video.videoId)}
-                    supportLevel={
-                      supportLevelByVideoId.get(video.videoId)?.supportLevel ||
-                      1
-                    }
-                    isNominated={nominationIds.has(video.videoId)}
-                    isRetired={retiredVideoIds.has(video.videoId)}
-                    onToggleSupport={onToggleSupport}
-                    onOpenSupportDropdown={handleOpenSupportDropdown}
-                    onOpenContextMenu={handleOpenContextMenu}
-                    commentActivity={
-                      globalActivityByVideoId.get(video.videoId) ?? null
-                    }
-                    onShowComments={onShowComments}
-                    showRatingInsteadOfComments={isVgmcPlaylistView}
-                  />
-                ))}
+                <div
+                  style={{
+                    position: 'relative',
+                    height: `${rowVirtualizer.getTotalSize()}px`,
+                  }}
+                >
+                  {rowVirtualizer.getVirtualItems().map((virtualItem) => {
+                    const { index } = virtualItem;
+                    const video = displayPlaylist[index];
+                    if (!video) return null;
+                    return (
+                      <div
+                        key={video.videoId}
+                        style={{
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          width: '100%',
+                          paddingBottom: '4px',
+                          transform: `translateY(${virtualItem.start}px)`,
+                        }}
+                      >
+                        <SortablePlaylistItem
+                          orderNumber={
+                            (showOriginalOrder || normalizedPlaylistSearchQuery
+                              ? (video.loadIndex ?? index)
+                              : index) + 1
+                          }
+                          video={video}
+                          isActive={
+                            video.videoId != null &&
+                            video.videoId === currentVideoId
+                          }
+                          isFlashing={flashIds.has(video.videoId)}
+                          listenedStatus={
+                            listenedStatusById[video.videoId] || null
+                          }
+                          onSelect={onSelect}
+                          isSupported={supportIds.has(video.videoId)}
+                          supportLevel={
+                            supportLevelByVideoId.get(video.videoId)
+                              ?.supportLevel || 1
+                          }
+                          isNominated={nominationIds.has(video.videoId)}
+                          isRetired={retiredVideoIds.has(video.videoId)}
+                          onToggleSupport={onToggleSupport}
+                          onOpenSupportDropdown={handleOpenSupportDropdown}
+                          onOpenContextMenu={handleOpenContextMenu}
+                          commentActivity={
+                            globalActivityByVideoId.get(video.videoId) ?? null
+                          }
+                          onShowComments={onShowComments}
+                          showRatingInsteadOfComments={isVgmcPlaylistView}
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
               </SortableContext>
             </DndContext>
           ) : (
