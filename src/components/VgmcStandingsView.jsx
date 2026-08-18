@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { partitionStandings } from '../lib/vgmcStandings.js';
+import { ReloadIcon } from './Icons.jsx';
 
 const SUB_TABS = [
   { id: 'standings', label: 'Current Standings' },
@@ -115,22 +116,23 @@ export default function VgmcStandingsView({
           })}
         </div>
 
+        {/* Icon-only, anchored to the far right of the row (space-between
+            above) rather than beside the tabs - title/aria-label carry what
+            the old "Refresh"/"Syncing…" button text used to say out loud,
+            since there's no label left to read. */}
         <button
           type="button"
+          className={`vgmc-standings-refresh-btn${isLoading ? ' is-loading' : ''}`}
           onClick={onRefresh}
           disabled={isLoading}
-          style={{
-            padding: '6px 12px',
-            borderRadius: '8px',
-            border: '1px solid var(--border)',
-            background: 'var(--bg-card)',
-            color: 'var(--text)',
-            fontSize: '13px',
-            cursor: isLoading ? 'default' : 'pointer',
-            opacity: isLoading ? 0.6 : 1,
-          }}
+          aria-label={
+            isLoading
+              ? 'Updating standings and playlist…'
+              : 'Update Standings and Playlist'
+          }
+          title={isLoading ? 'Updating…' : 'Update Standings and Playlist'}
         >
-          {isLoading ? 'Syncing…' : 'Refresh'}
+          <ReloadIcon className="vgmc-standings-refresh-icon" />
         </button>
       </div>
 
