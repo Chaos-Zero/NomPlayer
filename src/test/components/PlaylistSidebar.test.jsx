@@ -260,12 +260,17 @@ describe('PlaylistSidebar', () => {
       activePlaylistView: { type: 'support' },
     });
 
-    // Tracking is on by default, mounting already-cued-up scrolls once.
-    expect(Element.prototype.scrollIntoView).toHaveBeenCalledTimes(1);
+    // Tracking is on by default, mounting already-cued-up scrolls.
+    // scrollToIndex's own reconciliation can call scrollTo more than once
+    // per logical scroll, so this checks *that* a scroll happened at each
+    // point rather than an exact count - the latter would really be
+    // asserting on the virtualizer's internals, not this feature.
+    expect(Element.prototype.scrollTo).toHaveBeenCalled();
+    vi.mocked(Element.prototype.scrollTo).mockClear();
 
     fireEvent.click(screen.getByRole('button', { name: 'Order by rating' }));
 
-    expect(Element.prototype.scrollIntoView).toHaveBeenCalledTimes(2);
+    expect(Element.prototype.scrollTo).toHaveBeenCalled();
   });
 
   it('toggles the playlist view mode when shuffle is active', () => {
@@ -323,22 +328,30 @@ describe('PlaylistSidebar', () => {
       currentIndex: 0,
     });
 
-    // Tracking is on by default, so mounting already-cued-up scrolls once.
-    expect(Element.prototype.scrollIntoView).toHaveBeenCalledTimes(1);
+    // Tracking is on by default, so mounting already-cued-up scrolls.
+    // scrollToIndex's own reconciliation can call scrollTo more than once
+    // per logical scroll, so each checkpoint below clears the mock and
+    // checks *that* a scroll happened (or didn't) rather than an exact
+    // count - the latter would really be asserting on the virtualizer's
+    // internals, not this feature.
+    expect(Element.prototype.scrollTo).toHaveBeenCalled();
+    vi.mocked(Element.prototype.scrollTo).mockClear();
 
     // A track change (skip/back, or a new track starting) re-focuses.
     rerender(<PlaylistSidebar {...props} currentIndex={1} />);
-    expect(Element.prototype.scrollIntoView).toHaveBeenCalledTimes(2);
+    expect(Element.prototype.scrollTo).toHaveBeenCalled();
+    vi.mocked(Element.prototype.scrollTo).mockClear();
 
     fireEvent.click(screen.getByRole('button', { name: 'Track current song' }));
+    vi.mocked(Element.prototype.scrollTo).mockClear();
 
     // Off now, further track changes shouldn't scroll the list around.
     rerender(<PlaylistSidebar {...props} currentIndex={0} />);
-    expect(Element.prototype.scrollIntoView).toHaveBeenCalledTimes(2);
+    expect(Element.prototype.scrollTo).not.toHaveBeenCalled();
 
     // Turning it back on immediately re-focuses the active row.
     fireEvent.click(screen.getByRole('button', { name: 'Track current song' }));
-    expect(Element.prototype.scrollIntoView).toHaveBeenCalledTimes(3);
+    expect(Element.prototype.scrollTo).toHaveBeenCalled();
   });
 
   it('shows shuffle and preview controls in the mobile playlist header', () => {

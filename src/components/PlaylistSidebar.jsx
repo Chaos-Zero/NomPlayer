@@ -783,11 +783,19 @@ function PlaylistSidebar({
     Boolean(rankingSortDirection) ||
     Boolean(normalizedPlaylistSearchQuery);
 
+  // Was a container.querySelector('.playlist-item.active') + scrollIntoView()
+  // - broke once the list was windowed, since the active row usually isn't
+  // even mounted (that's the whole point of virtualizing). scrollToIndex
+  // asks the virtualizer to scroll there directly, which works whether or
+  // not the row currently has a DOM node.
   const focusActiveRow = useCallback(() => {
-    const container = listContainerRef.current;
-    const activeEl = container?.querySelector('.playlist-item.active');
-    activeEl?.scrollIntoView({ block: 'center' });
-  }, []);
+    if (!listContainerRef.current) return;
+    const activeIndex = displayPlaylist.findIndex(
+      (video) => video.videoId != null && video.videoId === currentVideoId,
+    );
+    if (activeIndex === -1) return;
+    rowVirtualizer.scrollToIndex(activeIndex, { align: 'center' });
+  }, [displayPlaylist, currentVideoId, rowVirtualizer]);
 
   // Scrolls the active row into view on: landing on a different playlist/view,
   // the current track changing (new track, skip/back), or the list being
@@ -1897,6 +1905,15 @@ function PlaylistSidebar({
             <div
               style={{
                 position: 'relative',
+                // .playlist-list lays its children out with display: flex,
+                // and this div's own children are all position: absolute
+                // (so they don't contribute to its content size) - without
+                // flexShrink: 0, the flex algorithm's default shrink
+                // behavior can compress this below the height it's actually
+                // asking for, which is the one thing genuinely different
+                // from before virtualization (many naturally-sized flex
+                // children instead of one explicitly-sized one).
+                flexShrink: 0,
                 height: `${rowVirtualizer.getTotalSize()}px`,
               }}
             >
@@ -1970,9 +1987,15 @@ function PlaylistSidebar({
                 items={displayPlaylist.map((video) => video.videoId)}
                 strategy={verticalListSortingStrategy}
               >
+                {/* flexShrink: 0 here for the same reason as the
+                    selectionMode branch above - its children are all
+                    position: absolute, so nothing stops the flex
+                    algorithm's default shrink from compressing this below
+                    its actual requested height. */}
                 <div
                   style={{
                     position: 'relative',
+                    flexShrink: 0,
                     height: `${rowVirtualizer.getTotalSize()}px`,
                   }}
                 >
@@ -2031,9 +2054,11 @@ function PlaylistSidebar({
               </SortableContext>
             </DndContext>
           ) : (
+            // Same flexShrink: 0 reasoning as the other two branches above.
             <div
               style={{
                 position: 'relative',
+                flexShrink: 0,
                 height: `${rowVirtualizer.getTotalSize()}px`,
               }}
             >
