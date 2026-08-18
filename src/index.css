@@ -4,6 +4,10 @@
   --bg-base: #0a0a0f;
   --bg-surface: #12121a;
   --bg-surface-hover: #1c1c2a;
+  /* Alias used by a handful of card-style panels (VgmcStandingsView, its
+     mobile drawer, ExportVgmcModal) that want the same opaque surface color
+     as --bg-surface under a more literal name. */
+  --bg-card: var(--bg-surface);
   --bg-deep: #0f0f15;
   --bg-glass: rgba(255, 255, 255, 0.04);
   --bg-glass-hover: rgba(255, 255, 255, 0.08);
@@ -99,6 +103,7 @@
   color-scheme: light;
   --bg-base: #f8fafc;
   --bg-surface: #ffffff;
+  --bg-card: var(--bg-surface);
   --bg-deep: #f1f5f9;
   --bg-deep-rgb: 241, 245, 249;
   --bg-glass: rgba(15, 23, 42, 0.05);
@@ -17341,48 +17346,24 @@ body.is-resizing .resize-handle {
   }
 }
 
-/* Standings table (VgmcStandingsView) play-now button, a dedicated per-row button
-   rather than the whole row being clickable. */
-.vgmc-standings-play-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  padding: 0;
-  border-radius: 999px;
-  border: 1px solid var(--border);
-  background: var(--bg-card);
-  color: var(--text);
-  cursor: pointer;
-  transition:
-    background 0.15s ease,
-    border-color 0.15s ease,
-    color 0.15s ease,
-    transform 0.12s ease;
-}
-
-.vgmc-standings-play-btn svg {
-  width: 12px;
-  height: 12px;
-}
-
-.vgmc-standings-play-btn:hover {
-  background: var(--accent, #6d5efc);
-  border-color: var(--accent, #6d5efc);
-  color: #fff;
-}
-
-.vgmc-standings-play-btn:active {
-  transform: scale(0.88);
-}
-
 /* Section-break row in the standings table (VgmcStandingsView), one per
    distinct point total ("5 Supports"), the list is already sorted
    highest-first so these fall out of a single pass with no re-grouping. Sits
-   between vgmc-standings-play-btn and the voter-count rules below since all
-   three style the same table. */
+   above the row/voter-count rules below since all three style the same
+   table.
+
+   Sticky, pinned just below the column-header bar (top offset =
+   --vgmc-standings-header-h, set on .vgmc-standings-table below) so whichever
+   point-group you're scrolled into stays visible until the next group's
+   header reaches that same spot and takes over. z-index below the column
+   header (2) so the header always wins where the two overlap, and above
+   plain rows (unstyled) so this doesn't disappear under them. Needs its own
+   opaque background for the same reason the column header does - rows
+   scrolling underneath it would otherwise show through. */
 .vgmc-standings-section td {
+  position: sticky;
+  top: var(--vgmc-standings-header-h);
+  z-index: 1;
   padding: 8px 8px 4px;
   font-size: 11px;
   font-weight: 700;
@@ -17401,9 +17382,16 @@ body.is-resizing .resize-handle {
 /* --bg-surface-hover sits almost flush against the page background in light
    mode (#f8fafc on #f8fafc), so the section break barely reads there even
    though it's plenty visible against the dark palette. Give light mode its
-   own, visibly darker shade instead of reusing that token. */
+   own, visibly darker shade instead of reusing that token.
+
+   Solid, not rgba(): this row is sticky (see the base rule above) and pins
+   itself over rows scrolling underneath it, so a translucent tint would let
+   them show/blend through instead of being fully covered - only fine back
+   when this was just a divider that scrolled past like any other row. Value
+   is --bg-deep, the flattened equivalent of the rgba(15, 23, 42, 0.06) this
+   used to be. */
 .theme-light .vgmc-standings-section td {
-  background: rgba(15, 23, 42, 0.06);
+  background: var(--bg-deep);
 }
 
 @media (max-width: 960px) {
@@ -17413,18 +17401,37 @@ body.is-resizing .resize-handle {
   }
 }
 
-/* A standings row doubles as a play button, mirroring the dedicated
-   vgmc-standings-play-btn control it sits next to, see the row's
-   onDoubleClick in VgmcStandingsView. The pointer cursor + hover tint are the
-   only hint that's there, since a double-click has no visible affordance of
-   its own. */
+/* The whole row is the play control now (no separate button), see the row's
+   onDoubleClick + title="Double click to Play Now" in VgmcStandingsView. The
+   pointer cursor + purple hover tint are the affordance that it's
+   interactive. accent-dim (not bg-surface-hover) so the tint reads as "this
+   plays something" rather than a plain neutral row-hover. user-select: none
+   so that double-click - normally a "select this word" gesture in every
+   browser - plays the song instead of highlighting whatever text your
+   cursor happened to land on.
+
+   Explicit --bg-surface base (rather than leaving it transparent) is what
+   gives .vgmc-standings-row-alt something to visibly differ from below -
+   same base/striped pairing as .database-table's zebra rows, just reused
+   here. */
 .vgmc-standings-row {
+  background: var(--bg-surface);
   cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
   transition: background 0.15s ease;
 }
 
+/* Alternate row tint, driven by item.rank in VgmcStandingsView (the row's
+   overall standing, continuous across sections) rather than nth-child - a
+   section-header row sits in the same tbody between groups, which would
+   throw off nth-child's parity every time one appears. */
+.vgmc-standings-row-alt {
+  background: var(--bg-table-striped);
+}
+
 .vgmc-standings-row:hover {
-  background: var(--bg-surface-hover);
+  background: var(--accent-dim);
 }
 
 /* Supporter headcount, the standings table's "Supporters" column. See
@@ -17438,29 +17445,75 @@ body.is-resizing .resize-handle {
   font-weight: 600;
 }
 
-.vgmc-standings-voters-icon {
-  width: 12px;
-  height: 12px;
-  color: var(--text-secondary);
-}
-
 @media (max-width: 960px) {
   .vgmc-standings-voters {
     font-size: 14px;
   }
+}
 
-  .vgmc-standings-voters-icon {
-    width: 13px;
-    height: 13px;
-  }
+/* Fixed layout + explicit widths on every column but Game/Song (left
+   unset, so fixed layout gives them an even split of whatever's left, see
+   https://www.w3.org/TR/CSS22/tables.html#width-layout) - both driven purely
+   by the table's own width, never by cell content. That's what makes # /
+   Game / Song / Supporters land at the same width on the Locked tab as
+   Standings, auto layout re-measures per render and the two tabs hold
+   different rows, which is why they used to drift apart. min-width is the
+   "never smaller than the columns" floor: below it the table overflows its
+   scroll container (overflowX: auto in VgmcStandingsView) instead of the
+   columns getting squeezed illegible. */
+.vgmc-standings-table {
+  table-layout: fixed;
+  min-width: 320px;
+  /* Column-header row's own rendered height, in one place so the sticky
+     section header (.vgmc-standings-section td above) can offset its `top`
+     by exactly this much and land flush underneath rather than guessing.
+     The header row itself is pinned to this height (box-sizing: border-box)
+     below so the two numbers can't drift apart. */
+  --vgmc-standings-header-h: 29px;
+}
+
+.vgmc-standings-table col:nth-of-type(1) {
+  width: 32px; /* # */
+}
+
+.vgmc-standings-table col:nth-of-type(4) {
+  width: 76px; /* Supporters */
+}
+
+/* Column names visible at all times while scrolling, same idea as
+   vgmc-standings-section's sticky treatment above it, just pinned to the very
+   top instead of per point-group. Needs its own opaque background (the
+   header cells are otherwise transparent) so rows scrolling underneath don't
+   show through - background/box-sizing/height together also fix the header
+   at --vgmc-standings-header-h regardless of content, which is the offset
+   the sticky section header relies on to sit flush beneath it. */
+.vgmc-standings-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  box-sizing: border-box;
+  height: var(--vgmc-standings-header-h);
+  background: var(--bg-card);
+  box-shadow: 0 1px 0 var(--border);
 }
 
 /* Mobile: standings live in a full-width drawer (see VgmcStandingsDrawer), so
    there's room to size the table up for readability rather than keeping the
-   cramped desktop-column sizing. */
+   cramped desktop-column sizing. The width floor doesn't apply there, that's
+   a desktop-only guarantee (App.jsx sizes the desktop split column itself),
+   the drawer is already full-width with nothing to shrink it. */
 @media (max-width: 960px) {
   .vgmc-standings-table {
     font-size: 15px;
+    min-width: 0;
+  }
+
+  .vgmc-standings-table col:nth-of-type(1) {
+    width: 36px;
+  }
+
+  .vgmc-standings-table col:nth-of-type(4) {
+    width: 92px;
   }
 
   .vgmc-standings-table th {
@@ -17469,15 +17522,5 @@ body.is-resizing .resize-handle {
 
   .vgmc-standings-table td {
     padding: 10px 8px;
-  }
-
-  .vgmc-standings-play-btn {
-    width: 34px;
-    height: 34px;
-  }
-
-  .vgmc-standings-play-btn svg {
-    width: 14px;
-    height: 14px;
   }
 }

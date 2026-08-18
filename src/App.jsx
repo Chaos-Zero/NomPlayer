@@ -624,14 +624,16 @@ function stripOAuthErrorParamsFromUrl() {
 export default function App() {
   const isMobileLayout = useMediaQuery('(max-width: 960px)');
   const supabase = getSupabaseClient();
-  const initialPlayerStateRef = useRef(null);
-  if (!initialPlayerStateRef.current) {
-    initialPlayerStateRef.current = loadLocalPlayerState({
+  // Computed once via useState's lazy initializer (React guarantees it runs
+  // only on mount, StrictMode double-invoke aside) rather than the
+  // read-a-ref-during-render pattern this used to be - same "compute once"
+  // behavior, but without touching a ref's .current while rendering.
+  const [initialPlayerState] = useState(() =>
+    loadLocalPlayerState({
       supportListFallback: loadSupportList(),
       nominationListFallback: loadNominationList(),
-    });
-  }
-  const initialPlayerState = initialPlayerStateRef.current;
+    }),
+  );
   const [activePage, setActivePage] = useState('home');
   const [theme, setTheme] = useState(
     () => localStorage.getItem(THEME_STORAGE_KEY) || 'dark',
@@ -662,11 +664,14 @@ export default function App() {
   // 'listened'. Shuffle and "move started to bottom" are mutually exclusive
   // (see handleShufflePlaylist/handleMoveListenedToBottom below), this is
   // what lets each button know whether it, specifically, is the one active.
-  const customOrderKindRef = useRef(
-    initialPlayerState.shuffleOrderIds.length > 0 ? 'shuffle' : null,
-  );
+  // Both the ref and the state get seeded from this directly, rather than
+  // the state reading the ref's .current, so neither has to read a ref
+  // during render.
+  const initialCustomOrderKind =
+    initialPlayerState.shuffleOrderIds.length > 0 ? 'shuffle' : null;
+  const customOrderKindRef = useRef(initialCustomOrderKind);
   const [customOrderKind, setCustomOrderKind] = useState(
-    customOrderKindRef.current,
+    initialCustomOrderKind,
   );
   const [showOriginalOrder, setShowOriginalOrder] = useState(
     initialPlayerState.showOriginalOrder,
@@ -700,6 +705,10 @@ export default function App() {
   });
   const [communityNominations, setCommunityNominations] = useState([]);
   const [nominationRefreshToken, setNominationRefreshToken] = useState(0);
+  // Declared here rather than by handleNavigateToCommunityPlaylists/the
+  // explorer-view state further down - handlePlayCommunityPlaylist (below)
+  // needs setLastCommunityPlaylist in scope well before that point.
+  const [lastCommunityPlaylist, setLastCommunityPlaylist] = useState(null);
   const hasReachedPlaylistEndRef = useRef(false);
 
   useEffect(() => {
@@ -844,9 +853,6 @@ export default function App() {
   const [isFeedbackForcedEdit, setIsFeedbackForcedEdit] = useState(false);
   const [feedbackTrack, setFeedbackTrack] = useState(null);
   const [feedbackPosition, setFeedbackPosition] = useState(null);
-  const [globalActivityByVideoId, setGlobalActivityByVideoId] = useState(
-    new Map(),
-  );
   const [catalogActivityByVideoId, setCatalogActivityByVideoId] = useState(
     new Map(),
   );
@@ -1061,6 +1067,54 @@ export default function App() {
 
   const authUser = authSession?.user ?? null;
 
+  // Declared here (its first use, syncCatalogForNominationVideos below, needs
+  // it in scope) rather than further down near the other list-mutation
+  // helpers - only depends on the setters above (stable across renders) and
+  // the module-level patchCatalogCache import, so where it lives doesn't
+  // matter beyond that ordering constraint.
+  const applyUpdatesToList = useCallback((updatesMap) => {
+    const transform = (item) => {
+      const update =
+        updatesMap[item.videoId] || (item.trackId && updatesMap[item.trackId]);
+      if (!update) return item;
+      const newVideoId = update.videoId || item.videoId;
+      return {
+        ...item,
+        videoId: newVideoId,
+        trackId: update.trackId || item.trackId,
+        gameTitle:
+          update.gameTitle !== undefined ? update.gameTitle : item.gameTitle,
+        trackTitle:
+          update.trackTitle !== undefined ? update.trackTitle : item.trackTitle,
+        displayTitle:
+          update.gameTitle && update.trackTitle
+            ? `${update.gameTitle} - ${update.trackTitle}`
+            : item.displayTitle,
+        thumbnail: update.thumbnail || item.thumbnail,
+        channelTitle: update.channelTitle || item.channelTitle,
+        sourceUrl:
+          update.submittedUrl ||
+          item.sourceUrl ||
+          `https://www.youtube.com/watch?v=${newVideoId}`,
+        submittedUrl:
+          update.submittedUrl ||
+          item.submittedUrl ||
+          `https://www.youtube.com/watch?v=${newVideoId}`,
+      };
+    };
+
+    setSupportList((prev) => prev.map(transform));
+    setNominationList((prev) => prev.map(transform));
+    setPlaylist((prev) => prev.map(transform));
+    setCustomPlaylists((prev) =>
+      prev.map((pl) => ({
+        ...pl,
+        videos: (pl.videos || []).map(transform),
+      })),
+    );
+    patchCatalogCache(Object.values(updatesMap));
+  }, []);
+
   const syncCatalogForNominationVideos = useCallback(
     (videos, { userId = authUserIdRef.current } = {}) => {
       if (
@@ -1149,6 +1203,11 @@ export default function App() {
     if (authUser?.id) {
       refreshUserFeedback();
     } else {
+      // Clearing local feedback on logout is tied to the same authUser.id
+      // change that drives the fetch above, splitting it into a separate
+      // "adjust during render" effect would duplicate that condition for no
+      // real benefit.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setUserFeedback({});
     }
   }, [authUser?.id, refreshUserFeedback]);
@@ -1554,7 +1613,10 @@ export default function App() {
       .catch(() => {});
   }, [supabase]);
 
-  useEffect(() => {
+  // Pure function of catalogActivityByVideoId + userFeedback (nothing else
+  // ever set this), so it's derived via useMemo rather than mirrored into
+  // its own state through an effect.
+  const globalActivityByVideoId = useMemo(() => {
     const merged = new Map(catalogActivityByVideoId);
     for (const fb of Object.values(userFeedback)) {
       if (!fb.videoId) continue;
@@ -1568,7 +1630,7 @@ export default function App() {
         merged.set(fb.videoId, personal);
       }
     }
-    setGlobalActivityByVideoId(merged);
+    return merged;
   }, [catalogActivityByVideoId, userFeedback]);
 
   const mergeCatalogTrackSummaries = useCallback((summaries) => {
@@ -2298,10 +2360,14 @@ export default function App() {
     // to display and to open comments on.
     return (
       currentContextTracks.find((video) => video.videoId === entry.videoId) ||
-      playlistRef.current.find((video) => video.videoId === entry.videoId) ||
+      playlist.find((video) => video.videoId === entry.videoId) ||
       entry
     );
-  }, [currentContextTracks, transientVideo, currentVideoId]);
+    // playlist (state), not playlistRef - this runs during render (useMemo),
+    // and playlistRef.current is kept in sync with playlist anyway (see the
+    // effect near its declaration), so reading the state directly here is
+    // equivalent without touching a ref mid-render.
+  }, [currentContextTracks, transientVideo, currentVideoId, playlist]);
   const isPlayerPage = activePage === 'player';
   const isDatabasePage = activePage === 'database';
   const isListExplorerPage = activePage === 'listExplorer';
@@ -2337,6 +2403,9 @@ export default function App() {
 
   useEffect(() => {
     if (!isVgmcStandingsPage) {
+      // Closing the drawer is a reset tied to navigating away from the VGMC
+      // page, not something read during this render.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setIsVgmcStandingsDrawerOpen(false);
     }
   }, [isVgmcStandingsPage]);
@@ -2352,6 +2421,11 @@ export default function App() {
   const currentVideo = transientVideo || currentPlaylistVideo;
 
   useEffect(() => {
+    // Zeroing the footer scrubber on track change, ahead of the real
+    // progress/duration the player reports once it loads (handleProgressUpdate
+    // below) - a reset tied to currentVideo?.videoId changing, not derived
+    // from anything read during this render.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setFooterCurrentTime(0);
     setFooterDuration(0);
   }, [currentVideo?.videoId]);
@@ -2418,8 +2492,14 @@ export default function App() {
   const isCurrentVideoNominated = currentVideo
     ? nominationList.some((entry) => entry.videoId === currentVideo.videoId)
     : false;
+  // isVideoRetired -> getCatalogTrackForVideo reads catalogTrackByVideoIdRef
+  // as a fallback, deliberately - catalogTrackByVideoIdRef.current is
+  // written eagerly and can be ahead of the catalogTrackByVideoId state,
+  // which is committed via startTransition (see its setter's call site), so
+  // reading state alone here could show a stale (non-)retired status.
   const isCurrentVideoRetired = currentVideo
-    ? isVideoRetired(currentVideo)
+    ? // eslint-disable-next-line react-hooks/refs
+      isVideoRetired(currentVideo)
     : false;
   const isCurrentVideoInPlaylist = currentVideo
     ? playlist.some((entry) => entry.videoId === currentVideo.videoId)
@@ -2795,6 +2875,10 @@ export default function App() {
 
   useEffect(() => {
     if (!supabase) {
+      // Early-exit guard inside the same effect that otherwise subscribes to
+      // supabase.auth.onAuthStateChange below - splitting this branch out
+      // would duplicate the "no supabase client" condition for no benefit.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setIsAuthReady(true);
       return undefined;
     }
@@ -2975,49 +3059,6 @@ export default function App() {
     },
     [showDefaultAppToast],
   );
-
-  const applyUpdatesToList = useCallback((updatesMap) => {
-    const transform = (item) => {
-      const update =
-        updatesMap[item.videoId] || (item.trackId && updatesMap[item.trackId]);
-      if (!update) return item;
-      const newVideoId = update.videoId || item.videoId;
-      return {
-        ...item,
-        videoId: newVideoId,
-        trackId: update.trackId || item.trackId,
-        gameTitle:
-          update.gameTitle !== undefined ? update.gameTitle : item.gameTitle,
-        trackTitle:
-          update.trackTitle !== undefined ? update.trackTitle : item.trackTitle,
-        displayTitle:
-          update.gameTitle && update.trackTitle
-            ? `${update.gameTitle} - ${update.trackTitle}`
-            : item.displayTitle,
-        thumbnail: update.thumbnail || item.thumbnail,
-        channelTitle: update.channelTitle || item.channelTitle,
-        sourceUrl:
-          update.submittedUrl ||
-          item.sourceUrl ||
-          `https://www.youtube.com/watch?v=${newVideoId}`,
-        submittedUrl:
-          update.submittedUrl ||
-          item.submittedUrl ||
-          `https://www.youtube.com/watch?v=${newVideoId}`,
-      };
-    };
-
-    setSupportList((prev) => prev.map(transform));
-    setNominationList((prev) => prev.map(transform));
-    setPlaylist((prev) => prev.map(transform));
-    setCustomPlaylists((prev) =>
-      prev.map((pl) => ({
-        ...pl,
-        videos: (pl.videos || []).map(transform),
-      })),
-    );
-    patchCatalogCache(Object.values(updatesMap));
-  }, []);
 
   const showRetiredSongToast = useCallback(() => {
     showDefaultAppToast(
@@ -3367,6 +3408,10 @@ export default function App() {
 
     window.sessionStorage.removeItem(DISCORD_OAUTH_SILENT_PENDING_KEY);
     stripOAuthErrorParamsFromUrl();
+    // Mount-time effect reacting to sessionStorage/URL state left behind by
+    // the OAuth redirect, not to anything read during this render - these
+    // just prep UI state ahead of the startDiscordOAuth call below.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setIsAuthSubmitting(true);
     setAuthError('');
     setAuthMessage('');
@@ -3748,6 +3793,10 @@ export default function App() {
 
   useEffect(() => {
     if (!isPreviewModeEnabled) {
+      // Reset tied to the interval this same effect owns below (started only
+      // while preview mode is on) - not something derivable from this
+      // render alone.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setPreviewCountdown(30);
       return undefined;
     }
@@ -3776,6 +3825,10 @@ export default function App() {
 
   useEffect(() => {
     if (isPreviewModeEnabled) {
+      // Restarts the countdown the effect above is ticking down, on track
+      // change - same "tied to a sibling effect's timer" reasoning as its
+      // own reset branch.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setPreviewCountdown(30);
     }
   }, [currentVideoId, isPreviewModeEnabled]);
@@ -5910,7 +5963,6 @@ export default function App() {
   }, [handleNavigate]);
 
   const [explorerInitialView, setExplorerInitialView] = useState('lists');
-  const [lastCommunityPlaylist, setLastCommunityPlaylist] = useState(null);
 
   const handleNavigateToCommunityPlaylists = useCallback(() => {
     setExplorerInitialView('community-playlists');
@@ -5939,10 +5991,18 @@ export default function App() {
   const shouldRenderPersistentPlayer =
     isPlayerLikePage || Boolean(currentVideo);
   const canTogglePlayback = Boolean(transientVideo) || playlist.length > 0;
+  // previousDetachedFooterIntentRef/isPlayingRef are deliberately read here
+  // for their previous-render values (both are only written inside effects,
+  // one render after the state they mirror changes) - this is detecting a
+  // transition, the same "was true, now false" comparison
+  // previousDetachedFooterIntentRef exists for, so swapping in the current
+  // isPlaying state would change what's being compared.
+  /* eslint-disable react-hooks/refs */
   const isCurrentlyBecomingDetached =
     shouldShowDetachedFooter &&
     !previousDetachedFooterIntentRef.current &&
     !isPlayingRef.current;
+  /* eslint-enable react-hooks/refs */
   const isActuallySettling =
     isDetachedFooterSettling || isCurrentlyBecomingDetached;
 
@@ -6440,7 +6500,15 @@ export default function App() {
                   key="vgmc-standings"
                   style={{
                     width: '33%',
-                    minWidth: '280px',
+                    // Floor matches the standings table's own min-width (320px,
+                    // see .vgmc-standings-table in index.css) plus
+                    // VgmcStandingsView's own 16px horizontal padding on each
+                    // side. `overflow: hidden` below means this wrapper won't
+                    // grow to fit its content on its own (that's what the
+                    // default flex min-content sizing would otherwise do), so
+                    // the floor has to be set explicitly here rather than left
+                    // to the child to enforce.
+                    minWidth: '352px',
                     maxWidth: '420px',
                     flexShrink: 0,
                     borderRight: '1px solid var(--border)',
@@ -6537,10 +6605,18 @@ export default function App() {
                       onOpenSupportDropdown={(video, position) =>
                         setSupportLevelDropdown({ video, position })
                       }
+                      /* dbCacheRef deliberately isn't state: it exists so
+                         TrackDatabase's tracks/selection survive it
+                         unmounting (leaving the database page) without
+                         re-rendering this whole app component on every
+                         internal change - see onUnmount, which is the only
+                         writer. */
+                      /* eslint-disable react-hooks/refs */
                       initialTracks={dbCacheRef.current.tracks}
                       initialSelectedVideoId={
                         dbCacheRef.current.selectedVideoId
                       }
+                      /* eslint-enable react-hooks/refs */
                       onUnmount={(tracks, selectedVideoId) => {
                         dbCacheRef.current = { tracks, selectedVideoId };
                       }}
@@ -7002,11 +7078,20 @@ export default function App() {
                 onSetSupportLevel={
                   feedbackPanelIsNominated
                     ? undefined
-                    : (level) =>
+                    : // This callback only ever runs later, from
+                      // FooterFeedbackPanel's own event handlers, never
+                      // during this render - the compiler is tracing the ref
+                      // read inside handleToggleSupportFromPlaylist's own
+                      // call chain (partitionRetiredVideos -> isVideoRetired
+                      // -> catalogTrackByVideoIdRef, see the disabled line
+                      // near isCurrentVideoRetired above) through to here.
+                      /* eslint-disable react-hooks/refs */
+                      (level) =>
                         handleToggleSupportFromPlaylist(
                           feedbackPanelTrack,
                           level,
                         )
+                  /* eslint-enable react-hooks/refs */
                 }
               />
             </ModalPortal>

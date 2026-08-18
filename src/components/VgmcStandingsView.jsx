@@ -1,6 +1,5 @@
 import { useMemo, useState } from 'react';
 import { partitionStandings } from '../lib/vgmcStandings.js';
-import { PlayIcon, UsersIcon } from './Icons.jsx';
 
 const SUB_TABS = [
   { id: 'standings', label: 'Current Standings' },
@@ -135,7 +134,7 @@ export default function VgmcStandingsView({
         </button>
       </div>
 
-      <div style={{ overflowY: 'auto', flex: 1 }}>
+      <div style={{ overflowY: 'auto', overflowX: 'auto', flex: 1 }}>
         {visibleRows.length === 0 ? (
           <p
             style={{
@@ -153,6 +152,20 @@ export default function VgmcStandingsView({
             className="vgmc-standings-table"
             style={{ width: '100%', borderCollapse: 'collapse' }}
           >
+            {/* Fixed column widths (index.css), rather than leaving them to
+                auto-layout, for two reasons: it's what keeps # / Game / Song /
+                Supporters the same width on both sub-tabs (auto layout
+                re-measures per render, and Standings/Locked have different
+                content, so they used to drift), and it's what makes the
+                table's own min-width (see .vgmc-standings-table) actually
+                mean something - an auto-layout table has no fixed columns to
+                floor in the first place. */}
+            <colgroup>
+              <col />
+              <col />
+              <col />
+              <col />
+            </colgroup>
             <thead>
               <tr
                 style={{
@@ -161,32 +174,38 @@ export default function VgmcStandingsView({
                   color: 'var(--text-secondary)',
                 }}
               >
-                <th style={{ padding: '4px 8px', width: '2.5em' }}>#</th>
+                <th style={{ padding: '4px 8px' }}>#</th>
                 <th style={{ padding: '4px 8px' }}>Game</th>
                 <th style={{ padding: '4px 8px' }}>Song</th>
                 <th style={{ padding: '4px 8px', textAlign: 'center' }}>
                   Supporters
                 </th>
-                <th style={{ padding: '4px 8px', width: '2.5em' }} />
               </tr>
             </thead>
             <tbody>
               {sections.map((item) =>
                 item.type === 'header' ? (
                   <tr key={item.key} className="vgmc-standings-section">
-                    <td colSpan={5}>
+                    <td colSpan={4}>
                       {item.points} Support{item.points === 1 ? '' : 's'}
                     </td>
                   </tr>
                 ) : (
                   <tr
                     key={item.key}
-                    className="vgmc-standings-row"
-                    // Double-click plays the song, same as the per-row play
-                    // button, just a faster path for anyone already scanning
-                    // the table with a mouse. handlePlayRow no-ops without a
-                    // videoId, so this is safe on any row.
+                    // Alternating tint by overall rank (not row index within
+                    // sections array) since that stays continuous across
+                    // section-header rows - see .vgmc-standings-row-alt.
+                    className={
+                      item.rank % 2 === 0
+                        ? 'vgmc-standings-row vgmc-standings-row-alt'
+                        : 'vgmc-standings-row'
+                    }
+                    // No dedicated play button anymore, the whole row is the
+                    // control: double-click plays the song. handlePlayRow
+                    // no-ops without a videoId, so this is safe on any row.
                     onDoubleClick={() => handlePlayRow(item.row)}
+                    title="Double click to Play Now"
                     style={{
                       borderTop: '1px solid var(--border)',
                       fontSize: '13px',
@@ -218,20 +237,8 @@ export default function VgmcStandingsView({
                       title={`${item.row.supportPoints} support point${item.row.supportPoints === 1 ? '' : 's'} from ${item.row.supportVoters} ${item.row.supportVoters === 1 ? 'person' : 'people'}`}
                     >
                       <span className="vgmc-standings-voters">
-                        <UsersIcon className="vgmc-standings-voters-icon" />
                         {item.row.supportVoters}
                       </span>
-                    </td>
-                    <td style={{ padding: '6px 8px', textAlign: 'center' }}>
-                      <button
-                        type="button"
-                        className="vgmc-standings-play-btn"
-                        onClick={() => handlePlayRow(item.row)}
-                        aria-label={`Play "${item.row.song || item.row.title}" now`}
-                        title={`Play "${item.row.song || item.row.title}" now`}
-                      >
-                        <PlayIcon />
-                      </button>
                     </td>
                   </tr>
                 ),
