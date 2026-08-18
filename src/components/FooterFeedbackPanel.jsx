@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   fetchCommunityFeedback,
   upsertUserFeedback,
@@ -39,6 +39,27 @@ export default function FooterFeedbackPanel({
     height: typeof window !== 'undefined' ? window.innerHeight : 1080,
   });
 
+  // Closes on any click outside the panel - this component only ever renders
+  // while it's meant to be open (see isFeedbackPanelOpen in App.jsx), so mount
+  // is "opened", no separate open/closed state to gate this on. The supporters
+  // popover below is excluded via its own class, not this ref: ContextMenuPortal
+  // renders it straight into document.body, so it sits outside panelRef in the
+  // real DOM tree even though it's nested here in the component tree - without
+  // that check, clicking a name in that popover would register as "outside" and
+  // close the whole panel out from under it.
+  const panelRef = useRef(null);
+
+  useEffect(() => {
+    function handleOutsideClick(event) {
+      if (panelRef.current?.contains(event.target)) return;
+      if (event.target.closest?.('.supporters-popover')) return;
+      onClose?.();
+    }
+
+    document.addEventListener('mousedown', handleOutsideClick);
+    return () => document.removeEventListener('mousedown', handleOutsideClick);
+  }, [onClose]);
+
   useEffect(() => {
     const handleResize = () => {
       setWindowDimensions({
@@ -63,17 +84,27 @@ export default function FooterFeedbackPanel({
     return null;
   });
 
-  useEffect(() => {
-    if (anchorRect) {
-      setInitialAnchorContext({
-        anchorRect,
-        windowWidth: window.innerWidth,
-        windowHeight: window.innerHeight,
-      });
-    } else {
-      setInitialAnchorContext(null);
-    }
-  }, [anchorRect]);
+  // Adjusts initialAnchorContext during render rather than in an effect reacting
+  // to anchorRect - besides being what the compiler wants, this is a genuine
+  // improvement over what was here before: applying the new value in the same
+  // render anchorRect changed in (rather than one render later, once the effect
+  // runs) is exactly what avoids the "1-frame flash" the comment above is
+  // guarding against. prevAnchorRect is what makes this safe to call
+  // unconditionally on every render without looping - it only actually adjusts
+  // state on the render where anchorRect's identity has just changed.
+  const [prevAnchorRect, setPrevAnchorRect] = useState(anchorRect);
+  if (anchorRect !== prevAnchorRect) {
+    setPrevAnchorRect(anchorRect);
+    setInitialAnchorContext(
+      anchorRect
+        ? {
+            anchorRect,
+            windowWidth: window.innerWidth,
+            windowHeight: window.innerHeight,
+          }
+        : null,
+    );
+  }
 
   const popoverStyle = useMemo(() => {
     // If we're anchored but don't have the context yet, start hidden to avoid a layout jump
@@ -139,7 +170,11 @@ export default function FooterFeedbackPanel({
     if (!track || !communityData.feedback || !authUser?.id)
       return { rating: null, note: '' };
 
-    const myId = authUser.id;
+    // authUser?.id here too, not authUser.id - the guard above already makes
+    // them equivalent at runtime, but reading the plain (non-optional) property
+    // was what made the compiler infer a dependency on all of authUser, wider
+    // than the narrower authUser?.id this is actually declared to depend on.
+    const myId = authUser?.id;
     const currentTrackId = track.trackId || track.id;
 
     return (
@@ -159,6 +194,11 @@ export default function FooterFeedbackPanel({
   useEffect(() => {
     if (isLoading) return;
 
+    // Seeds the editable draft fields from freshly-loaded server data (the
+    // isLoading gate is what makes this "once the fetch below finishes", not a
+    // plain prop mirror) - genuinely reacting to an external fetch completing,
+    // not something derivable from this render alone.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLocalComment(personalFeedback.note || '');
     setLocalRating(personalFeedback.rating || '');
 
@@ -196,6 +236,9 @@ export default function FooterFeedbackPanel({
     if (!track?.videoId || !supabase) return;
 
     let active = true;
+    // Standard fetch-loading-flag pattern - kicks off the async fetch this
+    // same effect owns below, not derivable from this render alone.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setIsLoading(true);
 
     const fetchData = async () => {
@@ -396,6 +439,7 @@ export default function FooterFeedbackPanel({
 
   return (
     <div
+      ref={panelRef}
       className={`list-explorer-info-panel footer-feedback-popover is-open${anchorRect ? ' is-anchored' : ''}`}
       style={popoverStyle}
     >

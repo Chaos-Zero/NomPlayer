@@ -23,5 +23,11 @@ if [[ ${#files[@]} -eq 0 ]]; then
   exit 0
 fi
 
-eslint --fix "${files[@]}"
+
+# --no-warn-ignored: extension/ has its own separate eslint.config.js and is
+# deliberately excluded from the root one (see eslint.config.js's
+# globalIgnores), so any staged extension/*.js file reaching this point is
+# correctly ignored, not a mistake - without this flag, ESLint warns on every
+# such file instead of just skipping it quietly.
+eslint --fix --no-warn-ignored "${files[@]}"
 git add -- "${files[@]}"
