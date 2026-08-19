@@ -504,7 +504,6 @@ function PlaylistSidebar({
   onShowComments,
   supabase = null,
   lastCommunityPlaylist = null,
-  onPlayCustomPlaylist,
   onNavigateToCommunityPlaylists,
   customPlaylists,
   onUpdateCustomPlaylists,
@@ -1187,7 +1186,15 @@ function PlaylistSidebar({
                             if (
                               lastCommunityPlaylist.type === 'custom-playlist'
                             ) {
-                              onPlayCustomPlaylist?.(lastCommunityPlaylist.id);
+                              // Own playlist: load into view only, same as the
+                              // community-playlist branch below - selecting
+                              // from this dropdown must never start or
+                              // interrupt playback.
+                              onSwitchView({
+                                type: 'custom-playlist',
+                                name: lastCommunityPlaylist.name,
+                                id: lastCommunityPlaylist.id,
+                              });
                             } else {
                               onSwitchView({
                                 type: 'community-playlist',
@@ -1327,9 +1334,15 @@ function PlaylistSidebar({
                             (p) => p.id === pl.id,
                           );
                           if (isOwn) {
-                            // Own playlist: play it via onPlayCustomPlaylist so
-                            // both activePlaylistView AND playingPlaylistView are updated.
-                            onPlayCustomPlaylist?.(pl.id);
+                            // Own playlist: load into view only, same as the
+                            // community playlist path below - selecting from
+                            // this dropdown must never start or interrupt
+                            // playback.
+                            onSwitchView({
+                              type: 'custom-playlist',
+                              name: pl.name,
+                              id: pl.id,
+                            });
                             setIsDropdownOpen(false);
                             return;
                           }

@@ -6881,7 +6881,6 @@ export default function App() {
               onShowComments={handleShowComments}
               supabase={supabase}
               lastCommunityPlaylist={lastCommunityPlaylist}
-              onPlayCustomPlaylist={handlePlayExplorerList}
               onNavigateToCommunityPlaylists={
                 handleNavigateToCommunityPlaylists
               }
