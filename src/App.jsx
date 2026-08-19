@@ -799,6 +799,23 @@ export default function App() {
   );
   const [showSupportList, setShowSupportList] = useState(false);
   const [renderSupportList, setRenderSupportList] = useState(false);
+  // FavouritesPanel's own level-filter/sort-order state would otherwise
+  // reset every time the panel reopens - renderSupportList/
+  // renderNominationsList unmount it entirely on close, taking its internal
+  // state with it. Lifted here so both survive that, but still start fresh
+  // (every level visible, no sort) on an actual page load, since these are
+  // just normal useState.
+  const [supportListVisibleLevels, setSupportListVisibleLevels] = useState(
+    () => new Set([1, 2, 3]),
+  );
+  const [supportListSortState, setSupportListSortState] = useState({
+    by: null,
+    direction: null,
+  });
+  const [nominationListSortState, setNominationListSortState] = useState({
+    by: null,
+    direction: null,
+  });
   const [nominationList, setNominationList] = useState(
     initialPlayerState.nominationList,
   );
@@ -7108,6 +7125,7 @@ export default function App() {
                     }
                     onPlayCommunityPlaylist={handlePlayCommunityPlaylist}
                     catalogTrackByVideoId={catalogTrackByVideoId}
+                    vgmcSupportPointsByVideoId={vgmcSupportPointsByVideoId}
                     initialView={
                       isCommunityPlaylistsPage
                         ? 'community-playlists'
@@ -7284,6 +7302,10 @@ export default function App() {
           onShowComments={handleShowComments}
           customPlaylists={customPlaylists}
           onUpdateCustomPlaylists={setCustomPlaylists}
+          visibleSupportLevels={supportListVisibleLevels}
+          onVisibleSupportLevelsChange={setSupportListVisibleLevels}
+          sortState={supportListSortState}
+          onSortStateChange={setSupportListSortState}
         />
       )}
 
@@ -7326,6 +7348,8 @@ export default function App() {
           onShowComments={handleShowComments}
           customPlaylists={customPlaylists}
           onUpdateCustomPlaylists={setCustomPlaylists}
+          sortState={nominationListSortState}
+          onSortStateChange={setNominationListSortState}
         />
       )}
 

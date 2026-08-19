@@ -123,6 +123,18 @@ export function SupportItem({
   userComment = null,
   showBreakdown = false,
   onShowSupporters,
+  // List Explorer (see SortableListExplorerCard in ListExplorer.jsx) reuses
+  // this same row but wants a denser layout than FavouritesPanel's own
+  // "Support list"/"Nominations" pop-out: one icon column instead of two
+  // (drops the own-level tier icon, keeps the aggregate fav-item-support-stats
+  // badge), the comment bubble only as a fallback when there's no support
+  // badge to show instead of it, and the GameFAQs badge slot reserved at a
+  // fixed width even when empty so whatever follows it (the aggregate badge)
+  // starts at the same x on every row - a plain flex row collapses that gap
+  // whenever a track has no GameFAQs badge, which is what actually produced
+  // the misaligned columns this was built to fix. The pop-out keeps the
+  // original layout entirely, unaffected by this flag.
+  isListExplorerRow = false,
 }) {
   const [imgError, setImgError] = useState(false);
   const display = getPlaylistItemDisplay(video);
@@ -130,6 +142,7 @@ export function SupportItem({
     (video.supportCount1 || 0) +
     (video.supportCount2 || 0) +
     (video.supportCount3 || 0);
+  const hasGamefaqsSupport = (video.gamefaqsPoints || 0) > 0;
   const dominantSupportClass =
     video.supportCount3 > 0
       ? 'highest'
@@ -272,134 +285,182 @@ export function SupportItem({
 
       {!selectionMode && (
         <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '12px',
-            paddingRight: '12px',
-          }}
+          className={
+            isListExplorerRow ? 'list-explorer-row-actions' : undefined
+          }
+          style={
+            isListExplorerRow
+              ? undefined
+              : {
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  paddingRight: '12px',
+                }
+          }
         >
-          {video.gamefaqsPoints > 0 && (
-            <div
-              className="fav-support-stat gamefaqs"
-              style={{ flexShrink: 0 }}
-              title={`${video.gamefaqsPoints} Supports from the GameFAQs VGMC thread${
-                video.gamefaqsVoters
-                  ? ` (${video.gamefaqsVoters} ${
-                      video.gamefaqsVoters === 1 ? 'voter' : 'voters'
-                    })`
-                  : ''
-              }`}
-            >
-              <CommunityPlaylistsIcon className="collection-icon" />
-              <span>{video.gamefaqsPoints}</span>
-            </div>
-          )}
+          {(() => {
+            const gamefaqsBadge = hasGamefaqsSupport && (
+              <div
+                className="fav-support-stat gamefaqs"
+                style={{ flexShrink: 0 }}
+                title={`${video.gamefaqsPoints} Supports from the GameFAQs VGMC thread${
+                  video.gamefaqsVoters
+                    ? ` (${video.gamefaqsVoters} ${
+                        video.gamefaqsVoters === 1 ? 'voter' : 'voters'
+                      })`
+                    : ''
+                }`}
+              >
+                <CommunityPlaylistsIcon className="collection-icon" />
+                <span>{video.gamefaqsPoints}</span>
+              </div>
+            );
 
-          <div className="fav-item-support-stats" style={{ flexShrink: 0 }}>
-            {showBreakdown ? (
+            const aggregateSupportBadge = (
+              <div className="fav-item-support-stats" style={{ flexShrink: 0 }}>
+                {showBreakdown ? (
+                  <>
+                    {video.supportCount1 > 0 && (
+                      <FavSupportStat
+                        levelClass="normal"
+                        level={1}
+                        count={video.supportCount1}
+                        title={`${video.supportCount1} Possible Supports`}
+                        Icon={HeartIcon}
+                        video={video}
+                        onShowSupporters={onShowSupporters}
+                      />
+                    )}
+                    {video.supportCount2 > 0 && (
+                      <FavSupportStat
+                        levelClass="strong"
+                        level={2}
+                        count={video.supportCount2}
+                        title={`${video.supportCount2} Likely Supports`}
+                        Icon={HeartIcon}
+                        video={video}
+                        onShowSupporters={onShowSupporters}
+                      />
+                    )}
+                    {video.supportCount3 > 0 && (
+                      <FavSupportStat
+                        levelClass="highest"
+                        level={3}
+                        count={video.supportCount3}
+                        title={`${video.supportCount3} Definite Supports`}
+                        Icon={LockIcon}
+                        video={video}
+                        onShowSupporters={onShowSupporters}
+                      />
+                    )}
+                  </>
+                ) : (
+                  totalSupport > 0 && (
+                    <FavSupportStat
+                      levelClass={dominantSupportClass}
+                      level={null}
+                      count={totalSupport}
+                      title={`${totalSupport} Total Supports`}
+                      Icon={video.supportCount3 > 0 ? LockIcon : HeartIcon}
+                      video={video}
+                      onShowSupporters={onShowSupporters}
+                    />
+                  )
+                )}
+              </div>
+            );
+
+            const commentBubble = onShowComments && (
+              <button
+                className={`comment-bubble-btn${
+                  commentActivity === 'commented'
+                    ? ' has-comments'
+                    : commentActivity === 'rated'
+                      ? ' has-rated'
+                      : ' empty'
+                }`}
+                type="button"
+                title={
+                  video.rating != null
+                    ? `Your rating: ${video.rating}, view community comments`
+                    : commentActivity
+                      ? 'View community comments'
+                      : 'Add a comment or score'
+                }
+                onClick={(e) => {
+                  e.stopPropagation();
+                  const rect = e.currentTarget.getBoundingClientRect();
+                  onShowComments?.(video, {
+                    top: rect.top,
+                    left: rect.left,
+                    width: rect.width,
+                    height: rect.height,
+                  });
+                }}
+              >
+                {video.rating != null ? (
+                  <span className="comment-bubble-rating">{video.rating}</span>
+                ) : (
+                  <SpeechBubbleIcon />
+                )}
+              </button>
+            );
+
+            if (isListExplorerRow) {
+              // Support badges take priority over the bubble here rather
+              // than sitting beside it - both fighting for the same slot is
+              // how this row got cramped enough to need the redesign in the
+              // first place. The bubble only falls back in when there's
+              // nothing support-shaped to show *and* there's actually a
+              // comment/rating to view - an empty "add a comment" bubble on
+              // every unsupported, uncommented row was pure noise here.
+              const hasAnySupportBadge = totalSupport > 0 || hasGamefaqsSupport;
+              const hasCommentContent =
+                commentActivity != null || video.rating != null;
+
+              // Two fixed grid columns (see .list-explorer-row-actions/
+              // .list-explorer-row-slot), rendered whether or not this row
+              // has content for them - an empty cell still holds its track's
+              // width, which is what actually keeps every row's columns
+              // lined up (a plain flex row collapses that space instead).
+              return (
+                <>
+                  <div className="list-explorer-row-slot">{gamefaqsBadge}</div>
+                  <div className="list-explorer-row-slot">
+                    {hasAnySupportBadge
+                      ? aggregateSupportBadge
+                      : hasCommentContent && commentBubble}
+                  </div>
+                </>
+              );
+            }
+
+            return (
               <>
-                {video.supportCount1 > 0 && (
-                  <FavSupportStat
-                    levelClass="normal"
-                    level={1}
-                    count={video.supportCount1}
-                    title={`${video.supportCount1} Possible Supports`}
-                    Icon={HeartIcon}
-                    video={video}
-                    onShowSupporters={onShowSupporters}
-                  />
+                {gamefaqsBadge}
+                {aggregateSupportBadge}
+                {/* A rating and the comment bubble both fighting for space
+                    here is how titles end up crowding into the icons - when
+                    there's a comment button to fold it into, show the rating
+                    inside that button instead of as its own separate field.
+                    Only when there's no comment button (onShowComments
+                    unset) does the rating get its own badge, so it's never
+                    simply dropped. */}
+                {video.rating != null && !onShowComments && (
+                  <span
+                    className="list-explorer-peer-rating"
+                    style={{ whiteSpace: 'nowrap', flexShrink: 0 }}
+                  >
+                    {video.rating}/10
+                  </span>
                 )}
-                {video.supportCount2 > 0 && (
-                  <FavSupportStat
-                    levelClass="strong"
-                    level={2}
-                    count={video.supportCount2}
-                    title={`${video.supportCount2} Likely Supports`}
-                    Icon={HeartIcon}
-                    video={video}
-                    onShowSupporters={onShowSupporters}
-                  />
-                )}
-                {video.supportCount3 > 0 && (
-                  <FavSupportStat
-                    levelClass="highest"
-                    level={3}
-                    count={video.supportCount3}
-                    title={`${video.supportCount3} Definite Supports`}
-                    Icon={LockIcon}
-                    video={video}
-                    onShowSupporters={onShowSupporters}
-                  />
-                )}
+                {commentBubble}
               </>
-            ) : (
-              totalSupport > 0 && (
-                <FavSupportStat
-                  levelClass={dominantSupportClass}
-                  level={null}
-                  count={totalSupport}
-                  title={`${totalSupport} Total Supports`}
-                  Icon={video.supportCount3 > 0 ? LockIcon : HeartIcon}
-                  video={video}
-                  onShowSupporters={onShowSupporters}
-                />
-              )
-            )}
-          </div>
+            );
+          })()}
 
-          {/* A rating and the comment bubble both fighting for space here is
-              how titles end up crowding into the icons - when there's a
-              comment button to fold it into, show the rating inside that
-              button instead of as its own separate field. Only when there's
-              no comment button (onShowComments unset) does the rating get
-              its own badge, so it's never simply dropped. */}
-          {video.rating != null && !onShowComments && (
-            <span
-              className="list-explorer-peer-rating"
-              style={{ whiteSpace: 'nowrap', flexShrink: 0 }}
-            >
-              {video.rating}/10
-            </span>
-          )}
-
-          {onShowComments && (
-            <button
-              className={`comment-bubble-btn${
-                commentActivity === 'commented'
-                  ? ' has-comments'
-                  : commentActivity === 'rated'
-                    ? ' has-rated'
-                    : ' empty'
-              }`}
-              type="button"
-              title={
-                video.rating != null
-                  ? `Your rating: ${video.rating}, view community comments`
-                  : commentActivity
-                    ? 'View community comments'
-                    : 'Add a comment or score'
-              }
-              onClick={(e) => {
-                e.stopPropagation();
-                const rect = e.currentTarget.getBoundingClientRect();
-                onShowComments?.(video, {
-                  top: rect.top,
-                  left: rect.left,
-                  width: rect.width,
-                  height: rect.height,
-                });
-              }}
-            >
-              {video.rating != null ? (
-                <span className="comment-bubble-rating">{video.rating}</span>
-              ) : (
-                <SpeechBubbleIcon />
-              )}
-            </button>
-          )}
-
-          {tone === 'support' && (
+          {tone === 'support' && !isListExplorerRow && (
             <button
               className={`support-tier-icon-btn level-${video.supportLevel || 1}`}
               onClick={(event) => {
@@ -626,6 +687,10 @@ export default function FavouritesPanel({
   onShowComments,
   customPlaylists,
   onUpdateCustomPlaylists,
+  visibleSupportLevels: visibleSupportLevelsProp,
+  onVisibleSupportLevelsChange,
+  sortState: sortStateProp,
+  onSortStateChange,
 }) {
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -638,15 +703,39 @@ export default function FavouritesPanel({
   const [contextMenu, setContextMenu] = useState(null);
   const [toastMessage, setToastMessage] = useState('');
   const [showSupportBreakdown, setShowSupportBreakdown] = useState(false);
-  // null (list order) -> 'desc' (highest first) -> 'asc' (lowest first) -> null,
-  // same three-state cycle as the VGMC playlist's rating-sort direction button.
-  const [ratingSortDirection, setRatingSortDirection] = useState(null);
-  // Support-list only, same cycle as ratingSortDirection.
-  const [supportLevelSortDirection, setSupportLevelSortDirection] =
-    useState(null);
-  const [visibleSupportLevels, setVisibleSupportLevels] = useState(
-    () => new Set(SUPPORT_LEVELS),
-  );
+  // One combined { by, direction } instead of three separate direction
+  // states (rating/support/gamefaqs each needing to null out the other two
+  // on click) - by is null (list order) | 'rating' | 'support' | 'gamefaqs',
+  // direction cycles 'desc' (highest first) -> 'asc' (lowest first) -> null
+  // same as the VGMC playlist's own sort buttons. Controlled by the parent
+  // when provided (App.jsx persists this - and visibleSupportLevels below -
+  // across the panel's own open/close-driven mount/unmount cycle, see
+  // renderSupportList/renderNominationsList, which otherwise reset both to
+  // "no sort, no filter" every time either panel reopens). Falls back to
+  // local state so any other caller of this component keeps working without
+  // wiring it up.
+  const [internalSortState, setInternalSortState] = useState({
+    by: null,
+    direction: null,
+  });
+  const sortState = sortStateProp ?? internalSortState;
+  const setSortState = onSortStateChange ?? setInternalSortState;
+  const cycleSort = (key) => {
+    setSortState((previous) =>
+      previous.by !== key
+        ? { by: key, direction: 'desc' }
+        : previous.direction === 'desc'
+          ? { by: key, direction: 'asc' }
+          : { by: null, direction: null },
+    );
+    if (selectionMode) setSelectionMode(false);
+  };
+  const [internalVisibleSupportLevels, setInternalVisibleSupportLevels] =
+    useState(() => new Set(SUPPORT_LEVELS));
+  const visibleSupportLevels =
+    visibleSupportLevelsProp ?? internalVisibleSupportLevels;
+  const setVisibleSupportLevels =
+    onVisibleSupportLevelsChange ?? setInternalVisibleSupportLevels;
   const [showLevelFilterMenu, setShowLevelFilterMenu] = useState(false);
   const [supportersPopover, setSupportersPopover] = useState(null);
   const isSupportTone = tone === 'support';
@@ -725,29 +814,26 @@ export default function FavouritesPanel({
       );
     }
 
-    if (isSupportTone && supportLevelSortDirection) {
+    if (sortState.by) {
+      const getValue = {
+        // The Support list sorts by the personal level you set; every other
+        // list (Nominations included) has no personal level, so this sorts
+        // by the same aggregate community total already shown on each row.
+        support: (video) =>
+          isSupportTone
+            ? video.supportLevel || 1
+            : (video.supportCount1 || 0) +
+              (video.supportCount2 || 0) +
+              (video.supportCount3 || 0),
+        gamefaqs: (video) => video.gamefaqsPoints || 0,
+        rating: (video) => video.rating ?? -1,
+      }[sortState.by];
+
       list = [...list].sort((a, b) => {
-        const levelA = a.supportLevel || 1;
-        const levelB = b.supportLevel || 1;
         const diff =
-          supportLevelSortDirection === 'desc'
-            ? levelB - levelA
-            : levelA - levelB;
-        if (diff !== 0) return diff;
-        // Stable sort using original index for ties
-        return (
-          (originalIndexMap.get(a.videoId) || 0) -
-          (originalIndexMap.get(b.videoId) || 0)
-        );
-      });
-    } else if (ratingSortDirection) {
-      list = [...list].sort((a, b) => {
-        const ratingA = a.rating ?? -1;
-        const ratingB = b.rating ?? -1;
-        const diff =
-          ratingSortDirection === 'desc'
-            ? ratingB - ratingA
-            : ratingA - ratingB;
+          sortState.direction === 'desc'
+            ? getValue(b) - getValue(a)
+            : getValue(a) - getValue(b);
         if (diff !== 0) return diff;
         // Stable sort using original index for ties
         return (
@@ -762,8 +848,7 @@ export default function FavouritesPanel({
     supportList,
     isSupportTone,
     visibleSupportLevels,
-    supportLevelSortDirection,
-    ratingSortDirection,
+    sortState,
     originalIndexMap,
   ]);
 
@@ -1063,62 +1148,64 @@ export default function FavouritesPanel({
                     )}
                   </div>
                 )}
-                {isSupportTone && (
-                  <button
-                    className={`fav-panel-action-btn icon-only${supportLevelSortDirection ? ' active' : ''}`}
-                    type="button"
-                    onClick={() => {
-                      setSupportLevelSortDirection((previousValue) =>
-                        previousValue === null
-                          ? 'desc'
-                          : previousValue === 'desc'
-                            ? 'asc'
-                            : null,
-                      );
-                      setRatingSortDirection(null);
-                      if (selectionMode) setSelectionMode(false);
-                    }}
-                    title={
-                      supportLevelSortDirection === 'desc'
-                        ? 'Sorted by support level, highest first, click for lowest first'
-                        : supportLevelSortDirection === 'asc'
-                          ? 'Sorted by support level, lowest first, click to reset'
-                          : 'Order by support level'
-                    }
-                    aria-label="Order by support level"
-                  >
-                    <SupportOrderIcon
-                      direction={
-                        supportLevelSortDirection === 'asc' ? 'asc' : 'desc'
-                      }
-                    />
-                  </button>
-                )}
                 <button
-                  className={`fav-panel-action-btn icon-only${ratingSortDirection ? ' active' : ''}`}
+                  className={`fav-panel-action-btn icon-only${sortState.by === 'gamefaqs' ? ' active' : ''}`}
                   type="button"
-                  onClick={() => {
-                    setRatingSortDirection((previousValue) =>
-                      previousValue === null
-                        ? 'desc'
-                        : previousValue === 'desc'
-                          ? 'asc'
-                          : null,
-                    );
-                    setSupportLevelSortDirection(null);
-                    if (selectionMode) setSelectionMode(false);
-                  }}
+                  onClick={() => cycleSort('gamefaqs')}
                   title={
-                    ratingSortDirection === 'desc'
-                      ? 'Sorted by your rating, highest first, click for lowest first'
-                      : ratingSortDirection === 'asc'
-                        ? 'Sorted by your rating, lowest first, click to reset'
-                        : 'Order by rating'
+                    sortState.by === 'gamefaqs'
+                      ? `Sorted by GameFAQs support, ${sortState.direction === 'desc' ? 'highest first, click for lowest first' : 'lowest first, click to reset'}`
+                      : 'Order by GameFAQs support'
+                  }
+                  aria-label="Order by GameFAQs support"
+                >
+                  <SupportOrderIcon
+                    direction={
+                      sortState.by === 'gamefaqs' &&
+                      sortState.direction === 'asc'
+                        ? 'asc'
+                        : 'desc'
+                    }
+                    heartColor="#38bdf8"
+                  />
+                </button>
+                <button
+                  className={`fav-panel-action-btn icon-only${sortState.by === 'support' ? ' active' : ''}`}
+                  type="button"
+                  onClick={() => cycleSort('support')}
+                  title={
+                    sortState.by === 'support'
+                      ? `Sorted by ${isSupportTone ? 'support level' : 'support total'}, ${sortState.direction === 'desc' ? 'highest first, click for lowest first' : 'lowest first, click to reset'}`
+                      : `Order by ${isSupportTone ? 'support level' : 'support total'}`
+                  }
+                  aria-label={`Order by ${isSupportTone ? 'support level' : 'support total'}`}
+                >
+                  <SupportOrderIcon
+                    direction={
+                      sortState.by === 'support' &&
+                      sortState.direction === 'asc'
+                        ? 'asc'
+                        : 'desc'
+                    }
+                  />
+                </button>
+                <button
+                  className={`fav-panel-action-btn icon-only${sortState.by === 'rating' ? ' active' : ''}`}
+                  type="button"
+                  onClick={() => cycleSort('rating')}
+                  title={
+                    sortState.by === 'rating'
+                      ? `Sorted by your rating, ${sortState.direction === 'desc' ? 'highest first, click for lowest first' : 'lowest first, click to reset'}`
+                      : 'Order by rating'
                   }
                   aria-label="Order by rating"
                 >
                   <RatingOrderIcon
-                    direction={ratingSortDirection === 'asc' ? 'asc' : 'desc'}
+                    direction={
+                      sortState.by === 'rating' && sortState.direction === 'asc'
+                        ? 'asc'
+                        : 'desc'
+                    }
                   />
                 </button>
                 <button
@@ -1309,7 +1396,7 @@ export default function FavouritesPanel({
               </div>
             </div>
           )}
-          {ratingSortDirection || supportLevelSortDirection ? (
+          {sortState.by ? (
             <div
               className={`collection-adder tone-${tone} sorting-active`}
               key="sorting"
@@ -1324,16 +1411,16 @@ export default function FavouritesPanel({
                     type="button"
                     onClick={() => {
                       onReorder?.(applyDisplayOrder(displayList));
-                      const reorderedBySupportLevel = Boolean(
-                        supportLevelSortDirection,
-                      );
-                      setRatingSortDirection(null);
-                      setSupportLevelSortDirection(null);
-                      showToast(
-                        reorderedBySupportLevel
-                          ? 'Support list reordered by support level'
-                          : 'Support list reordered by rating',
-                      );
+                      const reorderedBy =
+                        sortState.by === 'support'
+                          ? isSupportTone
+                            ? 'support level'
+                            : 'support total'
+                          : sortState.by === 'gamefaqs'
+                            ? 'GameFAQs support'
+                            : 'rating';
+                      setSortState({ by: null, direction: null });
+                      showToast(`${title} reordered by ${reorderedBy}`);
                     }}
                   >
                     Save Order

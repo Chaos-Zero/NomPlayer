@@ -58,6 +58,7 @@ import {
   ChevronDownIcon,
   ShareIcon,
 } from './Icons.jsx';
+import { CommunityPlaylistsIcon } from './SiteNavigation.jsx';
 import { ContextMenuPortal } from './ContextMenuPortal';
 import useContextSubmenu from '../hooks/useContextSubmenu.js';
 import ExportIcon from './ExportIcon.jsx';
@@ -189,8 +190,10 @@ function TrackInfoPanel({
   userProfile,
   columnId = null,
   customPlaylists = [],
+  vgmcSupportPointsByVideoId = new Map(),
 }) {
   const [supportersMenu, setSupportersMenu] = useState(null);
+  const gamefaqsSupport = vgmcSupportPointsByVideoId.get(track?.videoId);
   const personalFeedback = useMemo(() => {
     if (!track || !communityData.feedback || !authUser?.id)
       return { rating: null, note: '' };
@@ -494,11 +497,28 @@ function TrackInfoPanel({
                 </section>
               )}
 
-              {supportSummary.total > 0 && (
+              {(supportSummary.total > 0 || gamefaqsSupport?.points > 0) && (
                 <section className="list-explorer-info-section">
                   <h4>Community Support</h4>
                   <div className="list-explorer-support-summary">
                     <div className="list-explorer-support-icons">
+                      {gamefaqsSupport?.points > 0 && (
+                        <div
+                          className="support-badge gamefaqs"
+                          title={`${gamefaqsSupport.points} Supports from the GameFAQs VGMC thread${
+                            gamefaqsSupport.voters
+                              ? ` (${gamefaqsSupport.voters} ${
+                                  gamefaqsSupport.voters === 1
+                                    ? 'voter'
+                                    : 'voters'
+                                })`
+                              : ''
+                          }`}
+                        >
+                          <CommunityPlaylistsIcon />
+                          <span>{gamefaqsSupport.points}</span>
+                        </div>
+                      )}
                       {supportSummary[3]?.count > 0 && (
                         <button
                           className="support-badge highest"
@@ -732,6 +752,7 @@ function SortableListExplorerCard({
             itemAriaPrefix="List Explorer track"
             commentActivity={commentActivity}
             userComment={userComment}
+            isListExplorerRow
           />
         </div>
       </div>
@@ -1476,6 +1497,7 @@ export default function ListExplorer({
   onPlayCommunityListFromTrack,
   onPlayCommunityPlaylist,
   catalogTrackByVideoId,
+  vgmcSupportPointsByVideoId = new Map(),
   initialView = 'lists',
   initialFilterNominations = false,
   onRefreshFeedback,
@@ -1550,6 +1572,31 @@ export default function ListExplorer({
     setSelectedColumnId(null);
     setIsEditingInfo(false);
   };
+
+  // Adds supportCount1/2/3 (the site-wide aggregate, from catalogTrackByVideoId)
+  // and gamefaqsPoints/gamefaqsVoters (from vgmcSupportPointsByVideoId, see
+  // App.jsx) onto every video passed to a ListExplorerColumn below - none of
+  // playlist/supportList/nominationList/peer nominations/custom playlists
+  // carry these themselves, but SupportItem's badges (FavouritesPanel.jsx)
+  // need them regardless of which list a track came from. Both lookups are
+  // global (keyed by videoId across the whole catalog/thread, not scoped to
+  // any one list), so this is safe to apply to every column uniformly.
+  const mergeSupportData = useCallback(
+    (videos) =>
+      (videos || []).map((video) => {
+        const catalogEntry = catalogTrackByVideoId?.[video.videoId];
+        const gamefaqs = vgmcSupportPointsByVideoId.get(video.videoId);
+        return {
+          ...video,
+          supportCount1: catalogEntry?.supportCount1 || 0,
+          supportCount2: catalogEntry?.supportCount2 || 0,
+          supportCount3: catalogEntry?.supportCount3 || 0,
+          gamefaqsPoints: gamefaqs?.points || 0,
+          gamefaqsVoters: gamefaqs?.voters || 0,
+        };
+      }),
+    [catalogTrackByVideoId, vgmcSupportPointsByVideoId],
+  );
 
   const activeCustomPlaylist = useMemo(() => {
     return (
@@ -2874,6 +2921,7 @@ export default function ListExplorer({
           userProfile={userProfile}
           columnId={selectedColumnId}
           customPlaylists={customPlaylists}
+          vgmcSupportPointsByVideoId={vgmcSupportPointsByVideoId}
           onUpdateComment={(videoId, comment) =>
             handleUpdateComment(
               selectedTrackId ? findListId(selectedTrackId) : null,
@@ -2995,7 +3043,9 @@ export default function ListExplorer({
                   id="nominations"
                   title="Nominations"
                   subtitle={`${showMyNominations ? nominationList.length : 0} tracks`}
-                  videos={showMyNominations ? nominationList : []}
+                  videos={mergeSupportData(
+                    showMyNominations ? nominationList : [],
+                  )}
                   isFocused={focusedListId === 'nominations'}
                   onFocus={() => setFocusedListId('nominations')}
                   onUnfocus={() => setFocusedListId(null)}
@@ -3042,7 +3092,7 @@ export default function ListExplorer({
                   id="support"
                   title="Support List"
                   subtitle={`${supportList.length} tracks`}
-                  videos={supportList}
+                  videos={mergeSupportData(supportList)}
                   isFocused={focusedListId === 'support'}
                   onFocus={() => setFocusedListId('support')}
                   onUnfocus={() => setFocusedListId(null)}
@@ -3080,7 +3130,7 @@ export default function ListExplorer({
                     id="current"
                     title="My Queue"
                     subtitle={`${playlist.length} tracks`}
-                    videos={playlist}
+                    videos={mergeSupportData(playlist)}
                     isFocused={focusedListId === 'current'}
                     onFocus={() => setFocusedListId('current')}
                     onUnfocus={() => setFocusedListId(null)}
@@ -3114,7 +3164,7 @@ export default function ListExplorer({
                     id="new-nominations"
                     title="New Nominations"
                     subtitle={`${newNominations.length} tracks`}
-                    videos={newNominations}
+                    videos={mergeSupportData(newNominations)}
                     isFocused={focusedListId === 'new-nominations'}
                     onFocus={() => setFocusedListId('new-nominations')}
                     onUnfocus={() => setFocusedListId(null)}
@@ -3148,7 +3198,7 @@ export default function ListExplorer({
                     id={`peer-${col.user_id}`}
                     title={`${getDisplayProfileName(col.username)}'s Noms`}
                     subtitle={`${col.videos.length} tracks`}
-                    videos={col.videos}
+                    videos={mergeSupportData(col.videos)}
                     isFocused={focusedListId === `peer-${col.user_id}`}
                     onFocus={() => setFocusedListId(`peer-${col.user_id}`)}
                     onUnfocus={() => setFocusedListId(null)}
@@ -3198,7 +3248,7 @@ export default function ListExplorer({
                     id={activeCustomPlaylist.id}
                     title={activeCustomPlaylist.name}
                     subtitle={`${activeCustomPlaylist.videos.length} tracks`}
-                    videos={activeCustomPlaylist.videos}
+                    videos={mergeSupportData(activeCustomPlaylist.videos)}
                     isFocused={focusedListId === activeCustomPlaylist.id}
                     onFocus={() => setFocusedListId(activeCustomPlaylist.id)}
                     onUnfocus={() => setFocusedListId(null)}

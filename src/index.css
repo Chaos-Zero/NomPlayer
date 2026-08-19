@@ -8865,6 +8865,28 @@ button.playlist-search-indicator:hover {
   margin-left: 4px;
 }
 
+/* List Explorer rows only (SupportItem's isListExplorerRow, FavouritesPanel.jsx).
+   A flex row with a min-width slot (an earlier attempt at this) still let a
+   wider-than-reserved badge grow the slot itself - flex items default to
+   min-width: auto (content-based), which a smaller min-width can't cap, only
+   floor. Grid's explicit pixel tracks don't have that problem: a track sized
+   in px stays exactly that size regardless of what's inside it, content that
+   doesn't fit overflows (clipped below) rather than pushing the next track -
+   which is what actually keeps every row's columns lined up. */
+.list-explorer-row-actions {
+  display: grid;
+  grid-template-columns: 44px 56px 36px;
+  align-items: center;
+  gap: 12px;
+  padding-right: 12px;
+}
+
+.list-explorer-row-slot {
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+}
+
 .fav-support-stat {
   display: flex;
   align-items: center;

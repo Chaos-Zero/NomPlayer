@@ -158,6 +158,11 @@ export function HeartIcon({ className = 'collection-icon' }) {
 export function SupportOrderIcon({
   className = 'collection-icon',
   direction = 'desc',
+  // GameFAQs' "Order by GameFAQs support" button (FavouritesPanel.jsx) reuses
+  // this exact icon with the heart recolored blue, rather than a second
+  // near-identical icon, to read as "same sort control, different source of
+  // support" instead of a wholly separate feature.
+  heartColor = 'currentColor',
 }) {
   const arrowPath =
     direction === 'asc'
@@ -172,7 +177,7 @@ export function SupportOrderIcon({
           of the icon and drawn on top of the arrow. */}
       <svg x="1" y="1" width="17" height="17" viewBox="0 0 20 20">
         <path
-          fill="currentColor"
+          fill={heartColor}
           d="M9.653 16.915l-.005-.003-.019-.01a20.759 20.759 0 0 1-1.162-.682 22.045 22.045 0 0 1-2.582-1.9C4.045 12.733 2 10.352 2 7.5a4.5 4.5 0 0 1 8-2.828A4.5 4.5 0 0 1 18 7.5c0 2.852-2.044 5.233-3.885 6.82a22.049 22.049 0 0 1-3.744 2.582 20.77 20.77 0 0 1-1.162.682l-.019.01-.005.003L9.653 16.915z"
         />
       </svg>
