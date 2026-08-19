@@ -11026,6 +11026,21 @@ body.is-resizing .resize-handle {
   bottom: var(--player-footer-total-h);
 }
 
+/* ...except CommunityPlaylistsView's copy: it renders that panel inside
+   .cpl-layout, which is itself `position: relative` (needed so
+   .cpl-fab-create anchors within the community-playlists layout instead of
+   the whole page). That makes .cpl-layout the panel's containing block
+   instead of .list-explorer-container, so the padding-bottom reserved
+   above already shrinks .cpl-layout's own box by --player-footer-total-h -
+   applying that same offset again via the rule above double-subtracts it,
+   leaving the panel's bottom edge stranded well short of .cpl-layout's
+   actual (already-correct) bottom, which is what cut its content off
+   before ever reaching the track list. Its plain bottom: 0 needs to stay
+   plain here. */
+.main-content.has-persistent-player .cpl-layout .list-explorer-info-panel {
+  bottom: 0;
+}
+
 .list-explorer-header {
   display: flex;
   justify-content: space-between;
@@ -14471,8 +14486,17 @@ body.is-resizing .resize-handle {
 
 .hero-leaderboard-stat-icons {
   display: flex;
+  align-items: center;
   gap: 4px;
   flex-shrink: 0;
+  /* Pins this cluster to the row's far right on its own, rather than
+     depending on .hero-leaderboard-stats' space-between + a sibling
+     .hero-leaderboard-total-stat to push it there - that sibling is absent
+     whenever a track has no site-cast support (e.g. every row on the Live
+     Supports tab), which left space-between with only one child and no
+     "between" to space, so the icons (GameFAQs badge included) collapsed to
+     the left instead of the right. */
+  margin-left: auto;
 }
 
 .stat-badge {
@@ -14501,6 +14525,15 @@ body.is-resizing .resize-handle {
   background: rgba(255, 183, 0, 0.15);
   color: #ffb700;
   border: 1px solid rgba(255, 183, 0, 0.3);
+}
+
+/* Points pulled from the live GameFAQs VGMC thread, distinct from the
+   amber/pink/gold trio above (site-cast supports) so the two sources of
+   support never read as the same thing at a glance. */
+.stat-badge.gamefaqs {
+  background: rgba(56, 189, 248, 0.15);
+  color: #38bdf8;
+  border: 1px solid rgba(56, 189, 248, 0.3);
 }
 
 .hero-leaderboard-comment-btn {
@@ -14583,6 +14616,9 @@ body.is-resizing .resize-handle {
 }
 .theme-light .stat-badge.highest {
   color: #854d0e;
+}
+.theme-light .stat-badge.gamefaqs {
+  color: #0369a1;
 }
 .theme-light .hero-leaderboard-comment-btn:hover {
   background: rgba(0, 0, 0, 0.08);
