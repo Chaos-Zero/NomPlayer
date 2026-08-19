@@ -876,9 +876,18 @@ export async function fetchFilteredTracks(
           .filter(Boolean);
       }
     } else {
-      // Lightweight client-side fallback (mostly for integration tests)
+      // Lightweight client-side fallback (mostly for integration tests).
+      // Accent-fold before the ASCII-only strip below, the same order the
+      // search_track_catalog_slim RPC now does it in (see
+      // 20260819010000_add_accent_folding_and_trigram_fuzzy_search.sql) -
+      // otherwise "è"/"é"/etc. get silently deleted instead of folded to
+      // their plain letter, so "café" and "cafe" would never match.
       const normalize = (s) =>
-        (s || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+        (s || '')
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '')
+          .toLowerCase()
+          .replace(/[^a-z0-9]/g, '');
       const term = normalize(searchTerm);
       catalog = (catalog || []).filter(
         (t) =>
