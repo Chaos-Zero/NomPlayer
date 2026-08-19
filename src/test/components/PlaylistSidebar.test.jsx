@@ -508,6 +508,20 @@ describe('PlaylistSidebar', () => {
     expect(props.onToggleCollapse).toHaveBeenCalledTimes(1);
   });
 
+  it('resets selection mode when the sidebar collapses, so it doesn\'t re-expand still showing "Done"', () => {
+    const { rerender, props } = renderSidebar({ isCollapsed: false });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Select' }));
+    expect(screen.getByRole('button', { name: 'Done' })).toHaveClass('active');
+
+    rerender(<PlaylistSidebar {...props} isCollapsed={true} />);
+    rerender(<PlaylistSidebar {...props} isCollapsed={false} />);
+
+    expect(screen.getByRole('button', { name: 'Select' })).not.toHaveClass(
+      'active',
+    );
+  });
+
   it('supports closing the mobile playlist by dragging the drawer edge', () => {
     mockMatchMedia(true);
     const { props } = renderSidebar({ isCollapsed: false });
@@ -556,6 +570,60 @@ describe('PlaylistSidebar', () => {
     ]);
   });
 
+  it('adds selected tracks in the order shown on screen (rating-sorted), not the underlying playlist order', () => {
+    const alpha = { ...video, rating: 2 }; // videoId 'alpha1234567', 1st in the raw playlist array, lowest rating
+    const beta = {
+      videoId: 'beta12345678',
+      title: 'Beta',
+      thumbnail: 'b.jpg',
+      channelTitle: 'Channel B',
+      rating: 9, // highest rating - sorts to the top once "Order by rating" is on
+    };
+    const { props } = renderSidebar({
+      playlist: [alpha, beta],
+      currentIndex: null,
+      activePlaylistView: { type: 'support' },
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Order by rating' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Select' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Select all' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Add to Queue' }));
+
+    // Beta is shown first once rating-sorted, even though it's 2nd in the
+    // raw playlist array - the add order has to follow the screen, not the
+    // array.
+    expect(props.onAddDirectItems).toHaveBeenCalledWith([beta, alpha]);
+  });
+
+  it('"Select all" only selects what a search filter currently shows, not tracks it\'s hiding', () => {
+    const alpha = { ...video, title: 'Alpha' }; // videoId 'alpha1234567'
+    const beta = {
+      videoId: 'beta12345678',
+      title: 'Beta',
+      thumbnail: 'b.jpg',
+      channelTitle: 'Channel B',
+    };
+    const { props } = renderSidebar({
+      playlist: [alpha, beta],
+      currentIndex: null,
+      activePlaylistView: { type: 'support' },
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Search in playlist' }));
+    fireEvent.change(screen.getByPlaceholderText('Search in Playlist…'), {
+      target: { value: 'Beta' },
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Select' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Select all' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Add to Queue' }));
+
+    // Alpha never matched the filter, so "Select all" shouldn't have picked
+    // it up even though it's still sitting in the underlying playlist.
+    expect(props.onAddDirectItems).toHaveBeenCalledWith([beta]);
+  });
+
   it('renders CustomPlaylistSubmenu inside the context menu', () => {
     const mockPlaylists = [{ id: 'p1', name: 'My Mix', videos: [] }];
     renderSidebar({
@@ -570,5 +638,85 @@ describe('PlaylistSidebar', () => {
     expect(
       screen.getByRole('menuitem', { name: /Add to Custom Playlist/i }),
     ).toBeInTheDocument();
+  });
+
+  it('shows drag handles for a "community-playlist" view whose id is actually one of your own customPlaylists', () => {
+    const { container } = renderSidebar({
+      activePlaylistView: { type: 'community-playlist', id: 'p1' },
+      customPlaylists: [
+        { id: 'p1', name: 'Mine, browsed via Community', videos: [] },
+      ],
+    });
+
+    expect(container.querySelector('.drag-handle')).toBeInTheDocument();
+  });
+
+  it('hides drag handles for a "community-playlist" view that is not one of your own customPlaylists', () => {
+    const { container } = renderSidebar({
+      activePlaylistView: {
+        type: 'community-playlist',
+        id: 'someone-elses-id',
+      },
+      customPlaylists: [{ id: 'p1', name: 'Mine', videos: [] }],
+    });
+
+    expect(container.querySelector('.drag-handle')).not.toBeInTheDocument();
+  });
+
+  it("shortens a long title/game name for display so they can't crowd the rating/comment/heart cluster", () => {
+    const longVideo = {
+      videoId: 'gamma1234567',
+      thumbnail: 'g.jpg',
+      trackTitle:
+        'A Very Long Song Title That Definitely Runs On For Quite A While',
+      gameTitle: 'An Equally Long Game Title That Also Keeps Going And Going',
+      displayTitle:
+        'A Very Long Song Title That Definitely Runs On For Quite A While',
+    };
+    // Not the active row, so this exercises the plain (non-ScrollingText)
+    // title/meta divs.
+    renderSidebar({ playlist: [longVideo], currentIndex: null });
+
+    const title = screen.getByText(/^A Very Long Song Title/);
+    expect(title.textContent.length).toBeLessThanOrEqual(32);
+    expect(title.textContent.endsWith('…')).toBe(true);
+
+    const meta = screen.getByText(/^An Equally Long Game Title/);
+    expect(meta.textContent.length).toBeLessThanOrEqual(32);
+    expect(meta.textContent.endsWith('…')).toBe(true);
+  });
+
+  it("shortens a long title the same way for the active row's scrolling title, not just the static one", () => {
+    const longVideo = {
+      videoId: 'gamma1234567',
+      thumbnail: 'g.jpg',
+      trackTitle:
+        'A Very Long Song Title That Definitely Runs On For Quite A While',
+      gameTitle: 'Short Game',
+      displayTitle:
+        'A Very Long Song Title That Definitely Runs On For Quite A While',
+    };
+    renderSidebar({ playlist: [longVideo], currentIndex: 0 });
+
+    const title = screen.getByText(/^A Very Long Song Title/);
+    expect(title.textContent.length).toBeLessThanOrEqual(32);
+    expect(title.textContent.endsWith('…')).toBe(true);
+  });
+
+  it('leaves a short title/game name untouched', () => {
+    renderSidebar({
+      currentIndex: null,
+      playlist: [
+        {
+          ...video,
+          trackTitle: 'Skyline',
+          gameTitle: 'Gamma Game',
+          displayTitle: 'Gamma Game - Skyline',
+        },
+      ],
+    });
+
+    expect(screen.getByText('Skyline')).toBeInTheDocument();
+    expect(screen.getByText('Gamma Game')).toBeInTheDocument();
   });
 });

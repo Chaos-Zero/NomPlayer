@@ -137,6 +137,21 @@ function getPlaylistItemDisplay(video) {
   };
 }
 
+// A row's title/meta text has to share its line with the rating badge,
+// comment bubble, and support heart on the right (see .playlist-item-actions),
+// same as every other row - but a long title/game name that's actively
+// scrolling (see ScrollingText's marquee) renders its *full* text, with
+// nothing else CSS truncation would otherwise clip it to, and that full
+// text can end up feeling like it's crowding into those icons as it
+// scrolls past. Capping the displayed string here (search/aria-label still
+// use the untruncated getPlaylistItemDisplay() value, only what's actually
+// painted goes through this) keeps every row - scrolling or not - a
+// predictable length that comfortably clears them.
+function truncateForDisplay(text, maxLength = 32) {
+  if (!text || text.length <= maxLength) return text;
+  return `${text.slice(0, maxLength - 1).trimEnd()}…`;
+}
+
 // Memoized: a large playlist renders one of these per track, and most of
 // them get identical props again whenever the list re-renders for a reason
 // that only actually touches one or two rows (e.g. listenedStatusById
@@ -278,21 +293,21 @@ const PlaylistItem = memo(function PlaylistItem({
         {isActive && !selectionMode ? (
           <ScrollingText
             className={`playlist-item-title-scroll${hasCatalogMetadata ? ' metadata' : ''}`}
-            text={primaryTitle || video.videoId}
+            text={truncateForDisplay(primaryTitle || video.videoId)}
             truncateWhenStatic
           />
         ) : (
           <div
             className={`playlist-item-title${hasCatalogMetadata ? ' metadata' : ''}`}
           >
-            {primaryTitle || video.videoId}
+            {truncateForDisplay(primaryTitle || video.videoId)}
           </div>
         )}
         {secondaryTitle && (
           <div
             className={`playlist-item-meta${hasCatalogMetadata ? ' metadata' : ''}`}
           >
-            {secondaryTitle}
+            {truncateForDisplay(secondaryTitle)}
           </div>
         )}
       </div>
@@ -644,9 +659,18 @@ function PlaylistSidebar({
   // rating-sort has reordered/narrowed what's rendered.
   const currentVideoId = playlist[currentIndex]?.videoId ?? null;
 
+  // displayPlaylist, not playlist: every consumer of selectedVideos (Add to
+  // Queue, Export, Save YT Playlist, bulk Remove, "Add to Custom Playlist"
+  // from the multi-select context menu) should add/act on selections in
+  // the order they're actually shown on screen - filtered by search and/or
+  // rating-sorted, whichever is currently active - not the underlying
+  // natural playlist order. A selected-but-currently-filtered-out video
+  // (still possible via handleSelectAll below, or a stale selection left
+  // over from before a filter was typed) is naturally excluded here too,
+  // since it won't be in displayPlaylist either.
   const selectedVideos = useMemo(
-    () => playlist.filter((video) => selectedIdSet.has(video.videoId)),
-    [playlist, selectedIdSet],
+    () => displayPlaylist.filter((video) => selectedIdSet.has(video.videoId)),
+    [displayPlaylist, selectedIdSet],
   );
 
   const isReadOnlyView = activePlaylistView.type === 'community-playlist';
@@ -654,16 +678,36 @@ function PlaylistSidebar({
     isReadOnlyView &&
     Boolean(VGMC_PLAYLIST_ID) &&
     activePlaylistView.id === VGMC_PLAYLIST_ID;
+  // "community-playlist" is the view type for anything opened via the
+  // browse-community-playlists path, own playlists included - loading your
+  // own playlist that way rather than through "My Custom Playlists"
+  // (type "custom-playlist", already reorderable below) doesn't make it
+  // any less yours. Ownership only depends on whether its id is one of
+  // this user's own customPlaylists, never on which path loaded it.
+  const isOwnPlaylistViaCommunity =
+    isReadOnlyView &&
+    (customPlaylists || []).some((pl) => pl.id === activePlaylistView.id);
   const canReorder =
     !selectionMode &&
     (!isShuffleEnabled || showOriginalOrder) &&
     !isSortingByRating &&
     !rankingSortDirection &&
-    !isReadOnlyView;
+    (!isReadOnlyView || isOwnPlaylistViaCommunity);
+  // Also on isCollapsed, not just activePage - collapsing (mobile: slides
+  // the whole sidebar away; desktop: down to a thin tab) is this sidebar's
+  // version of a panel closing, and without this the Select button was
+  // still showing "Done" (and the selection still live) the next time it
+  // expanded, since nothing reset selectionMode on collapse - only on an
+  // explicit Select/Done click. contextMenu isn't rendered conditionally on
+  // isCollapsed the way the rest of this sidebar's content is (see
+  // ContextMenuPortal below), so it's cleared here too rather than
+  // potentially floating on its own, detached from a sidebar that's no
+  // longer showing the row it was opened on.
   useEffect(() => {
     setSelectionMode(false);
     setSelectedIds([]);
-  }, [activePage]);
+    setContextMenu(null);
+  }, [activePage, isCollapsed]);
 
   // A filter left over from the last list you were looking at (e.g.
   // Nominations) would otherwise silently keep hiding rows in whatever list
@@ -976,7 +1020,13 @@ function PlaylistSidebar({
   }
 
   function handleSelectAll() {
-    setSelectedIds(playlist.map((video) => video.videoId));
+    // displayPlaylist, not playlist - "Select all" while a search filter
+    // (or rating-sort) is active should only pick up what's actually on
+    // screen, matching selectedVideos above. Selecting a video hidden by
+    // the current filter would be invisible (its checkbox isn't even
+    // rendered) and, without this, would still silently ride along into
+    // the next add/export/remove once the filter cleared.
+    setSelectedIds(displayPlaylist.map((video) => video.videoId));
   }
 
   function renderHeader() {

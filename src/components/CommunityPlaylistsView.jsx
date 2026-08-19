@@ -5,9 +5,31 @@ import React, {
   useCallback,
   useRef,
 } from 'react';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core';
+import {
+  SortableContext,
+  arrayMove,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import { getDisplayProfileName } from '../lib/playerState.js';
 import { getMediaThumbnailUrl } from '../utils/media.js';
-import { SearchIcon, TrashIcon } from './Icons.jsx';
+import {
+  PencilIcon,
+  SaveIcon,
+  SearchIcon,
+  TrashIcon,
+  XIcon,
+} from './Icons.jsx';
 import PrivacyToggle from './PrivacyToggle.jsx';
 import CreatePlaylistDialog from './CreatePlaylistDialog.jsx';
 import DeletePlaylistConfirmDialog from './DeletePlaylistConfirmDialog.jsx';
@@ -109,6 +131,8 @@ function PlaylistCard({
   onSelect,
   onTogglePrivacy,
   onDelete,
+  onToggleEdit,
+  isEditing,
   loadingId,
   isOwn,
 }) {
@@ -193,6 +217,15 @@ function PlaylistCard({
               }}
               onClick={(e) => e.stopPropagation()}
             >
+              {onToggleEdit && (
+                <button
+                  className={`cpl-action-btn cpl-edit-btn${isEditing ? ' is-editing' : ''}`}
+                  onClick={() => onToggleEdit(playlist)}
+                  title={isEditing ? 'Save changes' : 'Edit Playlist'}
+                >
+                  {isEditing ? <SaveIcon /> : <PencilIcon />}
+                </button>
+              )}
               {onDelete && (
                 <button
                   className="cpl-action-btn cpl-delete-btn"
@@ -218,6 +251,147 @@ function PlaylistCard({
   );
 }
 
+// Plain (non-draggable) content for one track row - used as-is when the
+// panel is read-only, and wrapped by SortableCommunityTrackItem below when
+// the owner has edit mode open. Kept dumb about dnd-kit entirely, same split
+// PlaylistSidebar.jsx uses for PlaylistItem/SortablePlaylistItem.
+function CommunityTrackItem({
+  track,
+  playlist,
+  tracks,
+  isEditing,
+  isOwner,
+  onPlay,
+  onContextMenu,
+  onRemove,
+}) {
+  return (
+    <div
+      className="cpl-track-item"
+      style={{
+        display: 'flex',
+        gap: 12,
+        padding: '8px 12px',
+        alignItems: 'center',
+        borderRadius: 6,
+        transition: 'background 0.2s',
+        cursor: 'pointer',
+      }}
+      onDoubleClick={() => onPlay(playlist, tracks, track.videoId || track.id)}
+      onContextMenu={(e) =>
+        onContextMenu?.(e, track, {
+          sourceListId: 'community-playlist',
+          isOwner,
+          onRemove: onRemove ? () => onRemove(track.id) : undefined,
+        })
+      }
+    >
+      <img
+        src={track.thumbnail}
+        alt=""
+        style={{
+          borderRadius: 4,
+          width: 72,
+          height: 40,
+          objectFit: 'cover',
+          flexShrink: 0,
+        }}
+      />
+      <div
+        style={{
+          flex: 1,
+          minWidth: 0,
+          overflow: 'hidden',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 2,
+        }}
+      >
+        <span
+          style={{
+            fontSize: 14,
+            fontWeight: 500,
+            color: '#fff',
+            whiteSpace: 'nowrap',
+            textOverflow: 'ellipsis',
+            overflow: 'hidden',
+          }}
+        >
+          {track.trackTitle || track.displayTitle}
+        </span>
+        <span
+          style={{
+            fontSize: 12,
+            color: 'var(--text-muted, #9ca3af)',
+            whiteSpace: 'nowrap',
+            textOverflow: 'ellipsis',
+            overflow: 'hidden',
+          }}
+        >
+          {track.gameTitle || track.channelTitle}
+        </span>
+      </div>
+      {isEditing && onRemove && (
+        <button
+          className="cpl-track-remove-btn"
+          type="button"
+          aria-label={`Remove ${track.trackTitle || track.displayTitle || 'track'} from playlist`}
+          title="Remove from playlist"
+          onClick={(e) => {
+            e.stopPropagation();
+            onRemove(track.id);
+          }}
+        >
+          <XIcon size={14} />
+        </button>
+      )}
+    </div>
+  );
+}
+
+// Drag-to-reorder wrapper, mounted only while edit mode's DndContext is
+// active (see CommunityPlaylistPanel) - same shape as PlaylistSidebar's
+// SortablePlaylistItem: the drag handle lives outside CommunityTrackItem
+// entirely, so that component never has to know dnd-kit exists.
+function SortableCommunityTrackItem(props) {
+  const { track } = props;
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: track.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={{ ...style, display: 'flex', alignItems: 'center', gap: 4 }}
+    >
+      <button
+        type="button"
+        className="cpl-track-drag-handle"
+        {...attributes}
+        {...listeners}
+        aria-label="Drag to reorder"
+        title="Drag to reorder"
+      >
+        ⠿
+      </button>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <CommunityTrackItem {...props} />
+      </div>
+    </div>
+  );
+}
+
 function CommunityPlaylistPanel({
   playlist,
   tracks,
@@ -228,11 +402,33 @@ function CommunityPlaylistPanel({
   onContextMenu,
   isOwner,
   onRemoveTrack,
+  isEditing,
+  isSavingEdit,
+  editNameValue,
+  onEditNameChange,
+  onToggleEdit,
+  onCancelEdit,
+  onReorderTracks,
 }) {
   const fullTitle = playlist?.name || '';
   const gameTitle = playlist
     ? getDisplayProfileName(playlist.profile?.username)
     : '';
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    }),
+  );
+
+  function handleDragEnd(event) {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const oldIndex = tracks.findIndex((t) => t.id === active.id);
+    const newIndex = tracks.findIndex((t) => t.id === over.id);
+    if (oldIndex < 0 || newIndex < 0) return;
+    onReorderTracks?.(oldIndex, newIndex);
+  }
 
   return (
     <div className={`list-explorer-info-panel ${playlist ? 'is-open' : ''}`}>
@@ -268,12 +464,27 @@ function CommunityPlaylistPanel({
                   <div className="list-explorer-info-title-group">
                     <p className="list-explorer-info-game">{gameTitle}</p>
                     <span className="list-explorer-info-separator"> - </span>
-                    <h2
-                      className="list-explorer-info-song"
-                      style={{ fontSize: '1.4em' }}
-                    >
-                      {fullTitle}
-                    </h2>
+                    {isEditing ? (
+                      <input
+                        className="cpl-edit-name-input"
+                        type="text"
+                        value={editNameValue}
+                        onChange={(e) => onEditNameChange(e.target.value)}
+                        onClick={(e) => e.stopPropagation()}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') onToggleEdit?.();
+                          if (e.key === 'Escape') onCancelEdit?.();
+                        }}
+                        autoFocus
+                      />
+                    ) : (
+                      <h2
+                        className="list-explorer-info-song"
+                        style={{ fontSize: '1.4em' }}
+                      >
+                        {fullTitle}
+                      </h2>
+                    )}
                   </div>
                   <span className="list-explorer-info-vgmc-badge">
                     {playlist.trackCount} tracks
@@ -305,6 +516,17 @@ function CommunityPlaylistPanel({
                   >
                     Add to My Queue
                   </button>
+                  {isOwner && onToggleEdit && (
+                    <button
+                      className={`btn${isEditing ? ' btn-primary' : ''}`}
+                      onClick={onToggleEdit}
+                      disabled={isSavingEdit}
+                      title={isEditing ? 'Save changes' : 'Edit playlist'}
+                    >
+                      {isEditing ? <SaveIcon /> : <PencilIcon />}
+                      {isEditing ? (isSavingEdit ? 'Saving…' : 'Save') : 'Edit'}
+                    </button>
+                  )}
                 </div>
 
                 <div
@@ -317,77 +539,44 @@ function CommunityPlaylistPanel({
                     </p>
                   ) : tracks.length === 0 ? (
                     <p className="list-explorer-info-empty">No tracks yet.</p>
-                  ) : (
-                    tracks.map((t, i) => (
-                      <div
-                        key={i}
-                        className="cpl-track-item"
-                        style={{
-                          display: 'flex',
-                          gap: 12,
-                          padding: '8px 12px',
-                          alignItems: 'center',
-                          borderRadius: 6,
-                          transition: 'background 0.2s',
-                          cursor: 'pointer',
-                        }}
-                        onDoubleClick={() =>
-                          onPlay(playlist, tracks, t.videoId || t.id)
-                        }
-                        onContextMenu={(e) =>
-                          onContextMenu?.(e, t, {
-                            sourceListId: 'community-playlist',
-                            isOwner,
-                            onRemove: onRemoveTrack
-                              ? () => onRemoveTrack(t.id)
-                              : undefined,
-                          })
-                        }
+                  ) : isEditing ? (
+                    <DndContext
+                      sensors={sensors}
+                      collisionDetection={closestCenter}
+                      onDragEnd={handleDragEnd}
+                    >
+                      <SortableContext
+                        items={tracks.map((t) => t.id)}
+                        strategy={verticalListSortingStrategy}
                       >
-                        <img
-                          src={t.thumbnail}
-                          alt=""
-                          style={{
-                            borderRadius: 4,
-                            width: 72,
-                            height: 40,
-                            objectFit: 'cover',
-                            flexShrink: 0,
-                          }}
-                        />
-                        <div
-                          style={{
-                            overflow: 'hidden',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            gap: 2,
-                          }}
-                        >
-                          <span
-                            style={{
-                              fontSize: 14,
-                              fontWeight: 500,
-                              color: '#fff',
-                              whiteSpace: 'nowrap',
-                              textOverflow: 'ellipsis',
-                              overflow: 'hidden',
-                            }}
-                          >
-                            {t.trackTitle || t.displayTitle}
-                          </span>
-                          <span
-                            style={{
-                              fontSize: 12,
-                              color: 'var(--text-muted, #9ca3af)',
-                              whiteSpace: 'nowrap',
-                              textOverflow: 'ellipsis',
-                              overflow: 'hidden',
-                            }}
-                          >
-                            {t.gameTitle || t.channelTitle}
-                          </span>
-                        </div>
-                      </div>
+                        {tracks.map((t) => (
+                          <SortableCommunityTrackItem
+                            key={t.id}
+                            track={t}
+                            playlist={playlist}
+                            tracks={tracks}
+                            isEditing={isEditing}
+                            isOwner={isOwner}
+                            onPlay={onPlay}
+                            onContextMenu={onContextMenu}
+                            onRemove={onRemoveTrack}
+                          />
+                        ))}
+                      </SortableContext>
+                    </DndContext>
+                  ) : (
+                    tracks.map((t) => (
+                      <CommunityTrackItem
+                        key={t.id}
+                        track={t}
+                        playlist={playlist}
+                        tracks={tracks}
+                        isEditing={isEditing}
+                        isOwner={isOwner}
+                        onPlay={onPlay}
+                        onContextMenu={onContextMenu}
+                        onRemove={onRemoveTrack}
+                      />
                     ))
                   )}
                 </div>
@@ -418,15 +607,49 @@ export function CommunityPlaylistsView({
   const [selectedUserId, setSelectedUserId] = useState(null);
   const [userSearch, setUserSearch] = useState('');
   const [sortBy, setSortBy] = useState('newest');
-  const [featuredSeed, setFeaturedSeed] = useState(Math.random());
+  // Lazy initializer, not useState(Math.random()) - a plain call there gets
+  // re-evaluated (and its result thrown away) on every render, which is
+  // exactly what react-hooks/purity flags: React reads it only on the true
+  // first mount, but the render body still calls the impure function every
+  // time. Passing a function instead hands the call off to React, which
+  // only ever invokes it once.
+  const [featuredSeed, setFeaturedSeed] = useState(() => Math.random());
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const authUserId = authUser?.id ?? null;
+
+  // Re-rolled whenever the browsed user changes, so the `featured` pick
+  // below draws a fresh pool member instead of staying locked to whichever
+  // pick was made for the previous user. Adjusted during render (React's
+  // recommended way to reset state in response to a prop/value change -
+  // see https://react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes)
+  // rather than a useEffect, and setFeaturedSeed(() => Math.random())
+  // rather than setFeaturedSeed(Math.random()) - same reasoning as the
+  // lazy useState initializer above, handing React a function to call
+  // itself is what satisfies react-hooks/purity, not calling the impure
+  // function directly in the render body.
+  const [prevSelectedUserId, setPrevSelectedUserId] = useState(selectedUserId);
+  if (selectedUserId !== prevSelectedUserId) {
+    setPrevSelectedUserId(selectedUserId);
+    setFeaturedSeed(() => Math.random());
+  }
 
   const [selectedPlaylist, setSelectedPlaylist] = useState(null);
   const [selectedPlaylistTracks, setSelectedPlaylistTracks] = useState([]);
   const [isLoadingPanel, setIsLoadingPanel] = useState(false);
   const [playlistToDelete, setPlaylistToDelete] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  // Edit mode: rename + track reorder/remove for a playlist the viewer
+  // owns. Only one playlist can be "in edit mode" at a time, and it's
+  // always the currently selected one - the track list it edits only
+  // exists once a playlist is open in the panel. editNameValue is staged
+  // locally and only written to Supabase on Save (see handleSaveEdit);
+  // reorder/remove act on the live playlist immediately instead (see
+  // handleReorderTracks/handleRemoveFromPanel), same as the rest of this
+  // view's Supabase writes.
+  const [editingPlaylistId, setEditingPlaylistId] = useState(null);
+  const [editNameValue, setEditNameValue] = useState('');
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
 
   useEffect(() => {
     onSelectionChange?.(!!selectedPlaylist);
@@ -518,8 +741,17 @@ export function CommunityPlaylistsView({
     }
   }, [supabase, authUserId, onShowToast]);
 
+  // The canonical "fetch on mount" effect - fetchPlaylists' own first line
+  // is setIsLoading(true), which is what react-hooks/set-state-in-effect is
+  // flagging below. Splitting that out so this effect's own body stays
+  // setState-free would mean every other caller of fetchPlaylists (a
+  // manual refresh, or after creating/deleting a playlist) also has to
+  // remember to set it themselves - more places to get it wrong, for a
+  // rule whose own guidance (https://react.dev/learn/you-might-not-need-an-effect#fetching-data)
+  // still calls this exact pattern out as a legitimate Effect.
   useEffect(() => {
     if (!supabase) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchPlaylists();
   }, [supabase, fetchPlaylists]);
 
@@ -562,10 +794,6 @@ export function CommunityPlaylistsView({
       return changed ? next : prev;
     });
   }, [lastMetadataUpdateBatch, selectedPlaylistTracks.length]);
-
-  useEffect(() => {
-    setFeaturedSeed(Math.random());
-  }, [selectedUserId]);
 
   async function fetchTracks(playlistId) {
     const { data, error } = await supabase
@@ -648,6 +876,12 @@ export function CommunityPlaylistsView({
 
   async function handleSelectPlaylist(playlist) {
     if (selectedPlaylist?.id === playlist.id) return;
+    // The panel can only ever show one playlist's tracks at a time, so
+    // switching away from whichever one was being edited leaves nothing
+    // for that edit session to act on - drop it rather than leave a stale
+    // "Save" button pointing at a playlist that's no longer open.
+    setEditingPlaylistId(null);
+    setEditNameValue('');
     setSelectedPlaylist(playlist);
     setIsLoadingPanel(true);
     try {
@@ -709,6 +943,10 @@ export function CommunityPlaylistsView({
       if (selectedPlaylist?.id === playlistToDelete.id) {
         setSelectedPlaylist(null);
       }
+      if (editingPlaylistId === playlistToDelete.id) {
+        setEditingPlaylistId(null);
+        setEditNameValue('');
+      }
 
       if (onUpdateCustomPlaylists && customPlaylists) {
         onUpdateCustomPlaylists(
@@ -726,6 +964,8 @@ export function CommunityPlaylistsView({
 
   function handleClosePanel() {
     setSelectedPlaylist(null);
+    setEditingPlaylistId(null);
+    setEditNameValue('');
   }
 
   async function handleRemoveFromPanel(trackId) {
@@ -741,6 +981,111 @@ export function CommunityPlaylistsView({
     } catch (err) {
       console.error(err);
       onShowToast?.('Failed to remove track');
+    }
+  }
+
+  // Reorder is applied optimistically (like the rest of this view's edits)
+  // and persisted immediately, there's no separate "save" step for it, only
+  // the rename is staged - see editNameValue/handleSaveEdit below. Only
+  // rows whose order_index actually changed get written.
+  async function handleReorderTracks(oldIndex, newIndex) {
+    const prevTracks = selectedPlaylistTracks;
+    const reordered = arrayMove(prevTracks, oldIndex, newIndex);
+    setSelectedPlaylistTracks(reordered);
+
+    const prevIndexById = new Map(prevTracks.map((t, i) => [t.id, i]));
+    const changed = reordered
+      .map((t, i) => ({ id: t.id, order_index: i }))
+      .filter(({ id, order_index }) => prevIndexById.get(id) !== order_index);
+    if (!changed.length) return;
+
+    try {
+      const results = await Promise.all(
+        changed.map(({ id, order_index }) =>
+          supabase
+            .from('user_playlist_tracks')
+            .update({ order_index })
+            .eq('id', id),
+        ),
+      );
+      const failed = results.find((r) => r.error);
+      if (failed) throw failed.error;
+    } catch (err) {
+      console.error(err);
+      onShowToast?.('Failed to save new track order');
+      setSelectedPlaylistTracks(prevTracks);
+    }
+  }
+
+  function startEditing(playlist) {
+    // handleSelectPlaylist resets editingPlaylistId to null as its own
+    // first step (see its "switching away" comment) - it has to run before
+    // the two sets below, not after, or its reset fires last and wins,
+    // leaving edit mode off even though this card's Edit button was just
+    // pressed. handleSelectPlaylist is async but everything it does before
+    // its first await (including that reset) runs synchronously here.
+    if (selectedPlaylist?.id !== playlist.id) {
+      handleSelectPlaylist(playlist);
+    }
+    setEditingPlaylistId(playlist.id);
+    setEditNameValue(playlist.name);
+  }
+
+  function cancelEditing() {
+    setEditingPlaylistId(null);
+    setEditNameValue('');
+  }
+
+  async function handleSaveEdit() {
+    const playlistId = editingPlaylistId;
+    if (!playlistId) return;
+    const trimmed = editNameValue.trim();
+    const original = playlists.find((p) => p.id === playlistId);
+
+    if (!trimmed || !original || trimmed === original.name) {
+      setEditingPlaylistId(null);
+      setEditNameValue('');
+      return;
+    }
+
+    setIsSavingEdit(true);
+    try {
+      const { error } = await supabase
+        .from('user_playlists')
+        .update({ name: trimmed })
+        .eq('id', playlistId);
+      if (error) throw error;
+
+      setPlaylists((prev) =>
+        prev.map((p) => (p.id === playlistId ? { ...p, name: trimmed } : p)),
+      );
+      if (selectedPlaylist?.id === playlistId) {
+        setSelectedPlaylist((prev) => ({ ...prev, name: trimmed }));
+      }
+      if (onUpdateCustomPlaylists && customPlaylists) {
+        onUpdateCustomPlaylists(
+          customPlaylists.map((p) =>
+            p.id === playlistId ? { ...p, name: trimmed } : p,
+          ),
+        );
+      }
+      onShowToast?.('Playlist renamed');
+      setEditingPlaylistId(null);
+      setEditNameValue('');
+    } catch (err) {
+      console.error(err);
+      onShowToast?.('Failed to rename playlist');
+      // Leave edit mode open on failure so the typed name isn't lost.
+    } finally {
+      setIsSavingEdit(false);
+    }
+  }
+
+  function handleToggleEdit(playlist) {
+    if (editingPlaylistId === playlist.id) {
+      handleSaveEdit();
+    } else {
+      startEditing(playlist);
     }
   }
 
@@ -852,10 +1197,21 @@ export function CommunityPlaylistsView({
     return publicPool[Math.floor(featuredSeed * publicPool.length)];
   }, [playlists, featuredSeed, selectedUserId]);
 
+  // "Now" (for the 7-day cutoff below) is captured once via useState's lazy
+  // initializer, same reasoning as featuredSeed above - calling Date.now()
+  // fresh inside the memo instead is exactly what react-hooks/purity flags,
+  // and a ref recomputed during render (tried first) turned out to trip an
+  // even stricter rule, react-hooks/refs doesn't allow reading *or* writing
+  // ref values during render at all. This view doesn't stay mounted for the
+  // days it'd take a cutoff frozen at open to visibly drift - it isn't a
+  // persistent, kept-alive surface the way the video player is - so
+  // freezing it for this component's lifetime is a fine trade for not
+  // calling an impure function on every render.
+  const [cutoff] = useState(() => Date.now() - 7 * 86400000);
+
   const newThisWeek = useMemo(() => {
-    const cutoff = Date.now() - 7 * 86400000;
     return playlists.filter((p) => new Date(p.created_at).getTime() > cutoff);
-  }, [playlists]);
+  }, [playlists, cutoff]);
 
   const totalTracks = useMemo(
     () => playlists.reduce((s, p) => s + p.trackCount, 0),
@@ -1131,6 +1487,8 @@ export function CommunityPlaylistsView({
                       onAdd={handleAdd}
                       onTogglePrivacy={handleTogglePrivacy}
                       onDelete={handleDeletePlaylist}
+                      onToggleEdit={handleToggleEdit}
+                      isEditing={editingPlaylistId === pl.id}
                       loadingId={loadingId}
                       isOwn={pl.user_id === authUser?.id}
                     />
@@ -1243,6 +1601,8 @@ export function CommunityPlaylistsView({
                       onAdd={handleAdd}
                       onTogglePrivacy={handleTogglePrivacy}
                       onDelete={handleDeletePlaylist}
+                      onToggleEdit={handleToggleEdit}
+                      isEditing={editingPlaylistId === pl.id}
                       loadingId={loadingId}
                       isOwn={pl.user_id === authUser?.id}
                     />
@@ -1268,6 +1628,19 @@ export function CommunityPlaylistsView({
             ? handleRemoveFromPanel
             : null
         }
+        isEditing={
+          !!selectedPlaylist && editingPlaylistId === selectedPlaylist.id
+        }
+        isSavingEdit={isSavingEdit}
+        editNameValue={editNameValue}
+        onEditNameChange={setEditNameValue}
+        onToggleEdit={
+          selectedPlaylist
+            ? () => handleToggleEdit(selectedPlaylist)
+            : undefined
+        }
+        onCancelEdit={cancelEditing}
+        onReorderTracks={handleReorderTracks}
       />
 
       {authUser && (

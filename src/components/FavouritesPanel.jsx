@@ -566,11 +566,24 @@ export default function FavouritesPanel({
   const isSupportTone = tone === 'support';
   const toastTimeoutRef = useRef(null);
 
+  // Closing the panel mid-selection left the Select button showing "Done"
+  // (and its selection still live) the next time the panel opened, since
+  // nothing reset selectionMode on close - only on an explicit Select/Done
+  // click. Adjusted here during render rather than in a useEffect (React's
+  // recommended way to reset state in response to a prop change - see
+  // https://react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes)
+  // so it takes effect the same render isOpen flips, not one render later.
+  const [wasOpen, setWasOpen] = useState(isOpen);
+  if (isOpen !== wasOpen) {
+    setWasOpen(isOpen);
+    if (!isOpen) {
+      setSelectionMode(false);
+      setSelectedIds([]);
+      setContextMenu(null);
+    }
+  }
+
   const selectedIdSet = useMemo(() => new Set(selectedIds), [selectedIds]);
-  const selectedVideos = useMemo(
-    () => supportList.filter((video) => selectedIdSet.has(video.videoId)),
-    [selectedIdSet, supportList],
-  );
 
   // Map to keep track of original indices (1-based)
   const originalIndexMap = useMemo(() => {
@@ -631,6 +644,17 @@ export default function FavouritesPanel({
     ratingSortDirection,
     originalIndexMap,
   ]);
+
+  // displayList, not supportList: every consumer of selectedVideos (Add to
+  // Current Playlist, Remove Support, and the multi-select context menu's
+  // own copy below) should act on selections in the order/subset actually
+  // shown on screen - filtered by support level and/or sorted by rating,
+  // whichever is currently active - not the underlying natural order. Same
+  // fix as PlaylistSidebar's selectedVideos/displayPlaylist.
+  const selectedVideos = useMemo(
+    () => displayList.filter((video) => selectedIdSet.has(video.videoId)),
+    [selectedIdSet, displayList],
+  );
 
   // Reorders only the videos currently visible under the level filter,
   // leaving any filtered-out videos pinned at their existing positions -
@@ -744,7 +768,11 @@ export default function FavouritesPanel({
       }
 
       const selectedLookup = new Set(nextSelectedIds);
-      const selectedVideos = supportList.filter((entry) =>
+      // displayList, not supportList - same reasoning as the outer
+      // selectedVideos memo above, this is just a same-render-cycle
+      // recomputation of it since nextSelectedIds can differ from the
+      // selectedIds state this render started with.
+      const selectedVideos = displayList.filter((entry) =>
         selectedLookup.has(entry.videoId),
       );
       openContextMenu(event, selectedVideos, 'multi');

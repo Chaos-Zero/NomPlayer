@@ -5546,11 +5546,25 @@ export default function App() {
   // defeat that on every render.
   const handleReorderActivePlaylistView = useCallback(
     (newTracks) => {
+      // A "community-playlist" view is still one of *this* user's own
+      // customPlaylists when its id matches one - same ownership check as
+      // PlaylistSidebar's isOwnPlaylistViaCommunity, which is what enables
+      // the drag handles that get a reorder here in the first place. Route
+      // it the same place "custom-playlist" already does (by id), not the
+      // fallback below, that's the personal queue and would silently
+      // reorder the wrong list.
+      const isOwnPlaylistViaCommunity =
+        activePlaylistView.type === 'community-playlist' &&
+        customPlaylists.some((p) => p.id === activePlaylistView.id);
+
       if (activePlaylistView.type === 'nominations') {
         handleReorderNominationList(newTracks);
       } else if (activePlaylistView.type === 'support') {
         handleReorderSupportList(newTracks);
-      } else if (activePlaylistView.type === 'custom-playlist') {
+      } else if (
+        activePlaylistView.type === 'custom-playlist' ||
+        isOwnPlaylistViaCommunity
+      ) {
         setCustomPlaylists((prev) =>
           prev.map((p) =>
             p.id === activePlaylistView.id ? { ...p, videos: newTracks } : p,
@@ -5563,6 +5577,7 @@ export default function App() {
     [
       activePlaylistView.type,
       activePlaylistView.id,
+      customPlaylists,
       handleReorderNominationList,
       handleReorderSupportList,
       handleReorderPlaylist,

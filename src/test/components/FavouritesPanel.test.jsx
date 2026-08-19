@@ -309,6 +309,34 @@ describe('FavouritesPanel', () => {
     ]);
   });
 
+  it('adds selected tracks in the order shown on screen (rating-sorted), not the underlying supportList order', () => {
+    const alphaLowRating = { ...alpha, rating: 2 }; // 1st in the raw supportList array, lowest rating
+    const betaHighRating = { ...beta, rating: 9 }; // 2nd in the array, but sorts to the top
+
+    const { props } = renderPanel({
+      supportList: [alphaLowRating, betaHighRating],
+    });
+
+    // Sorting first, same as a real user would - clicking "Order by rating"
+    // while selection mode is already on turns selection mode back off
+    // (see its onClick), so this only works sort-then-select, not the
+    // other way round.
+    fireEvent.click(screen.getByRole('button', { name: 'Order by rating' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Select' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Select all' }));
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Add to Current Playlist' }),
+    );
+
+    // Beta is shown first once rating-sorted, even though it's 2nd in the
+    // raw supportList array - the add order has to follow the screen, not
+    // the array.
+    expect(props.onAddToPlaylist).toHaveBeenCalledWith([
+      betaHighRating,
+      alphaLowRating,
+    ]);
+  });
+
   it('shows numeric positions for support-list entries', () => {
     const { container } = renderPanel();
 
@@ -317,6 +345,24 @@ describe('FavouritesPanel', () => {
     );
 
     expect(numbers).toEqual(['1', '2']);
+  });
+
+  it('resets selection mode when the panel closes, so it doesn\'t reopen still showing "Done"', () => {
+    const { rerender, props } = renderPanel({ isOpen: true });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Select' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Select all' }));
+    expect(screen.getByRole('button', { name: 'Done' })).toHaveClass('active');
+
+    rerender(<FavouritesPanel {...props} isOpen={false} />);
+    rerender(<FavouritesPanel {...props} isOpen={true} />);
+
+    expect(screen.getByRole('button', { name: 'Select' })).not.toHaveClass(
+      'active',
+    );
+    expect(
+      screen.queryByRole('button', { name: 'Select all' }),
+    ).not.toBeInTheDocument();
   });
 
   it('keeps the panel mounted while closing and notifies when the exit animation completes', () => {

@@ -5897,6 +5897,7 @@ body {
 
 /* ─── Sidebar ─── */
 .sidebar-header {
+  position: relative;
   padding: 14px 16px;
   border-bottom: 1px solid var(--border);
   display: flex;
@@ -5949,8 +5950,13 @@ body {
 }
 
 /* ─── Community Dropdown ─── */
+/* Not a positioning context (position: static, the default) - the trigger's
+   own wrapper only spans as much width as it needs (it shares .sidebar-header
+   with .sidebar-header-actions' buttons), too narrow to anchor a menu meant
+   to cover the whole playlist pane. .sidebar-header below is the positioning
+   context instead, the full-width row above the playlist list, so the
+   dropdown spans edge to edge same as the pane it opens over. */
 .community-dropdown-wrapper {
-  position: relative;
   width: 100%;
 }
 
@@ -6057,8 +6063,8 @@ body {
 .community-view-dropdown {
   position: absolute;
   top: calc(100% + 8px);
-  left: -8px;
-  right: -8px;
+  left: 12px;
+  right: 12px;
   background: var(--bg-panel);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
@@ -6092,22 +6098,10 @@ body {
 }
 
 @media (max-width: 960px) {
-  /* The dropdown trigger's own wrapper only spans as much width as it
-     needs, so it's too narrow to anchor a menu meant to cover the whole
-     tray. Hand positioning off to .sidebar-header, the full-width row
-     above the playlist list, so the dropdown spans edge to edge. */
-  .community-dropdown-wrapper {
-    position: static;
-  }
-
-  .sidebar-header {
-    position: relative;
-  }
-
-  .community-view-dropdown {
-    left: 12px;
-    right: 12px;
-  }
+  /* Width/positioning is unconditional now (see .community-dropdown-wrapper/
+     .sidebar-header/.community-view-dropdown above) - this media query only
+     has the mobile-specific height cap left, viewport height is tighter
+     there than the 420px desktop max-height affords room for. */
 
   .community-view-dropdown-scroll {
     max-height: min(520px, calc(100dvh - 260px));
@@ -16031,6 +16025,27 @@ body.is-resizing .resize-handle {
   border-color: rgba(239, 68, 68, 0.4) !important;
 }
 
+/* Same hover-reveal as .cpl-delete-btn (only visible on card hover), except
+   while it's the active edit target - .is-editing forces it visible so the
+   Save button doesn't disappear the moment the pointer leaves the card. */
+.cpl-edit-btn {
+  opacity: 0;
+  pointer-events: none;
+}
+.cpl-card:hover .cpl-edit-btn {
+  opacity: 1;
+  pointer-events: auto;
+}
+.cpl-edit-btn:hover {
+  border-color: rgba(255, 255, 255, 0.24) !important;
+}
+.cpl-edit-btn.is-editing {
+  opacity: 1;
+  pointer-events: auto;
+  color: var(--accent-light) !important;
+  border-color: rgba(124, 58, 237, 0.4) !important;
+}
+
 /* ── Action buttons ───────────────────────────────── */
 
 .cpl-action-btn {
@@ -16391,6 +16406,78 @@ body.is-resizing .resize-handle {
 
 .cpl-track-item:hover {
   background: var(--bg-glass-hover) !important;
+}
+
+/* Inline rename input, replaces the h2 in CommunityPlaylistPanel's title
+   while edit mode is on - sized/positioned to sit in the same spot so
+   turning edit mode on/off doesn't reflow the header around it. Sits over
+   the hero cover image (see .list-explorer-info-hero), which can be any
+   color/brightness, so it needs a solid dark backing rather than --bg-glass
+   (a ~5% tint that let the image show straight through) - same fixed
+   rgba(0,0,0,*) + blur treatment .cpl-track-badge already uses for text
+   over an arbitrary cover image, not a theme token, since it has to stay
+   legible against the image regardless of light/dark theme. */
+.cpl-edit-name-input {
+  font-size: 1.4em;
+  font-weight: 700;
+  font-family: inherit;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(4px);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-sm);
+  padding: 2px 8px;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+.cpl-edit-name-input:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--accent-dim);
+}
+
+/* Drag handle + remove "x", edit-mode-only chrome around a track row (see
+   SortableCommunityTrackItem/CommunityTrackItem) - same shapes as
+   PlaylistSidebar's .drag-handle/.fav-remove-btn, reused here so the
+   affordance reads the same wherever the app lets you reorder a list. */
+.cpl-track-drag-handle {
+  width: 26px;
+  height: 40px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-glass);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  font-size: 14px;
+  cursor: grab;
+  transition: color var(--transition);
+}
+.cpl-track-drag-handle:hover {
+  color: var(--text-secondary);
+  border-color: var(--border-hover);
+}
+
+.cpl-track-remove-btn {
+  width: 26px;
+  height: 26px;
+  flex-shrink: 0;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--text-muted);
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition);
+  margin-left: auto;
+}
+.cpl-track-remove-btn:hover {
+  color: var(--danger);
+  background: rgba(239, 68, 68, 0.1);
 }
 
 /* Privacy Toggle */
