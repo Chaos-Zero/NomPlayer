@@ -1,5 +1,5 @@
 {
-  "exportedAt": "2026-08-19T18:16:39.919Z",
+  "exportedAt": "2026-08-19T23:04:55.663Z",
   "totalCount": 10926,
   "tracks": [
     {
@@ -122,7 +122,7 @@
       "comment_count": 0,
       "avg_rating": 5,
       "has_result": false,
-      "total_comments": 1,
+      "total_comments": 2,
       "average_rating": 5
     },
     {
@@ -2743,7 +2743,7 @@
       "comment_count": 0,
       "avg_rating": 4,
       "has_result": false,
-      "total_comments": 1,
+      "total_comments": 2,
       "average_rating": 4
     },
     {
@@ -3321,7 +3321,7 @@
       "comment_count": 1,
       "avg_rating": 6,
       "has_result": false,
-      "total_comments": 2,
+      "total_comments": 3,
       "average_rating": 6
     },
     {
@@ -16382,10 +16382,10 @@
       "support_count_3": 0,
       "nomination_count": 0,
       "comment_count": 0,
-      "avg_rating": 5,
+      "avg_rating": 4.5,
       "has_result": false,
-      "total_comments": 1,
-      "average_rating": 5
+      "total_comments": 2,
+      "average_rating": 4.5
     },
     {
       "track_id": "08f9defe-a149-49e3-a236-8fa4acb11393",
@@ -18465,15 +18465,15 @@
         }
       ],
       "tournament_count": 1,
-      "support_count_1": 1,
+      "support_count_1": 2,
       "support_count_2": 1,
       "support_count_3": 0,
       "nomination_count": 0,
       "comment_count": 1,
-      "avg_rating": 7.5,
+      "avg_rating": 7.3,
       "has_result": false,
-      "total_comments": 2,
-      "average_rating": 7.5
+      "total_comments": 3,
+      "average_rating": 7.333333333333333
     },
     {
       "track_id": "0a117520-fa7a-4eca-9c34-64e7b934ed47",
@@ -39717,10 +39717,10 @@
       "support_count_2": 0,
       "support_count_3": 0,
       "nomination_count": 0,
-      "comment_count": 0,
+      "comment_count": 1,
       "avg_rating": 6,
       "has_result": false,
-      "total_comments": 1,
+      "total_comments": 2,
       "average_rating": 6
     },
     {
@@ -45397,7 +45397,7 @@
       "support_count_3": 1,
       "nomination_count": 0,
       "comment_count": 1,
-      "avg_rating": 9,
+      "avg_rating": 5.5,
       "has_result": false
     },
     {
@@ -80086,8 +80086,8 @@
       "support_count_2": 0,
       "support_count_3": 1,
       "nomination_count": 0,
-      "comment_count": 1,
-      "avg_rating": 7.5,
+      "comment_count": 2,
+      "avg_rating": 7,
       "has_result": false
     },
     {
@@ -90199,7 +90199,7 @@
       "source_title": "The Guided Fate Paradox - God and the Illusory Garden",
       "source_channel_title": "Yōsei Teikoku - Topic",
       "source_thumbnail_url": "https://i.ytimg.com/vi/nPE3laf26H8/mqdefault.jpg",
-      "last_fetched_at": "2026-05-02T02:48:23.915986+00:00",
+      "last_fetched_at": "2026-08-19T21:07:38.662014+00:00",
       "tournaments": [
         {
           "name": "VGMC 20",
@@ -90213,7 +90213,7 @@
       ],
       "tournament_count": 1,
       "support_count_1": 0,
-      "support_count_2": 0,
+      "support_count_2": 1,
       "support_count_3": 0,
       "nomination_count": 1,
       "comment_count": 0,
@@ -128104,12 +128104,12 @@
         }
       ],
       "tournament_count": 2,
-      "support_count_1": 1,
+      "support_count_1": 2,
       "support_count_2": 0,
       "support_count_3": 0,
       "nomination_count": 0,
       "comment_count": 0,
-      "avg_rating": 5,
+      "avg_rating": 6,
       "has_result": false
     },
     {
@@ -166547,7 +166547,7 @@
       "support_count_3": 0,
       "nomination_count": 0,
       "comment_count": 0,
-      "avg_rating": 5,
+      "avg_rating": 5.5,
       "has_result": false
     },
     {
@@ -168135,12 +168135,12 @@
         }
       ],
       "tournament_count": 1,
-      "support_count_1": 1,
+      "support_count_1": 2,
       "support_count_2": 0,
       "support_count_3": 0,
       "nomination_count": 0,
       "comment_count": 0,
-      "avg_rating": 5,
+      "avg_rating": 6.5,
       "has_result": false
     },
     {
@@ -196550,7 +196550,7 @@
       "support_count_3": 0,
       "nomination_count": 0,
       "comment_count": 0,
-      "avg_rating": 4,
+      "avg_rating": 5,
       "has_result": false
     },
     {
@@ -197996,7 +197996,7 @@
       "support_count_3": 0,
       "nomination_count": 0,
       "comment_count": 0,
-      "avg_rating": 6,
+      "avg_rating": 5.5,
       "has_result": false
     },
     {
@@ -210761,8 +210761,8 @@
       "submitted_url": "https://www.youtube.com/watch?v=EwKQj7Wx7PQ",
       "source_title": "Gitaroo Man - Flyin' To Your Heart (English Ver.)",
       "source_channel_title": null,
-      "source_thumbnail_url": null,
-      "last_fetched_at": null,
+      "source_thumbnail_url": "https://i.ytimg.com/vi/EwKQj7Wx7PQ/mqdefault.jpg",
+      "last_fetched_at": "2026-08-19T21:31:49.867619+00:00",
       "tournaments": [
         {
           "name": "VGMC 20",
@@ -210775,7 +210775,7 @@
         }
       ],
       "tournament_count": 1,
-      "support_count_1": 0,
+      "support_count_1": 1,
       "support_count_2": 0,
       "support_count_3": 0,
       "nomination_count": 0,
@@ -259025,7 +259025,7 @@
       "support_count_3": 0,
       "nomination_count": 0,
       "comment_count": 0,
-      "avg_rating": 7,
+      "avg_rating": 6,
       "has_result": false
     },
     {
@@ -311737,7 +311737,7 @@
       "support_count_3": 0,
       "nomination_count": 0,
       "comment_count": 0,
-      "avg_rating": 4,
+      "avg_rating": 4.5,
       "has_result": false
     },
     {
@@ -327812,8 +327812,8 @@
         }
       ],
       "tournament_count": 1,
-      "support_count_1": 1,
-      "support_count_2": 0,
+      "support_count_1": 0,
+      "support_count_2": 1,
       "support_count_3": 0,
       "nomination_count": 1,
       "comment_count": 0,
@@ -348057,7 +348057,7 @@
       "support_count_3": 0,
       "nomination_count": 0,
       "comment_count": 0,
-      "avg_rating": 6,
+      "avg_rating": 5,
       "has_result": false
     },
     {
@@ -373875,7 +373875,7 @@
       "support_count_3": 0,
       "nomination_count": 0,
       "comment_count": 0,
-      "avg_rating": 4,
+      "avg_rating": 4.5,
       "has_result": false
     },
     {
@@ -381193,7 +381193,7 @@
       "support_count_3": 0,
       "nomination_count": 0,
       "comment_count": 0,
-      "avg_rating": 7,
+      "avg_rating": 6.5,
       "has_result": false
     },
     {
@@ -417688,7 +417688,7 @@
         }
       ],
       "tournament_count": 1,
-      "support_count_1": 1,
+      "support_count_1": 0,
       "support_count_2": 0,
       "support_count_3": 0,
       "nomination_count": 0,
@@ -445498,7 +445498,7 @@
       "support_count_3": 0,
       "nomination_count": 0,
       "comment_count": 0,
-      "avg_rating": 6,
+      "avg_rating": 5,
       "has_result": false
     },
     {
@@ -447509,7 +447509,7 @@
         }
       ],
       "tournament_count": 1,
-      "support_count_1": 1,
+      "support_count_1": 0,
       "support_count_2": 0,
       "support_count_3": 0,
       "nomination_count": 0,
@@ -453298,7 +453298,7 @@
       "support_count_3": 0,
       "nomination_count": 0,
       "comment_count": 0,
-      "avg_rating": 5,
+      "avg_rating": 4.5,
       "has_result": false
     },
     {
