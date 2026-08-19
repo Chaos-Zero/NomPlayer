@@ -20,6 +20,7 @@ import { ContextMenuPortal } from './ContextMenuPortal';
 import CustomPlaylistSubmenu from './CustomPlaylistSubmenu.jsx';
 import SupportLevelSubmenu from './SupportLevelSubmenu.jsx';
 import CollectionAdder from './CollectionAdder.jsx';
+import FilterSearchControl from './FilterSearchControl.jsx';
 import ExportIcon from './ExportIcon.jsx';
 import PrivacyToggle from './PrivacyToggle.jsx';
 import YouTubeIcon from './YouTubeIcon.jsx';
@@ -443,102 +444,6 @@ const SortablePlaylistItem = memo(function SortablePlaylistItem({
     </div>
   );
 });
-
-// Same flip-card open/close animation as CollectionAdder (see its CSS in
-// index.css, shared `.collection-adder*` classes), but the back face is a
-// live filter box instead of a URL-add form, no submit/loading/success state
-// needed, just an input plus a way to close it.
-function PlaylistSearchControl({
-  tone,
-  query,
-  onQueryChange,
-  onOpenChange,
-  hidden = false,
-}) {
-  const [isOpen, setIsOpen] = useState(false);
-  const inputRef = useRef(null);
-
-  useEffect(() => {
-    if (!isOpen) return undefined;
-
-    const frameId = window.requestAnimationFrame(() => {
-      inputRef.current?.focus();
-    });
-
-    return () => window.cancelAnimationFrame(frameId);
-  }, [isOpen]);
-
-  useEffect(() => {
-    if (!isOpen) return undefined;
-
-    function handleKeyDown(event) {
-      if (event.key === 'Escape') {
-        setIsOpen(false);
-        onQueryChange('');
-      }
-    }
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, onQueryChange]);
-
-  // Lets the parent hide the add-to-queue control (or whatever else shares
-  // this footer) while search is open, same contract as CollectionAdder.
-  useEffect(() => {
-    onOpenChange?.(isOpen);
-  }, [isOpen, onOpenChange]);
-
-  function closeSearch() {
-    setIsOpen(false);
-    onQueryChange('');
-  }
-
-  return (
-    <div
-      className={`collection-adder tone-${tone} compact playlist-filter-search${isOpen ? ' open' : ''}${hidden ? ' peer-hidden' : ''}`}
-    >
-      <div className="collection-adder-shell">
-        <div className="collection-adder-stage">
-          <button
-            className="collection-adder-face collection-adder-front"
-            type="button"
-            onClick={() => setIsOpen(true)}
-            aria-label="Search in playlist"
-            title="Search in playlist"
-            tabIndex={isOpen ? -1 : 0}
-          >
-            ⌕
-          </button>
-
-          <form
-            className="collection-adder-face collection-adder-back playlist-filter-search-back"
-            onSubmit={(event) => event.preventDefault()}
-          >
-            <input
-              ref={inputRef}
-              className="collection-adder-input"
-              type="text"
-              role="searchbox"
-              placeholder="Search in Playlist…"
-              value={query}
-              onChange={(event) => onQueryChange(event.target.value)}
-              tabIndex={isOpen ? 0 : -1}
-            />
-            <button
-              className="collection-adder-close"
-              type="button"
-              aria-label="Close playlist search"
-              onClick={closeSearch}
-              tabIndex={isOpen ? 0 : -1}
-            >
-              ✕
-            </button>
-          </form>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 function PlaylistSidebar({
   playlist,
@@ -1630,12 +1535,16 @@ function PlaylistSidebar({
     return (
       <div className="playlist-sidebar-add">
         {playlist.length > 0 && (
-          <PlaylistSearchControl
+          <FilterSearchControl
             tone={tone}
             query={playlistSearchQuery}
             onQueryChange={setPlaylistSearchQuery}
             onOpenChange={setIsFooterSearchOpen}
             hidden={isFooterAddOpen}
+            extraClassName="playlist-filter-search"
+            ariaLabel="Search in playlist"
+            placeholder="Search in Playlist…"
+            closeAriaLabel="Close playlist search"
           />
         )}
         {canModifyList && authUser && pendingMetadataCount > 0 && (

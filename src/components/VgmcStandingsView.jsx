@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { partitionStandings } from '../lib/vgmcStandings.js';
 import { ReloadIcon } from './Icons.jsx';
+import FilterSearchControl from './FilterSearchControl.jsx';
 
 const SUB_TABS = [
   { id: 'standings', label: 'Current Standings' },
@@ -36,6 +37,7 @@ export default function VgmcStandingsView({
   onPlayNow,
 }) {
   const [activeSubTab, setActiveSubTab] = useState('standings');
+  const [searchQuery, setSearchQuery] = useState('');
   const { standings, locked } = useMemo(() => partitionStandings(rows), [rows]);
   const visibleRows = activeSubTab === 'locked' ? locked : standings;
 
@@ -60,6 +62,46 @@ export default function VgmcStandingsView({
     });
     return items;
   }, [visibleRows]);
+
+  const normalizedSearchQuery = searchQuery.trim().toLowerCase();
+
+  // Filters `sections`, not `visibleRows` - rank (#) has to keep reflecting
+  // true overall standing (computed above from the full, unfiltered list),
+  // not position among just the search matches, same "narrows which rows
+  // render, never reorders/renumbers them" rule the playlist search follows
+  // (see PlaylistSidebar's displayPlaylist). A header is only kept when at
+  // least one row under it still matches, so an empty point-value section
+  // never shows up on its own.
+  const filteredSections = useMemo(() => {
+    if (!normalizedSearchQuery) return sections;
+
+    const matchingKeys = new Set(
+      sections
+        .filter((item) => item.type === 'row')
+        .filter((item) => {
+          const haystack =
+            `${item.row.game || ''} ${item.row.song || item.row.title || ''}`.toLowerCase();
+          return haystack.includes(normalizedSearchQuery);
+        })
+        .map((item) => item.key),
+    );
+
+    const result = [];
+    let pendingHeader = null;
+    sections.forEach((item) => {
+      if (item.type === 'header') {
+        pendingHeader = item;
+        return;
+      }
+      if (!matchingKeys.has(item.key)) return;
+      if (pendingHeader) {
+        result.push(pendingHeader);
+        pendingHeader = null;
+      }
+      result.push(item);
+    });
+    return result;
+  }, [sections, normalizedSearchQuery]);
 
   function handlePlayRow(row) {
     if (!onPlayNow || !row.videoId) return;
@@ -88,6 +130,12 @@ export default function VgmcStandingsView({
         minHeight: 0,
         overflow: 'hidden',
         background: 'var(--bg-card)',
+        // Containing block for the absolutely-positioned search control
+        // below - keeps it pinned to this panel's own corner instead of
+        // whichever ancestor up the tree happens to be positioned (which,
+        // via App.jsx's split layout, would span the full row including the
+        // player column next door).
+        position: 'relative',
         // border-box, not the content-box default: without it, this div's
         // "16px padding" is ADDED on top of the 100% width instead of eating
         // into it, so it quietly asks its App.jsx wrapper for 32px more than
@@ -153,7 +201,18 @@ export default function VgmcStandingsView({
           needed - hidden makes that a hard guarantee instead of "shouldn't
           happen", silently clipping the rare stray pixel instead of ever
           surfacing a scrollbar. */}
-      <div style={{ overflowY: 'auto', overflowX: 'hidden', flex: 1 }}>
+      <div
+        style={{
+          overflowY: 'auto',
+          overflowX: 'hidden',
+          flex: 1,
+          // Bottom clearance for the floating search control below (same
+          // 92px the playlist sidebar reserves for its own identical
+          // control - see .playlist-list in index.css - so the last row or
+          // two never lands underneath it).
+          paddingBottom: visibleRows.length > 0 ? 92 : 0,
+        }}
+      >
         {visibleRows.length === 0 ? (
           <p
             style={{
@@ -165,6 +224,16 @@ export default function VgmcStandingsView({
             {activeSubTab === 'locked'
               ? 'No songs have locked in 7+ support points yet.'
               : 'No songs have more than 1 support point yet.'}
+          </p>
+        ) : filteredSections.length === 0 ? (
+          <p
+            style={{
+              color: 'var(--text-secondary)',
+              fontSize: '13px',
+              padding: '8px 0',
+            }}
+          >
+            No songs match “{searchQuery.trim()}”.
           </p>
         ) : (
           <table
@@ -202,7 +271,7 @@ export default function VgmcStandingsView({
               </tr>
             </thead>
             <tbody>
-              {sections.map((item) =>
+              {filteredSections.map((item) =>
                 item.type === 'header' ? (
                   <tr key={item.key} className="vgmc-standings-section">
                     <td colSpan={4}>
@@ -274,6 +343,52 @@ export default function VgmcStandingsView({
           </table>
         )}
       </div>
+
+      {/* Same control, same corner as the playlist sidebar's search (see
+          PlaylistSidebar's renderAddControl/.playlist-sidebar-add), pinned
+          bottom-left over the list rather than living in the header, same
+          12px/20px inset. Both left and right are set (not just left) so
+          this wrapper gets a definite width - needed for the flip-card's
+          .open state (width: min(100%, 360px), see index.css) to size off
+          something real. FilterSearchControl has to be a *direct* flex
+          child of this wrapper, not nested another level down: as a flex
+          item it's sized to its own content (54px collapsed, up to 360px
+          open) rather than stretched, but that only resolves correctly if
+          `min(100%, 360px)` is read directly against this wrapper's
+          definite width - wrapping it in another auto-width div would leave
+          that inner div with no definite width of its own, so the
+          percentage would resolve against nothing and the opened input
+          would collapse to a sliver instead of expanding (this is also why
+          .collection-adder is a direct child of .playlist-sidebar-add, not
+          nested there either). pointer-events mirrors
+          .playlist-sidebar-add/> *: none on this wrapper, auto on the
+          control itself (via its style prop), so the empty strip beside the
+          collapsed button doesn't swallow double-clicks meant for the table
+          rows under it. */}
+      {rows.length > 0 && (
+        <div
+          style={{
+            position: 'absolute',
+            left: 12,
+            right: 20,
+            bottom: 12,
+            zIndex: 5,
+            display: 'flex',
+            alignItems: 'flex-end',
+            pointerEvents: 'none',
+          }}
+        >
+          <FilterSearchControl
+            tone="playlist"
+            query={searchQuery}
+            onQueryChange={setSearchQuery}
+            ariaLabel="Search standings"
+            placeholder="Search standings…"
+            closeAriaLabel="Close standings search"
+            style={{ pointerEvents: 'auto' }}
+          />
+        </div>
+      )}
     </div>
   );
 }
