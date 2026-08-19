@@ -3,6 +3,7 @@ import {
   buildReconcileEntries,
   extractVideoId,
   foldThread,
+  isRecordActive,
   normalizeKey,
   parseCommandLine,
   supportPoints,
@@ -359,7 +360,7 @@ describe('foldThread', () => {
     expect(buildReconcileEntries(records)[0].support_points).toBe(3);
   });
 
-  it("a supporter's ++ never steals removal rights from the original nominator", () => {
+  it("alice can still drop her own nomination, but bob's ++ support keeps it in the playlist", () => {
     const records = foldThread([
       {
         postId: '1',
@@ -374,7 +375,15 @@ describe('foldThread', () => {
       { postId: '3', author: 'alice', text: '- Game A | Song A | link' },
     ]);
 
-    expect(buildReconcileEntries(records)).toEqual([]);
+    // alice's drop still fires (authority rule: owner, magnitude 1), but it's
+    // no longer an immediate removal, it only excludes the record once points
+    // hit zero. bob's ++ (2 points) outweighs alice's net (1 - 1 = 0), so the
+    // record stays active at 2 points.
+    const record = records.get('game a|song a');
+    expect(record.droppedByOwner).toBe(true);
+    expect(buildReconcileEntries(records)).toEqual([
+      expect.objectContaining({ support_points: 2 }),
+    ]);
   });
 
   it("a supporter's ++ never edits the record's link/game/song", () => {
@@ -514,17 +523,68 @@ describe('foldThread', () => {
       { postId: '3', author: 'alice', text: '- Game A | Song A | link' },
     ]);
 
-    // alice is the owner, but this '-' is her second event on an already-'+'
-    // record, the authority rule only fires on a lone '-' as the very act
-    // that would flip present -> false; here it still does (owner, magnitude 1,
-    // present), so this also tombstones the record. Scoring still accumulates
-    // regardless: 1 + 1 - 1 = 1.
+    // alice is the owner, this '-' marks the record dropped and casts her -1
+    // vote, but her own earlier double '+' left her net at 1 point, so the
+    // record stays active: isRecordActive only excludes a dropped record once
+    // its points hit zero, regardless of whose points those are. Scoring still
+    // accumulates regardless: 1 + 1 - 1 = 1.
     const record = records.get('game a|song a');
-    expect(record.present).toBe(false);
+    expect(record.droppedByOwner).toBe(true);
+    expect(isRecordActive(record)).toBe(true);
     expect(supportPoints(record)).toBe(1);
   });
 
-  it('"--" never removes the nomination, only affects its score', () => {
+  it('a drop only takes effect once points reach zero; other supporters keep it in the playlist', () => {
+    const records = foldThread([
+      {
+        postId: '1',
+        author: 'alice',
+        text: '+ Game A | Song A | https://youtu.be/aaaaaaaaaaa',
+      },
+      {
+        postId: '2',
+        author: 'bob',
+        text: '++ Game A | Song A | https://youtu.be/aaaaaaaaaaa',
+      },
+      { postId: '3', author: 'alice', text: '- Game A | Song A | link' },
+    ]);
+
+    // alice drops her own nomination (1 - 1 = 0 for her), but bob's separate
+    // ++ support (2 points) keeps the total above zero, so it stays active and
+    // still gets reconciled into the playlist.
+    const record = records.get('game a|song a');
+    expect(record.droppedByOwner).toBe(true);
+    expect(isRecordActive(record)).toBe(true);
+    expect(supportPoints(record)).toBe(2);
+    expect(buildReconcileEntries(records)).toHaveLength(1);
+  });
+
+  it('a dropped-but-still-supported nomination drops out once later downvotes bring it to zero', () => {
+    const records = foldThread([
+      {
+        postId: '1',
+        author: 'alice',
+        text: '+ Game A | Song A | https://youtu.be/aaaaaaaaaaa',
+      },
+      {
+        postId: '2',
+        author: 'bob',
+        text: '+ Game A | Song A | https://youtu.be/aaaaaaaaaaa',
+      },
+      { postId: '3', author: 'alice', text: '- Game A | Song A | link' },
+      { postId: '4', author: 'carol', text: '- Game A | Song A | link' },
+    ]);
+
+    // After alice's drop: alice 0, bob 1 -> total 1, still active. carol's
+    // opposition vote (non-owner, so a vote only, not a second drop) brings it
+    // to 0, which finally excludes it.
+    const record = records.get('game a|song a');
+    expect(supportPoints(record)).toBe(0);
+    expect(isRecordActive(record)).toBe(false);
+    expect(buildReconcileEntries(records)).toHaveLength(0);
+  });
+
+  it('"--" never drops the nomination, only affects its score', () => {
     const records = foldThread([
       {
         postId: '1',
@@ -534,10 +594,12 @@ describe('foldThread', () => {
       { postId: '2', author: 'alice', text: '-- Game A | Song A | link' },
     ]);
 
-    // alice's own total accumulates (2 + -2 = 0, clamped no-op); still present,
-    // just below the >1 threshold, '--' only ever affects score, never presence.
+    // alice's own total accumulates (2 + -2 = 0, clamped no-op); '--' only ever
+    // affects score, it never marks the record dropped, so it's still active
+    // even though its points are down to 0.
     const record = records.get('game a|song a');
-    expect(record.present).toBe(true);
+    expect(record.droppedByOwner).toBe(false);
+    expect(isRecordActive(record)).toBe(true);
     expect(supportPoints(record)).toBe(0);
   });
 

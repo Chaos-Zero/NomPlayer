@@ -4,8 +4,11 @@ import { parseMediaInput } from '../utils/media.js';
 //
 //   + Game | Song | Link      adds (or updates the link of) a nomination; 1 support point
 //   ++ Game | Song | Link     same, but worth 2 support points (can also be the initial nomination)
-//   - Game | Song | Link      removes a nomination (owner only) and casts a -1 point vote
-//   -- Game | Song | Link     casts a -2 point vote; never removes
+//   - Game | Song | Link      owner-only: marks a nomination dropped and casts a -1 point vote.
+//                             A dropped nomination stays in the playlist as long as its total
+//                             support points stay above zero (other people's support can carry
+//                             it), it only actually disappears once its points hit zero.
+//   -- Game | Song | Link     casts a -2 point vote; never drops the nomination
 //
 // This is the single place that convention lives. The browser extension is a dumb
 // extractor, it only ships {postId, author, text} per post, so a parsing fix or a
@@ -106,13 +109,30 @@ function comparePostIds(a, b) {
 }
 
 /**
+ * Whether a record currently belongs in the playlist. A record that's never been
+ * dropped by its owner is always active, regardless of its point total (a song
+ * can sit at 0 or even negative points from downvotes and still be in the
+ * playlist; dropping it is a deliberate act, not an automatic consequence of a
+ * bad score). Once the owner drops it (a single '-'), it stays active only as
+ * long as its total support points are still above zero, other people's support
+ * can keep a dropped nomination alive; it disappears the moment points hit zero.
+ */
+export function isRecordActive(record) {
+  if (!record) return false;
+  if (!record.droppedByOwner) return true;
+  return supportPoints(record) > 0;
+}
+
+/**
  * Replays every post in thread order (post 1 -> N) and folds nomination/support
  * commands into a final record set, keyed by normalized (game, song) identity.
  *
  * Three rules make this work:
  *  - Authority rule: only a single '-' (never '--') from the song's current owner
- *    (the author of its most recent '+'/'++') removes it. Anything else with '-'
- *    polarity is a vote, never a removal.
+ *    (the author of its most recent '+'/'++') marks it dropped. Anything else
+ *    with '-' polarity is a vote, never a drop. A dropped record isn't removed
+ *    outright, see isRecordActive: it stays in the playlist as long as its points
+ *    stay positive, and reverting/reclaiming (see below) un-drops it.
  *  - Two points max per author: every +/++/-/-- from the same author on the same
  *    song accumulates onto their running total for it (across as many separate
  *    posts as they like, one ++ and two separate +'s both get you to the same
@@ -122,13 +142,14 @@ function comparePostIds(a, b) {
  *    cap. This is what stops one person inflating or tanking a song's score by
  *    reposting, while still counting genuine repeat show-of-support.
  *  - Ordinal stability: a key's `ordinal` is assigned once, the first time it's ever
- *    introduced, and is never reassigned, not even across removal. Votes persist
- *    across a removal/re-add too, for the same reason a tombstoned song keeps its
- *    slot: the record's identity doesn't reset just because it's temporarily absent.
+ *    introduced, and is never reassigned, not even across a drop. Votes persist
+ *    across a drop/re-add too, for the same reason an inactive song keeps its
+ *    slot: the record's identity doesn't reset just because it's temporarily
+ *    inactive.
  *
  * Always replays from the full post set, never call this with a delta. Returns the
- * full record map (including tombstones); use buildReconcileEntries to get the
- * desired playlist order plus each record's total support points.
+ * full record map (including inactive/dropped records); use buildReconcileEntries
+ * to get the desired playlist order plus each record's total support points.
  */
 export function foldThread(posts) {
   const records = new Map();
@@ -159,22 +180,22 @@ export function foldThread(posts) {
         if (existing) {
           // Only the owner (the current nominator) can change what the record
           // points at. Anyone else's '+'/'++' is pure support, it must not silently
-          // edit the link/game/song, and critically must not steal removal rights
+          // edit the link/game/song, and critically must not steal drop rights
           // away from the person who actually nominated it (see the authority-rule
           // regression this guards: a supporter's '++' used to reassign `owner` to
-          // themselves, which meant the original nominator could no longer remove
-          // their own nomination).  A fresh re-add of a tombstoned record is the one
+          // themselves, which meant the original nominator could no longer drop
+          // their own nomination). A fresh re-add of an inactive record is the one
           // exception, whoever revives it becomes the new owner.
-          const wasAbsent = !existing.present;
-          const isOwnerAction = wasAbsent || existing.owner === post.author;
+          const wasInactive = !isRecordActive(existing);
+          const isOwnerAction = wasInactive || existing.owner === post.author;
 
-          existing.present = true;
           if (isOwnerAction) {
             existing.videoId = videoId;
             existing.provider = provider;
             existing.game = game;
             existing.song = song;
             existing.owner = post.author;
+            existing.droppedByOwner = false;
           }
           applyVote(existing.votes, post.author, value);
         } else {
@@ -186,7 +207,7 @@ export function foldThread(posts) {
             song,
             videoId,
             provider,
-            present: true,
+            droppedByOwner: false,
             owner: post.author,
             ordinal: nextOrdinal++,
             votes,
@@ -195,17 +216,15 @@ export function foldThread(posts) {
         continue;
       }
 
-      // sign === '-': nothing to vote on or remove if the song was never nominated.
+      // sign === '-': nothing to vote on or drop if the song was never nominated.
       if (!existing) continue;
 
       // Authority rule, only a single '-' (magnitude 1) from the current owner
-      // removes. A '--' (magnitude 2) never removes, only votes.
-      if (
-        magnitude === 1 &&
-        existing.present &&
-        existing.owner === post.author
-      ) {
-        existing.present = false;
+      // marks it dropped. A '--' (magnitude 2) never drops, only votes. Dropping
+      // isn't an immediate removal, see isRecordActive: the record stays active
+      // as long as its points stay above zero.
+      if (magnitude === 1 && existing.owner === post.author) {
+        existing.droppedByOwner = true;
       }
 
       applyVote(existing.votes, post.author, value);
@@ -233,7 +252,7 @@ export function supportPoints(record) {
  * is displayed. */
 export function buildReconcileEntries(records) {
   return [...records.values()]
-    .filter((record) => record.present && record.videoId)
+    .filter((record) => isRecordActive(record) && record.videoId)
     .sort((a, b) => a.ordinal - b.ordinal)
     .map((record) => ({
       source_key: record.sourceKey,
