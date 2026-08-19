@@ -2467,6 +2467,11 @@ export default function App() {
   const isPlayerPage = activePage === 'player';
   const isDatabasePage = activePage === 'database';
   const isListExplorerPage = activePage === 'listExplorer';
+  // Community Playlists moved out to its own left-nav destination but still
+  // renders through ListExplorer (see the shared render block below) - this
+  // flag lets the surrounding chrome (main-content class, HomePage hiding)
+  // treat it the same way isListExplorerPage already does.
+  const isCommunityPlaylistsPage = activePage === 'communityPlaylists';
   // The VGMC standings page reuses the classic player page's full VideoPlayer +
   // persistent sidebar chrome (see PLAYER_LIKE_PAGES in handleNavigate for the
   // matching navigation-animation treatment), it just adds a standings table above
@@ -6185,7 +6190,21 @@ export default function App() {
         }
 
         const isNominations = sharedListLink.type === 'nominations';
-        const videos = isNominations ? lists.nominationList : lists.supportList;
+        // get_user_public_lists (see lib/sharedUserLists.js) returns each
+        // track's stored source_thumbnail_url as-is, which is empty for
+        // tracks that never had one scraped (e.g. some GameFaqs-sourced
+        // nominations) - enrichedNominationList/enrichedSupportList (above)
+        // fall back to a thumbnail derived from the video ID itself
+        // (catalogEntry?.sourceThumbnailUrl || item.thumbnail ||
+        // getYouTubeThumbnailUrl(...)) for the same reason, this is that
+        // same fallback applied here so shared nomination/support links
+        // don't come back with blank thumbnails.
+        const videos = (
+          isNominations ? lists.nominationList : lists.supportList
+        ).map((video) => ({
+          ...video,
+          thumbnail: video.thumbnail || getYouTubeThumbnailUrl(video.videoId),
+        }));
         if (!videos.length) {
           showDefaultAppToast(
             `${lists.username} doesn't have any ${isNominations ? 'nominations' : 'supports'} yet.`,
@@ -6316,11 +6335,29 @@ export default function App() {
     setExplorerInitialFilterNominations,
   ] = useState(false);
 
+  // Community Playlists is its own top-level page now (see NAV_ITEMS in
+  // SiteNavigation) rather than an explorerInitialView preset - it no
+  // longer shares activePage with 'listExplorer', so the shared render
+  // block below derives its initialView from activePage directly.
   const handleNavigateToCommunityPlaylists = useCallback(() => {
-    setExplorerInitialView('community-playlists');
     setExplorerInitialFilterNominations(false);
-    handleNavigate('listExplorer');
+    handleNavigate('communityPlaylists');
   }, [handleNavigate]);
+
+  // SiteNavigation dispatches every nav item through the same onNavigate(id)
+  // callback, so route its 'communityPlaylists' click through the same
+  // handler as every other entry point into that page (PlaylistSidebar,
+  // HomePage's dashboard card) instead of calling handleNavigate directly.
+  const handleSiteNavigate = useCallback(
+    (page) => {
+      if (page === 'communityPlaylists') {
+        handleNavigateToCommunityPlaylists();
+      } else {
+        handleNavigate(page);
+      }
+    },
+    [handleNavigate, handleNavigateToCommunityPlaylists],
+  );
 
   const handleNavigateToExplorer = useCallback(() => {
     setExplorerInitialView('lists');
@@ -6670,7 +6707,7 @@ export default function App() {
       {!isMobileLayout && (
         <SiteNavigation
           activePage={activePage}
-          onNavigate={handleNavigate}
+          onNavigate={handleSiteNavigate}
           authUser={authUser}
         />
       )}
@@ -6679,7 +6716,7 @@ export default function App() {
         <SiteNavigation
           isMobile
           activePage={activePage}
-          onNavigate={handleNavigate}
+          onNavigate={handleSiteNavigate}
           authUser={authUser}
           isMenuOpen={isMobileNavOpen}
           onToggleMenu={handleToggleMobileNav}
@@ -6756,7 +6793,7 @@ export default function App() {
         />
 
         <main
-          className={`main-content${isPlayerLikePage ? ' player-view' : isDatabasePage || isListExplorerPage ? ' home-view' : ' home-view'}${isListExplorerPage ? ' list-explorer-view' : ''}${!isPlayerLikePage && isLogoutTransitioning ? ' logout-fade-in' : ''}${hasDetachedFooter && !isPlayerLikePage ? ' has-persistent-player' : ''}`}
+          className={`main-content${isPlayerLikePage ? ' player-view' : isDatabasePage || isListExplorerPage ? ' home-view' : ' home-view'}${isListExplorerPage || isCommunityPlaylistsPage ? ' list-explorer-view' : ''}${!isPlayerLikePage && isLogoutTransitioning ? ' logout-fade-in' : ''}${hasDetachedFooter && !isPlayerLikePage ? ' has-persistent-player' : ''}`}
           id="main-content"
         >
           {/*
@@ -6864,53 +6901,61 @@ export default function App() {
                 </div>
               )}
 
-              {!isPlayerLikePage && !isDatabasePage && !isListExplorerPage && (
-                <div key="home-page" style={{ flex: '1 1 auto', minHeight: 0 }}>
-                  <HomePage
-                    supabase={supabase}
-                    authUser={authUser}
-                    isAuthReady={isAuthReady}
-                    currentPlaylist={playlist}
-                    supportStatusById={supportStatusById}
-                    globalActivityByVideoId={globalActivityByVideoId}
-                    listenedStatusById={listenedStatusById}
-                    isFeedbackPanelOpen={isFeedbackPanelOpen}
-                    onAddToPlaylist={handleQueueFromSupportList}
-                    onPlayNow={handlePlayNowFromSupportList}
-                    onPlayPlaylist={handlePlayCommunityPlaylist}
-                    onToggleSupport={handleToggleSupportFromPlaylist}
-                    onToggleNomination={handleToggleNominationFromPlaylist}
-                    onOpenSupportDropdown={handleOpenSupportDropdown}
-                    onShowComments={handleShowComments}
-                    onNavigateToPlayer={handleNavigateToPlayer}
-                    onNavigateToExplorer={handleNavigateToExplorer}
-                    onNavigateToCommunityPlaylists={
-                      handleNavigateToCommunityPlaylists
-                    }
-                    onNavigateToExplorerComments={
-                      handleNavigateToExplorerComments
-                    }
-                    onNavigateToDatabase={handleNavigateToDatabase}
-                    onOpenPlaylist={handleTogglePlaylist}
-                    onOpenNominationsAdding={handleOpenNominationsWithHighlight}
-                    onShowToast={handleShowDashboardToneToast}
-                    onUpdateMetadata={handleOpenMetadataUpdate}
-                    catalogMetadata={catalogTrackByVideoId}
-                    lastMetadataUpdateBatch={lastMetadataUpdateBatch}
-                    onPlayCommunityListFromTrack={
-                      handlePlayCommunityListFromTrack
-                    }
-                    onPlayFromNominationList={handlePlayFromNominationList}
-                    onPlayFromSupportList={handlePlayFromSupportList}
-                    userProfile={userProfile}
-                    nominationList={nominationList}
-                    onNominationsLoaded={handleNominationsLoaded}
-                    nominationRefreshToken={nominationRefreshToken}
-                    customPlaylists={customPlaylists}
-                    onUpdateCustomPlaylists={setCustomPlaylists}
-                  />
-                </div>
-              )}
+              {!isPlayerLikePage &&
+                !isDatabasePage &&
+                !isListExplorerPage &&
+                !isCommunityPlaylistsPage && (
+                  <div
+                    key="home-page"
+                    style={{ flex: '1 1 auto', minHeight: 0 }}
+                  >
+                    <HomePage
+                      supabase={supabase}
+                      authUser={authUser}
+                      isAuthReady={isAuthReady}
+                      currentPlaylist={playlist}
+                      supportStatusById={supportStatusById}
+                      globalActivityByVideoId={globalActivityByVideoId}
+                      listenedStatusById={listenedStatusById}
+                      isFeedbackPanelOpen={isFeedbackPanelOpen}
+                      onAddToPlaylist={handleQueueFromSupportList}
+                      onPlayNow={handlePlayNowFromSupportList}
+                      onPlayPlaylist={handlePlayCommunityPlaylist}
+                      onToggleSupport={handleToggleSupportFromPlaylist}
+                      onToggleNomination={handleToggleNominationFromPlaylist}
+                      onOpenSupportDropdown={handleOpenSupportDropdown}
+                      onShowComments={handleShowComments}
+                      onNavigateToPlayer={handleNavigateToPlayer}
+                      onNavigateToExplorer={handleNavigateToExplorer}
+                      onNavigateToCommunityPlaylists={
+                        handleNavigateToCommunityPlaylists
+                      }
+                      onNavigateToExplorerComments={
+                        handleNavigateToExplorerComments
+                      }
+                      onNavigateToDatabase={handleNavigateToDatabase}
+                      onOpenPlaylist={handleTogglePlaylist}
+                      onOpenNominationsAdding={
+                        handleOpenNominationsWithHighlight
+                      }
+                      onShowToast={handleShowDashboardToneToast}
+                      onUpdateMetadata={handleOpenMetadataUpdate}
+                      catalogMetadata={catalogTrackByVideoId}
+                      lastMetadataUpdateBatch={lastMetadataUpdateBatch}
+                      onPlayCommunityListFromTrack={
+                        handlePlayCommunityListFromTrack
+                      }
+                      onPlayFromNominationList={handlePlayFromNominationList}
+                      onPlayFromSupportList={handlePlayFromSupportList}
+                      userProfile={userProfile}
+                      nominationList={nominationList}
+                      onNominationsLoaded={handleNominationsLoaded}
+                      nominationRefreshToken={nominationRefreshToken}
+                      customPlaylists={customPlaylists}
+                      onUpdateCustomPlaylists={setCustomPlaylists}
+                    />
+                  </div>
+                )}
 
               {isDatabasePage && (
                 <div
@@ -6958,9 +7003,18 @@ export default function App() {
                 </div>
               )}
 
-              {activePage === 'listExplorer' && (
+              {(isListExplorerPage || isCommunityPlaylistsPage) && (
                 <div
-                  key="list-explorer-page"
+                  // Both pages render the same ListExplorer component, just
+                  // landed on a different explorerView - keyed by page so
+                  // switching between them remounts it and picks up the
+                  // fresh initialView below (ListExplorer only reads that
+                  // prop once, on mount).
+                  key={
+                    isCommunityPlaylistsPage
+                      ? 'community-playlists-page'
+                      : 'list-explorer-page'
+                  }
                   style={{ flex: '1 1 auto', minHeight: 0 }}
                 >
                   <ListExplorer
@@ -6993,7 +7047,11 @@ export default function App() {
                     }
                     onPlayCommunityPlaylist={handlePlayCommunityPlaylist}
                     catalogTrackByVideoId={catalogTrackByVideoId}
-                    initialView={explorerInitialView}
+                    initialView={
+                      isCommunityPlaylistsPage
+                        ? 'community-playlists'
+                        : explorerInitialView
+                    }
                     initialFilterNominations={explorerInitialFilterNominations}
                     onRefreshFeedback={refreshUserFeedback}
                     refreshKey={feedbackRefreshKey}

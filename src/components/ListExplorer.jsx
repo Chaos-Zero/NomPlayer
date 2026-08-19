@@ -42,6 +42,8 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import { PointerSensor as CorePointerSensor } from '@dnd-kit/core';
 import PrivacyToggle from './PrivacyToggle.jsx';
+import SharePlaylistConfirmDialog from './SharePlaylistConfirmDialog.jsx';
+import { buildPlaylistShareUrl } from '../lib/communityPlaylists.js';
 import { SortableSupportItem, SupportItem } from './FavouritesPanel.jsx';
 import { DotLottieReact } from '@lottiefiles/dotlottie-react';
 import {
@@ -54,6 +56,7 @@ import {
   StarIcon,
   ChevronRightIcon,
   ChevronDownIcon,
+  ShareIcon,
 } from './Icons.jsx';
 import { ContextMenuPortal } from './ContextMenuPortal';
 import useContextSubmenu from '../hooks/useContextSubmenu.js';
@@ -765,6 +768,7 @@ function ListExplorerColumn({
   userToggle = null,
   isPublic = false,
   onTogglePrivacy = null,
+  onShare = null,
 }) {
   const [addUrl, setAddUrl] = useState('');
   const playlistSelectRef = useRef(null);
@@ -860,6 +864,16 @@ function ListExplorerColumn({
               title="Delete playlist"
             >
               <TrashIcon />
+            </button>
+          )}
+          {isCustom && onShare && !isReadOnly && (
+            <button
+              className="list-explorer-column-btn"
+              onClick={() => onShare(activePlaylistId)}
+              title="Copy share link"
+              aria-label="Copy share link"
+            >
+              <ShareIcon />
             </button>
           )}
           {videos && videos.length > 0 && (
@@ -2222,12 +2236,74 @@ export default function ListExplorer({
     }
   };
 
-  const handleToggleCustomPlaylistPrivacy = (id, isPublic) => {
-    onUpdateCustomPlaylists(
-      customPlaylists.map((p) =>
-        p.id === id ? { ...p, is_public: isPublic } : p,
-      ),
-    );
+  // Persists to user_playlists first, same as PlaylistSidebar's
+  // handleTogglePrivacy - the local customPlaylists update alone (which is
+  // all this used to do) never reached the DB, so a toggle here silently
+  // reverted on next reload, and handleConfirmMakePublicAndShare below
+  // depends on this actually landing before it hands out a link that RLS
+  // would otherwise reject for anyone but the owner.
+  const handleToggleCustomPlaylistPrivacy = async (id, isPublic) => {
+    if (!supabase) return;
+    try {
+      const { error } = await supabase
+        .from('user_playlists')
+        .update({ is_public: isPublic })
+        .eq('id', id);
+      if (error) throw error;
+      onUpdateCustomPlaylists(
+        customPlaylists.map((p) =>
+          p.id === id ? { ...p, is_public: isPublic } : p,
+        ),
+      );
+    } catch (err) {
+      console.error(err);
+      onShowToast?.('Failed to update playlist privacy');
+    }
+  };
+
+  // Copies a `?playlist=<id>` link (see the shared-link boot loader in
+  // App.jsx), same flow as PlaylistSidebar's handleSharePlaylist - a
+  // private playlist can't just be shared as-is (RLS only allows public
+  // rows to be read by anyone but the owner), so it goes through
+  // SharePlaylistConfirmDialog (rendered below) instead of silently
+  // publishing it.
+  const [playlistToShare, setPlaylistToShare] = useState(null);
+  const [isPublishingForShare, setIsPublishingForShare] = useState(false);
+
+  const handleSharePlaylist = (playlistId) => {
+    const pl = (customPlaylists || []).find((p) => p.id === playlistId);
+    if (!pl) return;
+    if (!pl.is_public) {
+      setPlaylistToShare(pl);
+      return;
+    }
+    navigator.clipboard
+      .writeText(buildPlaylistShareUrl(playlistId))
+      .then(() => onShowToast?.('Share link copied to clipboard'))
+      .catch((err) => {
+        console.error(err);
+        onShowToast?.('Failed to copy share link');
+      });
+  };
+
+  const handleConfirmMakePublicAndShare = async () => {
+    if (!playlistToShare) return;
+    setIsPublishingForShare(true);
+    try {
+      await handleToggleCustomPlaylistPrivacy(playlistToShare.id, true);
+      await navigator.clipboard.writeText(
+        buildPlaylistShareUrl(playlistToShare.id),
+      );
+      onShowToast?.(
+        `Made "${playlistToShare.name}" public and copied its share link`,
+      );
+      setPlaylistToShare(null);
+    } catch (err) {
+      console.error(err);
+      onShowToast?.('Failed to copy share link');
+    } finally {
+      setIsPublishingForShare(false);
+    }
   };
 
   const handleAddByUrl = async (id, url) => {
@@ -2685,11 +2761,17 @@ export default function ListExplorer({
     >
       <div className="list-explorer-header">
         <div className="list-explorer-title-group">
-          <h1>List Explorer</h1>
-          <ViewSelectorDropdown
-            value={explorerView}
-            onChange={handleChangeExplorerView}
-          />
+          <h1>
+            {explorerView === 'community-playlists'
+              ? 'Community Playlists'
+              : 'List Explorer'}
+          </h1>
+          {explorerView !== 'community-playlists' && (
+            <ViewSelectorDropdown
+              value={explorerView}
+              onChange={handleChangeExplorerView}
+            />
+          )}
         </div>
         <div className="list-explorer-global-actions">
           {explorerView === 'lists' && (
@@ -3149,6 +3231,7 @@ export default function ListExplorer({
                     }
                     isPublic={activeCustomPlaylist.is_public}
                     onTogglePrivacy={handleToggleCustomPlaylistPrivacy}
+                    onShare={handleSharePlaylist}
                     onRemove={(videoId) => {
                       onUpdateCustomPlaylists(
                         customPlaylists.map((p) =>
@@ -3525,6 +3608,14 @@ export default function ListExplorer({
         playlistName={deleteDialog?.name || ''}
         onClose={() => setDeleteDialog(null)}
         onConfirm={confirmDelete}
+      />
+
+      <SharePlaylistConfirmDialog
+        isOpen={!!playlistToShare}
+        isSubmitting={isPublishingForShare}
+        playlistName={playlistToShare?.name || ''}
+        onClose={() => setPlaylistToShare(null)}
+        onConfirm={handleConfirmMakePublicAndShare}
       />
 
       {showCreatePlaylistDialog && (

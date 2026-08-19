@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import DiscordIcon from './DiscordIcon.jsx';
 import {
   parseStoredProfileUsername,
@@ -28,12 +29,37 @@ export default function UserMenu({
   const [isOpen, setIsOpen] = useState(false);
   const [failedAvatarUrl, setFailedAvatarUrl] = useState('');
   const menuRef = useRef(null);
+  // Popover is portaled to document.body (see the createPortal call below)
+  // so it always paints above everything else, including ancestors that
+  // create their own stacking context (a transform/filter/etc. anywhere
+  // between here and <body> would otherwise trap a position:fixed child
+  // and cap its effective z-index at that ancestor's). popoverRef lets the
+  // outside-click check below still recognise clicks inside it even though
+  // it's no longer a DOM descendant of menuRef.
+  const popoverRef = useRef(null);
+  const [popoverPosition, setPopoverPosition] = useState(null);
+
+  // Anchors the portaled popover under the toggle button, right-aligned to
+  // its edge - the same spot the old position:absolute/right:0 CSS put it.
+  // Reading menuRef during render (rather than measuring here in an effect)
+  // isn't allowed - refs aren't safe to read until after commit - so this
+  // has to be an Effect that measures the DOM and reflects it into state.
+  useLayoutEffect(() => {
+    if (!isOpen) return;
+    const buttonRect = menuRef.current?.getBoundingClientRect();
+    if (!buttonRect) return;
+    setPopoverPosition({
+      top: buttonRect.bottom + 10,
+      right: Math.max(8, window.innerWidth - buttonRect.right),
+    });
+  }, [isOpen]);
 
   useEffect(() => {
     if (!isOpen) return undefined;
 
     function handlePointerDown(event) {
       if (menuRef.current?.contains(event.target)) return;
+      if (popoverRef.current?.contains(event.target)) return;
       setIsOpen(false);
     }
 
@@ -91,82 +117,95 @@ export default function UserMenu({
         )}
       </button>
 
-      {isOpen && (
-        <div className="user-menu-popover" role="menu">
-          {user ? (
-            <>
-              <div className="user-menu-summary">
-                <span className="user-menu-name">
-                  {displayIdentity.provider === 'discord' && (
-                    <DiscordIcon className="profile-provider-icon user-menu-provider-icon" />
-                  )}
-                  <span>
-                    {getDisplayProfileName(displayIdentity.displayName)}
+      {isOpen &&
+        popoverPosition &&
+        createPortal(
+          <div
+            ref={popoverRef}
+            className="user-menu-popover"
+            role="menu"
+            style={{
+              position: 'fixed',
+              top: popoverPosition.top,
+              right: popoverPosition.right,
+              zIndex: 50000,
+            }}
+          >
+            {user ? (
+              <>
+                <div className="user-menu-summary">
+                  <span className="user-menu-name">
+                    {displayIdentity.provider === 'discord' && (
+                      <DiscordIcon className="profile-provider-icon user-menu-provider-icon" />
+                    )}
+                    <span>
+                      {getDisplayProfileName(displayIdentity.displayName)}
+                    </span>
                   </span>
-                </span>
-                {secondaryLabel && (
-                  <span className="user-menu-email">{secondaryLabel}</span>
-                )}
-              </div>
-              <button
-                className="user-menu-item"
-                type="button"
-                role="menuitem"
-                onClick={() => {
-                  setIsOpen(false);
-                  onOpenHistory?.();
-                }}
-              >
-                History
-              </button>
-              <button
-                className="user-menu-item"
-                type="button"
-                role="menuitem"
-                onClick={() => {
-                  setIsOpen(false);
-                  onOpenSettings?.();
-                }}
-              >
-                Settings
-              </button>
-              <button
-                className="user-menu-item danger"
-                type="button"
-                role="menuitem"
-                onClick={() => {
-                  setIsOpen(false);
-                  onLogout?.();
-                }}
-              >
-                Log out
-              </button>
-            </>
-          ) : (
-            <>
-              <div className="user-menu-summary">
-                <span className="user-menu-name">Guest</span>
-                <span className="user-menu-email">
-                  {authAvailable
-                    ? 'Log in to sync playlists and lists.'
-                    : 'Configure Supabase to enable accounts.'}
-                </span>
-              </div>
-              <button
-                className="user-menu-item"
-                type="button"
-                role="menuitem"
-                onClick={() => {
-                  setIsOpen(false);
-                  onOpenAuth?.();
-                }}
-              >
-                {authAvailable ? 'Log in' : 'Set up login'}
-              </button>
-            </>
-          )}
-        </div>
-      )}
+                  {secondaryLabel && (
+                    <span className="user-menu-email">{secondaryLabel}</span>
+                  )}
+                </div>
+                <button
+                  className="user-menu-item"
+                  type="button"
+                  role="menuitem"
+                  onClick={() => {
+                    setIsOpen(false);
+                    onOpenHistory?.();
+                  }}
+                >
+                  History
+                </button>
+                <button
+                  className="user-menu-item"
+                  type="button"
+                  role="menuitem"
+                  onClick={() => {
+                    setIsOpen(false);
+                    onOpenSettings?.();
+                  }}
+                >
+                  Settings
+                </button>
+                <button
+                  className="user-menu-item danger"
+                  type="button"
+                  role="menuitem"
+                  onClick={() => {
+                    setIsOpen(false);
+                    onLogout?.();
+                  }}
+                >
+                  Log out
+                </button>
+              </>
+            ) : (
+              <>
+                <div className="user-menu-summary">
+                  <span className="user-menu-name">Guest</span>
+                  <span className="user-menu-email">
+                    {authAvailable
+                      ? 'Log in to sync playlists and lists.'
+                      : 'Configure Supabase to enable accounts.'}
+                  </span>
+                </div>
+                <button
+                  className="user-menu-item"
+                  type="button"
+                  role="menuitem"
+                  onClick={() => {
+                    setIsOpen(false);
+                    onOpenAuth?.();
+                  }}
+                >
+                  {authAvailable ? 'Log in' : 'Set up login'}
+                </button>
+              </>
+            )}
+          </div>,
+          document.body,
+        )}
     </div>
   );
 }
