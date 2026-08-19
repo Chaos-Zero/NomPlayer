@@ -4,6 +4,8 @@ import { DotLottieReact } from '@lottiefiles/dotlottie-react';
 import { fetchAllCommunityFeedback } from '../lib/feedback.js';
 import { getDisplayProfileName } from '../lib/playerState.js';
 import { getMediaThumbnailUrl } from '../utils/media.js';
+import { ChevronDownIcon } from './Icons.jsx';
+import useMediaQuery from '../hooks/useMediaQuery.js';
 
 const SORT_OPTIONS = [
   { id: 'date', label: 'Latest Activity' },
@@ -62,6 +64,12 @@ export default function AllFeedbackView({
     initialFilterNominations,
   );
   const [filterSupports, setFilterSupports] = useState(false);
+  // Sort/filter row is a lot of controls to plant permanently between the
+  // sub-tabs and the actual list on a phone screen, so on mobile it starts
+  // folded away - same info, just a tap away instead of eating the view by
+  // default. Desktop has the room, so it always stays expanded there.
+  const isMobileLayout = useMediaQuery('(max-width: 960px)');
+  const [isToolbarExpanded, setIsToolbarExpanded] = useState(false);
 
   const parentRef = useRef(null);
 
@@ -214,6 +222,17 @@ export default function AllFeedbackView({
 
   const virtualItems = rowVirtualizer.getVirtualItems();
 
+  // Whether anything's been changed from the defaults - drives the little
+  // indicator dot on the folded toggle, so it's obvious a filter is active
+  // even while the row that shows it is collapsed.
+  const hasActiveFilters =
+    sortBy !== 'date' ||
+    sortAsc ||
+    filterNominations ||
+    filterSupports ||
+    Boolean(vgmcFilter) ||
+    Boolean(userFilter.trim());
+
   function handleSortClick(id) {
     if (sortBy === id) {
       setSortAsc((prev) => !prev);
@@ -244,55 +263,75 @@ export default function AllFeedbackView({
   return (
     <div className="afv-container">
       <div className="afv-toolbar">
-        <div className="afv-sort-group">
-          {SORT_OPTIONS.map((opt) => (
-            <button
-              key={opt.id}
-              className={`afv-sort-btn${sortBy === opt.id ? ' active' : ''}`}
-              onClick={() => handleSortClick(opt.id)}
-            >
-              {opt.label}
-              {sortBy === opt.id && <SortChevron asc={sortAsc} />}
-            </button>
-          ))}
-        </div>
-        <div className="afv-filters">
-          {nominationVideoIds?.size > 0 && (
-            <button
-              className={`afv-sort-btn${filterNominations ? ' active' : ''}`}
-              onClick={() => setFilterNominations((v) => !v)}
-            >
-              My Nominations
-            </button>
-          )}
-          {supportVideoIds?.size > 0 && (
-            <button
-              className={`afv-sort-btn${filterSupports ? ' active' : ''}`}
-              onClick={() => setFilterSupports((v) => !v)}
-            >
-              My Supports
-            </button>
-          )}
-          <select
-            className="afv-filter-select"
-            value={vgmcFilter}
-            onChange={(e) => setVgmcFilter(e.target.value)}
+        {isMobileLayout && (
+          <button
+            type="button"
+            className={`afv-toolbar-toggle${hasActiveFilters ? ' has-active' : ''}`}
+            onClick={() => setIsToolbarExpanded((v) => !v)}
+            aria-expanded={isToolbarExpanded}
           >
-            <option value="">All VGMCs</option>
-            {availableVgmcNums.map((n) => (
-              <option key={n} value={n}>
-                VGMC {n}
-              </option>
-            ))}
-          </select>
-          <input
-            className="afv-filter-input"
-            type="text"
-            placeholder="Filter by user…"
-            value={userFilter}
-            onChange={(e) => setUserFilter(e.target.value)}
-          />
-        </div>
+            <span>Sort &amp; Filters</span>
+            {hasActiveFilters && (
+              <span className="afv-toolbar-toggle-dot" aria-hidden="true" />
+            )}
+            <ChevronDownIcon
+              className={`afv-toolbar-chevron${isToolbarExpanded ? ' open' : ''}`}
+            />
+          </button>
+        )}
+        {(!isMobileLayout || isToolbarExpanded) && (
+          <div className="afv-toolbar-controls">
+            <div className="afv-sort-group">
+              {SORT_OPTIONS.map((opt) => (
+                <button
+                  key={opt.id}
+                  className={`afv-sort-btn${sortBy === opt.id ? ' active' : ''}`}
+                  onClick={() => handleSortClick(opt.id)}
+                >
+                  {opt.label}
+                  {sortBy === opt.id && <SortChevron asc={sortAsc} />}
+                </button>
+              ))}
+            </div>
+            <div className="afv-filters">
+              {nominationVideoIds?.size > 0 && (
+                <button
+                  className={`afv-sort-btn${filterNominations ? ' active' : ''}`}
+                  onClick={() => setFilterNominations((v) => !v)}
+                >
+                  My Nominations
+                </button>
+              )}
+              {supportVideoIds?.size > 0 && (
+                <button
+                  className={`afv-sort-btn${filterSupports ? ' active' : ''}`}
+                  onClick={() => setFilterSupports((v) => !v)}
+                >
+                  My Supports
+                </button>
+              )}
+              <select
+                className="afv-filter-select"
+                value={vgmcFilter}
+                onChange={(e) => setVgmcFilter(e.target.value)}
+              >
+                <option value="">All VGMCs</option>
+                {availableVgmcNums.map((n) => (
+                  <option key={n} value={n}>
+                    VGMC {n}
+                  </option>
+                ))}
+              </select>
+              <input
+                className="afv-filter-input"
+                type="text"
+                placeholder="Filter by user…"
+                value={userFilter}
+                onChange={(e) => setUserFilter(e.target.value)}
+              />
+            </div>
+          </div>
+        )}
         <div className="afv-count">
           {sorted.length} track{sorted.length !== 1 ? 's' : ''} &middot;{' '}
           {entries.length} entr{entries.length !== 1 ? 'ies' : 'y'}

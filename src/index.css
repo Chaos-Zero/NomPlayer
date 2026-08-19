@@ -63,6 +63,21 @@
   --mobile-detached-player-visible-height: calc(
     var(--footer-player-h) - var(--mobile-detached-player-overlap)
   );
+  /* The mobile detached-player cluster (video thumbnail + control shell -
+     see .player-surface.detached-footer.mobile-detached-footer and
+     .mobile-topbar-shell.has-detached-player) is fixed/absolutely
+     positioned, floating above the app-shell grid's bottom `.topbar` row
+     rather than living inside it - so that row's grid track only reserves
+     its own min-height (112px, must stay in sync with .topbar.mobile-layout's
+     min-height), not the taller cluster rendered on top of it. Any mobile
+     view that scrolls underneath the cluster needs this much *extra* bottom
+     clearance - on top of whatever the grid track already reserves - so its
+     content stops short of the cluster instead of running behind it.
+  */
+  --mobile-detached-player-content-clearance: calc(
+    10px + env(safe-area-inset-bottom) + var(--mobile-topbar-shell-h) +
+      var(--mobile-detached-player-base-visible-height) + 12px - 112px + 20px
+  );
   --transition: 0.2s ease;
   --bg-gradient-1: rgba(124, 58, 237, 0.08);
   --bg-gradient-2: rgba(245, 158, 11, 0.08);
@@ -10674,7 +10689,17 @@ body.is-resizing .resize-handle {
   }
 
   .main-content.has-persistent-player .list-explorer-container {
-    padding-bottom: calc(var(--player-footer-total-h) / 1.5 + 20px);
+    /* Was losing to the unconditional (desktop-shaped) rule of the same
+       specificity further down the file, since neither declaration had
+       !important - every other rule in this block does. That let a value
+       sized for the desktop detached-footer bar apply here too, which
+       happened to be *larger* than actually needed but wasn't derived from
+       the mobile cluster's real geometry, so it could drift out of sync
+       with it again. Pinning both bugs at once: !important so this mobile
+       value actually wins, and a value derived straight from the same
+       tokens that position the mobile cluster (see
+       --mobile-detached-player-content-clearance) so it can't drift. */
+    padding-bottom: var(--mobile-detached-player-content-clearance) !important;
   }
 
   .list-explorer-header {
@@ -16917,6 +16942,96 @@ body.is-resizing .resize-handle {
     sans-serif;
   color: var(--text-muted);
   white-space: nowrap;
+}
+
+/* Fold toggle for .afv-toolbar-controls, mobile only - see AllFeedbackView's
+   isMobileLayout/isToolbarExpanded. Sits inert (never rendered) on desktop,
+   where .afv-toolbar-controls is always shown, so no desktop-facing rule
+   needs to account for it here. */
+.afv-toolbar-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text-secondary);
+  font:
+    600 12px 'Inter',
+    sans-serif;
+  cursor: pointer;
+  transition: all var(--transition);
+}
+
+.afv-toolbar-toggle:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-primary);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.afv-toolbar-toggle.has-active {
+  border-color: var(--accent);
+  color: var(--accent-light);
+}
+
+.afv-toolbar-toggle-dot {
+  width: 6px;
+  height: 6px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 6px var(--accent-glow);
+}
+
+.afv-toolbar-chevron {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  transition: transform 0.2s ease;
+}
+
+.afv-toolbar-chevron.open {
+  transform: rotate(180deg);
+}
+
+.afv-toolbar-controls {
+  display: flex;
+  align-items: center;
+  flex: 1 1 auto;
+  min-width: 0;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 960px) {
+  .afv-toolbar {
+    /* Was the same row-wrap as desktop; the toggle button and the (now
+       conditionally-rendered) controls panel each need their own full-width
+       row instead of competing for space inline. */
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .afv-toolbar-controls {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .afv-filters {
+    margin-left: 0;
+  }
+
+  .afv-filter-input {
+    width: auto;
+    flex: 1;
+  }
+
+  .afv-count {
+    order: -1;
+  }
 }
 
 .afv-scroll {
