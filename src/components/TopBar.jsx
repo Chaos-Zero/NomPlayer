@@ -14,15 +14,9 @@ import { MenuIcon } from './SiteNavigation.jsx';
 import { lastSearchQuery } from '../utils/searchPersistence.js';
 import UserMenu from './UserMenu.jsx';
 import FeedbackDialog from './FeedbackDialog.jsx';
+import PlaybackTransportButtons from './PlaybackTransportButtons.jsx';
 import {
-  PreviousIcon,
-  NextIcon,
-  PlayIcon,
-  PauseIcon,
-  StopIcon,
-  ShuffleIcon,
   PlaylistPlusIcon,
-  StopwatchIcon,
   HeartIcon as SupportIcon,
   HeartEmptyIcon,
   StarIcon,
@@ -30,6 +24,7 @@ import {
   SunIcon,
   MoonIcon,
   SearchIcon,
+  TriangleDownIcon,
 } from './Icons.jsx';
 
 const API_KEY = import.meta.env.VITE_YT_API_KEY || '';
@@ -79,6 +74,8 @@ function TopBar({
   isMenuOpen = false,
   onToggleMenu,
   hidePlaybackControls = false,
+  isControlsBelowPlayer = false,
+  onToggleControlsPosition,
   customPlaylists,
   onUpdateCustomPlaylists,
   onShowToast,
@@ -549,109 +546,51 @@ function TopBar({
     withIds = false,
   } = {}) {
     const showModeButtons = !isMobileLayout;
+    // Only the desktop player-page instance of this row offers the
+    // relocate toggle - the below-player slot it moves controls into
+    // (VideoPlayer's now-playing-controls-relocated) only exists there.
+    const canRelocate = showModeButtons && isPlayerPage;
+    const isRelocated = canRelocate && isControlsBelowPlayer;
+    const isDisabled = hidden || hidePlaybackControls || isRelocated;
 
     return (
       <div
-        className={`playback-controls-stage${hidePlaybackControls ? ' flipped' : ''}`}
+        className={`playback-controls-stage${hidePlaybackControls || isRelocated ? ' flipped' : ''}`}
       >
         <div
           className={`playback-controls playback-controls-front${className ? ` ${className}` : ''}`}
-          aria-hidden={hidden || hidePlaybackControls || undefined}
+          aria-hidden={isDisabled || undefined}
         >
-          {showModeButtons && (
-            <button
-              className={`footer-control-btn shuffle${isShuffleEnabled ? ' active' : ''}${!isShuffleAvailable ? ' disabled' : ''}`}
-              onClick={isShuffleAvailable ? onShuffle : undefined}
-              title={
-                isShuffleAvailable
-                  ? 'Shuffle queue'
-                  : 'Add at least 2 tracks to shuffle'
-              }
-              aria-label={
-                isShuffleAvailable
-                  ? 'Shuffle queue'
-                  : 'Add at least 2 tracks to shuffle'
-              }
-              aria-pressed={isShuffleEnabled}
-              disabled={!isShuffleAvailable}
-              tabIndex={hidden || hidePlaybackControls ? -1 : 0}
-            >
-              <ShuffleIcon />
-            </button>
-          )}
-
-          <button
-            className="footer-control-btn"
-            onClick={onPrev}
-            title="Previous"
-            id={withIds ? 'prev-btn' : undefined}
-            aria-label="Previous video"
-            tabIndex={hidden || hidePlaybackControls ? -1 : 0}
-          >
-            <PreviousIcon />
-          </button>
-
-          <button
-            className="footer-control-btn play-pause"
-            onClick={() => setIsPlaying((p) => !p)}
-            title={
-              isPlaying
-                ? currentVideo?.provider === 'soundcloud'
-                  ? 'Stop'
-                  : 'Pause'
-                : 'Play'
+          <PlaybackTransportButtons
+            showModeButtons={showModeButtons}
+            isShuffleEnabled={isShuffleEnabled}
+            isShuffleAvailable={isShuffleAvailable}
+            onShuffle={onShuffle}
+            onPrev={onPrev}
+            onNext={onNext}
+            isPlaying={isPlaying}
+            onTogglePlay={() => setIsPlaying((p) => !p)}
+            canTogglePlayback={canTogglePlayback}
+            currentVideo={currentVideo}
+            isPreviewModeEnabled={isPreviewModeEnabled}
+            previewCountdown={previewCountdown}
+            onTogglePreview={onTogglePreview}
+            showPreviewCountdownOnPlayButton={
+              isMobileLayout && isPreviewModeEnabled
             }
-            id={withIds ? 'play-pause-btn' : undefined}
-            aria-label={
-              isPlaying
-                ? currentVideo?.provider === 'soundcloud'
-                  ? 'Stop'
-                  : 'Pause'
-                : 'Play'
-            }
-            disabled={!canTogglePlayback}
-            tabIndex={hidden || hidePlaybackControls ? -1 : 0}
-          >
-            {isMobileLayout && isPreviewModeEnabled ? (
-              <StopwatchIcon
-                countdown={previewCountdown}
-                className="transport-icon transport-icon-preview"
-              />
-            ) : isPlaying ? (
-              currentVideo?.provider === 'soundcloud' ? (
-                <StopIcon />
-              ) : (
-                <PauseIcon />
-              )
-            ) : (
-              <PlayIcon />
-            )}
-          </button>
-
-          <button
-            className="footer-control-btn"
-            onClick={onNext}
-            title="Next"
-            id={withIds ? 'next-btn' : undefined}
-            aria-label="Next video"
-            tabIndex={hidden || hidePlaybackControls ? -1 : 0}
-          >
-            <NextIcon />
-          </button>
-
-          {showModeButtons && (
+            withIds={withIds}
+            disabled={isDisabled}
+          />
+          {canRelocate && (
             <button
-              className={`footer-control-btn preview${isPreviewModeEnabled ? ' active' : ''}`}
-              onClick={onTogglePreview}
-              title="Preview mode"
-              aria-label="Preview mode"
-              aria-pressed={isPreviewModeEnabled}
-              tabIndex={hidden || hidePlaybackControls ? -1 : 0}
+              className="footer-control-btn playback-relocate-btn"
+              type="button"
+              onClick={onToggleControlsPosition}
+              title="Move controls below player"
+              aria-label="Move playback controls below the player"
+              tabIndex={isDisabled ? -1 : 0}
             >
-              <StopwatchIcon
-                countdown={previewCountdown}
-                className="transport-icon transport-icon-preview"
-              />
+              <TriangleDownIcon className="transport-icon transport-icon-relocate" />
             </button>
           )}
         </div>

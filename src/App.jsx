@@ -183,6 +183,7 @@ import {
   saveTrackSupport,
   fetchUserHydratedState,
   upsertUserProfile,
+  updateControlsBelowPlayerPreference,
   recordTrackHistory,
   getTrackHistory,
   clearTrackHistory,
@@ -207,6 +208,11 @@ import {
   fetchVgmcPlaylistTracks,
   toPlaylistVideos,
 } from './lib/vgmcStandings.js';
+import {
+  fetchPlaylistMeta,
+  fetchPlaylistTracks,
+} from './lib/communityPlaylists.js';
+import { fetchUserPublicLists } from './lib/sharedUserLists.js';
 import { reportError } from './lib/errorReporter.js';
 import { getSupabaseClient, isSupabaseConfigured } from './lib/supabase.js';
 import { getYouTubeThumbnailUrl } from './utils/youtube.js';
@@ -623,9 +629,54 @@ function stripOAuthErrorParamsFromUrl() {
   window.history.replaceState(window.history.state, '', url.toString());
 }
 
+// Query params a share link can land the app on: a specific playlist (see
+// buildPlaylistShareUrl in lib/communityPlaylists.js) or, straight from the
+// companion Discord bot's "Open in NomPlayer" buttons
+// (NomPlayerBot/src/commands/nominations.js / supports.js), someone's
+// nominations or support list (see lib/sharedUserLists.js). Each param's
+// value is that target's id, `playlist`'s a playlist id, the other two a
+// user id - only one is ever expected on a given link.
+const SHARED_LIST_URL_PARAMS = ['playlist', 'nominations', 'supports'];
+
+/** Whichever `?<param>=<uuid>` a share link was opened with, as
+ * `{ type, id }` (type is the param name), or null. Read once via a lazy
+ * useState initializer at the call site rather than on every render, since
+ * the param is stripped from the URL as soon as it's been handled. */
+function readSharedListLinkFromUrl() {
+  if (typeof window === 'undefined') return null;
+
+  const searchParams = new URLSearchParams(window.location.search);
+  for (const type of SHARED_LIST_URL_PARAMS) {
+    const id = searchParams.get(type);
+    if (id) return { type, id };
+  }
+  return null;
+}
+
+function stripSharedListParamFromUrl() {
+  if (typeof window === 'undefined') return;
+
+  const url = new URL(window.location.href);
+  for (const type of SHARED_LIST_URL_PARAMS) {
+    url.searchParams.delete(type);
+  }
+  window.history.replaceState(window.history.state, '', url.toString());
+}
+
 export default function App() {
   const isMobileLayout = useMediaQuery('(max-width: 960px)');
   const supabase = getSupabaseClient();
+  // Read once on mount, before the param gets stripped from the URL once
+  // handled (see the shared-list-link effect further down). A shared link
+  // always wins over the default VGMC auto-navigate landing (below), so
+  // that effect checks this too rather than racing it. Mirrored into a ref
+  // (same "seed a ref from the lazy-initialized state" shape as
+  // initialCustomOrderKind/customOrderKindRef below) so effects can read it
+  // without listing a useState value in their dependency arrays, that
+  // reactive-looking dependency is what defeats the "runs once" analysis
+  // react-hooks/set-state-in-effect otherwise applies to those effects.
+  const [sharedListLinkFromUrl] = useState(readSharedListLinkFromUrl);
+  const sharedListLinkRef = useRef(sharedListLinkFromUrl);
   // Computed once via useState's lazy initializer (React guarantees it runs
   // only on mount, StrictMode double-invoke aside) rather than the
   // read-a-ref-during-render pattern this used to be - same "compute once"
@@ -692,6 +743,13 @@ export default function App() {
   const [isDesktopOverlayPlaylistOpen, setIsDesktopOverlayPlaylistOpen] =
     useState(false);
   const [isPreviewModeEnabled, setIsPreviewModeEnabled] = useState(false);
+  // Whether the playback transport controls (shuffle/prev/play/next/preview)
+  // are relocated from the top bar down to below the player - see the
+  // playback-relocate-btn toggle in TopBar/VideoPlayer.
+  const [isPlaybackControlsBelowPlayer, setIsPlaybackControlsBelowPlayer] =
+    useState(false);
+  // handleToggleControlsPosition is declared further down, once authUser is
+  // in scope (its persistence needs the logged-in user's id).
   const isPlayingRef = useRef(false);
   const activePageRef = useRef('home');
   const [activePlaylistView, setActivePlaylistView] = useState(() => {
@@ -756,6 +814,7 @@ export default function App() {
   const [isVgmcSheetSyncOpen, setIsVgmcSheetSyncOpen] = useState(false);
   const hasLoadedVgmcPlaylistRef = useRef(false);
   const hasAutoNavigatedToVgmcRef = useRef(false);
+  const hasLoadedSharedListLinkRef = useRef(false);
   // handleLoadVgmcPlaylist/handleRefreshVgmcPlaylist are defined further down, right
   // after handlePlayCommunityPlaylist, they build on it, so they live near it.
 
@@ -839,6 +898,18 @@ export default function App() {
   const catalogLookupPendingVideoIdsRef = useRef(new Set());
   const [authSession, setAuthSession] = useState(null);
   const [userProfile, setUserProfile] = useState(null);
+  // Seed the controls-position toggle from the profile once per login (id
+  // change), not on every subsequent profile edit - later edits to other
+  // profile fields (username, avatar, ...) shouldn't yank a mid-session
+  // toggle back to whatever was last persisted.
+  useEffect(() => {
+    if (!userProfile) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setIsPlaybackControlsBelowPlayer(
+      Boolean(userProfile.controls_below_player),
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userProfile?.id]);
   const [userFeedback, setUserFeedback] = useState({});
   const [feedbackRefreshKey, setFeedbackRefreshKey] = useState(0);
   const [isAuthReady, setIsAuthReady] = useState(!isSupabaseConfigured);
@@ -1073,6 +1144,27 @@ export default function App() {
   }, []);
 
   const authUser = authSession?.user ?? null;
+
+  const handleToggleControlsPosition = useCallback(() => {
+    setIsPlaybackControlsBelowPlayer((previousValue) => {
+      const nextValue = !previousValue;
+      // Persist for logged-in users only - guests just get the session
+      // default each visit, same as every other guest-vs-account split here.
+      if (supabase && authUser) {
+        updateControlsBelowPlayerPreference(
+          supabase,
+          authUser.id,
+          nextValue,
+        ).catch((error) => {
+          console.error(
+            'Failed to save playback controls position preference',
+            error,
+          );
+        });
+      }
+      return nextValue;
+    });
+  }, [supabase, authUser]);
 
   // Declared here (its first use, syncCatalogForNominationVideos below, needs
   // it in scope) rather than further down near the other list-mutation
@@ -6027,12 +6119,106 @@ export default function App() {
     if (hasAutoNavigatedToVgmcRef.current) return;
     if (!VGMC_PLAYLIST_ID) return;
     if (activePageRef.current !== 'home') return;
+    // A shared list link (below) is an explicit destination the visitor
+    // clicked their way in on, it always wins over the generic default
+    // landing page, rather than racing it for which navigate() lands last.
+    if (sharedListLinkRef.current) return;
 
     hasAutoNavigatedToVgmcRef.current = true;
     handleLoadVgmcPlaylist().then(() => {
       handleNavigate('vgmcStandings');
     });
   }, [handleNavigate, handleLoadVgmcPlaylist]);
+
+  // Opens a shared-link URL (a `?playlist=<uuid>` from buildPlaylistShareUrl
+  // in lib/communityPlaylists.js, or a `?nominations=<uuid>` /
+  // `?supports=<uuid>` from the companion Discord bot's "Open in NomPlayer"
+  // buttons, see lib/sharedUserLists.js) straight into the player, the same
+  // transient "now playing" mechanism used for browsing a community
+  // playlist, without touching the visitor's own saved queue. Runs once,
+  // same shape as the VGMC auto-navigate effect just above, and takes
+  // priority over it for where a fresh page load lands.
+  useEffect(() => {
+    const sharedListLink = sharedListLinkRef.current;
+    if (hasLoadedSharedListLinkRef.current) return;
+    if (!sharedListLink) return;
+
+    hasLoadedSharedListLinkRef.current = true;
+
+    (async () => {
+      try {
+        if (!supabase) {
+          // Nothing to load, don't leave the full-view loading overlay
+          // stuck up forever waiting on a fetch that's never going to
+          // happen (see handleLoadVgmcPlaylist's identical guard, above).
+          showDefaultAppToast('Failed to load that shared link.');
+          return;
+        }
+
+        if (sharedListLink.type === 'playlist') {
+          const meta = await fetchPlaylistMeta(supabase, sharedListLink.id);
+          if (!meta) {
+            showDefaultAppToast(
+              "That playlist link is private, or doesn't exist anymore.",
+            );
+            return;
+          }
+
+          const videos = await fetchPlaylistTracks(supabase, sharedListLink.id);
+          if (!videos.length) {
+            showDefaultAppToast('This playlist has no tracks yet.');
+            return;
+          }
+
+          handlePlayCommunityPlaylist(videos, { id: meta.id, name: meta.name });
+          handleNavigate('player');
+          return;
+        }
+
+        // 'nominations' | 'supports' - sharedListLink.id is a user id here,
+        // not a list id, there's only ever one nomination/support list per
+        // user so there's nothing else it could point at.
+        const lists = await fetchUserPublicLists(supabase, sharedListLink.id);
+        if (!lists) {
+          showDefaultAppToast("That share link doesn't exist anymore.");
+          return;
+        }
+
+        const isNominations = sharedListLink.type === 'nominations';
+        const videos = isNominations ? lists.nominationList : lists.supportList;
+        if (!videos.length) {
+          showDefaultAppToast(
+            `${lists.username} doesn't have any ${isNominations ? 'nominations' : 'supports'} yet.`,
+          );
+          return;
+        }
+
+        handlePlayCommunityPlaylist(videos, {
+          id: `${sharedListLink.type}-${sharedListLink.id}`,
+          name: isNominations
+            ? `${lists.username}'s Nominations`
+            : `${lists.username}'s Support List`,
+        });
+        handleNavigate('player');
+      } catch (error) {
+        reportError('Load shared list link', error);
+        showDefaultAppToast('Failed to load that shared link.');
+      } finally {
+        // The full-view loading overlay (see hasVgmcLoadedOnce, below) waits
+        // on this the same way it waits on handleLoadVgmcPlaylist, without
+        // this the VGMC auto-navigate effect above (skipped whenever a
+        // shared link is present) would otherwise have been the only thing
+        // that ever clears it, leaving the overlay stuck up permanently.
+        setHasVgmcLoadedOnce(true);
+        stripSharedListParamFromUrl();
+      }
+    })();
+  }, [
+    supabase,
+    handlePlayCommunityPlaylist,
+    handleNavigate,
+    showDefaultAppToast,
+  ]);
 
   const handleTogglePlaylist = useCallback(() => {
     // If we're on the dashboard/other home views, we toggle the Desktop Overlay state
@@ -6237,10 +6423,14 @@ export default function App() {
           handleSetIsPlaying((previousValue) => !previousValue)
         }
         isShuffleEnabled={isShuffleEnabled}
+        isShuffleAvailable={isShuffleAvailable}
         onShuffle={handleShufflePlaylist}
         isPreviewModeEnabled={isPreviewModeEnabled}
         previewCountdown={previewCountdown}
         onTogglePreview={handleTogglePreviewMode}
+        canTogglePlayback={canTogglePlayback}
+        isControlsBelowPlayer={isPlaybackControlsBelowPlayer}
+        onToggleControlsPosition={handleToggleControlsPosition}
         isSupported={isCurrentVideoSupported}
         onOpenSupportDropdown={(video, position, options) =>
           setSupportLevelDropdown({ video, position, ...options })
@@ -6450,11 +6640,15 @@ export default function App() {
 
   return (
     <div className={`app-frame${isMobileLayout ? ' mobile' : ''}`}>
-      {VGMC_PLAYLIST_ID && !hasVgmcLoadedOnce && (
-        // Full-screen splash while the default VGMC 20 landing loads, the site
-        // mounts into the normal home page underneath this the whole time; we only
-        // navigate to the VGMC page (see the auto-navigate effect above) once
-        // loading is completely done, and this comes down at the same moment.
+      {(VGMC_PLAYLIST_ID || sharedListLinkFromUrl) && !hasVgmcLoadedOnce && (
+        // Full-screen splash while either the default VGMC 20 landing or a
+        // shared link (see the two effects above) loads, the site mounts
+        // into the normal home page underneath this the whole time; we only
+        // navigate to the destination page once loading is completely done,
+        // and this comes down at the same moment - both effects resolve
+        // through the same hasVgmcLoadedOnce flag. Wording follows whichever
+        // of the two is actually happening, a shared link never lands on
+        // the VGMC page so it shouldn't claim to.
         <div
           className="database-loading-overlay initial"
           style={{ position: 'fixed', inset: 0, zIndex: 2000 }}
@@ -6467,7 +6661,9 @@ export default function App() {
               style={{ width: 'min(220px, 70vw)', height: 'min(220px, 70vw)' }}
             />
           </div>
-          <div className="database-loading-text">Loading VGMC 20…</div>
+          <div className="database-loading-text">
+            {sharedListLinkFromUrl ? 'Loading NomPlayer…' : 'Loading VGMC 20…'}
+          </div>
         </div>
       )}
 
@@ -6509,6 +6705,8 @@ export default function App() {
           onPrev={handlePrev}
           onNext={handleNext}
           canTogglePlayback={canTogglePlayback}
+          isControlsBelowPlayer={isPlaybackControlsBelowPlayer}
+          onToggleControlsPosition={handleToggleControlsPosition}
           showSupportList={showSupportList}
           setShowSupportList={handleSetShowSupportList}
           showNominationsList={showNominationsList}
@@ -6945,7 +7143,7 @@ export default function App() {
           tone="support"
           emptyIcon="🤝"
           emptyTitle="No support items yet"
-          emptyHint="Double-click an item to queue it, or right-click for Play Now, Add to Current Playlist, and Remove Support."
+          emptyHint="Double-click an item to queue it, or right-click for Play Now, Add to My Queue, and Remove Support."
           itemAriaPrefix="Support"
           removeButtonTitle="Remove from support list"
           removeButtonAriaLabel="Remove from support list"

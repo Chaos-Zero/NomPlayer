@@ -485,7 +485,7 @@ export async function fetchUserProfile(supabase, userId) {
   const { data, error } = await supabase
     .from('profiles')
     .select(
-      'id, username, email, gamefaqs_username, avatar_url, vgmc_mode_enabled',
+      'id, username, email, gamefaqs_username, avatar_url, vgmc_mode_enabled, controls_below_player',
     )
     .eq('id', userId)
     .maybeSingle();
@@ -523,7 +523,7 @@ export async function upsertUserProfile(supabase, profile) {
       onConflict: 'id',
     })
     .select(
-      'id, username, email, gamefaqs_username, avatar_url, vgmc_mode_enabled',
+      'id, username, email, gamefaqs_username, avatar_url, vgmc_mode_enabled, controls_below_player',
     )
     .single();
 
@@ -532,6 +532,25 @@ export async function upsertUserProfile(supabase, profile) {
   }
 
   return data;
+}
+
+// Lightweight update for the playback-controls-position toggle - unlike
+// upsertUserProfile above, this never needs to touch username/gamefaqs
+// (so no profanity check) and shouldn't require re-supplying every other
+// profile field just to flip one boolean.
+export async function updateControlsBelowPlayerPreference(
+  supabase,
+  userId,
+  controlsBelowPlayer,
+) {
+  const { error } = await supabase
+    .from('profiles')
+    .update({ controls_below_player: Boolean(controlsBelowPlayer) })
+    .eq('id', userId);
+
+  if (error) {
+    throw error;
+  }
 }
 
 export async function checkSignupAvailability(supabase, { email, username }) {

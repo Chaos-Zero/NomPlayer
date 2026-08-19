@@ -23,14 +23,17 @@ import CollectionAdder from './CollectionAdder.jsx';
 import FilterSearchControl from './FilterSearchControl.jsx';
 import ExportIcon from './ExportIcon.jsx';
 import PrivacyToggle from './PrivacyToggle.jsx';
+import SharePlaylistConfirmDialog from './SharePlaylistConfirmDialog.jsx';
 import YouTubeIcon from './YouTubeIcon.jsx';
 import ScrollingText from './ScrollingText.jsx';
 import useMediaQuery from '../hooks/useMediaQuery.js';
 import { getDisplayProfileName } from '../lib/playerState.js';
 import { getMediaThumbnailUrl } from '../utils/media.js';
+import { buildPlaylistShareUrl } from '../lib/communityPlaylists.js';
 import {
   CheckDownIcon,
   LocateIcon,
+  ShareIcon,
   SortByRatingIcon,
   SpeechBubbleIcon,
 } from './Icons.jsx';
@@ -175,7 +178,6 @@ const PlaylistItem = memo(function PlaylistItem({
   onToggleSelected,
   commentActivity = null,
   onShowComments,
-  showRatingInsteadOfComments = false,
 }) {
   const [imgError, setImgError] = useState(false);
   const tickLabel =
@@ -313,7 +315,13 @@ const PlaylistItem = memo(function PlaylistItem({
       </div>
 
       <div className="playlist-item-actions">
-        {video.rating != null && !showRatingInsteadOfComments && (
+        {/* A rating and the comment bubble both fighting for space next to
+            the title is how titles end up crowding into the icons - when
+            there's a comment button to fold it into, show the rating inside
+            that button instead of as its own separate field. Only when
+            there's no comment button (onShowComments unset) does the rating
+            get its own badge, so it's never simply dropped. */}
+        {video.rating != null && !onShowComments && (
           <span
             className="list-explorer-peer-rating sidebar-rating"
             title="Your rating"
@@ -332,7 +340,7 @@ const PlaylistItem = memo(function PlaylistItem({
             }`}
             type="button"
             title={
-              showRatingInsteadOfComments && video.rating != null
+              video.rating != null
                 ? `Your rating: ${video.rating}, view community comments`
                 : commentActivity
                   ? 'View community comments'
@@ -349,7 +357,7 @@ const PlaylistItem = memo(function PlaylistItem({
               });
             }}
           >
-            {showRatingInsteadOfComments && video.rating != null ? (
+            {video.rating != null ? (
               <span className="comment-bubble-rating">{video.rating}</span>
             ) : (
               <SpeechBubbleIcon />
@@ -404,7 +412,6 @@ const SortablePlaylistItem = memo(function SortablePlaylistItem({
   onOpenContextMenu,
   commentActivity = null,
   onShowComments,
-  showRatingInsteadOfComments = false,
 }) {
   const {
     attributes,
@@ -454,7 +461,6 @@ const SortablePlaylistItem = memo(function SortablePlaylistItem({
         onToggleSelected={noop}
         commentActivity={commentActivity}
         onShowComments={onShowComments}
-        showRatingInsteadOfComments={showRatingInsteadOfComments}
       />
     </div>
   );
@@ -527,6 +533,50 @@ function PlaylistSidebar({
     } catch (err) {
       console.error(err);
       onShowToast?.('Failed to update playlist privacy');
+    }
+  };
+
+  // Copies a `?playlist=<id>` link (see the shared-link boot loader in
+  // App.jsx). Only public playlists are readable by anyone but the owner
+  // (RLS), so a private playlist can't just be shared as-is, a private one
+  // goes through SharePlaylistConfirmDialog (rendered below) rather than
+  // silently publishing it.
+  const [playlistToShare, setPlaylistToShare] = useState(null);
+  const [isPublishingForShare, setIsPublishingForShare] = useState(false);
+
+  const handleSharePlaylist = (playlistId) => {
+    const pl = (customPlaylists || []).find((p) => p.id === playlistId);
+    if (!pl) return;
+    if (!pl.is_public) {
+      setPlaylistToShare(pl);
+      return;
+    }
+    navigator.clipboard
+      .writeText(buildPlaylistShareUrl(playlistId))
+      .then(() => onShowToast?.('Share link copied to clipboard'))
+      .catch((err) => {
+        console.error(err);
+        onShowToast?.('Failed to copy share link');
+      });
+  };
+
+  const handleConfirmMakePublicAndShare = async () => {
+    if (!playlistToShare) return;
+    setIsPublishingForShare(true);
+    try {
+      await handleTogglePrivacy(playlistToShare.id, true);
+      await navigator.clipboard.writeText(
+        buildPlaylistShareUrl(playlistToShare.id),
+      );
+      onShowToast?.(
+        `Made "${playlistToShare.name}" public and copied its share link`,
+      );
+      setPlaylistToShare(null);
+    } catch (err) {
+      console.error(err);
+      onShowToast?.('Failed to copy share link');
+    } finally {
+      setIsPublishingForShare(false);
     }
   };
   const dropdownRef = useRef(null);
@@ -1440,18 +1490,6 @@ function PlaylistSidebar({
             )}
             {playlist.length > 0 && (
               <>
-                {isVgmcPlaylistView && (
-                  <button
-                    className={`fav-panel-action-btn icon-only${isListenedToBottomActive ? ' active' : ''}`}
-                    type="button"
-                    onClick={onMoveListenedToBottom}
-                    disabled={playlist.length < 2}
-                    title="Move started songs to bottom of playlist"
-                    aria-label="Move started songs to bottom of playlist"
-                  >
-                    <CheckDownIcon />
-                  </button>
-                )}
                 <button
                   className={`fav-panel-action-btn icon-only${isTrackingActive ? ' active' : ''}`}
                   type="button"
@@ -1466,10 +1504,37 @@ function PlaylistSidebar({
                 >
                   <LocateIcon />
                 </button>
+                {isVgmcPlaylistView && (
+                  <button
+                    className={`fav-panel-action-btn icon-only${isListenedToBottomActive ? ' active' : ''}`}
+                    type="button"
+                    onClick={onMoveListenedToBottom}
+                    disabled={playlist.length < 2}
+                    title="Move started songs to bottom of playlist"
+                    aria-label="Move started songs to bottom of playlist"
+                  >
+                    <CheckDownIcon />
+                  </button>
+                )}
                 {activePlaylistView.type === 'custom-playlist' ? (
                   <div
-                    style={{ marginLeft: 8, marginRight: 8, display: 'flex' }}
+                    style={{
+                      marginLeft: 8,
+                      marginRight: 8,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 6,
+                    }}
                   >
+                    <button
+                      className="fav-panel-action-btn icon-only"
+                      type="button"
+                      onClick={() => handleSharePlaylist(activePlaylistView.id)}
+                      title="Copy share link"
+                      aria-label="Copy share link"
+                    >
+                      <ShareIcon />
+                    </button>
                     <PrivacyToggle
                       isPublic={
                         customPlaylists?.find(
@@ -1503,12 +1568,11 @@ function PlaylistSidebar({
                     }
                     aria-label="Sort by your rating"
                   >
-                    <SortByRatingIcon />
-                    {rankingSortDirection && (
-                      <span className="sort-direction-arrow" aria-hidden="true">
-                        {rankingSortDirection === 'desc' ? '↓' : '↑'}
-                      </span>
-                    )}
+                    <SortByRatingIcon
+                      direction={
+                        rankingSortDirection === 'asc' ? 'asc' : 'desc'
+                      }
+                    />
                   </button>
                 ) : (
                   <button
@@ -1936,7 +2000,6 @@ function PlaylistSidebar({
                         globalActivityByVideoId.get(video.videoId) ?? null
                       }
                       onShowComments={onShowComments}
-                      showRatingInsteadOfComments={isVgmcPlaylistView}
                     />
                   </div>
                 );
@@ -2017,7 +2080,6 @@ function PlaylistSidebar({
                             globalActivityByVideoId.get(video.videoId) ?? null
                           }
                           onShowComments={onShowComments}
-                          showRatingInsteadOfComments={isVgmcPlaylistView}
                         />
                       </div>
                     );
@@ -2081,7 +2143,6 @@ function PlaylistSidebar({
                         globalActivityByVideoId.get(video.videoId) ?? null
                       }
                       onShowComments={onShowComments}
-                      showRatingInsteadOfComments={isVgmcPlaylistView}
                     />
                   </div>
                 );
@@ -2133,7 +2194,7 @@ function PlaylistSidebar({
               {contextMenu.videos.length > 1
                 ? `(${contextMenu.videos.length}) `
                 : ''}
-              to Queue
+              to My Queue
             </button>
           )}
 
@@ -2147,7 +2208,7 @@ function PlaylistSidebar({
                 closeContextMenu();
               }}
             >
-              Add to Nominations
+              Add to My Nominations
             </button>
           )}
 
@@ -2202,6 +2263,14 @@ function PlaylistSidebar({
           )}
         </ContextMenuPortal>
       )}
+
+      <SharePlaylistConfirmDialog
+        isOpen={!!playlistToShare}
+        isSubmitting={isPublishingForShare}
+        playlistName={playlistToShare?.name || ''}
+        onClose={() => setPlaylistToShare(null)}
+        onConfirm={handleConfirmMakePublicAndShare}
+      />
     </div>
   );
 }

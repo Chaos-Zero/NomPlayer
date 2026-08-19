@@ -278,7 +278,13 @@ export function SupportItem({
             )}
           </div>
 
-          {video.rating != null && (
+          {/* A rating and the comment bubble both fighting for space here is
+              how titles end up crowding into the icons - when there's a
+              comment button to fold it into, show the rating inside that
+              button instead of as its own separate field. Only when there's
+              no comment button (onShowComments unset) does the rating get
+              its own badge, so it's never simply dropped. */}
+          {video.rating != null && !onShowComments && (
             <span
               className="list-explorer-peer-rating"
               style={{ whiteSpace: 'nowrap', flexShrink: 0 }}
@@ -298,9 +304,11 @@ export function SupportItem({
               }`}
               type="button"
               title={
-                commentActivity
-                  ? 'View community comments'
-                  : 'Add a comment or score'
+                video.rating != null
+                  ? `Your rating: ${video.rating}, view community comments`
+                  : commentActivity
+                    ? 'View community comments'
+                    : 'Add a comment or score'
               }
               onClick={(e) => {
                 e.stopPropagation();
@@ -313,7 +321,11 @@ export function SupportItem({
                 });
               }}
             >
-              <SpeechBubbleIcon />
+              {video.rating != null ? (
+                <span className="comment-bubble-rating">{video.rating}</span>
+              ) : (
+                <SpeechBubbleIcon />
+              )}
             </button>
           )}
 
@@ -521,7 +533,7 @@ export default function FavouritesPanel({
   tone = 'support',
   emptyIcon = '☆',
   emptyTitle = 'No support items yet',
-  emptyHint = 'Double-click an item to queue it, or right-click for Play Now, Add to Current Playlist, and Remove Support.',
+  emptyHint = 'Double-click an item to queue it, or right-click for Play Now, Add to My Queue, and Remove Support.',
   itemAriaPrefix = 'Support',
   removeButtonTitle = 'Remove from support list',
   removeButtonAriaLabel = 'Remove from support list',
@@ -1044,7 +1056,7 @@ export default function FavouritesPanel({
               onClick={() => handleQueueVideos(selectedVideos)}
               disabled={selectedVideos.length === 0}
             >
-              Add to Current Playlist
+              Add to My Queue
             </button>
             <button
               className="fav-panel-action-btn selection-accent"
@@ -1247,7 +1259,7 @@ export default function FavouritesPanel({
               role="menuitem"
               onClick={handleAddToCurrentPlaylist}
             >
-              Add to Current Playlist
+              Add to My Queue
             </button>
 
             {tone !== 'nomination' && onToggleNomination && (
@@ -1260,7 +1272,7 @@ export default function FavouritesPanel({
                   closeContextMenu();
                 }}
               >
-                Add to Nominations
+                Add to My Nominations
               </button>
             )}
             {tone === 'nomination' && (

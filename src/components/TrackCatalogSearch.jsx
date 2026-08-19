@@ -320,7 +320,7 @@ export default function TrackCatalogSearch({
               closeContextMenu();
             }}
           >
-            Add to Queue
+            Add to My Queue
           </button>
 
           {!nominationIds.has(contextMenu.result.videoId) &&
@@ -334,7 +334,7 @@ export default function TrackCatalogSearch({
                   closeContextMenu();
                 }}
               >
-                Add to Nominations
+                Add to My Nominations
               </button>
             )}
 

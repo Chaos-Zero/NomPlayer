@@ -337,6 +337,40 @@ export function PencilIcon({ className = 'collection-icon' }) {
   );
 }
 
+// Document + pencil "edit" glyph. Every path sets its own fill="none"
+// (rather than leaving it to the <svg>'s attribute) because .collection-icon
+// declares `fill: currentColor` in CSS, which - being an author stylesheet
+// rule - outranks a plain presentation attribute on the ancestor <svg> and
+// would otherwise get inherited down into solid-filled paths.
+export function EditIcon({ className = 'collection-icon' }) {
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      {/* Page with its top-right corner folded down, kept to the icon's
+          upper-left so the pencil below has room to cross its corner. */}
+      <path
+        fill="none"
+        d="M3.5 2.5h6.5l4 4V16a1 1 0 0 1-1 1H4.5a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1Z"
+      />
+      <path fill="none" d="M10 2.5V6.5h4" />
+      {/* Pencil, tip toward the bottom, crossing the page's bottom-right
+          corner - same "document being edited" composition as SaveIcon's
+          page shape, just paired with a pencil instead of left flat. */}
+      <path
+        fill="none"
+        d="M19.8 10.2a2 2 0 0 1 0 2.9L13 19.9l-3.8.9.9-3.8 6.8-6.8a2 2 0 0 1 2.9 0Z"
+      />
+    </svg>
+  );
+}
+
 export function XIcon({ size = 20, className = 'collection-icon' }) {
   return (
     <svg
@@ -373,6 +407,44 @@ export function ReloadIcon({ className = 'collection-icon' }) {
     </svg>
   );
 }
+export function LinkIcon({ className = 'collection-icon' }) {
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+      <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+    </svg>
+  );
+}
+
+// Open tray with an arrow breaking out its top-right corner - the classic
+// "share/export" glyph (matches Feather's external-link icon).
+export function ShareIcon({ className = 'collection-icon' }) {
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path
+        fill="none"
+        d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3"
+      />
+    </svg>
+  );
+}
+
 export function SheetIcon({ className = 'collection-icon' }) {
   return (
     <svg
@@ -428,19 +500,30 @@ export function EyeIcon({ className = 'collection-icon' }) {
   );
 }
 
-export function SortByRatingIcon({ className = 'collection-icon' }) {
+// "#" grid + a direction arrow, composed like SupportOrderIcon/RatingOrderIcon
+// above: same #facc15 arrow, just paired with a hash instead of a heart/star
+// since this one marks a numeric rating value rather than a favourite.
+export function SortByRatingIcon({
+  className = 'collection-icon',
+  direction = 'desc',
+}) {
+  const arrowPath =
+    direction === 'asc'
+      ? 'M16.5 15H19.5V9.5H22.5L18 4L13.5 9.5H16.5Z'
+      : 'M16.5 4H19.5V9.5H22.5L18 15L13.5 9.5H16.5Z';
+
   return (
     <svg
       className={className}
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
-      strokeWidth="2.5"
+      strokeWidth="2"
       strokeLinecap="round"
       strokeLinejoin="round"
     >
-      <path d="M3 9h10M3 15h10M7 5v14M11 5v14" opacity="0.5" />
-      <path d="M17 11l3 3 3-3M20 18V6" />
+      <path d={arrowPath} fill="#facc15" stroke="none" />
+      <path fill="none" d="M3 7h10M3 12h10M7 4v11M11 4v11" opacity="0.7" />
     </svg>
   );
 }
@@ -534,6 +617,26 @@ export function ChevronDownIcon({ className = 'collection-icon' }) {
   );
 }
 
+// Small filled triangles for the playback-controls relocate toggle (move
+// controls below the player / back to the top bar) - deliberately a solid
+// triangle rather than the outlined ChevronDown/Up above, so it reads as a
+// distinct "flip position" affordance rather than another dropdown caret.
+export function TriangleDownIcon({ className = 'collection-icon' }) {
+  return (
+    <svg className={className} viewBox="0 0 20 20" fill="currentColor">
+      <path d="M5 7h10l-5 7z" />
+    </svg>
+  );
+}
+
+export function TriangleUpIcon({ className = 'collection-icon' }) {
+  return (
+    <svg className={className} viewBox="0 0 20 20" fill="currentColor">
+      <path d="M10 6l5 7H5z" />
+    </svg>
+  );
+}
+
 export function PlusIcon({ className = 'collection-icon' }) {
   return (
     <svg className={className} viewBox="0 0 20 20" fill="currentColor">
@@ -590,9 +693,12 @@ export function SaveIcon({ className = 'collection-icon' }) {
       strokeLinecap="round"
       strokeLinejoin="round"
     >
-      <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z" />
-      <path d="M17 21v-8H7v8" />
-      <path d="M7 3v5h8" />
+      <path
+        fill="none"
+        d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"
+      />
+      <path fill="none" d="M17 21v-8H7v8" />
+      <path fill="none" d="M7 3v5h8" />
     </svg>
   );
 }

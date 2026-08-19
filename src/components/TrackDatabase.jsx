@@ -1399,7 +1399,7 @@ export default function TrackDatabase({
               setContextMenu(null);
             }}
           >
-            <PlaylistPlusIcon /> Add to Queue
+            <PlaylistPlusIcon /> Add to My Queue
           </button>
 
           <CustomPlaylistSubmenu
@@ -1421,7 +1421,7 @@ export default function TrackDatabase({
                   setContextMenu(null);
                 }}
               >
-                <NominateIcon /> Add to Nominations
+                <NominateIcon /> Add to My Nominations
               </button>
               <button
                 className="database-context-menu-item"

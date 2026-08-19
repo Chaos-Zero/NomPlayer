@@ -5754,6 +5754,20 @@ body {
   gap: 10px;
 }
 
+/* Only while the relocated playback controls are actually mounted (see
+   isControlsBelowPlayer in VideoPlayer): switch to a 3-column grid (main /
+   controls / actions) so that middle item sits truly centered on the
+   row's full width (i.e. the video's width) instead of just splitting the
+   leftover space between the other two, and can't be pushed into by a
+   long title (main's 1fr column caps its width instead). Left off the
+   plain rule above so the default 2-item layout - the vast majority of
+   the time - is untouched. */
+.now-playing-info.has-relocated-controls {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: start;
+}
+
 .now-playing-main {
   min-width: 0;
   display: flex;
@@ -5831,6 +5845,7 @@ body {
   align-items: center;
   gap: 8px;
   flex-shrink: 0;
+  justify-self: end;
 }
 
 /* Mobile-only counterparts to the "Sync your feedback to Reactions Sheet" /
@@ -7639,15 +7654,6 @@ button.playlist-search-indicator:hover {
   height: 16px;
 }
 
-.sort-direction-arrow {
-  position: absolute;
-  bottom: 2px;
-  right: 3px;
-  font-size: 8px;
-  font-weight: 800;
-  line-height: 1;
-}
-
 .support-level-filter-wrapper {
   position: relative;
   display: inline-flex;
@@ -7789,6 +7795,19 @@ button.playlist-search-indicator:hover {
   border-top: 1px solid var(--border);
   display: flex;
   justify-content: flex-end;
+  gap: 12px;
+}
+
+/* Primary action flush to the left edge, Cancel flush to the right,
+   each inset by the same amount as .modal-card's own padding - unlike
+   .delete-dialog-footer's flex-end cluster, this pair reads as one
+   deliberate row rather than two buttons bunched in a corner. */
+.share-dialog-footer {
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   gap: 12px;
 }
 
@@ -10990,6 +11009,23 @@ body.is-resizing .resize-handle {
   padding-bottom: var(--player-footer-total-h);
 }
 
+/* .list-explorer-info-panel (the selected-track/selected-playlist side
+   panel) is `position: absolute; bottom: 0`, its containing block is
+   .list-explorer-container's *padding* box, not its content box, so a
+   bare bottom: 0 reaches past the padding-bottom reserved above for the
+   persistent footer player instead of stopping at it. That let the
+   panel's solid --bg-surface background paint a bar over the footer
+   player whenever both were showing at once. Anchoring it to the same
+   reserved height keeps it flush with the container's actual content
+   edge instead.
+   Only /components/CommunityPlaylistsView.jsx and ListExplorer.jsx render
+   this class inside .list-explorer-container - FooterFeedbackPanel.jsx
+   also uses it, but that one portals to #modal-root outside .main-content
+   entirely and sets its own `bottom` regardless, so it's unaffected. */
+.main-content.has-persistent-player .list-explorer-info-panel {
+  bottom: var(--player-footer-total-h);
+}
+
 .list-explorer-header {
   display: flex;
   justify-content: space-between;
@@ -13896,6 +13932,62 @@ body.is-resizing .resize-handle {
   opacity: 1;
 }
 
+/* "Move playback controls" toggle - a small down-triangle beside Preview
+   mode in the top bar, or a small up-triangle in the relocated row below
+   the player (see .now-playing-controls-relocated below). Shares
+   .footer-control-btn's circular hover/active look, just smaller. */
+.playback-relocate-btn {
+  padding: 6px;
+  margin-left: 2px;
+}
+
+.playback-relocate-btn .transport-icon-relocate {
+  width: 12px;
+  height: 12px;
+}
+
+/* Below-player slot the controls relocate into - the middle column of
+   now-playing-info's grid (see now-playing-info above), which is what
+   actually keeps it centered on the full video width regardless of how
+   wide the title text or action buttons beside it are. Only the transport
+   buttons are laid out in-flow here, so this box's own content width -
+   and therefore the auto grid column's width - is driven purely by them;
+   the reverse-to-top toggle is positioned absolutely just past its right
+   edge, deliberately excluded from that width so it can't pull the
+   controls off-center (per design: centering ignores the reverse button).
+   Mounted only while active (see isControlsBelowPlayer in VideoPlayer),
+   so the column takes no space at all - and main/actions aren't
+   squeezed - when the feature is off. */
+.now-playing-controls-relocated {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  align-self: center;
+  animation: now-playing-controls-relocated-in 0.28s
+    cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes now-playing-controls-relocated-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.now-playing-controls-relocated .playback-relocate-btn {
+  position: absolute;
+  left: 100%;
+  top: 50%;
+  transform: translateY(-50%);
+  margin-left: 10px;
+}
+
 @media (max-width: 960px) {
   .detached-footer-premium-container {
     display: none;
@@ -15924,6 +16016,13 @@ body.is-resizing .resize-handle {
     background var(--transition);
 }
 
+/* .cpl-card-overlay covers the whole cover (inset: 0), so without a
+   z-index it'd sit above the toggle in paint order (it comes later in the
+   DOM) and swallow hover/clicks the instant the card is hovered. */
+.cpl-card-privacy-toggle {
+  z-index: 1;
+}
+
 .cpl-card:hover .cpl-card-overlay {
   opacity: 1;
   background: rgba(0, 0, 0, 0.32);
@@ -16537,6 +16636,26 @@ body.is-resizing .resize-handle {
 .privacy-toggle-label {
   min-width: 45px;
   text-align: left;
+}
+
+.privacy-toggle.compact {
+  padding: 0;
+  border-radius: 10px;
+}
+
+/* Sits on top of a playlist card's cover image - same dark blurred pill
+   treatment as .cpl-track-badge/.cpl-private-badge, just holding the live
+   toggle instead of a static count/label. */
+.cpl-card-privacy-toggle {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  padding: 3px 6px;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(4px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  line-height: 0;
 }
 
 /* ═══════════════════════════════════════════════════

@@ -3302,7 +3302,7 @@ export default function ListExplorer({
                 }}
               >
                 <StarIcon />
-                <span>Add to Nomination List</span>
+                <span>Add to My Nominations</span>
               </button>
             )}
 
@@ -3312,7 +3312,7 @@ export default function ListExplorer({
                 onClick={(e) => handleToggleTrackSupport(contextMenu.video, e)}
               >
                 <HeartIcon />
-                <span>Add to Support List</span>
+                <span>Add to My Support List</span>
               </button>
             )}
 
@@ -3433,7 +3433,7 @@ export default function ListExplorer({
                     }}
                   >
                     <TrashIcon />
-                    <span>Remove from list</span>
+                    <span>Remove from List</span>
                   </button>
                 </>
               )}

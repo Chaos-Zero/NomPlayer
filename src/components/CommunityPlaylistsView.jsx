@@ -24,15 +24,21 @@ import { CSS } from '@dnd-kit/utilities';
 import { getDisplayProfileName } from '../lib/playerState.js';
 import { getMediaThumbnailUrl } from '../utils/media.js';
 import {
-  PencilIcon,
+  buildPlaylistShareUrl,
+  fetchPlaylistTracks,
+} from '../lib/communityPlaylists.js';
+import {
+  EditIcon,
   SaveIcon,
   SearchIcon,
+  ShareIcon,
   TrashIcon,
   XIcon,
 } from './Icons.jsx';
 import PrivacyToggle from './PrivacyToggle.jsx';
 import CreatePlaylistDialog from './CreatePlaylistDialog.jsx';
 import DeletePlaylistConfirmDialog from './DeletePlaylistConfirmDialog.jsx';
+import SharePlaylistConfirmDialog from './SharePlaylistConfirmDialog.jsx';
 
 function PlaySvg() {
   return (
@@ -129,6 +135,7 @@ function PlaylistCard({
   onLoad,
   onAdd,
   onSelect,
+  onShare,
   onTogglePrivacy,
   onDelete,
   onToggleEdit,
@@ -159,6 +166,20 @@ function PlaylistCard({
         )}
         <span className="cpl-track-badge">{playlist.trackCount} tracks</span>
         {isPrivate && <span className="cpl-private-badge">Private</span>}
+        {isOwn && onTogglePrivacy && (
+          <div
+            className="cpl-card-privacy-toggle"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <PrivacyToggle
+              isPublic={playlist.is_public}
+              onToggle={(newIsPublic) =>
+                onTogglePrivacy(playlist.id, newIsPublic)
+              }
+              compact
+            />
+          </div>
+        )}
         <div className="cpl-card-overlay">
           <button
             className="cpl-play-btn"
@@ -207,6 +228,19 @@ function PlaylistCard({
           >
             Add
           </button>
+          {onShare && (
+            <button
+              className="cpl-action-btn"
+              onClick={(e) => {
+                e.stopPropagation();
+                onShare(playlist);
+              }}
+              disabled={busy}
+              title="Copy share link"
+            >
+              <ShareIcon />
+            </button>
+          )}
           {isOwn && (
             <div
               style={{
@@ -223,7 +257,7 @@ function PlaylistCard({
                   onClick={() => onToggleEdit(playlist)}
                   title={isEditing ? 'Save changes' : 'Edit Playlist'}
                 >
-                  {isEditing ? <SaveIcon /> : <PencilIcon />}
+                  {isEditing ? <SaveIcon /> : <EditIcon />}
                 </button>
               )}
               {onDelete && (
@@ -234,14 +268,6 @@ function PlaylistCard({
                 >
                   <TrashIcon />
                 </button>
-              )}
-              {onTogglePrivacy && (
-                <PrivacyToggle
-                  isPublic={playlist.is_public}
-                  onToggle={(newIsPublic) =>
-                    onTogglePrivacy(playlist.id, newIsPublic)
-                  }
-                />
               )}
             </div>
           )}
@@ -399,6 +425,7 @@ function CommunityPlaylistPanel({
   onClose,
   onPlay,
   onAdd,
+  onShare,
   onContextMenu,
   isOwner,
   onRemoveTrack,
@@ -500,31 +527,53 @@ function CommunityPlaylistPanel({
               >
                 <div
                   className="cpl-featured-actions"
-                  style={{ marginBottom: 20, display: 'flex', gap: 8 }}
+                  style={{
+                    marginBottom: 20,
+                    display: 'flex',
+                    flexWrap: 'wrap',
+                    justifyContent: 'center',
+                    gap: 8,
+                  }}
                 >
                   <button
                     className="btn btn-primary"
                     onClick={() => onPlay(playlist, tracks)}
-                    style={{ flex: 1 }}
+                    style={{ flex: '1 1 140px' }}
                   >
                     Play Playlist
                   </button>
                   <button
                     className="btn"
                     onClick={() => onAdd(playlist, tracks)}
-                    style={{ flex: 1 }}
+                    style={{ flex: '1 1 140px' }}
                   >
                     Add to My Queue
                   </button>
+                  {onShare && (
+                    <button
+                      className="btn"
+                      onClick={() => onShare(playlist)}
+                      title="Copy share link"
+                      style={{ flex: '0 0 auto', width: 40, padding: 0 }}
+                    >
+                      <ShareIcon />
+                    </button>
+                  )}
                   {isOwner && onToggleEdit && (
                     <button
                       className={`btn${isEditing ? ' btn-primary' : ''}`}
                       onClick={onToggleEdit}
                       disabled={isSavingEdit}
-                      title={isEditing ? 'Save changes' : 'Edit playlist'}
+                      title={
+                        isEditing
+                          ? isSavingEdit
+                            ? 'Saving…'
+                            : 'Save changes'
+                          : 'Edit playlist'
+                      }
+                      style={{ flex: '0 0 auto', width: 40, padding: 0 }}
                     >
-                      {isEditing ? <SaveIcon /> : <PencilIcon />}
-                      {isEditing ? (isSavingEdit ? 'Saving…' : 'Save') : 'Edit'}
+                      {isEditing ? <SaveIcon /> : <EditIcon />}
                     </button>
                   )}
                 </div>
@@ -638,6 +687,8 @@ export function CommunityPlaylistsView({
   const [isLoadingPanel, setIsLoadingPanel] = useState(false);
   const [playlistToDelete, setPlaylistToDelete] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [playlistToShare, setPlaylistToShare] = useState(null);
+  const [isPublishingForShare, setIsPublishingForShare] = useState(false);
 
   // Edit mode: rename + track reorder/remove for a playlist the viewer
   // owns. Only one playlist can be "in edit mode" at a time, and it's
@@ -795,85 +846,6 @@ export function CommunityPlaylistsView({
     });
   }, [lastMetadataUpdateBatch, selectedPlaylistTracks.length]);
 
-  async function fetchTracks(playlistId) {
-    const { data, error } = await supabase
-      .from('user_playlist_tracks')
-      .select(
-        `id, order_index, track_id, provider, external_id, cached_title, cached_channel, cached_thumbnail,
-         tracks (
-           id, canonical_game_title, canonical_track_title,
-           track_sources (
-             provider, external_id, cached_title, cached_channel_title,
-             cached_thumbnail_url, is_primary
-           )
-         )`,
-      )
-      .eq('playlist_id', playlistId)
-      .order('order_index');
-    if (error) throw error;
-    return (data || [])
-      .map((pt) => {
-        if (pt.track_id != null) {
-          const track = pt.tracks;
-          const src =
-            track?.track_sources?.find((s) => s.is_primary) ??
-            track?.track_sources?.[0];
-          if (!src) return null;
-          return {
-            id: pt.id,
-            videoId: src.external_id,
-            provider: src.provider || 'youtube',
-            trackId: pt.track_id,
-            title:
-              src.cached_title ||
-              [track.canonical_game_title, track.canonical_track_title]
-                .filter(Boolean)
-                .join(' – '),
-            displayTitle:
-              track.canonical_track_title ||
-              src.cached_title ||
-              src.external_id,
-            channelTitle:
-              src.cached_channel_title ||
-              (!src.provider || src.provider === 'youtube' ? 'YouTube' : ''),
-            thumbnail:
-              src.cached_thumbnail_url ||
-              getMediaThumbnailUrl({
-                provider: src.provider,
-                videoId: src.external_id,
-              }),
-            gameTitle: track.canonical_game_title,
-            trackTitle: track.canonical_track_title,
-            comment: '',
-            addedAt: new Date().toISOString(),
-          };
-        }
-        if (pt.external_id) {
-          return {
-            id: pt.id,
-            videoId: pt.external_id,
-            provider: pt.provider || 'youtube',
-            trackId: null,
-            title: pt.cached_title || pt.external_id,
-            displayTitle: pt.cached_title || pt.external_id,
-            channelTitle: pt.cached_channel || 'YouTube',
-            thumbnail:
-              pt.cached_thumbnail ||
-              getMediaThumbnailUrl({
-                provider: pt.provider,
-                videoId: pt.external_id,
-              }),
-            gameTitle: '',
-            trackTitle: '',
-            comment: '',
-            addedAt: new Date().toISOString(),
-          };
-        }
-        return null;
-      })
-      .filter(Boolean);
-  }
-
   async function handleSelectPlaylist(playlist) {
     if (selectedPlaylist?.id === playlist.id) return;
     // The panel can only ever show one playlist's tracks at a time, so
@@ -885,7 +857,7 @@ export function CommunityPlaylistsView({
     setSelectedPlaylist(playlist);
     setIsLoadingPanel(true);
     try {
-      const tracks = await fetchTracks(playlist.id);
+      const tracks = await fetchPlaylistTracks(supabase, playlist.id);
       setSelectedPlaylistTracks(tracks);
     } catch (err) {
       console.error(err);
@@ -923,6 +895,51 @@ export function CommunityPlaylistsView({
       onShowToast?.('Failed to update playlist privacy');
     }
   }
+  // Copies a `?playlist=<id>` link (see buildPlaylistShareUrl) that anyone
+  // can open straight into the player, see the shared-link boot loader in
+  // App.jsx. Only public playlists are readable by anyone but the owner
+  // (RLS), so a private playlist can't just be shared as-is, that's what
+  // playlistToShare (below) gates on: a private one goes through
+  // SharePlaylistConfirmDialog first rather than silently publishing it.
+  async function copyShareLink(playlist) {
+    try {
+      await navigator.clipboard.writeText(buildPlaylistShareUrl(playlist.id));
+      onShowToast?.('Share link copied to clipboard');
+    } catch (err) {
+      console.error(err);
+      onShowToast?.('Failed to copy share link');
+    }
+  }
+
+  function handleShare(playlist) {
+    const isOwn = playlist.user_id === authUserId;
+    if (isOwn && !playlist.is_public) {
+      setPlaylistToShare(playlist);
+      return;
+    }
+    copyShareLink(playlist);
+  }
+
+  async function handleConfirmMakePublicAndShare() {
+    if (!playlistToShare) return;
+    setIsPublishingForShare(true);
+    try {
+      await handleTogglePrivacy(playlistToShare.id, true);
+      await navigator.clipboard.writeText(
+        buildPlaylistShareUrl(playlistToShare.id),
+      );
+      onShowToast?.(
+        `Made "${playlistToShare.name}" public and copied its share link`,
+      );
+      setPlaylistToShare(null);
+    } catch (err) {
+      console.error(err);
+      onShowToast?.('Failed to copy share link');
+    } finally {
+      setIsPublishingForShare(false);
+    }
+  }
+
   async function handleDeletePlaylist(playlist) {
     setPlaylistToDelete(playlist);
   }
@@ -1115,7 +1132,7 @@ export function CommunityPlaylistsView({
   async function handleLoad(playlist) {
     setLoadingId(playlist.id);
     try {
-      const videos = await fetchTracks(playlist.id);
+      const videos = await fetchPlaylistTracks(supabase, playlist.id);
       if (!videos.length) {
         onShowToast?.('This playlist has no tracks yet');
         return;
@@ -1136,7 +1153,7 @@ export function CommunityPlaylistsView({
   async function handleAdd(playlist) {
     setLoadingId(playlist.id);
     try {
-      const videos = await fetchTracks(playlist.id);
+      const videos = await fetchPlaylistTracks(supabase, playlist.id);
       if (!videos.length) {
         onShowToast?.('This playlist has no tracks yet');
         return;
@@ -1485,6 +1502,7 @@ export function CommunityPlaylistsView({
                       onSelect={handleSelectPlaylist}
                       onLoad={handleLoad}
                       onAdd={handleAdd}
+                      onShare={handleShare}
                       onTogglePrivacy={handleTogglePrivacy}
                       onDelete={handleDeletePlaylist}
                       onToggleEdit={handleToggleEdit}
@@ -1599,6 +1617,7 @@ export function CommunityPlaylistsView({
                       onSelect={handleSelectPlaylist}
                       onLoad={handleLoad}
                       onAdd={handleAdd}
+                      onShare={handleShare}
                       onTogglePrivacy={handleTogglePrivacy}
                       onDelete={handleDeletePlaylist}
                       onToggleEdit={handleToggleEdit}
@@ -1621,6 +1640,7 @@ export function CommunityPlaylistsView({
         onClose={handleClosePanel}
         onPlay={handlePanelPlay}
         onAdd={handlePanelAdd}
+        onShare={handleShare}
         onContextMenu={onContextMenu}
         isOwner={selectedPlaylist?.user_id === authUser?.id}
         onRemoveTrack={
@@ -1683,6 +1703,14 @@ export function CommunityPlaylistsView({
         playlistName={playlistToDelete?.name || ''}
         onClose={() => setPlaylistToDelete(null)}
         onConfirm={handleConfirmDelete}
+      />
+
+      <SharePlaylistConfirmDialog
+        isOpen={!!playlistToShare}
+        isSubmitting={isPublishingForShare}
+        playlistName={playlistToShare?.name || ''}
+        onClose={() => setPlaylistToShare(null)}
+        onConfirm={handleConfirmMakePublicAndShare}
       />
     </div>
   );

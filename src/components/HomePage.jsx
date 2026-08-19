@@ -3427,7 +3427,7 @@ function HomePage({
               )
             }
           >
-            <span>Add to Queue</span>
+            <span>Add to My Queue</span>
           </button>
           <CustomPlaylistSubmenu
             videos={[discoveryContextMenu.candidate]}
@@ -3462,8 +3462,8 @@ function HomePage({
               <span>
                 {supportStatusById[discoveryContextMenu.candidate.videoId]
                   ?.isSupported
-                  ? 'Remove from Support List'
-                  : 'Add to Support List'}
+                  ? 'Remove from My Support List'
+                  : 'Add to My Support List'}
               </span>
             </button>
           )}
@@ -3479,7 +3479,7 @@ function HomePage({
                 )
               }
             >
-              <span>Add to Nominations</span>
+              <span>Add to My Nominations</span>
             </button>
           )}
           <div className="context-menu-divider" />
@@ -3541,7 +3541,7 @@ function HomePage({
               )
             }
           >
-            <span>Add to Queue</span>
+            <span>Add to My Queue</span>
           </button>
           <CustomPlaylistSubmenu
             videos={[nominationContextMenu.video]}
@@ -3570,8 +3570,8 @@ function HomePage({
             <span>
               {supportStatusById[nominationContextMenu.video.videoId]
                 ?.isSupported
-                ? 'Remove from Support List'
-                : 'Add to Support List'}
+                ? 'Remove from My Support List'
+                : 'Add to My Support List'}
             </span>
           </button>
           {!supportStatusById[nominationContextMenu.video.videoId]
@@ -3586,7 +3586,7 @@ function HomePage({
                 )
               }
             >
-              <span>Add to Nominations</span>
+              <span>Add to My Nominations</span>
             </button>
           )}
           <div className="context-menu-divider" />

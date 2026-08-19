@@ -9,6 +9,8 @@ import YouTube from 'react-youtube';
 import CommunityActivity from './CommunityActivity.jsx';
 import SoundCloudPlayer from './players/SoundCloudPlayer.jsx';
 import BandcampPlayer from './players/BandcampPlayer.jsx';
+import PlaybackTransportButtons from './PlaybackTransportButtons.jsx';
+import useMediaQuery from '../hooks/useMediaQuery.js';
 
 function safelyControlPlayer(player, methodName, args = []) {
   try {
@@ -31,6 +33,7 @@ import {
   SpeechBubbleIcon,
   ReloadIcon,
   SheetIcon,
+  TriangleUpIcon,
 } from './Icons.jsx';
 
 const VideoPlayer = forwardRef(function VideoPlayer(
@@ -44,10 +47,14 @@ const VideoPlayer = forwardRef(function VideoPlayer(
     onNext,
     onTogglePlay,
     isShuffleEnabled = false,
+    isShuffleAvailable = true,
     onShuffle,
     isPreviewModeEnabled = false,
     previewCountdown = 30,
     onTogglePreview,
+    canTogglePlayback = true,
+    isControlsBelowPlayer = false,
+    onToggleControlsPosition,
     isSupported = false,
     isNominated = false,
     onToggleSupport,
@@ -73,6 +80,10 @@ const VideoPlayer = forwardRef(function VideoPlayer(
   },
   ref,
 ) {
+  // The relocated controls row (see now-playing-controls-relocated below)
+  // only has anywhere to go on desktop - mobile keeps its own separate
+  // footer controls untouched, so this feature is a no-op there.
+  const isMobileLayout = useMediaQuery('(max-width: 960px)');
   const playerRef = useRef(null);
 
   useImperativeHandle(ref, () => ({
@@ -532,7 +543,7 @@ const VideoPlayer = forwardRef(function VideoPlayer(
   const metadataNode =
     showMetadata && (video.trackTitle || video.gameTitle || video.title) ? (
       <div
-        className={`now-playing-info${hasVgmcMobileActions ? ' has-vgmc-mobile-actions' : ''}`}
+        className={`now-playing-info${hasVgmcMobileActions ? ' has-vgmc-mobile-actions' : ''}${!isMobileLayout && isControlsBelowPlayer ? ' has-relocated-controls' : ''}`}
         style={isFull ? { marginBottom: '0', paddingBottom: '0' } : undefined}
       >
         <div className="now-playing-main">
@@ -629,6 +640,37 @@ const VideoPlayer = forwardRef(function VideoPlayer(
             )}
           </div>
         </div>
+        {!isMobileLayout && isControlsBelowPlayer && (
+          // Its own grid cell in now-playing-info (see index.css) - centered
+          // relative to the whole row (i.e. the video width) regardless of
+          // how wide the title text or action buttons beside it are, rather
+          // than just splitting the leftover space between them.
+          <div className="now-playing-controls-relocated">
+            <PlaybackTransportButtons
+              isShuffleEnabled={isShuffleEnabled}
+              isShuffleAvailable={isShuffleAvailable}
+              onShuffle={onShuffle}
+              onPrev={onPrev}
+              onNext={onNext}
+              isPlaying={isPlaying}
+              onTogglePlay={onTogglePlay}
+              canTogglePlayback={canTogglePlayback}
+              currentVideo={video}
+              isPreviewModeEnabled={isPreviewModeEnabled}
+              previewCountdown={previewCountdown}
+              onTogglePreview={onTogglePreview}
+            />
+            <button
+              className="footer-control-btn playback-relocate-btn"
+              type="button"
+              onClick={onToggleControlsPosition}
+              title="Move controls back to the top bar"
+              aria-label="Move playback controls back to the top bar"
+            >
+              <TriangleUpIcon className="transport-icon transport-icon-relocate" />
+            </button>
+          </div>
+        )}
         <div className="now-playing-actions">
           <button
             className={`btn btn-icon add-to-playlist-btn${isCurrentVideoInPlaylist ? ' hidden' : ''}`}
