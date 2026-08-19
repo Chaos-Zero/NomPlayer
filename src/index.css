@@ -5005,11 +5005,11 @@ body {
   }
 
   .playlist-collapse-tab {
-    top: auto;
-    bottom: calc(128px + env(safe-area-inset-bottom));
+    top: 14px;
+    bottom: auto;
     left: -52px;
     width: 52px;
-    height: 110px;
+    height: 88px;
     border-radius: 18px 0 0 18px;
     transform: none;
     touch-action: pan-y;
@@ -5024,7 +5024,8 @@ body {
   .playlist-sidebar:not(.collapsed) .playlist-collapse-tab {
     left: 0;
     right: auto;
-    bottom: calc(122px + env(safe-area-inset-bottom));
+    top: 14px;
+    bottom: auto;
     border-left: none;
     border-right: 1px solid var(--border);
     border-radius: 0 18px 18px 0;
@@ -5815,6 +5816,14 @@ body {
   align-items: center;
   gap: 8px;
   flex-shrink: 0;
+}
+
+/* Mobile-only counterparts to the "Sync your feedback to Reactions Sheet" /
+   "Check your Nomination feedback" text buttons (see .vgmc-sheet-sync-btn
+   below) - hidden here, shown centered below the video at the 960px
+   breakpoint alongside the queue/support icons instead. */
+.vgmc-mobile-action-btn {
+  display: none;
 }
 
 .now-playing-link {
@@ -9100,6 +9109,17 @@ button.playlist-search-indicator:hover {
     right: 0;
   }
 
+  /* The "Now Playing List" / "Previous Track" lines above the video (see
+     nowPlayingListNode in VideoPlayer.jsx) only had a 4px gap below them
+     before the video starts - the video's own box-shadow (0 8px 40px, see
+     .player-iframe-container) has enough blur to bleed up over that gap on
+     narrow screens and wash out the text. Push the video down instead of
+     touching that 4px, which is the deliberately tight gap between the two
+     text lines themselves, not the gap to the video. */
+  .player-stage.has-community-activity .player-grid-video-row {
+    margin-top: 20px;
+  }
+
   .now-playing-main {
     gap: 0;
   }
@@ -9111,6 +9131,35 @@ button.playlist-search-indicator:hover {
 
   .now-playing-meta {
     width: 100%;
+  }
+
+  /* VGMC full player only (see hasVgmcMobileActions in VideoPlayer.jsx) -
+     stack the URL above a centered row of icon buttons instead of the
+     desktop's side-by-side "title/url left, queue+support icons right"
+     layout, and fold the "Sync your feedback"/"Check your Nomination
+     feedback" text buttons (shown at the top of the page on desktop) into
+     that icon row as the sync/sheet icons instead. */
+  .now-playing-info.has-vgmc-mobile-actions {
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .now-playing-info.has-vgmc-mobile-actions .now-playing-meta {
+    text-align: center;
+  }
+
+  .now-playing-info.has-vgmc-mobile-actions .now-playing-actions {
+    justify-content: center;
+    width: 100%;
+  }
+
+  .vgmc-sheet-sync-btn {
+    display: none;
+  }
+
+  .vgmc-mobile-action-btn {
+    display: flex;
   }
 
   .sidebar-icon-btn {
@@ -12069,8 +12118,13 @@ body.is-resizing .resize-handle {
 .list-explorer-info-rating-row {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 12px;
   margin-bottom: 12px;
+}
+
+.list-explorer-info-rating-row .rating-row-actions {
+  margin-left: auto;
 }
 
 .list-explorer-info-rating-row .label {

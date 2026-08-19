@@ -289,6 +289,112 @@ describe('VideoPlayer', () => {
     expect(onPlaybackChange).toHaveBeenCalledWith(true);
   });
 
+  it('seeks back to the last known position if a resume reports a reset time', () => {
+    vi.useFakeTimers();
+
+    let visibilityState = 'visible';
+    Object.defineProperty(document, 'visibilityState', {
+      configurable: true,
+      get: () => visibilityState,
+    });
+
+    const onPlaybackChange = vi.fn();
+    const onProgressUpdate = vi.fn();
+    const video = { videoId: 'alpha1234567', title: 'Alpha' };
+
+    render(
+      <VideoPlayer
+        video={video}
+        isPlaying={true}
+        onPlaybackChange={onPlaybackChange}
+        onProgressUpdate={onProgressUpdate}
+      />,
+    );
+
+    const player = youtubeMockState.players.get(video.videoId);
+    let mockCurrentTime = 120;
+    player.getCurrentTime = vi.fn(() => mockCurrentTime);
+    player.getDuration = vi.fn(() => 240);
+    player.seekTo = vi.fn((time) => {
+      mockCurrentTime = time;
+    });
+
+    // Let the progress-polling interval record a real position before we go
+    // into the background.
+    act(() => {
+      vi.advanceTimersByTime(500);
+    });
+    expect(onProgressUpdate).toHaveBeenCalledWith({
+      currentTime: 120,
+      duration: 240,
+    });
+
+    act(() => {
+      hasFocusMock.mockReturnValue(false);
+      window.dispatchEvent(new Event('blur'));
+      visibilityState = 'hidden';
+      document.dispatchEvent(new Event('visibilitychange'));
+    });
+
+    // Simulate the browser having silently reset the player's position
+    // while it was backgrounded (the bug this guards against).
+    mockCurrentTime = 0;
+
+    act(() => {
+      hasFocusMock.mockReturnValue(true);
+      visibilityState = 'visible';
+      document.dispatchEvent(new Event('visibilitychange'));
+    });
+
+    expect(player.seekTo).toHaveBeenCalledWith(120, true);
+  });
+
+  it('does not seek on a normal resume that kept its position', () => {
+    vi.useFakeTimers();
+
+    let visibilityState = 'visible';
+    Object.defineProperty(document, 'visibilityState', {
+      configurable: true,
+      get: () => visibilityState,
+    });
+
+    const onPlaybackChange = vi.fn();
+    const video = { videoId: 'alpha1234567', title: 'Alpha' };
+
+    render(
+      <VideoPlayer
+        video={video}
+        isPlaying={true}
+        onPlaybackChange={onPlaybackChange}
+      />,
+    );
+
+    const player = youtubeMockState.players.get(video.videoId);
+    const mockCurrentTime = 120;
+    player.getCurrentTime = vi.fn(() => mockCurrentTime);
+    player.getDuration = vi.fn(() => 240);
+    player.seekTo = vi.fn();
+
+    act(() => {
+      vi.advanceTimersByTime(500);
+    });
+
+    act(() => {
+      hasFocusMock.mockReturnValue(false);
+      window.dispatchEvent(new Event('blur'));
+      visibilityState = 'hidden';
+      document.dispatchEvent(new Event('visibilitychange'));
+    });
+
+    act(() => {
+      hasFocusMock.mockReturnValue(true);
+      visibilityState = 'visible';
+      document.dispatchEvent(new Event('visibilitychange'));
+    });
+
+    expect(player.seekTo).not.toHaveBeenCalled();
+  });
+
   describe('provider dispatch', () => {
     it('renders SoundCloudPlayer for a soundcloud track, passing video and isPlaying through', () => {
       const video = {

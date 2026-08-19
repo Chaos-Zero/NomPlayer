@@ -10,6 +10,7 @@ import {
 } from '../lib/playerState.js';
 import { HeartIcon, LockIcon, PencilIcon, XIcon } from './Icons.jsx';
 import { ContextMenuPortal } from './ContextMenuPortal';
+import useMediaQuery from '../hooks/useMediaQuery.js';
 
 export default function CommunityActivity({
   videoId,
@@ -19,6 +20,7 @@ export default function CommunityActivity({
   onShowToast,
   onFeedbackSaved,
 }) {
+  const isMobileLayout = useMediaQuery('(max-width: 960px)');
   const [trackId, setTrackId] = useState(null);
   const [supportersMenu, setSupportersMenu] = useState(null);
   const [communityData, setCommunityData] = useState({
@@ -83,6 +85,9 @@ export default function CommunityActivity({
     if (!videoId || !supabase) return;
 
     let active = true;
+    // Standard fetch-loading-flag pattern - kicks off the async fetch this
+    // same effect owns below, not derivable from this render alone.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setIsLoading(true);
 
     const fetchData = async () => {
@@ -444,6 +449,29 @@ export default function CommunityActivity({
                     </option>
                   ))}
                 </select>
+                {isMobileLayout && isModified && (
+                  <div className="feedback-save-row-left rating-row-actions">
+                    <button
+                      className="btn btn-primary btn-save-feedback"
+                      onClick={handleSaveFeedback}
+                      disabled={isSaving}
+                    >
+                      {isSaving ? 'Saving...' : 'Submit'}
+                    </button>
+                    <button
+                      className="btn btn-ghost"
+                      onClick={() => {
+                        setPendingFeedback(userFeedback);
+                        if (userFeedback.rating || userFeedback.note) {
+                          setIsEditing(false);
+                        }
+                      }}
+                      disabled={isSaving}
+                    >
+                      Discard
+                    </button>
+                  </div>
+                )}
               </div>
               <textarea
                 ref={textareaRef}
@@ -470,14 +498,14 @@ export default function CommunityActivity({
               />
               <div className="feedback-save-row">
                 <div className="feedback-save-row-left">
-                  {isModified && (
+                  {!isMobileLayout && isModified && (
                     <>
                       <button
                         className="btn btn-primary btn-save-feedback"
                         onClick={handleSaveFeedback}
                         disabled={isSaving}
                       >
-                        {isSaving ? 'Saving...' : 'Save Feedback'}
+                        {isSaving ? 'Saving...' : 'Submit'}
                       </button>
                       <button
                         className="btn btn-ghost"

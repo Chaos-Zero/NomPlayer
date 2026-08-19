@@ -29,6 +29,8 @@ import {
   ShuffleIcon,
   StopwatchIcon,
   SpeechBubbleIcon,
+  ReloadIcon,
+  SheetIcon,
 } from './Icons.jsx';
 
 const VideoPlayer = forwardRef(function VideoPlayer(
@@ -85,6 +87,12 @@ const VideoPlayer = forwardRef(function VideoPlayer(
   const restorePauseGuardUntilRef = useRef(0);
   const restorePlayRetryTimeoutsRef = useRef([]);
   const pauseVerificationTimeoutRef = useRef(0);
+  // Last currentTime we actually heard from the player (updated by
+  // reportProgress below). Backgrounded tabs can lose the player's position
+  // entirely - either the browser reclaims the iframe's content or the
+  // embed resets itself - so armRestorePauseGuard uses this to notice a
+  // resume that silently landed back at 0 and seek it back where it was.
+  const lastKnownTimeRef = useRef(0);
   const isOverlayEnabled = false;
   const videoId = video?.videoId ?? null;
   const provider = video?.provider || 'youtube';
@@ -151,6 +159,25 @@ const VideoPlayer = forwardRef(function VideoPlayer(
     );
   }, []);
 
+  // Corrects for the player having silently lost its position while
+  // backgrounded (see lastKnownTimeRef above) - only seeks when we're
+  // actually behind where we were, so a normal resume that kept its place
+  // never takes an unnecessary/audible seek.
+  const restorePlaybackPosition = useCallback(() => {
+    const player = playerRef.current;
+    const target = lastKnownTimeRef.current;
+    if (!player || !(target > 1.5)) return;
+
+    try {
+      const current = player.getCurrentTime?.() ?? 0;
+      if (current < target - 1.5) {
+        player.seekTo?.(target, true);
+      }
+    } catch {
+      // player may be re-initializing
+    }
+  }, []);
+
   const armRestorePauseGuard = useCallback(() => {
     if (
       document.visibilityState !== 'visible' ||
@@ -166,19 +193,18 @@ const VideoPlayer = forwardRef(function VideoPlayer(
       onPlaybackChange?.(true);
     }
 
-    safelyControlPlayer(playerRef.current, 'playVideo');
+    const playAndRestore = () => {
+      safelyControlPlayer(playerRef.current, 'playVideo');
+      restorePlaybackPosition();
+    };
+
+    playAndRestore();
     restorePlayRetryTimeoutsRef.current = [
-      window.setTimeout(() => {
-        safelyControlPlayer(playerRef.current, 'playVideo');
-      }, 180),
-      window.setTimeout(() => {
-        safelyControlPlayer(playerRef.current, 'playVideo');
-      }, 700),
-      window.setTimeout(() => {
-        safelyControlPlayer(playerRef.current, 'playVideo');
-      }, 1500),
+      window.setTimeout(playAndRestore, 180),
+      window.setTimeout(playAndRestore, 700),
+      window.setTimeout(playAndRestore, 1500),
     ];
-  }, [clearRestorePauseGuard, onPlaybackChange]);
+  }, [clearRestorePauseGuard, onPlaybackChange, restorePlaybackPosition]);
 
   const verifyPauseState = useCallback(() => {
     clearPauseVerification();
@@ -226,6 +252,24 @@ const VideoPlayer = forwardRef(function VideoPlayer(
     }
   }, [clearVisibilityResumeTracking, isPlaying]);
 
+  // Wraps onProgressUpdate to also keep lastKnownTimeRef current, so
+  // restorePlaybackPosition always has an up-to-date fallback to seek back
+  // to. Used by the active-playback sites below (the polling interval,
+  // buffering) - deliberately NOT by handleReady's own progress report,
+  // since a freshly (re)initialized player reports time 0 there, which
+  // would stomp the very position we're trying to preserve if it fires
+  // mid-restore (e.g. a backgrounded iframe the browser reloaded, which
+  // re-fires "ready" once its player re-initializes).
+  const reportProgress = useCallback(
+    (currentTime, duration) => {
+      if (typeof currentTime === 'number' && Number.isFinite(currentTime)) {
+        lastKnownTimeRef.current = currentTime;
+      }
+      onProgressUpdate?.({ currentTime, duration });
+    },
+    [onProgressUpdate],
+  );
+
   // Track playback progress
   useEffect(() => {
     if (!isPlaying) {
@@ -238,7 +282,7 @@ const VideoPlayer = forwardRef(function VideoPlayer(
       try {
         const time = player.getCurrentTime();
         const dur = player.getDuration();
-        onProgressUpdate?.({ currentTime: time, duration: dur });
+        reportProgress(time, dur);
       } catch {
         // Player might be re-initializing
       }
@@ -247,7 +291,7 @@ const VideoPlayer = forwardRef(function VideoPlayer(
     return () => {
       window.clearInterval(intervalId);
     };
-  }, [isPlaying, onProgressUpdate]);
+  }, [isPlaying, reportProgress]);
 
   // Sync play/pause state with the YouTube player
   useEffect(() => {
@@ -325,6 +369,12 @@ const VideoPlayer = forwardRef(function VideoPlayer(
     (event) => {
       if (event?.data === 1) {
         clearPauseVerification();
+        // Confirmed actually playing again - stop treating a subsequent
+        // pause as background-restore noise to ignore (see
+        // isPauseIgnoredDuringRestore). Left armed, it would keep
+        // swallowing pause presses for up to the rest of the 2.5s guard
+        // window even after we'd already resumed successfully.
+        resumeAfterVisibilityRef.current = false;
         onPlaybackChange?.(true);
       } else if (event?.data === 2) {
         if (isPauseIgnoredDuringRestore()) {
@@ -342,7 +392,7 @@ const VideoPlayer = forwardRef(function VideoPlayer(
           const player = playerRef.current;
           const dur = player?.getDuration?.() ?? 0;
           const time = player?.getCurrentTime?.() ?? 0;
-          if (dur > 0) onProgressUpdate?.({ currentTime: time, duration: dur });
+          if (dur > 0) reportProgress(time, dur);
         } catch {
           // player may be re-initializing
         }
@@ -352,7 +402,7 @@ const VideoPlayer = forwardRef(function VideoPlayer(
       clearPauseVerification,
       isPauseIgnoredDuringRestore,
       onPlaybackChange,
-      onProgressUpdate,
+      reportProgress,
       verifyPauseState,
     ],
   );
@@ -475,10 +525,14 @@ const VideoPlayer = forwardRef(function VideoPlayer(
       </>
     ) : null;
 
+  const hasVgmcMobileActions = Boolean(
+    onOpenVgmcSheetSync || onOpenNominationFeedback,
+  );
+
   const metadataNode =
     showMetadata && (video.trackTitle || video.gameTitle || video.title) ? (
       <div
-        className="now-playing-info"
+        className={`now-playing-info${hasVgmcMobileActions ? ' has-vgmc-mobile-actions' : ''}`}
         style={isFull ? { marginBottom: '0', paddingBottom: '0' } : undefined}
       >
         <div className="now-playing-main">
@@ -607,6 +661,28 @@ const VideoPlayer = forwardRef(function VideoPlayer(
           >
             {supportGlyph}
           </button>
+          {onOpenVgmcSheetSync && (
+            <button
+              className="btn btn-icon vgmc-mobile-action-btn"
+              type="button"
+              onClick={onOpenVgmcSheetSync}
+              title="Sync your VGMC ratings to the reaction sheet"
+              aria-label="Sync your feedback to Reactions Sheet"
+            >
+              <ReloadIcon />
+            </button>
+          )}
+          {onOpenNominationFeedback && (
+            <button
+              className="btn btn-icon vgmc-mobile-action-btn"
+              type="button"
+              onClick={onOpenNominationFeedback}
+              title="See ratings & comments left on tracks you've nominated"
+              aria-label="Check your Nomination feedback"
+            >
+              <SheetIcon />
+            </button>
+          )}
         </div>
       </div>
     ) : null;
