@@ -9,6 +9,7 @@ import {
   deriveProfileAvatarUrl,
 } from '../lib/playerState.js';
 import { HeartIcon, LockIcon, PencilIcon, XIcon } from './Icons.jsx';
+import { CommunityPlaylistsIcon } from './SiteNavigation.jsx';
 import { ContextMenuPortal } from './ContextMenuPortal';
 import useMediaQuery from '../hooks/useMediaQuery.js';
 
@@ -19,6 +20,7 @@ export default function CommunityActivity({
   userProfile,
   onShowToast,
   onFeedbackSaved,
+  vgmcSupportPointsByVideoId = new Map(),
 }) {
   const isMobileLayout = useMediaQuery('(max-width: 960px)');
   const [trackId, setTrackId] = useState(null);
@@ -323,16 +325,33 @@ export default function CommunityActivity({
     );
   }
 
+  const gamefaqsSupport = vgmcSupportPointsByVideoId.get(videoId);
+
   return (
     <div
       className={`player-community-activity ${!trackId ? 'loading-track' : ''}`}
     >
       {/* ─── Community Support Summary (Conditional) ─── */}
-      {supportSummary.total > 0 && (
+      {(supportSummary.total > 0 || gamefaqsSupport?.points > 0) && (
         <section className="list-explorer-info-section">
           <h4>COMMUNITY SUPPORT</h4>
           <div className="list-explorer-support-summary">
             <div className="list-explorer-support-icons">
+              {gamefaqsSupport?.points > 0 && (
+                <div
+                  className="support-badge gamefaqs"
+                  title={`${gamefaqsSupport.points} Supports from the GameFAQs VGMC thread${
+                    gamefaqsSupport.voters
+                      ? ` (${gamefaqsSupport.voters} ${
+                          gamefaqsSupport.voters === 1 ? 'voter' : 'voters'
+                        })`
+                      : ''
+                  }`}
+                >
+                  <CommunityPlaylistsIcon />
+                  <span>{gamefaqsSupport.points}</span>
+                </div>
+              )}
               {supportSummary[3]?.count > 0 && (
                 <button
                   className="support-badge highest"
@@ -379,12 +398,15 @@ export default function CommunityActivity({
           className="supporters-popover"
         >
           <div className="supporters-popover-header">
-            {supportersMenu.level === 3
-              ? 'Definite'
-              : supportersMenu.level === 2
-                ? 'Likely'
-                : 'Possible'}{' '}
-            Supports
+            <span className="supporters-popover-header-label">
+              {supportersMenu.level === 3 ? <LockIcon /> : <HeartIcon />}
+              {supportersMenu.level === 3
+                ? 'Definite'
+                : supportersMenu.level === 2
+                  ? 'Likely'
+                  : 'Possible'}{' '}
+              Supports
+            </span>
           </div>
           <div
             className="supporters-list"

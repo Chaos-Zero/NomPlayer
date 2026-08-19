@@ -3,6 +3,11 @@ import { createPortal } from 'react-dom';
 import DiscordIcon from './DiscordIcon.jsx';
 import ScrollingText from './ScrollingText.jsx';
 import { getMediaThumbnailUrl } from '../utils/media.js';
+import {
+  partitionStandings,
+  buildVgmcSupportPointsByVideoId,
+} from '../lib/vgmcStandings.js';
+import { fetchTrackSupportersByLevel } from '../lib/feedback.js';
 import useMediaQuery from '../hooks/useMediaQuery.js';
 import {
   buildDiscoveryCandidates,
@@ -38,6 +43,7 @@ import {
   StarIcon,
   UsersIcon,
 } from './Icons.jsx';
+import { CommunityPlaylistsIcon } from './SiteNavigation.jsx';
 
 import { AnimatedGridPattern } from './AnimatedGridPattern.jsx';
 import TextType from './TextType.jsx';
@@ -45,6 +51,18 @@ import Dock from './Dock.jsx';
 import CustomPlaylistSubmenu from './CustomPlaylistSubmenu.jsx';
 const DASHBOARD_REFRESH_LIMIT = 8;
 const HOME_CPL_PAGE_SIZE = 12;
+
+// Single kill switch for every GameFAQs-VGMC-sourced leaderboard element
+// (the "Live Supports" tab, and the GameFAQs badge on every tab's rows) - see
+// .env.example. Once the nomination period closes and the VGMC 20 entrants
+// are locked in, set VITE_VGMC_LIVE_SUPPORTS_ENABLED=false and redeploy to
+// hide all of it again for the next cycle, without touching this file. Same
+// flag also gates the home page's auto-redirect into the VGMC standings page
+// and the persistent VGMC nav toggle button (see App.jsx's own copy of this
+// constant - duplicated rather than shared, matching VGMC_PLAYLIST_ID below).
+// Defaults on (unset or anything other than the literal string "false").
+const VGMC_LIVE_SUPPORTS_ENABLED =
+  import.meta.env.VITE_VGMC_LIVE_SUPPORTS_ENABLED !== 'false';
 
 const HOME_CPL_GRADIENTS = [
   ['#7c3aed', '#3b1d6e'],
@@ -1491,10 +1509,46 @@ function DiscoveryGridItem({ candidate, metadata, onPlayNow, onContextMenu }) {
   );
 }
 
+// One of the three site-support stat badges (Definite/Likely/Possible) on a
+// hero-leaderboard row. Clickable only on the tabs that pass `onShowSupporters`
+// (see isSupporterBreakdownClickable in HeroLeaderboard below) - elsewhere it's
+// the same plain, non-interactive span it always was.
+function SupportCountBadge(props) {
+  // Destructured from the params object here, at the body level, rather than
+  // in the param list itself - matches this repo's no-unused-vars
+  // varsIgnorePattern (^[A-Z_]), which only covers variable declarations.
+  // Icon (used only as a JSX tag) reads as unused otherwise.
+  const { level, count, label, Icon, track, onShowSupporters } = props;
+  if (count <= 0) return null;
+  const levelClass =
+    level === 3 ? 'highest' : level === 2 ? 'strong' : 'normal';
+
+  if (!onShowSupporters) {
+    return (
+      <span className={`stat-badge ${levelClass}`} title={label}>
+        <Icon size={10} /> {count}
+      </span>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      className={`stat-badge ${levelClass} clickable`}
+      title={`${label} (click to see who)`}
+      onClick={(e) => onShowSupporters(e, track, level)}
+    >
+      <Icon size={10} /> {count}
+    </button>
+  );
+}
+
 function HeroLeaderboard({
+  supabase,
   yourNominations,
   yourSupports,
   globalLeaderboard,
+  liveSupportFrontrunners,
   authUser,
   isLoading,
   globalActivityByVideoId,
@@ -1511,6 +1565,7 @@ function HeroLeaderboard({
   );
   const [showAllGlobal, setShowAllGlobal] = useState(false);
   const [prevAuthUser, setPrevAuthUser] = useState(authUser);
+  const [supportersPopover, setSupportersPopover] = useState(null);
 
   if (authUser !== prevAuthUser) {
     setPrevAuthUser(authUser);
@@ -1523,6 +1578,45 @@ function HeroLeaderboard({
     setShowAllGlobal(false);
   };
 
+  // The breakdown-of-who-supported popover is only wired up for your own
+  // Nominations/Supports lists, not Global or Live Supports - see the
+  // request this shipped for. SupportCountBadge falls back to a plain,
+  // non-interactive span wherever this is undefined.
+  const isSupporterBreakdownClickable =
+    currentView === 'nominations' || currentView === 'supports';
+
+  const handleShowSupporters = useCallback(
+    async (event, track, level) => {
+      event.stopPropagation();
+      if (!supabase || !track?.videoId) return;
+
+      const rect = event.currentTarget.getBoundingClientRect();
+      const key = `${track.videoId}:${level}`;
+      setSupportersPopover({
+        key,
+        level,
+        x: rect.left + rect.width / 2,
+        y: rect.top,
+        names: [],
+        isLoading: true,
+      });
+
+      const byLevel = await fetchTrackSupportersByLevel(
+        supabase,
+        track.videoId,
+      );
+
+      // Guard against a slower, now-stale fetch landing after the user has
+      // already clicked a different badge (or closed this one).
+      setSupportersPopover((previous) =>
+        previous?.key === key
+          ? { ...previous, names: byLevel[level] || [], isLoading: false }
+          : previous,
+      );
+    },
+    [supabase],
+  );
+
   let data = [];
   let title = '';
   if (currentView === 'global') {
@@ -1534,6 +1628,9 @@ function HeroLeaderboard({
   } else if (currentView === 'supports') {
     data = yourSupports;
     title = 'Your Supports';
+  } else if (currentView === 'liveSupports') {
+    data = liveSupportFrontrunners;
+    title = 'Live Supports';
   }
 
   const GLOBAL_PREVIEW_LIMIT = 20;
@@ -1572,6 +1669,15 @@ function HeroLeaderboard({
           >
             Global
           </button>
+          {VGMC_LIVE_SUPPORTS_ENABLED && (
+            <button
+              className={`hero-leaderboard-tab ${currentView === 'liveSupports' ? 'active' : ''}`}
+              onClick={() => switchView('liveSupports')}
+              title="Frontrunners from the live GameFAQs VGMC thread"
+            >
+              Live Supports
+            </button>
+          )}
         </div>
       </div>
 
@@ -1654,32 +1760,65 @@ function HeroLeaderboard({
                         Total: {track.totalSupport}
                       </span>
                     )}
-                    {track.totalSupport > 0 && (
+                    {(track.totalSupport > 0 || track.gamefaqsPoints > 0) && (
                       <div className="hero-leaderboard-stat-icons">
-                        {track.supportCount3 > 0 && (
+                        {/* GameFAQs badge leads the cluster, on the far left
+                            of the site's own support badges - it's a
+                            different source of support, not another tier of
+                            this site's own. */}
+                        {track.gamefaqsPoints > 0 && (
                           <span
-                            className="stat-badge highest"
-                            title="Definite Supports"
+                            className="stat-badge gamefaqs"
+                            title={`${track.gamefaqsPoints} Supports from the GameFAQs VGMC thread${
+                              track.gamefaqsVoters
+                                ? ` (${track.gamefaqsVoters} ${
+                                    track.gamefaqsVoters === 1
+                                      ? 'voter'
+                                      : 'voters'
+                                  })`
+                                : ''
+                            }`}
                           >
-                            <LockIcon size={10} /> {track.supportCount3}
+                            <CommunityPlaylistsIcon className="collection-icon" />{' '}
+                            {track.gamefaqsPoints}
                           </span>
                         )}
-                        {track.supportCount2 > 0 && (
-                          <span
-                            className="stat-badge strong"
-                            title="Likely Supports"
-                          >
-                            <HeartIcon size={10} /> {track.supportCount2}
-                          </span>
-                        )}
-                        {track.supportCount1 > 0 && (
-                          <span
-                            className="stat-badge normal"
-                            title="Possible Supports"
-                          >
-                            <HeartIcon size={10} /> {track.supportCount1}
-                          </span>
-                        )}
+                        <SupportCountBadge
+                          level={3}
+                          count={track.supportCount3}
+                          label="Definite Supports"
+                          Icon={LockIcon}
+                          track={track}
+                          onShowSupporters={
+                            isSupporterBreakdownClickable
+                              ? handleShowSupporters
+                              : undefined
+                          }
+                        />
+                        <SupportCountBadge
+                          level={2}
+                          count={track.supportCount2}
+                          label="Likely Supports"
+                          Icon={HeartIcon}
+                          track={track}
+                          onShowSupporters={
+                            isSupporterBreakdownClickable
+                              ? handleShowSupporters
+                              : undefined
+                          }
+                        />
+                        <SupportCountBadge
+                          level={1}
+                          count={track.supportCount1}
+                          label="Possible Supports"
+                          Icon={HeartIcon}
+                          track={track}
+                          onShowSupporters={
+                            isSupporterBreakdownClickable
+                              ? handleShowSupporters
+                              : undefined
+                          }
+                        />
                       </div>
                     )}
                   </div>
@@ -1699,6 +1838,43 @@ function HeroLeaderboard({
           </>
         )}
       </div>
+
+      {supportersPopover && (
+        <ContextMenuPortal
+          x={supportersPopover.x}
+          y={supportersPopover.y}
+          onClose={() => setSupportersPopover(null)}
+          className="supporters-popover"
+        >
+          <div className="supporters-popover-header">
+            <span className="supporters-popover-header-label">
+              {supportersPopover.level === 3 ? <LockIcon /> : <HeartIcon />}
+              {supportersPopover.level === 3
+                ? 'Definite'
+                : supportersPopover.level === 2
+                  ? 'Likely'
+                  : 'Possible'}{' '}
+              Supports
+            </span>
+          </div>
+          <div
+            className="supporters-list"
+            onClick={() => setSupportersPopover(null)}
+          >
+            {supportersPopover.isLoading ? (
+              <div className="supporters-list-item">Loading…</div>
+            ) : supportersPopover.names.length === 0 ? (
+              <div className="supporters-list-item">No names available</div>
+            ) : (
+              supportersPopover.names.map((name, i) => (
+                <div key={i} className="supporters-list-item">
+                  {name}
+                </div>
+              ))
+            )}
+          </div>
+        </ContextMenuPortal>
+      )}
     </article>
   );
 }
@@ -1740,6 +1916,7 @@ function HomePage({
   nominationRefreshToken = 0,
   customPlaylists,
   onUpdateCustomPlaylists,
+  vgmcStandingsRows = [],
 }) {
   const isMobileLayout = useMediaQuery('(max-width: 960px)');
   const [nominationUpdates, setNominationUpdates] = useState([]);
@@ -2047,12 +2224,25 @@ function HomePage({
     return mergedNominationUpdates;
   }, [authUser?.id, mergedNominationUpdates, isHidingOwnNominations]);
 
+  // Points/voters pulled from the live GameFAQs VGMC nomination thread, keyed
+  // by videoId - separate from supportCount1/2/3 above, which are supports
+  // cast on the site itself. Feeds the GameFAQs badge on every leaderboard
+  // tab below, not just the dedicated Live Supports one (see
+  // buildVgmcSupportPointsByVideoId for the qualifying rule - it's shared
+  // with App.jsx's enriched nominations/support lists, which feed this same
+  // badge into FavouritesPanel.jsx).
+  const vgmcPointsByVideoId = useMemo(() => {
+    if (!VGMC_LIVE_SUPPORTS_ENABLED) return new Map();
+    return buildVgmcSupportPointsByVideoId(vgmcStandingsRows);
+  }, [vgmcStandingsRows]);
+
   const globalLeaderboard = useMemo(() => {
     return Object.values(mergedMetadata)
       .map((meta) => {
         const s1 = meta.supportCount1 || 0;
         const s2 = meta.supportCount2 || 0;
         const s3 = meta.supportCount3 || 0;
+        const gamefaqs = vgmcPointsByVideoId.get(meta.videoId);
         return {
           videoId: meta.videoId,
           provider: meta.provider || 'youtube',
@@ -2069,6 +2259,8 @@ function HomePage({
           supportCount2: s2,
           supportCount3: s3,
           totalSupport: s1 + s2 + s3,
+          gamefaqsPoints: gamefaqs?.points || 0,
+          gamefaqsVoters: gamefaqs?.voters || 0,
         };
       })
       .filter((t) => t.totalSupport > 0)
@@ -2081,7 +2273,7 @@ function HomePage({
           return b.supportCount2 - a.supportCount2;
         return b.supportCount1 - a.supportCount1;
       });
-  }, [mergedMetadata]);
+  }, [mergedMetadata, vgmcPointsByVideoId]);
 
   const yourNominations = useMemo(() => {
     if (!authUser) return [];
@@ -2096,6 +2288,7 @@ function HomePage({
         const s1 = meta.supportCount1 || 0;
         const s2 = meta.supportCount2 || 0;
         const s3 = meta.supportCount3 || 0;
+        const gamefaqs = vgmcPointsByVideoId.get(video.videoId);
         return {
           ...video,
           provider: meta.provider || video.provider || 'youtube',
@@ -2113,6 +2306,8 @@ function HomePage({
           supportCount2: s2,
           supportCount3: s3,
           totalSupport: s1 + s2 + s3,
+          gamefaqsPoints: gamefaqs?.points || 0,
+          gamefaqsVoters: gamefaqs?.voters || 0,
         };
       })
       .sort((a, b) => {
@@ -2124,7 +2319,7 @@ function HomePage({
           return b.supportCount2 - a.supportCount2;
         return b.supportCount1 - a.supportCount1;
       });
-  }, [authUser, mergedNominationUpdates, mergedMetadata]);
+  }, [authUser, mergedNominationUpdates, mergedMetadata, vgmcPointsByVideoId]);
 
   const yourSupports = useMemo(() => {
     if (!authUser) return [];
@@ -2138,6 +2333,7 @@ function HomePage({
         const s1 = meta.supportCount1 || 0;
         const s2 = meta.supportCount2 || 0;
         const s3 = meta.supportCount3 || 0;
+        const gamefaqs = vgmcPointsByVideoId.get(id);
         return {
           videoId: id,
           provider: meta.provider || 'youtube',
@@ -2151,6 +2347,8 @@ function HomePage({
           supportCount2: s2,
           supportCount3: s3,
           totalSupport: s1 + s2 + s3,
+          gamefaqsPoints: gamefaqs?.points || 0,
+          gamefaqsVoters: gamefaqs?.voters || 0,
         };
       })
       .filter(Boolean)
@@ -2163,7 +2361,38 @@ function HomePage({
           return b.supportCount2 - a.supportCount2;
         return b.supportCount1 - a.supportCount1;
       });
-  }, [authUser, supportStatusById, mergedMetadata]);
+  }, [authUser, supportStatusById, mergedMetadata, vgmcPointsByVideoId]);
+
+  // "Frontrunners" tab: current point standings straight from the live
+  // GameFAQs VGMC thread (see vgmcStandings.js), independent of anything
+  // supported on the site itself. Locked (7+ points) first, since those are
+  // already the clear leaders, then the rest of qualifying (>1 point)
+  // standings - both halves come back pre-sorted from partitionStandings.
+  // Same >1-voter rule as vgmcPointsByVideoId above - a song only the
+  // nominator has backed isn't a "frontrunner" yet.
+  const liveSupportFrontrunners = useMemo(() => {
+    if (!VGMC_LIVE_SUPPORTS_ENABLED) return [];
+    const { standings, locked } = partitionStandings(vgmcStandingsRows);
+    return [...locked, ...standings]
+      .filter((row) => row.supportVoters > 1)
+      .map((row) => ({
+        videoId: row.videoId,
+        provider: row.provider,
+        title: row.song
+          ? `${row.game || 'Unknown Game'} - ${row.song}`
+          : row.title,
+        thumbnail: getMediaThumbnailUrl({
+          provider: row.provider,
+          videoId: row.videoId,
+        }),
+        supportCount1: 0,
+        supportCount2: 0,
+        supportCount3: 0,
+        totalSupport: 0,
+        gamefaqsPoints: row.supportPoints,
+        gamefaqsVoters: row.supportVoters,
+      }));
+  }, [vgmcStandingsRows]);
 
   const discoveryCandidates = useMemo(() => {
     const rawCandidates = buildDiscoveryCandidates(visibleNominationUpdates, {
@@ -2847,9 +3076,11 @@ function HomePage({
 
         <div className="dashboard-hero-leaderboard-container">
           <HeroLeaderboard
+            supabase={supabase}
             yourNominations={yourNominations}
             yourSupports={yourSupports}
             globalLeaderboard={globalLeaderboard}
+            liveSupportFrontrunners={liveSupportFrontrunners}
             authUser={authUser}
             isLoading={isDashboardLoading || isMetadataLoading}
             globalActivityByVideoId={globalActivityByVideoId}
@@ -3442,7 +3673,8 @@ function HomePage({
             supportStatusById[discoveryContextMenu.candidate.videoId]
               ?.isSupported &&
             (discoveryContextMenu.source === 'nominations' ||
-              discoveryContextMenu.source === 'global')
+              discoveryContextMenu.source === 'global' ||
+              discoveryContextMenu.source === 'liveSupports')
           ) && (
             <button
               className={`playlist-context-menu-item ${

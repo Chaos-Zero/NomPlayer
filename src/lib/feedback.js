@@ -1,5 +1,6 @@
 import { checkContent } from '../utils/profanityFilter.js';
 import { getCachedCatalog } from './trackCatalog.js';
+import { getDisplayProfileName } from './playerState.js';
 
 export async function fetchUserFeedback(supabase, userId) {
   if (!supabase || !userId) return {};
@@ -104,6 +105,63 @@ export async function deleteUserFeedback(supabase, userId, trackId) {
   if (error) {
     throw error;
   }
+}
+
+// Per-level list of supporter display names for a track, given its videoId -
+// the same track_supports + profiles lookup CommunityActivity.jsx already
+// does inline for the player's activity panel (track_supports has no FK
+// PostgREST can embed profiles through, hence the manual second query),
+// extracted here so the home page leaderboard's clickable support badges
+// (see HomePage.jsx) can reuse it too. Always resolves all three levels,
+// even the empty ones, so callers don't need an extra existence check.
+export async function fetchTrackSupportersByLevel(supabase, videoId) {
+  const emptyResult = { 1: [], 2: [], 3: [] };
+  if (!supabase || !videoId) return emptyResult;
+
+  const { data: catalogData } = await supabase
+    .from('track_catalog')
+    .select('track_id')
+    .eq('source_external_id', videoId)
+    .maybeSingle();
+
+  const trackId = catalogData?.track_id;
+  if (!trackId) return emptyResult;
+
+  const { data: supportRows, error } = await supabase
+    .from('track_supports')
+    .select('level, user_id')
+    .eq('track_id', trackId);
+
+  if (error) {
+    console.error('Failed to fetch track supporters:', error);
+    return emptyResult;
+  }
+
+  const rows = supportRows || [];
+  const userIds = [...new Set(rows.map((row) => row.user_id))];
+
+  let usernameByUserId = new Map();
+  if (userIds.length > 0) {
+    const { data: profiles } = await supabase
+      .from('profiles')
+      .select('id, username')
+      .in('id', userIds);
+    usernameByUserId = new Map(
+      (profiles || []).map((profile) => [profile.id, profile.username]),
+    );
+  }
+
+  const byLevel = { 1: [], 2: [], 3: [] };
+  for (const row of rows) {
+    if (!byLevel[row.level]) continue;
+    byLevel[row.level].push(
+      getDisplayProfileName(
+        usernameByUserId.get(row.user_id),
+        'Anonymous listener',
+      ),
+    );
+  }
+  return byLevel;
 }
 
 export async function fetchRecentComments(supabase, limit = 20) {

@@ -207,6 +207,7 @@ import { fetchDashboardNominationUpdates } from './lib/dashboard.js';
 import {
   fetchVgmcPlaylistTracks,
   toPlaylistVideos,
+  buildVgmcSupportPointsByVideoId,
 } from './lib/vgmcStandings.js';
 import {
   fetchPlaylistMeta,
@@ -246,6 +247,16 @@ const SIDEBAR_VIEW_STORAGE_KEY = 'nom-active-sidebar-view';
 // inside handleNavigate's page-transition animation logic.
 const PLAYER_LIKE_PAGES = new Set(['player', 'vgmcStandings']);
 const VGMC_PLAYLIST_ID = import.meta.env.VITE_VGMC_PLAYLIST_ID || '';
+// Same flag, same default, as HomePage.jsx's VGMC_LIVE_SUPPORTS_ENABLED - kept
+// as a separate local const rather than a shared import, matching how
+// VGMC_PLAYLIST_ID itself is already duplicated per-file in this codebase.
+// Here it gates the two ways a visitor actually lands on the VGMC standings
+// page (the auto-redirect below, and VgmcNavToggle's persistent nav button),
+// not the page/data itself - the VGMC playlist can still be browsed normally
+// (e.g. via Community Playlists) once the nomination period is closed and
+// this is flipped to "false", it just stops being pushed on everyone.
+const VGMC_LIVE_SUPPORTS_ENABLED =
+  import.meta.env.VITE_VGMC_LIVE_SUPPORTS_ENABLED !== 'false';
 
 function loadStoredList(storageKey, fallbackKey = null) {
   try {
@@ -2158,9 +2169,21 @@ export default function App() {
       .filter(Boolean);
   }, [catalogTrackByVideoId, isPersonalShuffleActive, playlist, playOrderIds]);
 
+  // Same GameFAQs-VGMC point/voter lookup HomePage.jsx's leaderboard badge
+  // uses (see buildVgmcSupportPointsByVideoId), gated behind the same flag -
+  // feeds the equivalent badge on the Support/Nomination list panels below.
+  const vgmcSupportPointsByVideoId = useMemo(
+    () =>
+      VGMC_LIVE_SUPPORTS_ENABLED
+        ? buildVgmcSupportPointsByVideoId(vgmcStandingsRows)
+        : new Map(),
+    [vgmcStandingsRows],
+  );
+
   const enrichedNominationList = useMemo(() => {
     return nominationList.map((nom, index) => {
       const catalogEntry = catalogTrackByVideoId[nom.videoId];
+      const gamefaqs = vgmcSupportPointsByVideoId.get(nom.videoId);
       const personalRating =
         (catalogEntry?.id && userFeedback[catalogEntry.id]?.rating) ||
         (nom.trackId && userFeedback[nom.trackId]?.rating);
@@ -2171,6 +2194,8 @@ export default function App() {
         supportCount1: catalogEntry?.supportCount1 || 0,
         supportCount2: catalogEntry?.supportCount2 || 0,
         supportCount3: catalogEntry?.supportCount3 || 0,
+        gamefaqsPoints: gamefaqs?.points || 0,
+        gamefaqsVoters: gamefaqs?.voters || 0,
         title:
           catalogEntry?.displayTitle ||
           catalogEntry?.sourceTitle ||
@@ -2193,11 +2218,17 @@ export default function App() {
           '',
       };
     });
-  }, [nominationList, catalogTrackByVideoId, userFeedback]);
+  }, [
+    nominationList,
+    catalogTrackByVideoId,
+    userFeedback,
+    vgmcSupportPointsByVideoId,
+  ]);
 
   const enrichedSupportList = useMemo(() => {
     return supportList.map((sup, index) => {
       const catalogEntry = catalogTrackByVideoId[sup.videoId];
+      const gamefaqs = vgmcSupportPointsByVideoId.get(sup.videoId);
       const personalRating =
         (catalogEntry?.id && userFeedback[catalogEntry.id]?.rating) ||
         (sup.trackId && userFeedback[sup.trackId]?.rating);
@@ -2208,6 +2239,8 @@ export default function App() {
         supportCount1: catalogEntry?.supportCount1 || 0,
         supportCount2: catalogEntry?.supportCount2 || 0,
         supportCount3: catalogEntry?.supportCount3 || 0,
+        gamefaqsPoints: gamefaqs?.points || 0,
+        gamefaqsVoters: gamefaqs?.voters || 0,
         title:
           catalogEntry?.displayTitle ||
           catalogEntry?.sourceTitle ||
@@ -2230,7 +2263,12 @@ export default function App() {
           '',
       };
     });
-  }, [supportList, catalogTrackByVideoId, userFeedback]);
+  }, [
+    supportList,
+    catalogTrackByVideoId,
+    userFeedback,
+    vgmcSupportPointsByVideoId,
+  ]);
 
   const sidebarTracks = useMemo(() => {
     let tracks;
@@ -6111,15 +6149,22 @@ export default function App() {
   );
 
   // VGMC 20 is the default landing page for everyone for now (not gated on any
-  // per-user setting), fires once per session, and never fights a deep link or
-  // the user's own later navigation back to Classic, since it only ever fires
-  // while still on the default 'home' page.
+  // per-user setting) whenever VGMC_LIVE_SUPPORTS_ENABLED is on, fires once per
+  // session, and never fights a deep link or the user's own later navigation
+  // back to Classic, since it only ever fires while still on the default 'home'
+  // page.
   //
   // The site loads into the normal home page first, behind a full-screen loading
   // overlay (see hasVgmcLoadedOnce below), navigation to the VGMC page itself only
   // happens *after* the playlist has fully loaded, not before. Mounting the VGMC
   // page's tree while data was still arriving was the source of it rendering blank,
   // deferring the page switch until everything's ready sidesteps that entirely.
+  //
+  // The load itself always runs, flag or no flag - vgmcStandingsRows still feeds
+  // the (separately-gated) home page badges, and the loading overlay's own
+  // gate is "has this resolved at all", not "did it redirect", so skipping the
+  // fetch outright here would leave that overlay stuck up forever with the
+  // flag off. Only the redirect at the end is conditional.
   useEffect(() => {
     if (hasAutoNavigatedToVgmcRef.current) return;
     if (!VGMC_PLAYLIST_ID) return;
@@ -6131,7 +6176,9 @@ export default function App() {
 
     hasAutoNavigatedToVgmcRef.current = true;
     handleLoadVgmcPlaylist().then(() => {
-      handleNavigate('vgmcStandings');
+      if (VGMC_LIVE_SUPPORTS_ENABLED) {
+        handleNavigate('vgmcStandings');
+      }
     });
   }, [handleNavigate, handleLoadVgmcPlaylist]);
 
@@ -6501,6 +6548,7 @@ export default function App() {
         // ends, so replaying the previous track never disturbs the real
         // queue/position.
         onPlayPreviousTrack={handlePlayNowFromSupportList}
+        vgmcSupportPointsByVideoId={vgmcSupportPointsByVideoId}
       />
 
       {isDesktopDetachedFooter && (
@@ -6816,9 +6864,13 @@ export default function App() {
               minHeight: 0,
             }}
           >
-            {VGMC_PLAYLIST_ID && (
+            {VGMC_PLAYLIST_ID && VGMC_LIVE_SUPPORTS_ENABLED && (
               // Normal flow, reserves its own row so every page's content (the
               // hero, the VGMC split, etc.) renders below it, never under it.
+              // Gated on the flag too, not just the playlist id - this button
+              // (and the auto-redirect above) are the only two ways in to the
+              // VGMC standings page, so with the flag off there's nothing left
+              // to point at it with.
               <div
                 style={{
                   display: 'flex',
@@ -6826,6 +6878,14 @@ export default function App() {
                   justifyContent: 'center',
                   padding: '12px 16px',
                   position: 'relative',
+                  // The attention glow below bleeds 34px past the button in every
+                  // direction (see .vgmc-toggle-attention-glow), past this row's own
+                  // padding and into the page content stacked below it. That content
+                  // is also position:relative with no z-index of its own, so without
+                  // this the two sit in the same stacking layer and paint in DOM
+                  // order - content wins where the glow spills over it. Explicit
+                  // z-index here lifts the whole row (button included) above that.
+                  zIndex: 1,
                 }}
               >
                 {/* Centered regardless of whether the mobile Standings trigger
@@ -6953,6 +7013,7 @@ export default function App() {
                       nominationRefreshToken={nominationRefreshToken}
                       customPlaylists={customPlaylists}
                       onUpdateCustomPlaylists={setCustomPlaylists}
+                      vgmcStandingsRows={vgmcStandingsRows}
                     />
                   </div>
                 )}
@@ -7186,6 +7247,7 @@ export default function App() {
 
       {renderSupportList && (
         <FavouritesPanel
+          supabase={supabase}
           supportList={enrichedSupportList}
           onReorder={handleReorderSupportList}
           isOpen={showSupportList}
@@ -7227,6 +7289,7 @@ export default function App() {
 
       {renderNominationsList && (
         <FavouritesPanel
+          supabase={supabase}
           supportList={enrichedNominationList}
           onReorder={handleReorderNominationList}
           isOpen={showNominationsList}
@@ -7416,6 +7479,7 @@ export default function App() {
                         )
                   /* eslint-enable react-hooks/refs */
                 }
+                vgmcSupportPointsByVideoId={vgmcSupportPointsByVideoId}
               />
             </ModalPortal>
           );

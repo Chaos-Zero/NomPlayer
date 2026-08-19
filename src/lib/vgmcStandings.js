@@ -79,6 +79,30 @@ export function toPlaylistVideos(rows) {
 }
 
 /**
+ * videoId -> {points, voters} for every row with a real second supporter
+ * behind it, straight off the live GameFAQs VGMC thread (see vgmcIngest.js).
+ * A lone voter is just the nominator (worth 1 point normally, or 2 via a
+ * "++" self-nomination), neither of which is an actual second person backing
+ * the song yet, so those are left out here too, same rule as
+ * partitionStandings' own qualifying filter below, just keyed for a badge
+ * lookup instead of a section split. Shared by every place that shows the
+ * GameFAQs badge (HomePage.jsx's leaderboard, App.jsx's enriched
+ * nominations/support lists feeding FavouritesPanel.jsx) so the "does this
+ * track get a badge" rule only lives in one place.
+ */
+export function buildVgmcSupportPointsByVideoId(rows) {
+  const map = new Map();
+  for (const row of rows || []) {
+    if (!row?.external_id) continue;
+    const points = Number.isFinite(row.support_points) ? row.support_points : 0;
+    const voters = Number.isFinite(row.support_voters) ? row.support_voters : 0;
+    if (points <= 0 || voters <= 1) continue;
+    map.set(row.external_id, { points, voters });
+  }
+  return map;
+}
+
+/**
  * Splits playlist-track rows into the two standings views: `standings` is
  * every song with more than 1 but fewer than 7 support points (this includes
  * a nomination submitted with `++`, which starts at 2), sorted highest-first;

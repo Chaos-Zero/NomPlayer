@@ -45,7 +45,7 @@
   --nav-w: 96px;
   --sidebar-w: 440px;
   --sidebar-collapsed-w: 0px;
-  --support-panel-w: 640px;
+  --support-panel-w: 720px;
   --player-max-w: 900px;
   --player-meta-reserve-h: 78px;
   --footer-player-w: 200px;
@@ -8897,6 +8897,30 @@ button.playlist-search-indicator:hover {
   background: rgba(255, 183, 0, 0.1);
 }
 
+/* Points pulled from the live GameFAQs VGMC thread - same blue used for the
+   equivalent badge on the home page leaderboard (see .stat-badge.gamefaqs),
+   distinct from the amber/pink/gold trio above (site-cast supports). */
+.fav-support-stat.gamefaqs {
+  color: #38bdf8;
+  background: rgba(56, 189, 248, 0.1);
+}
+
+/* Rendered as a real <button> (FavSupportStat, FavouritesPanel.jsx) whenever
+   clicking it opens the who-supported breakdown - resets the button chrome
+   the other .fav-support-stat divs never needed, same treatment as
+   .stat-badge.clickable on the home page leaderboard. */
+.fav-support-stat.clickable {
+  cursor: pointer;
+  border: none;
+  font-family: inherit;
+  outline: none;
+  transition: transform 0.15s ease;
+}
+
+.fav-support-stat.clickable:hover {
+  transform: translateY(-1px);
+}
+
 .theme-light .fav-support-stat.normal {
   background: rgba(251, 191, 36, 0.08);
   color: #b45309;
@@ -8910,6 +8934,11 @@ button.playlist-search-indicator:hover {
 .theme-light .fav-support-stat.highest {
   background: rgba(255, 183, 0, 0.08);
   color: #854d0e;
+}
+
+.theme-light .fav-support-stat.gamefaqs {
+  background: rgba(56, 189, 248, 0.08);
+  color: #0369a1;
 }
 
 .fav-panel-body > .fav-item {
@@ -12989,6 +13018,19 @@ body.is-resizing .resize-handle {
   box-shadow: 0 0 15px rgba(251, 191, 36, 0.1);
 }
 
+/* Points pulled from the live GameFAQs VGMC thread - same blue used for the
+   equivalent badge everywhere else (.stat-badge.gamefaqs, .fav-support-stat.gamefaqs).
+   Rendered as a plain div, not a <button> like the three above - there's no
+   supporter breakdown to open for it here - so cursor resets to default
+   rather than inheriting .support-badge's pointer. */
+.support-badge.gamefaqs {
+  color: #38bdf8;
+  border-color: rgba(56, 189, 248, 0.3);
+  background: rgba(56, 189, 248, 0.08);
+  box-shadow: 0 0 15px rgba(56, 189, 248, 0.1);
+  cursor: default;
+}
+
 .support-badge span {
   font-family: 'Outfit', sans-serif;
   letter-spacing: -0.01em;
@@ -13103,6 +13145,22 @@ body.is-resizing .resize-handle {
   display: flex;
   align-items: center;
   justify-content: space-between;
+}
+
+/* Icon + label wrapped together as one flex child of the header above, so
+   justify-content: space-between (there for a future right-side element,
+   none of this popover's callers use one yet) can't pull them apart to
+   opposite edges the way two separate children would. */
+.supporters-popover-header-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.supporters-popover-header-label svg {
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
 }
 
 .supporters-list {
@@ -14534,6 +14592,21 @@ body.is-resizing .resize-handle {
   background: rgba(56, 189, 248, 0.15);
   color: #38bdf8;
   border: 1px solid rgba(56, 189, 248, 0.3);
+}
+
+/* Rendered as a real <button> (SupportCountBadge, HomePage.jsx) on the
+   Nominations/Supports tabs, where clicking a badge opens the who-supported
+   breakdown - resets the button chrome the other .stat-badge spans never
+   needed and adds a small lift on hover to read as interactive. */
+.stat-badge.clickable {
+  cursor: pointer;
+  font-family: inherit;
+  outline: none;
+  transition: transform 0.15s ease;
+}
+
+.stat-badge.clickable:hover {
+  transform: translateY(-1px);
 }
 
 .hero-leaderboard-comment-btn {

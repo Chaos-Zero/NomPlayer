@@ -77,6 +77,7 @@ const VideoPlayer = forwardRef(function VideoPlayer(
     previousTrack,
     onShowComments,
     onPlayPreviousTrack,
+    vgmcSupportPointsByVideoId,
   },
   ref,
 ) {
@@ -904,6 +905,7 @@ const VideoPlayer = forwardRef(function VideoPlayer(
                   userProfile={userProfile}
                   onShowToast={onShowToast}
                   onFeedbackSaved={onFeedbackSaved}
+                  vgmcSupportPointsByVideoId={vgmcSupportPointsByVideoId}
                 />
               </div>
               <div className="player-filler" />

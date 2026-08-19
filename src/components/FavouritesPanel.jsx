@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   DndContext,
   closestCenter,
@@ -22,6 +22,8 @@ import SupportLevelSubmenu from './SupportLevelSubmenu.jsx';
 import ExportIcon from './ExportIcon.jsx';
 import YouTubeIcon from './YouTubeIcon.jsx';
 import ScrollingText from './ScrollingText.jsx';
+import { CommunityPlaylistsIcon } from './SiteNavigation.jsx';
+import { fetchTrackSupportersByLevel } from '../lib/feedback.js';
 import {
   HeartIcon,
   SupportOrderIcon,
@@ -31,6 +33,12 @@ import {
   EyeIcon,
   PlayIcon,
 } from './Icons.jsx';
+
+const SUPPORT_LEVEL_TITLES = {
+  1: 'Possible Supports',
+  2: 'Likely Supports',
+  3: 'Definite Supports',
+};
 
 const SUPPORT_LEVELS = [1, 2, 3];
 const SUPPORT_LEVEL_LABELS = {
@@ -61,6 +69,42 @@ function getPlaylistItemDisplay(video) {
   };
 }
 
+// One support-count badge in a SupportItem row. `level` is a specific level
+// (1/2/3, only used when showBreakdown is on) or null for the single
+// dominant/total badge shown when it's off - either way, clicking opens the
+// full who-supported breakdown via onShowSupporters (see FavouritesPanel's
+// handleShowSupporters), not just whatever this one badge represents.
+// Falls back to a plain, non-interactive div wherever onShowSupporters isn't
+// passed.
+function FavSupportStat(props) {
+  // Destructured from the params object here, at the body level, rather than
+  // in the param list itself - matches this repo's no-unused-vars
+  // varsIgnorePattern (^[A-Z_]). Icon (used only as a JSX tag) reads as
+  // unused otherwise. Same pattern as SupportCountBadge in HomePage.jsx.
+  const { levelClass, level, count, title, Icon, video, onShowSupporters } =
+    props;
+  if (!onShowSupporters) {
+    return (
+      <div className={`fav-support-stat ${levelClass}`} title={title}>
+        <Icon />
+        <span>{count}</span>
+      </div>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      className={`fav-support-stat ${levelClass} clickable`}
+      title={`${title} (click to see who)`}
+      onClick={(e) => onShowSupporters(e, video, level)}
+    >
+      <Icon />
+      <span>{count}</span>
+    </button>
+  );
+}
+
 export function SupportItem({
   orderNumber,
   video,
@@ -78,6 +122,7 @@ export function SupportItem({
   onShowComments,
   userComment = null,
   showBreakdown = false,
+  onShowSupporters,
 }) {
   const [imgError, setImgError] = useState(false);
   const display = getPlaylistItemDisplay(video);
@@ -234,46 +279,71 @@ export function SupportItem({
             paddingRight: '12px',
           }}
         >
+          {video.gamefaqsPoints > 0 && (
+            <div
+              className="fav-support-stat gamefaqs"
+              style={{ flexShrink: 0 }}
+              title={`${video.gamefaqsPoints} Supports from the GameFAQs VGMC thread${
+                video.gamefaqsVoters
+                  ? ` (${video.gamefaqsVoters} ${
+                      video.gamefaqsVoters === 1 ? 'voter' : 'voters'
+                    })`
+                  : ''
+              }`}
+            >
+              <CommunityPlaylistsIcon className="collection-icon" />
+              <span>{video.gamefaqsPoints}</span>
+            </div>
+          )}
+
           <div className="fav-item-support-stats" style={{ flexShrink: 0 }}>
             {showBreakdown ? (
               <>
                 {video.supportCount1 > 0 && (
-                  <div
-                    className="fav-support-stat normal"
+                  <FavSupportStat
+                    levelClass="normal"
+                    level={1}
+                    count={video.supportCount1}
                     title={`${video.supportCount1} Possible Supports`}
-                  >
-                    <HeartIcon />
-                    <span>{video.supportCount1}</span>
-                  </div>
+                    Icon={HeartIcon}
+                    video={video}
+                    onShowSupporters={onShowSupporters}
+                  />
                 )}
                 {video.supportCount2 > 0 && (
-                  <div
-                    className="fav-support-stat strong"
+                  <FavSupportStat
+                    levelClass="strong"
+                    level={2}
+                    count={video.supportCount2}
                     title={`${video.supportCount2} Likely Supports`}
-                  >
-                    <HeartIcon />
-                    <span>{video.supportCount2}</span>
-                  </div>
+                    Icon={HeartIcon}
+                    video={video}
+                    onShowSupporters={onShowSupporters}
+                  />
                 )}
                 {video.supportCount3 > 0 && (
-                  <div
-                    className="fav-support-stat highest"
+                  <FavSupportStat
+                    levelClass="highest"
+                    level={3}
+                    count={video.supportCount3}
                     title={`${video.supportCount3} Definite Supports`}
-                  >
-                    <LockIcon />
-                    <span>{video.supportCount3}</span>
-                  </div>
+                    Icon={LockIcon}
+                    video={video}
+                    onShowSupporters={onShowSupporters}
+                  />
                 )}
               </>
             ) : (
               totalSupport > 0 && (
-                <div
-                  className={`fav-support-stat ${dominantSupportClass}`}
+                <FavSupportStat
+                  levelClass={dominantSupportClass}
+                  level={null}
+                  count={totalSupport}
                   title={`${totalSupport} Total Supports`}
-                >
-                  {video.supportCount3 > 0 ? <LockIcon /> : <HeartIcon />}
-                  <span>{totalSupport}</span>
-                </div>
+                  Icon={video.supportCount3 > 0 ? LockIcon : HeartIcon}
+                  video={video}
+                  onShowSupporters={onShowSupporters}
+                />
               )
             )}
           </div>
@@ -400,6 +470,7 @@ export function SortableSupportItem({
   commentActivity = null,
   onShowComments,
   showBreakdown = false,
+  onShowSupporters,
 }) {
   const {
     attributes,
@@ -448,6 +519,7 @@ export function SortableSupportItem({
         commentActivity={commentActivity}
         onShowComments={onShowComments}
         showBreakdown={showBreakdown}
+        onShowSupporters={onShowSupporters}
       />
     </div>
   );
@@ -516,6 +588,7 @@ function SupportLevelFilterDropdown({
 }
 
 export default function FavouritesPanel({
+  supabase,
   supportList,
   onReorder,
   onClose,
@@ -575,8 +648,45 @@ export default function FavouritesPanel({
     () => new Set(SUPPORT_LEVELS),
   );
   const [showLevelFilterMenu, setShowLevelFilterMenu] = useState(false);
+  const [supportersPopover, setSupportersPopover] = useState(null);
   const isSupportTone = tone === 'support';
   const toastTimeoutRef = useRef(null);
+
+  // Clicking a support badge here always opens the full who-supported
+  // breakdown (every non-empty level stacked in one popover), whether the
+  // badge clicked was one of showBreakdown's three per-level ones or the
+  // single dominant/total one - there's no single "type" a total badge maps
+  // to, and this way both cases share one handler and one popover shape.
+  const handleShowSupporters = useCallback(
+    async (event, video) => {
+      event.stopPropagation();
+      if (!supabase || !video?.videoId) return;
+
+      const rect = event.currentTarget.getBoundingClientRect();
+      const key = video.videoId;
+      setSupportersPopover({
+        key,
+        x: rect.left + rect.width / 2,
+        y: rect.top,
+        byLevel: null,
+        isLoading: true,
+      });
+
+      const byLevel = await fetchTrackSupportersByLevel(
+        supabase,
+        video.videoId,
+      );
+
+      // Guard against a slower, now-stale fetch landing after the user has
+      // already clicked a different row's badge (or closed this one).
+      setSupportersPopover((previous) =>
+        previous?.key === key
+          ? { ...previous, byLevel, isLoading: false }
+          : previous,
+      );
+    },
+    [supabase],
+  );
 
   // Closing the panel mid-selection left the Select button showing "Done"
   // (and its selection still live) the next time the panel opened, since
@@ -841,6 +951,12 @@ export default function FavouritesPanel({
   }
 
   const showSelectionActions = selectionMode && supportList.length > 0;
+
+  const nonEmptySupporterLevels = supportersPopover?.byLevel
+    ? [3, 2, 1].filter(
+        (level) => (supportersPopover.byLevel[level] || []).length > 0,
+      )
+    : [];
 
   return (
     <>
@@ -1129,6 +1245,7 @@ export default function FavouritesPanel({
                 }
                 onShowComments={onShowComments}
                 showBreakdown={showSupportBreakdown}
+                onShowSupporters={handleShowSupporters}
               />
             ))
           ) : (
@@ -1161,6 +1278,7 @@ export default function FavouritesPanel({
                     }
                     onShowComments={onShowComments}
                     showBreakdown={showSupportBreakdown}
+                    onShowSupporters={handleShowSupporters}
                   />
                 ))}
               </SortableContext>
@@ -1349,6 +1467,47 @@ export default function FavouritesPanel({
                   Update Metadata
                 </button>
               </>
+            )}
+          </ContextMenuPortal>
+        )}
+
+        {supportersPopover && (
+          <ContextMenuPortal
+            x={supportersPopover.x}
+            y={supportersPopover.y}
+            onClose={() => setSupportersPopover(null)}
+            className="supporters-popover"
+          >
+            {supportersPopover.isLoading ? (
+              <div className="supporters-list-item">Loading…</div>
+            ) : nonEmptySupporterLevels.length === 0 ? (
+              <div className="supporters-list-item">No names available</div>
+            ) : (
+              nonEmptySupporterLevels.map((level) => (
+                <div key={level}>
+                  <div className="supporters-popover-header">
+                    <span className="supporters-popover-header-label">
+                      {level === 3 ? <LockIcon /> : <HeartIcon />}
+                      {level === 3
+                        ? 'Definite'
+                        : level === 2
+                          ? 'Likely'
+                          : 'Possible'}{' '}
+                      Supports
+                    </span>
+                  </div>
+                  <div
+                    className="supporters-list"
+                    onClick={() => setSupportersPopover(null)}
+                  >
+                    {supportersPopover.byLevel[level].map((name, i) => (
+                      <div key={i} className="supporters-list-item">
+                        {name}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))
             )}
           </ContextMenuPortal>
         )}

@@ -632,12 +632,15 @@ function TrackInfoPanel({
           className="supporters-popover"
         >
           <div className="supporters-popover-header">
-            {supportersMenu.level === 3
-              ? 'Definite'
-              : supportersMenu.level === 2
-                ? 'Likely'
-                : 'Possible'}{' '}
-            Supports
+            <span className="supporters-popover-header-label">
+              {supportersMenu.level === 3 ? <LockIcon /> : <HeartIcon />}
+              {supportersMenu.level === 3
+                ? 'Definite'
+                : supportersMenu.level === 2
+                  ? 'Likely'
+                  : 'Possible'}{' '}
+              Supports
+            </span>
           </div>
           <div
             className="supporters-list"
