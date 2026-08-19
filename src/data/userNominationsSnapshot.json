@@ -1,5 +1,5 @@
 {
-  "exportedAt": "2026-08-18T22:50:04.300Z",
+  "exportedAt": "2026-08-19T18:16:45.708Z",
   "totalCount": 11,
   "users": [
     {
@@ -721,15 +721,6 @@
           "displayTitle": "Chrono Trigger - Schala’s Theme"
         },
         {
-          "title": "Silver Surfer - Stage 1",
-          "trackId": "5a0a51a3-5494-4fcb-93ae-434d12327203",
-          "videoId": "BGNSHNf-nlU",
-          "gameTitle": "Silver Surfer",
-          "trackTitle": "Stage 1",
-          "channelTitle": "explod2A03",
-          "displayTitle": "Silver Surfer - Stage 1"
-        },
-        {
           "title": "One Must Fall 2097 - Menu",
           "trackId": "b604a995-e171-446c-810c-da1807cf13bd",
           "videoId": "i0FNUDLdT4A",
@@ -748,24 +739,6 @@
           "displayTitle": "Lost Odyssey - Dark Saint"
         },
         {
-          "title": "Guilty Gear X - Awe of She",
-          "trackId": "2b876601-bf94-413f-8da9-1481b5b01410",
-          "videoId": "u9LtKHiVRCw",
-          "gameTitle": "Guilty Gear X",
-          "trackTitle": "Awe of She",
-          "channelTitle": "shinryuu10901",
-          "displayTitle": "Guilty Gear X - Awe of She"
-        },
-        {
-          "title": "Danganronpa: Tripper Happy Havoc - Discussion -HOPE VS DESPAIR-",
-          "trackId": "b9ed05b6-f71c-4d62-a90d-b498071c6483",
-          "videoId": "MtrNyKRbGe4",
-          "gameTitle": "Danganronpa: Tripper Happy Havoc",
-          "trackTitle": "Discussion -HOPE VS DESPAIR-",
-          "channelTitle": "Masafumi Takada - Topic",
-          "displayTitle": "Danganronpa: Tripper Happy Havoc - Discussion -HOPE VS DESPAIR-"
-        },
-        {
           "title": "The Wizard of Oz: Beyond the Yellow Brick Road - RIZ-ZOAWD!",
           "trackId": "1a8f88db-1bab-47dc-9557-e88f7326eb5e",
           "videoId": "3guEs9C8Jj4",
@@ -773,33 +746,6 @@
           "trackTitle": "RIZ-ZOAWD!",
           "channelTitle": "sleeping0dragon",
           "displayTitle": "The Wizard of Oz: Beyond the Yellow Brick Road - RIZ-ZOAWD!"
-        },
-        {
-          "title": "Dynasty Warriors Online - Steal a March",
-          "trackId": "ddc9394a-d69d-4319-8a95-62d36b9ce102",
-          "videoId": "spgFAlPlfIA",
-          "gameTitle": "Dynasty Warriors Online",
-          "trackTitle": "Steal a March",
-          "channelTitle": "Lord Raviel",
-          "displayTitle": "Dynasty Warriors Online - Steal a March"
-        },
-        {
-          "title": "Shantae & The Pirate's Curse - We Love Burning Town",
-          "trackId": "ea3483cc-0edc-4d2c-a83b-a5d39e059e64",
-          "videoId": "mcMtC5ZMnEE",
-          "gameTitle": "Shantae & The Pirate's Curse",
-          "trackTitle": "We Love Burning Town",
-          "channelTitle": "M D",
-          "displayTitle": "Shantae & The Pirate's Curse - We Love Burning Town"
-        },
-        {
-          "title": "The Incredible Machine: Even More Contraptions - Progressive Rock",
-          "trackId": "5fa82b04-7785-4565-bd3e-cc2ea9ef6eca",
-          "videoId": "Q_QV3lfib_8",
-          "gameTitle": "The Incredible Machine: Even More Contraptions",
-          "trackTitle": "Progressive Rock",
-          "channelTitle": "1ucasvb",
-          "displayTitle": "The Incredible Machine: Even More Contraptions - Progressive Rock"
         },
         {
           "title": "Donkey Kong Country - Ice Cave Chant",
@@ -847,24 +793,6 @@
           "displayTitle": "Pokemon Mystery Dungeon: Explorers of Sky - Vast Ice Mountain Peak"
         },
         {
-          "title": "Guacamelee! 2 - Los Manglares",
-          "trackId": "d6634f30-b99f-483c-96de-46e294fa42ba",
-          "videoId": "0eVirfGyPCA",
-          "gameTitle": "Guacamelee! 2",
-          "trackTitle": "Los Manglares",
-          "channelTitle": "Rom Di Prisco - Topic",
-          "displayTitle": "Guacamelee! 2 - Los Manglares"
-        },
-        {
-          "title": "UNBEATABLE - WORN OUT TAPES",
-          "trackId": "8b11bbde-8071-4593-9ace-fec2a12ecb7d",
-          "videoId": "mJLB7SRGgFc",
-          "gameTitle": "UNBEATABLE",
-          "trackTitle": "WORN OUT TAPES",
-          "channelTitle": "D-CELL",
-          "displayTitle": "UNBEATABLE - WORN OUT TAPES"
-        },
-        {
           "title": "Genshin Impact - Across Dimming Asterisms",
           "trackId": "e3fe3339-821a-4c61-9342-db9d3f0c20c6",
           "videoId": "YvLZzUcyDWY",
@@ -881,15 +809,6 @@
           "trackTitle": "DAMIDAMI",
           "channelTitle": "Sihan - Topic",
           "displayTitle": "Zenless Zone Zero - DAMIDAMI"
-        },
-        {
-          "title": "Tyrian - Rock Garden",
-          "trackId": "ad99dd64-6976-42af-8a68-8fe6b7dcaa51",
-          "videoId": "6WQ-XbrYdr0",
-          "gameTitle": "Tyrian",
-          "trackTitle": "Rock Garden",
-          "channelTitle": "dada78641",
-          "displayTitle": "Tyrian - Rock Garden"
         }
       ]
     },
