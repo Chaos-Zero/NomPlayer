@@ -239,11 +239,9 @@ describe('FavouritesPanel', () => {
 
     fireEvent.contextMenu(screen.getByLabelText('Support Alpha'));
     fireEvent.pointerDown(
-      screen.getByRole('menuitem', { name: 'Add to Current Playlist' }),
+      screen.getByRole('menuitem', { name: 'Add to My Queue' }),
     );
-    fireEvent.click(
-      screen.getByRole('menuitem', { name: 'Add to Current Playlist' }),
-    );
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Add to My Queue' }));
     expect(props.onAddToPlaylist).toHaveBeenCalledWith([alpha]);
     expect(
       screen.getByText('Added 1 song to current playlist'),
@@ -265,16 +263,14 @@ describe('FavouritesPanel', () => {
       screen.getByRole('button', { name: 'Select all' }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole('button', { name: 'Add to Current Playlist' }),
+      screen.getByRole('button', { name: 'Add to My Queue' }),
     ).toBeInTheDocument();
     expect(
       screen.getByRole('button', { name: 'Remove Support' }),
     ).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Select all' }));
-    fireEvent.click(
-      screen.getByRole('button', { name: 'Add to Current Playlist' }),
-    );
+    fireEvent.click(screen.getByRole('button', { name: 'Add to My Queue' }));
     expect(props.onAddToPlaylist).toHaveBeenCalledWith([alpha, beta]);
     expect(
       screen.getByText('Added 2 songs to current playlist'),
@@ -291,11 +287,9 @@ describe('FavouritesPanel', () => {
     ).not.toBeInTheDocument();
 
     fireEvent.pointerDown(
-      screen.getByRole('menuitem', { name: 'Add to Current Playlist' }),
+      screen.getByRole('menuitem', { name: 'Add to My Queue' }),
     );
-    fireEvent.click(
-      screen.getByRole('menuitem', { name: 'Add to Current Playlist' }),
-    );
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Add to My Queue' }));
     expect(props.onAddToPlaylist).toHaveBeenLastCalledWith([alpha, beta]);
 
     fireEvent.contextMenu(screen.getByLabelText('Support Alpha'));
@@ -324,9 +318,7 @@ describe('FavouritesPanel', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Order by rating' }));
     fireEvent.click(screen.getByRole('button', { name: 'Select' }));
     fireEvent.click(screen.getByRole('button', { name: 'Select all' }));
-    fireEvent.click(
-      screen.getByRole('button', { name: 'Add to Current Playlist' }),
-    );
+    fireEvent.click(screen.getByRole('button', { name: 'Add to My Queue' }));
 
     // Beta is shown first once rating-sorted, even though it's 2nd in the
     // raw supportList array - the add order has to follow the screen, not
