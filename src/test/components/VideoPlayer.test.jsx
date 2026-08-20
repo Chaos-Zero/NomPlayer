@@ -29,6 +29,8 @@ vi.mock('react-youtube', async () => {
           }
           youtubeMockState.playerStates.set(videoId, 2);
         }),
+        loadVideoById: vi.fn(),
+        cueVideoById: vi.fn(),
         getPlayerState: vi.fn(() => youtubeMockState.playerStates.get(videoId)),
       };
 
@@ -36,16 +38,27 @@ vi.mock('react-youtube', async () => {
       return player;
     }, [videoId]);
 
+    // Mirrors the real react-youtube class component, which reads
+    // this.props.onReady/onStateChange fresh off `this.props` each time
+    // rather than re-subscribing (and re-firing "ready") whenever those
+    // props change identity - onReady only ever fires once per real player
+    // instance, regardless of how many times the parent's onReady/
+    // onStateChange callback identity changes across re-renders.
+    const latestHandlersRef = React.useRef({ onReady, onStateChange });
+    latestHandlersRef.current = { onReady, onStateChange };
+
     React.useEffect(() => {
       youtubeMockState.destroyedById.set(videoId, false);
-      youtubeMockState.stateChangeHandlers.set(videoId, onStateChange);
-      onReady?.({ target: player });
+      youtubeMockState.stateChangeHandlers.set(videoId, (event) =>
+        latestHandlersRef.current.onStateChange?.(event),
+      );
+      latestHandlersRef.current.onReady?.({ target: player });
 
       return () => {
         youtubeMockState.destroyedById.set(videoId, true);
         youtubeMockState.stateChangeHandlers.delete(videoId);
       };
-    }, [onReady, onStateChange, player, videoId]);
+    }, [player, videoId]);
 
     return <div data-testid={`youtube-${videoId}`} style={style} />;
   }
@@ -118,7 +131,7 @@ describe('VideoPlayer', () => {
     expect(player.pauseVideo).toHaveBeenCalled();
   });
 
-  it('does not call pause on the old player when swapping videos during playback', () => {
+  it('reuses the same YouTube player across a video swap instead of tearing it down', () => {
     const firstVideo = { videoId: 'alpha1234567', title: 'Alpha' };
     const secondVideo = { videoId: 'beta12345678', title: 'Beta' };
     const { rerender } = render(
@@ -126,12 +139,34 @@ describe('VideoPlayer', () => {
     );
     const firstPlayer = youtubeMockState.players.get(firstVideo.videoId);
 
-    firstPlayer.playVideo.mockClear();
-    firstPlayer.pauseVideo.mockClear();
+    rerender(<VideoPlayer video={secondVideo} isPlaying={true} />);
+
+    // No second iframe/player got created for the new track - the <YouTube>
+    // mount stays pinned to the original videoId (see youtubeMountVideoId),
+    // and the existing player is just told to load the new one instead.
+    expect(youtubeMockState.players.get(secondVideo.videoId)).toBeUndefined();
+    expect(
+      screen.getByTestId(`youtube-${firstVideo.videoId}`),
+    ).toBeInTheDocument();
+    expect(firstPlayer.loadVideoById).toHaveBeenCalledWith({
+      videoId: secondVideo.videoId,
+    });
+  });
+
+  it('cues (rather than loads) the next video on a swap while paused', () => {
+    const firstVideo = { videoId: 'alpha1234567', title: 'Alpha' };
+    const secondVideo = { videoId: 'beta12345678', title: 'Beta' };
+    const { rerender } = render(
+      <VideoPlayer video={firstVideo} isPlaying={false} />,
+    );
+    const firstPlayer = youtubeMockState.players.get(firstVideo.videoId);
 
     rerender(<VideoPlayer video={secondVideo} isPlaying={false} />);
 
-    expect(firstPlayer.pauseVideo).not.toHaveBeenCalled();
+    expect(firstPlayer.cueVideoById).toHaveBeenCalledWith({
+      videoId: secondVideo.videoId,
+    });
+    expect(firstPlayer.loadVideoById).not.toHaveBeenCalled();
   });
 
   it('shows a YouTube hyperlink below the now playing title', () => {

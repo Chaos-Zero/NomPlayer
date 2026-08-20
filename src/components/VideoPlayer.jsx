@@ -107,6 +107,17 @@ const VideoPlayer = forwardRef(function VideoPlayer(
   // embed resets itself - so armRestorePauseGuard uses this to notice a
   // resume that silently landed back at 0 and seek it back where it was.
   const lastKnownTimeRef = useRef(0);
+  // Which provider playerRef.current currently belongs to, and which
+  // videoId it was actually constructed with vs. which videoId is actually
+  // loaded into it right now. Together these let YouTube reuse one
+  // never-destroyed player across a track change instead of recreating the
+  // iframe every time - see the "reuse the live YouTube player" effect
+  // below for why that matters (Chrome only allows *unmuted* autoplay
+  // without a fresh gesture for an already-engaged player; a brand new
+  // iframe created while the tab is hidden can't get one).
+  const playerProviderRef = useRef(null);
+  const mountedAsVideoIdRef = useRef(null);
+  const loadedVideoIdRef = useRef(null);
   const isOverlayEnabled = false;
   const videoId = video?.videoId ?? null;
   const provider = video?.provider || 'youtube';
@@ -251,12 +262,20 @@ const VideoPlayer = forwardRef(function VideoPlayer(
     onPlaybackChange,
   ]);
 
+  // Only tears the live player down on an actual provider switch (the
+  // embed component itself unmounts then) or true unmount - deliberately
+  // NOT keyed to videoId, so a same-provider track change leaves
+  // playerRef/playerProviderRef alone and the "reuse the live YouTube
+  // player" effect below can keep reusing it.
   useEffect(() => {
     return () => {
       clearVisibilityResumeTracking();
       playerRef.current = null;
+      playerProviderRef.current = null;
+      mountedAsVideoIdRef.current = null;
+      loadedVideoIdRef.current = null;
     };
-  }, [clearVisibilityResumeTracking, videoId]);
+  }, [clearVisibilityResumeTracking, provider]);
 
   useEffect(() => {
     isPlayingRef.current = isPlaying;
@@ -299,12 +318,20 @@ const VideoPlayer = forwardRef(function VideoPlayer(
         reportProgress(time, dur);
 
         // YouTube's (and SoundCloud's) embedded player can silently
-        // auto-pause while the tab is backgrounded, without ever reaching a
-        // real "ended" state - which then never fires the queue's
-        // auto-advance. Nudge it back to playing here rather than only on
-        // visibilitychange, since this interval already runs the whole time
-        // we believe we're playing, regardless of tab visibility.
-        if (player.getPlayerState?.() === 2 && isPlayingRef.current) {
+        // auto-pause - or, for a track that (re)mounts fresh while the tab
+        // is backgrounded (e.g. auto-advancing to the next queued track),
+        // never actually start at all despite the autoplay attempt in
+        // handleReady/opts.playerVars - without ever reaching a real "ended"
+        // state, which then never fires the queue's auto-advance. Nudge it
+        // back to playing here rather than only on visibilitychange, since
+        // this interval already runs the whole time we believe we're
+        // playing, regardless of tab visibility. Only 1 (playing) and 3
+        // (buffering, already on its way) count as "fine"; 0 (ended) is
+        // deliberately left alone for the real onEnd handler to own, and an
+        // unknown/missing state is left alone too rather than guessed at.
+        const state = player.getPlayerState?.();
+        const isSettled = state === 1 || state === 3 || state === 0;
+        if (isPlayingRef.current && typeof state === 'number' && !isSettled) {
           safelyControlPlayer(player, 'playVideo');
         }
       } catch {
@@ -316,6 +343,42 @@ const VideoPlayer = forwardRef(function VideoPlayer(
       window.clearInterval(intervalId);
     };
   }, [isPlaying, reportProgress]);
+
+  // Reuse the live YouTube player across a track change instead of letting
+  // react-youtube destroy and recreate the iframe on every videoId prop
+  // change (which it does unconditionally, regardless of React key - see
+  // mountedAsVideoIdRef above). This alone is enough to let the *current*
+  // track keep playing through the whole time the tab is hidden. Loading
+  // genuinely *different* content (loadVideoById) is a fresh playback
+  // request as far as the autoplay policy is concerned, even on an
+  // already-engaged instance, so it can still get silently refused while
+  // hidden - deliberately never worked around by muting it in the
+  // background (that shipped once and got reverted: users don't want a
+  // "surprise" silent track). Instead, the general progress-poll self-heal
+  // above keeps retrying unmuted until the browser actually allows it, and
+  // the Media Session action handlers further down give a real,
+  // gesture-backed way to unstick it without even switching tabs - a
+  // hardware/OS media-key press is a genuine input event, unlike a tab
+  // focus/visibilitychange. The <YouTube videoId={...}> prop below is
+  // deliberately pinned to mountedAsVideoIdRef so react-youtube itself
+  // never observes this videoId change and never resets the player -
+  // loading a new track happens only here, imperatively, on the same live
+  // instance.
+  useEffect(() => {
+    if (provider !== 'youtube' || !videoId) return;
+    if (videoId === loadedVideoIdRef.current) return;
+    if (playerProviderRef.current !== 'youtube' || !playerRef.current) return;
+
+    lastKnownTimeRef.current = 0;
+    const player = playerRef.current;
+
+    if (isPlaying) {
+      safelyControlPlayer(player, 'loadVideoById', [{ videoId }]);
+    } else {
+      safelyControlPlayer(player, 'cueVideoById', [{ videoId }]);
+    }
+    loadedVideoIdRef.current = videoId;
+  }, [provider, videoId, isPlaying]);
 
   // Sync play/pause state with the YouTube player
   useEffect(() => {
@@ -369,7 +432,15 @@ const VideoPlayer = forwardRef(function VideoPlayer(
 
   const handleReady = useCallback(
     (event) => {
+      // Always a genuinely fresh player - see the "reuse the live YouTube
+      // player" effect below, which prevents react-youtube from ever
+      // recreating (and re-firing onReady for) an already-live YouTube
+      // player on an ordinary track change.
       playerRef.current = event.target;
+      playerProviderRef.current = provider;
+      mountedAsVideoIdRef.current = videoId;
+      loadedVideoIdRef.current = videoId;
+      lastKnownTimeRef.current = 0;
       onReady?.(event.target);
       if (isPlaying) {
         safelyControlPlayer(event.target, 'playVideo');
@@ -382,7 +453,7 @@ const VideoPlayer = forwardRef(function VideoPlayer(
         // player may be re-initializing
       }
     },
-    [isPlaying, onReady, onProgressUpdate],
+    [isPlaying, onReady, onProgressUpdate, provider, videoId],
   );
 
   const handleEnd = useCallback(() => {
@@ -431,6 +502,119 @@ const VideoPlayer = forwardRef(function VideoPlayer(
     ],
   );
 
+  // --- Media Session API ---
+  // Gives the OS real playback controls for the current track (lock screen,
+  // taskbar/menu-bar widget, hardware media keys) by routing them to the
+  // exact same handlers our own on-page transport buttons call. Deliberately
+  // stays at that level - it never touches playerRef/the YouTube iframe
+  // directly, just like the on-page buttons don't - so it can't interfere
+  // with (or need to know about) how the embed itself is kept alive.
+  useEffect(() => {
+    if (!('mediaSession' in navigator) || !videoId) return undefined;
+
+    navigator.mediaSession.metadata = new MediaMetadata({
+      title: video.trackTitle || video.title || '',
+      artist: video.gameTitle || video.channelTitle || '',
+      album: video.gameTitle ? video.channelTitle || '' : '',
+      artwork: video.thumbnail ? [{ src: video.thumbnail }] : [],
+    });
+
+    return () => {
+      navigator.mediaSession.metadata = null;
+    };
+  }, [
+    videoId,
+    video?.trackTitle,
+    video?.title,
+    video?.gameTitle,
+    video?.channelTitle,
+    video?.thumbnail,
+  ]);
+
+  useEffect(() => {
+    if (!('mediaSession' in navigator)) return;
+    navigator.mediaSession.playbackState = isPlaying ? 'playing' : 'paused';
+  }, [isPlaying]);
+
+  const handleMediaSessionPlay = useCallback(() => {
+    if (!isPlayingRef.current) {
+      onTogglePlay?.();
+    }
+  }, [onTogglePlay]);
+
+  const handleMediaSessionPause = useCallback(() => {
+    if (isPlayingRef.current) {
+      onTogglePlay?.();
+    }
+  }, [onTogglePlay]);
+
+  const handleMediaSessionPrevious = useCallback(() => {
+    onPrev?.();
+  }, [onPrev]);
+
+  const handleMediaSessionNext = useCallback(() => {
+    onNext?.();
+  }, [onNext]);
+
+  useEffect(() => {
+    if (!('mediaSession' in navigator)) return undefined;
+
+    const actionHandlers = [
+      ['play', handleMediaSessionPlay],
+      ['pause', handleMediaSessionPause],
+      ['previoustrack', handleMediaSessionPrevious],
+      ['nexttrack', handleMediaSessionNext],
+    ];
+
+    for (const [action, handler] of actionHandlers) {
+      try {
+        navigator.mediaSession.setActionHandler(action, handler);
+      } catch {
+        // Not every action name is supported in every browser -
+        // setActionHandler throws for unsupported ones rather than a
+        // silent no-op.
+      }
+    }
+
+    return () => {
+      for (const [action] of actionHandlers) {
+        try {
+          navigator.mediaSession.setActionHandler(action, null);
+        } catch {
+          // see above
+        }
+      }
+    };
+  }, [
+    handleMediaSessionNext,
+    handleMediaSessionPause,
+    handleMediaSessionPlay,
+    handleMediaSessionPrevious,
+  ]);
+
+  // Separate from the Media Session block above: a keyboard's dedicated
+  // Back/Forward buttons are browser-history navigation keys, not
+  // multimedia Previous/Next-track keys - they never reach
+  // navigator.mediaSession, they surface as regular keydown events with
+  // key === 'BrowserBack'/'BrowserForward'. This app doesn't use browser
+  // history for in-app navigation (no popstate listener anywhere), so
+  // there's nothing to lose by claiming them for playlist prev/next
+  // instead of letting them navigate away from the site.
+  useEffect(() => {
+    const handleKeyDown = (event) => {
+      if (event.key === 'BrowserBack') {
+        event.preventDefault();
+        onPrev?.();
+      } else if (event.key === 'BrowserForward') {
+        event.preventDefault();
+        onNext?.();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onPrev, onNext]);
+
   if (!video) {
     return (
       <div className="player-empty" id="player-empty">
@@ -454,6 +638,22 @@ const VideoPlayer = forwardRef(function VideoPlayer(
       origin: window.location.origin,
     },
   };
+
+  // What videoId to actually hand <YouTube>: if there's already a live
+  // YouTube player we can reuse (see the "reuse the live YouTube player"
+  // effect above), keep feeding it the videoId it was originally
+  // constructed with, frozen, so react-youtube's own prop-diffing never
+  // sees a change and never tears it down - the effect handles loading the
+  // current track into it imperatively instead. Only a genuinely fresh
+  // mount (first track ever, or coming back from a different provider)
+  // gets the current videoId directly.
+  const canReuseYoutubePlayer =
+    provider === 'youtube' &&
+    playerProviderRef.current === 'youtube' &&
+    Boolean(playerRef.current);
+  const youtubeMountVideoId = canReuseYoutubePlayer
+    ? mountedAsVideoIdRef.current
+    : videoId;
 
   const isFull = variant === 'full';
 
@@ -780,8 +980,7 @@ const VideoPlayer = forwardRef(function VideoPlayer(
       />
     ) : (
       <YouTube
-        key={video.videoId}
-        videoId={video.videoId}
+        videoId={youtubeMountVideoId}
         opts={opts}
         onReady={handleReady}
         onEnd={handleEnd}

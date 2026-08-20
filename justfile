@@ -10,6 +10,14 @@ run-dev:
     npx wrangler pages dev dist --env-file .env --port 8788 &
     npm run dev
 
+# Frees the ports run-dev/preview testing use - Vite dev (5173), wrangler
+# pages dev (8788), and an ad hoc `vite preview` (4173) - and stops the local
+# Supabase stack. Safe to run even if some/all of them aren't up.
+stop-all-dev:
+    fuser -k 5173/tcp 8788/tcp 4173/tcp 2>/dev/null || true
+    npx supabase stop || true
+    @echo "Stopped all dev environments."
+
 deploy:
     node scripts/exportCatalogSnapshot.js
     node scripts/exportNominationsSnapshot.js
