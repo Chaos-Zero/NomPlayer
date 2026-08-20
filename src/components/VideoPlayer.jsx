@@ -297,6 +297,16 @@ const VideoPlayer = forwardRef(function VideoPlayer(
         const time = player.getCurrentTime();
         const dur = player.getDuration();
         reportProgress(time, dur);
+
+        // YouTube's (and SoundCloud's) embedded player can silently
+        // auto-pause while the tab is backgrounded, without ever reaching a
+        // real "ended" state - which then never fires the queue's
+        // auto-advance. Nudge it back to playing here rather than only on
+        // visibilitychange, since this interval already runs the whole time
+        // we believe we're playing, regardless of tab visibility.
+        if (player.getPlayerState?.() === 2 && isPlayingRef.current) {
+          safelyControlPlayer(player, 'playVideo');
+        }
       } catch {
         // Player might be re-initializing
       }

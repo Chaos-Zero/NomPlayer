@@ -243,6 +243,62 @@ describe('VideoPlayer', () => {
     expect(onPlaybackChange).toHaveBeenCalledWith(false);
   });
 
+  it('nudges playVideo() again when the player silently stalls while the tab is hidden', () => {
+    vi.useFakeTimers();
+
+    let visibilityState = 'visible';
+    Object.defineProperty(document, 'visibilityState', {
+      configurable: true,
+      get: () => visibilityState,
+    });
+
+    const video = { videoId: 'alpha1234567', title: 'Alpha' };
+
+    render(<VideoPlayer video={video} isPlaying={true} />);
+
+    const player = youtubeMockState.players.get(video.videoId);
+    player.getCurrentTime = vi.fn(() => 60);
+    player.getDuration = vi.fn(() => 240);
+    player.playVideo.mockClear();
+
+    act(() => {
+      visibilityState = 'hidden';
+      document.dispatchEvent(new Event('visibilitychange'));
+    });
+
+    // Simulate the YouTube IFrame API's known quirk of silently auto-pausing
+    // an embedded player while its containing tab is backgrounded - without
+    // a real pause event ever coming through.
+    youtubeMockState.playerStates.set(video.videoId, 2);
+
+    act(() => {
+      vi.advanceTimersByTime(500);
+    });
+
+    expect(player.playVideo).toHaveBeenCalled();
+  });
+
+  it('does not call playVideo() from the polling interval while genuinely paused', () => {
+    vi.useFakeTimers();
+
+    const video = { videoId: 'alpha1234567', title: 'Alpha' };
+    const { rerender } = render(<VideoPlayer video={video} isPlaying={true} />);
+
+    const player = youtubeMockState.players.get(video.videoId);
+    player.getCurrentTime = vi.fn(() => 60);
+    player.getDuration = vi.fn(() => 240);
+
+    rerender(<VideoPlayer video={video} isPlaying={false} />);
+    player.playVideo.mockClear();
+    youtubeMockState.playerStates.set(video.videoId, 2);
+
+    act(() => {
+      vi.advanceTimersByTime(500);
+    });
+
+    expect(player.playVideo).not.toHaveBeenCalled();
+  });
+
   it('restores the playback state on visible when it fell false during the hidden cycle', () => {
     vi.useFakeTimers();
 
