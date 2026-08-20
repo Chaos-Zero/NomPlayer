@@ -7607,12 +7607,29 @@ button.playlist-search-indicator:hover {
   padding: 12px 20px;
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
+  gap: 12px;
 }
 
 .fav-panel-actions {
   display: flex;
   align-items: center;
   gap: 8px;
+  /* Enough buttons now (filter, three sort orders, breakdown, select, ...)
+     to overflow a phone-width panel - min-width: 0 overrides the flex-item
+     default of "never shrink below content width" so this can actually
+     shrink to fit next to .btn-close (a sibling now, not the last child in
+     here, see FavouritesPanel.jsx - it needs to stay reachable without
+     scrolling to find it), and scrolls horizontally itself rather than
+     pushing the header wider than the panel. Harmless at desktop widths,
+     where it never actually overflows. */
+  min-width: 0;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.fav-panel-actions::-webkit-scrollbar {
+  display: none;
 }
 
 .fav-panel-action-btn {
@@ -7626,6 +7643,7 @@ button.playlist-search-indicator:hover {
   font-weight: 600;
   cursor: pointer;
   transition: all var(--transition);
+  flex-shrink: 0;
 }
 
 .fav-panel-action-btn:hover {
@@ -7657,6 +7675,7 @@ button.playlist-search-indicator:hover {
 .support-level-filter-wrapper {
   position: relative;
   display: inline-flex;
+  flex-shrink: 0;
 }
 
 .support-level-filter-summary {
@@ -7723,6 +7742,7 @@ button.playlist-search-indicator:hover {
   align-items: center;
   justify-content: center;
   transition: all var(--transition);
+  flex-shrink: 0;
 }
 
 .btn-close:hover {

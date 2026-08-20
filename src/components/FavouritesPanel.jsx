@@ -1234,14 +1234,19 @@ export default function FavouritesPanel({
                 </button>
               </>
             )}
-            <button
-              className="btn-close"
-              onClick={onClose}
-              aria-label={closeLabel}
-            >
-              ✕
-            </button>
           </div>
+          {/* Outside .fav-panel-actions, not its last child - that div
+              scrolls horizontally on mobile (see .fav-panel-actions in
+              index.css) now that it holds enough buttons to overflow a
+              phone-width panel, and close needs to stay reachable without
+              having to scroll to find it. */}
+          <button
+            className="btn-close"
+            onClick={onClose}
+            aria-label={closeLabel}
+          >
+            ✕
+          </button>
         </div>
 
         {showSelectionActions && (

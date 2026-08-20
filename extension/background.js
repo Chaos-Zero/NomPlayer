@@ -152,10 +152,26 @@ async function reloadFollowedTopicTabs() {
   const tabs = await findFollowedTopicTabs();
   // tabs.reload() only affects the tab's content, never which tab/window is
   // focused, so this never steals focus from whatever you're actually doing.
-  await Promise.all(tabs.map((tab) => browser.tabs.reload(tab.id)));
+  //
+  // allSettled, not all: a single tab that's mid-navigation, got closed the
+  // instant before this ran, or otherwise rejects must not sink the whole
+  // batch - Promise.all here previously meant one bad reload skipped the
+  // status update below entirely (so lastAutoReloadAt silently stopped
+  // advancing) and threw an unhandled rejection out of this async function,
+  // straight into the alarm listener below with nothing to catch it.
+  const results = await Promise.allSettled(
+    tabs.map((tab) => browser.tabs.reload(tab.id)),
+  );
+  const failures = results.filter((result) => result.status === 'rejected');
+  if (failures.length > 0) {
+    console.warn(
+      `vgmc auto-reload: ${failures.length}/${tabs.length} tab reload(s) failed`,
+      failures.map((f) => f.reason),
+    );
+  }
   await NomplayerStorage.setStatus({
     lastAutoReloadAt: new Date().toISOString(),
-    lastAutoReloadTabCount: tabs.length,
+    lastAutoReloadTabCount: tabs.length - failures.length,
   });
 }
 
@@ -177,7 +193,13 @@ async function scheduleAutoReload() {
 
 browser.alarms.onAlarm.addListener((alarm) => {
   if (alarm.name === AUTO_RELOAD_ALARM_NAME) {
-    reloadFollowedTopicTabs();
+    // Backstop, not the main fix (see the allSettled note inside
+    // reloadFollowedTopicTabs) - anything else this could still throw
+    // (NomplayerStorage itself, browser.tabs.query) must not become an
+    // unhandled rejection in a listener the alarm API itself invoked.
+    reloadFollowedTopicTabs().catch((error) =>
+      console.error('vgmc auto-reload failed', error),
+    );
   }
 });
 
