@@ -1,8 +1,13 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useId } from 'react';
 import { fetchTrackCatalogByVideoIds } from '../lib/trackCatalog.js';
 import { fetchListenHistory } from '../lib/playerState.js';
 
-function PlaylistPlusIcon() {
+// Play triangle, centered, masked with a small gap around the plus for
+// contrast - matches the "Add to Queue" icon used everywhere else (see
+// PlayPlusIcon in Icons.jsx) - kept as a local copy like the rest of this
+// file's icon, rather than importing, since it's only used here.
+function PlayPlusIcon() {
+  const maskId = useId();
   return (
     <svg
       viewBox="0 0 24 24"
@@ -11,7 +16,12 @@ function PlaylistPlusIcon() {
       width="16"
       height="16"
     >
-      <path d="M14 10H2v2h12v-2zm0-4H2v2h12V6zm4 8v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zM2 16h8v-2H2v2z" />
+      <mask id={maskId}>
+        <rect width="24" height="24" fill="#fff" />
+        <path d="M19 13V9H15V13H11V17H15V21H19V17H23V13Z" fill="#000" />
+      </mask>
+      <path d="M5 4v16l14-8z" mask={`url(#${maskId})`} />
+      <path d="M18 14V10H16V14H12V16H16V20H18V16H22V14Z" />
     </svg>
   );
 }
@@ -32,68 +42,108 @@ export default function ListeningHistoryDialog({
   const [mostPlayed, setMostPlayed] = useState([]);
   const [mostPlayedLoading, setMostPlayedLoading] = useState(false);
 
-  // Refresh recent history whenever dialog opens
-  useEffect(() => {
-    if (!isOpen) return;
-
+  // Reacts to a fresh fetch cycle starting, during render rather than
+  // inside the effect below - React's recommended way to react to a
+  // condition becoming newly true is setState during render, not inside an
+  // effect (see https://react.dev/learn/you-might-not-need-an-effect,
+  // "Derived event pattern"; same pattern VgmcSheetSyncPanel.jsx uses for
+  // its own reset-on-reopen case), since setting state synchronously as the
+  // first thing an effect does forces an extra cascading render. The guest
+  // (no authUser/supabase) branch is fully synchronous - just a local read
+  // - so it's resolved right here too, rather than round-tripping through
+  // an effect for no reason.
+  const recentFetchSignature = isOpen
+    ? `${Boolean(authUser)}:${Boolean(supabase)}`
+    : null;
+  const [lastRecentFetchSignature, setLastRecentFetchSignature] =
+    useState(null);
+  if (isOpen && recentFetchSignature !== lastRecentFetchSignature) {
+    setLastRecentFetchSignature(recentFetchSignature);
     if (authUser && supabase) {
       setRecentLoading(true);
-      fetchListenHistory(supabase)
-        .then(setLocalHistory)
-        .catch((err) => console.error('Failed to load listen history:', err))
-        .finally(() => setRecentLoading(false));
     } else {
       setLocalHistory(
         typeof getTrackHistory === 'function' ? getTrackHistory() : [],
       );
     }
-  }, [isOpen, authUser, supabase, getTrackHistory]);
+  }
 
-  const loadMostPlayed = useCallback(async () => {
+  // Kicks off the actual fetch for the authenticated branch only - the
+  // guest branch is handled synchronously above, it never needed an effect.
+  useEffect(() => {
+    if (!isOpen || !authUser || !supabase) return;
+
+    fetchListenHistory(supabase)
+      .then(setLocalHistory)
+      .catch((err) => console.error('Failed to load listen history:', err))
+      .finally(() => setRecentLoading(false));
+  }, [isOpen, authUser, supabase]);
+
+  // Written as an explicit .then() chain rather than async/await
+  // deliberately: the set-state-in-effect check exempts setState calls made
+  // from a Promise callback (see fetchListenHistory above) but doesn't
+  // unwrap async/await control flow the same way, so an async function
+  // invoked directly from the effect below still trips it even though every
+  // setState call here already only ever runs after an await.
+  const loadMostPlayed = useCallback(() => {
     if (!supabase || !authUser) return;
-    setMostPlayedLoading(true);
-    try {
-      const { data, error } = await supabase.rpc('get_track_listens');
-      if (error) throw error;
+    supabase
+      .rpc('get_track_listens')
+      .then(({ data, error }) => {
+        if (error) throw error;
 
-      const rows = Array.isArray(data) ? data : [];
-      const sorted = [...rows]
-        .sort((a, b) => b.listen_count - a.listen_count)
-        .slice(0, 100);
-      const videoIds = sorted.map((r) => r.external_id);
+        const rows = Array.isArray(data) ? data : [];
+        const sorted = [...rows]
+          .sort((a, b) => b.listen_count - a.listen_count)
+          .slice(0, 100);
+        const videoIds = sorted.map((r) => r.external_id);
 
-      const catalogEntries = await fetchTrackCatalogByVideoIds(
-        supabase,
-        videoIds,
-      );
-      const catalogByVideoId = new Map(
-        catalogEntries.map((e) => [e.videoId, e]),
-      );
+        return fetchTrackCatalogByVideoIds(supabase, videoIds).then(
+          (catalogEntries) => {
+            const catalogByVideoId = new Map(
+              catalogEntries.map((e) => [e.videoId, e]),
+            );
 
-      setMostPlayed(
-        sorted.map((row) => {
-          const catalog = catalogByVideoId.get(row.external_id);
-          return {
-            videoId: row.external_id,
-            provider: catalog?.provider || 'youtube',
-            trackId: row.track_id,
-            listenCount: row.listen_count,
-            trackTitle:
-              catalog?.trackTitle ||
-              catalog?.displayTitle ||
-              catalog?.sourceTitle ||
-              '',
-            gameTitle: catalog?.gameTitle || '',
-            title: catalog?.sourceTitle || '',
-          };
-        }),
-      );
-    } catch (err) {
-      console.error('Failed to load most played:', err);
-    } finally {
-      setMostPlayedLoading(false);
-    }
+            setMostPlayed(
+              sorted.map((row) => {
+                const catalog = catalogByVideoId.get(row.external_id);
+                return {
+                  videoId: row.external_id,
+                  provider: catalog?.provider || 'youtube',
+                  trackId: row.track_id,
+                  listenCount: row.listen_count,
+                  trackTitle:
+                    catalog?.trackTitle ||
+                    catalog?.displayTitle ||
+                    catalog?.sourceTitle ||
+                    '',
+                  gameTitle: catalog?.gameTitle || '',
+                  title: catalog?.sourceTitle || '',
+                };
+              }),
+            );
+          },
+        );
+      })
+      .catch((err) => console.error('Failed to load most played:', err))
+      .finally(() => setMostPlayedLoading(false));
   }, [supabase, authUser]);
+
+  // Same render-time-flip pattern as recentFetchSignature above, mirroring
+  // loadMostPlayed's own [supabase, authUser] dependency so this re-fires
+  // under the same conditions the effect below would re-run for.
+  const mostPlayedFetchSignature =
+    isOpen && activeTab === 'mostPlayed'
+      ? `${Boolean(authUser)}:${Boolean(supabase)}`
+      : null;
+  const [lastMostPlayedFetchSignature, setLastMostPlayedFetchSignature] =
+    useState(null);
+  if (mostPlayedFetchSignature !== lastMostPlayedFetchSignature) {
+    setLastMostPlayedFetchSignature(mostPlayedFetchSignature);
+    if (authUser && supabase) {
+      setMostPlayedLoading(true);
+    }
+  }
 
   // Load most played when tab becomes active or dialog opens on that tab
   useEffect(() => {
@@ -216,7 +266,7 @@ export default function ListeningHistoryDialog({
                           title="Add to queue"
                           onClick={(e) => handleAddToPlaylist(e, item)}
                         >
-                          <PlaylistPlusIcon />
+                          <PlayPlusIcon />
                         </button>
                       )}
                     </button>
@@ -270,7 +320,7 @@ export default function ListeningHistoryDialog({
                           title="Add to queue"
                           onClick={(e) => handleAddToPlaylist(e, item)}
                         >
-                          <PlaylistPlusIcon />
+                          <PlayPlusIcon />
                         </button>
                       )}
                     </button>

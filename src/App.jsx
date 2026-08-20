@@ -227,7 +227,7 @@ import {
   StopIcon,
   FastForwardIcon,
   PlaylistPlusIcon,
-  FolderPlusIcon,
+  PlayPlusIcon,
   ShuffleIcon,
   StopwatchIcon,
   HeartIcon as SupportIcon,
@@ -6701,7 +6701,7 @@ export default function App() {
               title="Add to Queue"
               disabled={!currentVideo}
             >
-              <PlaylistPlusIcon />
+              <PlayPlusIcon />
             </button>
 
             <button
@@ -6723,7 +6723,7 @@ export default function App() {
               title="Add to Playlist"
               disabled={!currentVideo}
             >
-              <FolderPlusIcon />
+              <PlaylistPlusIcon />
             </button>
 
             <button

@@ -37,7 +37,7 @@ import {
   MusicIcon,
   SearchIcon,
   DatabaseIcon,
-  PlaylistPlusIcon,
+  PlayPlusIcon,
   PlayIcon,
   SpeechBubbleIcon,
   StarIcon,
@@ -1086,7 +1086,7 @@ export function NominationUpdateCard({
             }}
             title="Add to Queue"
           >
-            <PlaylistPlusIcon size={20} />
+            <PlayPlusIcon size={20} />
           </button>
           <button
             className={`peek-action-btn peek-action-btn-support ${
@@ -2119,7 +2119,7 @@ function HomePage({
         className: 'dashboard-action-btn-secondary',
       },
       {
-        icon: <PlaylistPlusIcon />,
+        icon: <PlayPlusIcon />,
         label: 'View Queue',
         onClick: onOpenPlaylist,
         className: 'dashboard-action-btn-secondary',

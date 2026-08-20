@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useId } from 'react';
 
 export function PreviousIcon() {
   return (
@@ -77,6 +77,8 @@ export function FastForwardIcon() {
   );
 }
 
+// List + plus. Used for "Add to Playlist" (adding to one of the user's own
+// saved playlists) - not "Add to Queue", see PlayPlusIcon below for that.
 export function PlaylistPlusIcon() {
   return (
     <svg
@@ -90,10 +92,18 @@ export function PlaylistPlusIcon() {
   );
 }
 
-// Folder + plus, visually distinct from PlaylistPlusIcon (list + plus, used
-// for "Add to Queue") since the two live right next to each other in the
-// playback views and need to read as different actions at a glance.
-export function FolderPlusIcon() {
+// Play triangle, centered in the box, behind a plus sign. Used for "Add to
+// Queue" everywhere - the plus is the exact same shape/position as
+// PlaylistPlusIcon's (list + plus, "Add to Playlist") plus, deliberately,
+// so the two read as the same "add" affordance in front of a different
+// backdrop (play triangle here vs. list bars there) rather than two
+// unrelated glyphs. The triangle is masked with a padded copy of the plus's
+// own outline, punching a small gap around it so the plus keeps a clean
+// border against the triangle sitting behind it instead of blurring into
+// it - can't do that with a plain overlapping fill (same currentColor on
+// both), so this needs a real mask, not just path layering.
+export function PlayPlusIcon() {
+  const maskId = useId();
   return (
     <svg
       className="transport-icon"
@@ -101,8 +111,12 @@ export function FolderPlusIcon() {
       aria-hidden="true"
       fill="currentColor"
     >
-      <path d="M3 5a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v2h-2V7h-8.83l-2-2H5v12h6v2H5a2 2 0 0 1-2-2V5z" />
-      <path d="M18 12v3h-3v2h3v3h2v-3h3v-2h-3v-3h-2z" />
+      <mask id={maskId}>
+        <rect width="24" height="24" fill="#fff" />
+        <path d="M19 13V9H15V13H11V17H15V21H19V17H23V13Z" fill="#000" />
+      </mask>
+      <path d="M5 4v16l14-8z" mask={`url(#${maskId})`} />
+      <path d="M18 14V10H16V14H12V16H16V20H18V16H22V14Z" />
     </svg>
   );
 }

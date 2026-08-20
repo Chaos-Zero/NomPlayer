@@ -4,6 +4,7 @@ import React, {
   useCallback,
   useEffect,
   useRef,
+  useId,
 } from 'react';
 import { createPortal } from 'react-dom';
 import { useVirtualizer } from '@tanstack/react-virtual';
@@ -73,7 +74,12 @@ import {
   parseMediaInput,
 } from '../utils/media.js';
 
-function PlaylistPlusIcon() {
+// Play triangle, centered, masked with a small gap around the plus for
+// contrast - matches the "Add to Queue" icon used everywhere else (see
+// PlayPlusIcon in Icons.jsx) - kept as a local copy like this file's other
+// icons, rather than importing, since it's only used here.
+function PlayPlusIcon() {
+  const maskId = useId();
   return (
     <svg
       className="transport-icon"
@@ -81,7 +87,12 @@ function PlaylistPlusIcon() {
       aria-hidden="true"
       fill="currentColor"
     >
-      <path d="M14 10H2v2h12v-2zm0-4H2v2h12V6zm4 8v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zM2 16h8v-2H2v2z" />
+      <mask id={maskId}>
+        <rect width="24" height="24" fill="#fff" />
+        <path d="M19 13V9H15V13H11V17H15V21H19V17H23V13Z" fill="#000" />
+      </mask>
+      <path d="M5 4v16l14-8z" mask={`url(#${maskId})`} />
+      <path d="M18 14V10H16V14H12V16H16V20H18V16H22V14Z" />
     </svg>
   );
 }
@@ -937,7 +948,7 @@ function ListExplorerColumn({
               onClick={onAddAll}
               title="Add all tracks to current playlist"
             >
-              <PlaylistPlusIcon />
+              <PlayPlusIcon />
             </button>
           )}
           {videos && videos.length > 0 && (
@@ -3422,7 +3433,7 @@ export default function ListExplorer({
                 className="database-context-menu-item"
                 onClick={() => handleAddTrackToPlaylist(contextMenu.video)}
               >
-                <PlaylistPlusIcon />
+                <PlayPlusIcon />
                 <span>Add to My Queue</span>
               </button>
             )}

@@ -18,7 +18,7 @@ import PlaybackTransportButtons from './PlaybackTransportButtons.jsx';
 import AddToPlaylistDropdown from './AddToPlaylistDropdown.jsx';
 import {
   PlaylistPlusIcon,
-  FolderPlusIcon,
+  PlayPlusIcon,
   HeartIcon as SupportIcon,
   HeartEmptyIcon,
   StarIcon,
@@ -824,7 +824,7 @@ function TopBar({
                         disabled={!currentVideo}
                         tabIndex={effectiveInputOpen ? -1 : 0}
                       >
-                        <PlaylistPlusIcon />
+                        <PlayPlusIcon />
                       </button>
                       <button
                         className="btn btn-icon add-to-custom-playlist-btn mobile-add-to-custom-playlist-btn"
@@ -847,7 +847,7 @@ function TopBar({
                         disabled={!currentVideo}
                         tabIndex={effectiveInputOpen ? -1 : 0}
                       >
-                        <FolderPlusIcon />
+                        <PlaylistPlusIcon />
                       </button>
                       <button
                         className={`btn btn-icon mobile-current-support-btn${currentSupportClassName}`}

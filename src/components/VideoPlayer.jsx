@@ -28,7 +28,7 @@ import {
   StopIcon,
   FastForwardIcon,
   PlaylistPlusIcon,
-  FolderPlusIcon,
+  PlayPlusIcon,
   ShuffleIcon,
   StopwatchIcon,
   SpeechBubbleIcon,
@@ -681,7 +681,7 @@ const VideoPlayer = forwardRef(function VideoPlayer(
             title="Add to Queue"
             aria-label="Add to Queue"
           >
-            <PlaylistPlusIcon />
+            <PlayPlusIcon />
           </button>
           <button
             className="btn btn-icon add-to-custom-playlist-btn"
@@ -697,7 +697,7 @@ const VideoPlayer = forwardRef(function VideoPlayer(
             aria-label="Add to Playlist"
             disabled={!video}
           >
-            <FolderPlusIcon />
+            <PlaylistPlusIcon />
           </button>
           <button
             className={`btn btn-icon now-playing-support-btn${supportClassName}`}
