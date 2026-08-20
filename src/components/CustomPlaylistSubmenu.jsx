@@ -13,6 +13,7 @@ export default function CustomPlaylistSubmenu({
   const {
     open,
     side,
+    vAlign,
     wrapRef,
     submenuRef,
     handleMouseEnter,
@@ -98,7 +99,7 @@ export default function CustomPlaylistSubmenu({
       {open && (
         <div
           ref={submenuRef}
-          className={`context-side-submenu side-${side}`}
+          className={`context-side-submenu side-${side} valign-${vAlign}`}
           role="menu"
         >
           {!showInput ? (

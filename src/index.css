@@ -7428,6 +7428,17 @@ button.playlist-search-indicator:hover {
   right: calc(100% + 6px);
 }
 
+/* Default (valign-top, no extra class needed) anchors from the trigger's
+   top edge, growing downward - the base `top: 0` above. valign-bottom
+   flips that: anchor from the trigger's bottom edge instead, growing
+   upward, for a trigger low enough in the viewport that growing downward
+   would push the submenu off the bottom of the screen. Mirrors side-left/
+   side-right's horizontal flip, just on the other axis. */
+.context-side-submenu.valign-bottom {
+  top: auto;
+  bottom: 0;
+}
+
 .context-side-submenu-create {
   color: var(--accent);
   opacity: 0.85;

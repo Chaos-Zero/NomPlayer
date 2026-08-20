@@ -25,6 +25,7 @@ export default function SupportLevelSubmenu({
   const {
     open,
     side,
+    vAlign,
     wrapRef,
     submenuRef,
     handleMouseEnter,
@@ -61,7 +62,7 @@ export default function SupportLevelSubmenu({
       {open && (
         <div
           ref={submenuRef}
-          className={`context-side-submenu side-${side}`}
+          className={`context-side-submenu side-${side} valign-${vAlign}`}
           role="menu"
         >
           {LEVELS.map((level) => (
