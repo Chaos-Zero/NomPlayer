@@ -89,7 +89,7 @@ export default function CustomPlaylistSubmenu({
           setName('');
         }}
       >
-        <span>Add to Custom Playlist</span>
+        <span>Add to Playlist</span>
         <ChevronRightIcon
           className={`context-menu-chevron${open ? ' open' : ''}`}
         />

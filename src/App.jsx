@@ -150,6 +150,7 @@ import ScrollingText from './components/ScrollingText.jsx';
 import UserSettingsDialog from './components/UserSettingsDialog.jsx';
 import ListeningHistoryDialog from './components/ListeningHistoryDialog.jsx';
 import SupportLevelDropdown from './components/SupportLevelDropdown.jsx';
+import AddToPlaylistDropdown from './components/AddToPlaylistDropdown.jsx';
 import ExportVgmcModal from './components/ExportVgmcModal.jsx';
 import VgmcSheetSyncPanel from './components/VgmcSheetSyncPanel.jsx';
 import DeleteAccountConfirmDialog from './components/DeleteAccountConfirmDialog.jsx';
@@ -226,6 +227,7 @@ import {
   StopIcon,
   FastForwardIcon,
   PlaylistPlusIcon,
+  FolderPlusIcon,
   ShuffleIcon,
   StopwatchIcon,
   HeartIcon as SupportIcon,
@@ -967,6 +969,7 @@ export default function App() {
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [supportLevelDropdown, setSupportLevelDropdown] = useState(null);
+  const [addToPlaylistDropdown, setAddToPlaylistDropdown] = useState(null);
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [exportTracks, setExportTracks] = useState([]);
   const [isSettingsSubmitting, setIsSettingsSubmitting] = useState(false);
@@ -5783,6 +5786,22 @@ export default function App() {
     });
   }, []);
 
+  // Shared opener for the "Add to Playlist" popover, same shape as
+  // handleOpenSupportDropdown above - one stable callback threaded to every
+  // playback-view trigger (VideoPlayer, the detached footer) instead of each
+  // inlining its own arrow function.
+  const handleOpenAddToPlaylistDropdown = useCallback(
+    (videos, position, options) => {
+      setAddToPlaylistDropdown({
+        videos,
+        position,
+        direction: 'down',
+        ...options,
+      });
+    },
+    [],
+  );
+
   const handlePlayCatalogTrack = useCallback(
     (video) => {
       const nextVideo = applyCatalogMetadataToVideo(video);
@@ -6536,6 +6555,7 @@ export default function App() {
         onOpenSupportDropdown={(video, position, options) =>
           setSupportLevelDropdown({ video, position, ...options })
         }
+        onOpenAddToPlaylistDropdown={handleOpenAddToPlaylistDropdown}
         isNominated={isCurrentVideoNominated}
         onToggleSupport={handleToggleSupportFromPlaylist}
         onToggleNomination={handleToggleNominationFromPlaylist}
@@ -6682,6 +6702,28 @@ export default function App() {
               disabled={!currentVideo}
             >
               <PlaylistPlusIcon />
+            </button>
+
+            <button
+              className="btn btn-icon add-to-custom-playlist-btn detached-footer-add-to-custom-playlist-btn"
+              type="button"
+              onClick={(event) => {
+                if (!currentVideo) return;
+                const rect = event.currentTarget.getBoundingClientRect();
+                setAddToPlaylistDropdown({
+                  videos: [currentVideo],
+                  position: {
+                    top: rect.top,
+                    left: rect.left + rect.width / 2,
+                  },
+                  direction: 'up',
+                });
+              }}
+              aria-label="Add to Playlist"
+              title="Add to Playlist"
+              disabled={!currentVideo}
+            >
+              <FolderPlusIcon />
             </button>
 
             <button
@@ -7438,6 +7480,18 @@ export default function App() {
             );
             setSupportLevelDropdown(null);
           }}
+        />
+      )}
+
+      {addToPlaylistDropdown && (
+        <AddToPlaylistDropdown
+          videos={addToPlaylistDropdown.videos}
+          position={addToPlaylistDropdown.position}
+          direction={addToPlaylistDropdown.direction}
+          customPlaylists={customPlaylists}
+          onUpdateCustomPlaylists={setCustomPlaylists}
+          onShowToast={showDefaultAppToast}
+          onClose={() => setAddToPlaylistDropdown(null)}
         />
       )}
 

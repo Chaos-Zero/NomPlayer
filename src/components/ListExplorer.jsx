@@ -3466,7 +3466,7 @@ export default function ListExplorer({
                   setNewPlaylistName('');
                 }}
               >
-                <span>Add to Custom Playlist</span>
+                <span>Add to Playlist</span>
                 <ChevronRightIcon
                   className={`context-menu-chevron${isPlaylistSubmenuOpen ? ' open' : ''}`}
                 />

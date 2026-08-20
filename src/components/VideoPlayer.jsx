@@ -28,6 +28,7 @@ import {
   StopIcon,
   FastForwardIcon,
   PlaylistPlusIcon,
+  FolderPlusIcon,
   ShuffleIcon,
   StopwatchIcon,
   SpeechBubbleIcon,
@@ -59,6 +60,7 @@ const VideoPlayer = forwardRef(function VideoPlayer(
     isNominated = false,
     onToggleSupport,
     onOpenSupportDropdown,
+    onOpenAddToPlaylistDropdown,
     supportLevel = 1,
     isCurrentVideoInPlaylist = false,
     onAddToPlaylist,
@@ -680,6 +682,22 @@ const VideoPlayer = forwardRef(function VideoPlayer(
             aria-label="Add to Queue"
           >
             <PlaylistPlusIcon />
+          </button>
+          <button
+            className="btn btn-icon add-to-custom-playlist-btn"
+            type="button"
+            onClick={(event) => {
+              const rect = event.currentTarget.getBoundingClientRect();
+              onOpenAddToPlaylistDropdown?.([video], {
+                top: rect.bottom,
+                left: rect.left + rect.width / 2,
+              });
+            }}
+            title="Add to Playlist"
+            aria-label="Add to Playlist"
+            disabled={!video}
+          >
+            <FolderPlusIcon />
           </button>
           <button
             className={`btn btn-icon now-playing-support-btn${supportClassName}`}

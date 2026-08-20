@@ -636,7 +636,7 @@ describe('PlaylistSidebar', () => {
 
     // The CustomPlaylistSubmenu should render its toggle button
     expect(
-      screen.getByRole('menuitem', { name: /Add to Custom Playlist/i }),
+      screen.getByRole('menuitem', { name: /Add to Playlist/i }),
     ).toBeInTheDocument();
   });
 

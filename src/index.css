@@ -7715,6 +7715,27 @@ button.playlist-search-indicator:hover {
   accent-color: var(--gold);
 }
 
+/* ─── Add to Playlist Dropdown ─── */
+.add-to-playlist-dropdown {
+  width: 260px;
+}
+
+.add-to-playlist-options {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+.add-to-playlist-option-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .fav-panel-action-btn.selection-accent {
   background: var(--info-dim);
   border-color: rgba(59, 130, 246, 0.42);

@@ -709,7 +709,7 @@ function PlaylistSidebar({
   const currentVideoId = playlist[currentIndex]?.videoId ?? null;
 
   // displayPlaylist, not playlist: every consumer of selectedVideos (Add to
-  // Queue, Export, Save YT Playlist, bulk Remove, "Add to Custom Playlist"
+  // Queue, Export, Save YT Playlist, bulk Remove, "Add to Playlist"
   // from the multi-select context menu) should add/act on selections in
   // the order they're actually shown on screen - filtered by search and/or
   // rating-sorted, whichever is currently active - not the underlying

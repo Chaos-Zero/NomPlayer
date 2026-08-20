@@ -26,7 +26,7 @@ describe('CustomPlaylistSubmenu', () => {
       />,
     );
     expect(
-      screen.getByRole('menuitem', { name: /Add to Custom Playlist/i }),
+      screen.getByRole('menuitem', { name: /Add to Playlist/i }),
     ).toBeInTheDocument();
   });
 
@@ -39,9 +39,7 @@ describe('CustomPlaylistSubmenu', () => {
       />,
     );
 
-    fireEvent.click(
-      screen.getByRole('menuitem', { name: /Add to Custom Playlist/i }),
-    );
+    fireEvent.click(screen.getByRole('menuitem', { name: /Add to Playlist/i }));
 
     expect(
       screen.getByRole('menuitem', { name: /\+ Create New Playlist/i }),
@@ -59,9 +57,7 @@ describe('CustomPlaylistSubmenu', () => {
       />,
     );
 
-    fireEvent.click(
-      screen.getByRole('menuitem', { name: /Add to Custom Playlist/i }),
-    );
+    fireEvent.click(screen.getByRole('menuitem', { name: /Add to Playlist/i }));
     expect(screen.getByText('No playlists yet')).toBeInTheDocument();
   });
 
@@ -80,9 +76,7 @@ describe('CustomPlaylistSubmenu', () => {
       />,
     );
 
-    fireEvent.click(
-      screen.getByRole('menuitem', { name: /Add to Custom Playlist/i }),
-    );
+    fireEvent.click(screen.getByRole('menuitem', { name: /Add to Playlist/i }));
     fireEvent.click(screen.getByText('Chill Vibes'));
 
     expect(mockUpdate).toHaveBeenCalledTimes(1);
@@ -108,9 +102,7 @@ describe('CustomPlaylistSubmenu', () => {
       />,
     );
 
-    fireEvent.click(
-      screen.getByRole('menuitem', { name: /Add to Custom Playlist/i }),
-    );
+    fireEvent.click(screen.getByRole('menuitem', { name: /Add to Playlist/i }));
     fireEvent.click(screen.getByText('Chill Vibes'));
 
     expect(mockUpdate).not.toHaveBeenCalled();
@@ -132,9 +124,7 @@ describe('CustomPlaylistSubmenu', () => {
       />,
     );
 
-    fireEvent.click(
-      screen.getByRole('menuitem', { name: /Add to Custom Playlist/i }),
-    );
+    fireEvent.click(screen.getByRole('menuitem', { name: /Add to Playlist/i }));
     fireEvent.click(
       screen.getByRole('menuitem', { name: /\+ Create New Playlist/i }),
     );
@@ -163,9 +153,7 @@ describe('CustomPlaylistSubmenu', () => {
       />,
     );
 
-    fireEvent.click(
-      screen.getByRole('menuitem', { name: /Add to Custom Playlist/i }),
-    );
+    fireEvent.click(screen.getByRole('menuitem', { name: /Add to Playlist/i }));
     fireEvent.click(
       screen.getByRole('menuitem', { name: /\+ Create New Playlist/i }),
     );

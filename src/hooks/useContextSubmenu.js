@@ -5,7 +5,7 @@ const HOVER_CLOSE_DELAY = 250;
 
 /**
  * Shared open/close + positioning logic for a nested "off to the side"
- * context-menu submenu (e.g. Update Support, Add to Custom Playlist).
+ * context-menu submenu (e.g. Update Support, Add to Playlist).
  * Opens on click or on ~500ms hover, closes shortly after the pointer
  * leaves, and flips from the right side to the left if it would overflow
  * the window.

@@ -15,8 +15,10 @@ import { lastSearchQuery } from '../utils/searchPersistence.js';
 import UserMenu from './UserMenu.jsx';
 import FeedbackDialog from './FeedbackDialog.jsx';
 import PlaybackTransportButtons from './PlaybackTransportButtons.jsx';
+import AddToPlaylistDropdown from './AddToPlaylistDropdown.jsx';
 import {
   PlaylistPlusIcon,
+  FolderPlusIcon,
   HeartIcon as SupportIcon,
   HeartEmptyIcon,
   StarIcon,
@@ -94,6 +96,12 @@ function TopBar({
   const [mobileDetachedPlayerVars, setMobileDetachedPlayerVars] = useState({});
   const [error, setError] = useState('');
   const [isCatalogSearchOpen, setIsCatalogSearchOpen] = useState(false);
+  // Local to TopBar (unlike SupportLevelDropdown, which App.jsx lifts and
+  // shares across every trigger) since TopBar already receives
+  // customPlaylists/onUpdateCustomPlaylists/onShowToast directly as props -
+  // no need to thread an extra opener callback down from App.jsx just for
+  // this one popover.
+  const [addToPlaylistDropdown, setAddToPlaylistDropdown] = useState(null);
   const [mobileHasQuery, setMobileHasQuery] = useState(
     Boolean(lastSearchQuery),
   );
@@ -819,6 +827,29 @@ function TopBar({
                         <PlaylistPlusIcon />
                       </button>
                       <button
+                        className="btn btn-icon add-to-custom-playlist-btn mobile-add-to-custom-playlist-btn"
+                        type="button"
+                        onClick={(event) => {
+                          if (!currentVideo) return;
+                          const rect =
+                            event.currentTarget.getBoundingClientRect();
+                          setAddToPlaylistDropdown({
+                            videos: [currentVideo],
+                            position: {
+                              top: rect.top,
+                              left: rect.left + rect.width / 2,
+                            },
+                            direction: 'up',
+                          });
+                        }}
+                        aria-label="Add to Playlist"
+                        title="Add to Playlist"
+                        disabled={!currentVideo}
+                        tabIndex={effectiveInputOpen ? -1 : 0}
+                      >
+                        <FolderPlusIcon />
+                      </button>
+                      <button
                         className={`btn btn-icon mobile-current-support-btn${currentSupportClassName}`}
                         type="button"
                         onClick={() =>
@@ -1019,6 +1050,18 @@ function TopBar({
           onLogout={onLogout}
         />
       </div>
+
+      {addToPlaylistDropdown && (
+        <AddToPlaylistDropdown
+          videos={addToPlaylistDropdown.videos}
+          position={addToPlaylistDropdown.position}
+          direction={addToPlaylistDropdown.direction}
+          customPlaylists={customPlaylists}
+          onUpdateCustomPlaylists={onUpdateCustomPlaylists}
+          onShowToast={onShowToast}
+          onClose={() => setAddToPlaylistDropdown(null)}
+        />
+      )}
     </div>
   );
 }

@@ -90,6 +90,23 @@ export function PlaylistPlusIcon() {
   );
 }
 
+// Folder + plus, visually distinct from PlaylistPlusIcon (list + plus, used
+// for "Add to Queue") since the two live right next to each other in the
+// playback views and need to read as different actions at a glance.
+export function FolderPlusIcon() {
+  return (
+    <svg
+      className="transport-icon"
+      viewBox="0 0 24 24"
+      aria-hidden="true"
+      fill="currentColor"
+    >
+      <path d="M3 5a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v2h-2V7h-8.83l-2-2H5v12h6v2H5a2 2 0 0 1-2-2V5z" />
+      <path d="M18 12v3h-3v2h3v3h2v-3h3v-2h-3v-3h-2z" />
+    </svg>
+  );
+}
+
 export function ShuffleIcon() {
   return (
     <svg
