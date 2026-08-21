@@ -147,6 +147,7 @@ export async function onRequestPost(context) {
     acceptedPosts: ingestResult.accepted,
     playlistSize: reconcileResult.playlistSize,
     skippedVideoConflicts: reconcileResult.skippedVideoConflicts || 0,
+    skippedRetired: reconcileResult.skippedRetired || 0,
     promotedToCatalog: reconcileResult.promotedToCatalog || 0,
     updatedAt: new Date().toISOString(),
   });

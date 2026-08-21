@@ -925,7 +925,13 @@ export default function App() {
   });
   const [catalogTrackByVideoId, setCatalogTrackByVideoId] = useState({});
   const catalogTrackByVideoIdRef = useRef({});
-  const catalogLookupPendingVideoIdsRef = useRef(new Set());
+  // videoId -> Promise<void> for a lookup currently in flight, so a second
+  // caller asking about the same videoId while it's still being fetched
+  // (e.g. partitionRetiredVideos racing the background playlist-sync
+  // effect right after a track is queued) awaits the same fetch instead of
+  // being told "someone else has it" and moving on without the data - see
+  // ensureCatalogEntriesForVideoIds below.
+  const catalogLookupInFlightRef = useRef(new Map());
   const [authSession, setAuthSession] = useState(null);
   const [userProfile, setUserProfile] = useState(null);
   // Seed the controls-position toggle from the profile once per login (id
@@ -1827,101 +1833,108 @@ export default function App() {
         ),
       );
 
-      const knownEntries = catalogTrackByVideoIdRef.current;
       if (!supabase || normalizedVideoIds.length === 0) {
-        return knownEntries;
+        return catalogTrackByVideoIdRef.current;
+      }
+
+      // Join any lookups already in flight for these ids (e.g. the
+      // background playlist-sync effect firing right after a track gets
+      // queued) before deciding what's still missing - a caller like
+      // partitionRetiredVideos needs that fetch's actual result, not just
+      // to be told someone else is already handling it and move on
+      // without the data (see catalogLookupInFlightRef above).
+      const inFlight = normalizedVideoIds
+        .map((videoId) => catalogLookupInFlightRef.current.get(videoId))
+        .filter(Boolean);
+      if (inFlight.length > 0) {
+        await Promise.all(inFlight);
       }
 
       const missingVideoIds = normalizedVideoIds.filter(
-        (videoId) =>
-          !(videoId in knownEntries) &&
-          !catalogLookupPendingVideoIdsRef.current.has(videoId),
+        (videoId) => !(videoId in catalogTrackByVideoIdRef.current),
       );
 
       if (missingVideoIds.length === 0) {
-        return knownEntries;
+        return catalogTrackByVideoIdRef.current;
       }
+
+      const lookupPromise = (async () => {
+        try {
+          // Optimization: For missing IDs, if we have the full video objects, ingest them first.
+          // This ensures trackId existence for new nominations immediately.
+          const videosToIngest = videos.filter(
+            (v) =>
+              typeof v === 'object' &&
+              v?.videoId &&
+              missingVideoIds.includes(v.videoId),
+          );
+
+          if (videosToIngest.length > 0) {
+            await ingestTrackSources(supabase, videosToIngest);
+          }
+
+          const fetchedEntries = await fetchTrackCatalogByVideoIds(
+            supabase,
+            missingVideoIds,
+          );
+          const fetchedById = new Map(
+            fetchedEntries.map((entry) => [
+              entry.videoId,
+              {
+                videoId: entry.videoId,
+                trackId: entry.trackId,
+                gameTitle: entry.gameTitle,
+                trackTitle: entry.trackTitle,
+                displayTitle: entry.displayTitle,
+                sourceTitle: entry.sourceTitle,
+                sourceChannelTitle: entry.sourceChannelTitle,
+                sourceThumbnailUrl:
+                  entry.sourceThumbnailUrl ||
+                  getYouTubeThumbnailUrl(entry.videoId),
+                supportCount1: entry.supportCount1 || 0,
+                supportCount2: entry.supportCount2 || 0,
+                supportCount3: entry.supportCount3 || 0,
+                isRetired: entry.isRetired,
+                retiredByTournamentName: entry.retiredByTournamentName,
+              },
+            ]),
+          );
+
+          const fallbackEntries = missingVideoIds
+            .filter((videoId) => !fetchedById.has(videoId))
+            .map((videoId) => ({
+              videoId,
+              trackId: null,
+              gameTitle: '',
+              trackTitle: '',
+              displayTitle: '',
+              sourceTitle: '',
+              sourceChannelTitle: '',
+              sourceThumbnailUrl: getYouTubeThumbnailUrl(videoId),
+              supportCount1: 0,
+              supportCount2: 0,
+              supportCount3: 0,
+              isRetired: false,
+              retiredByTournamentName: '',
+            }));
+
+          mergeCatalogTrackSummaries([
+            ...fetchedById.values(),
+            ...fallbackEntries,
+          ]);
+        } finally {
+          missingVideoIds.forEach((videoId) => {
+            catalogLookupInFlightRef.current.delete(videoId);
+          });
+        }
+      })();
 
       missingVideoIds.forEach((videoId) => {
-        catalogLookupPendingVideoIdsRef.current.add(videoId);
+        catalogLookupInFlightRef.current.set(videoId, lookupPromise);
       });
 
-      try {
-        // Optimization: For missing IDs, if we have the full video objects, ingest them first.
-        // This ensures trackId existence for new nominations immediately.
-        const videosToIngest = videos.filter(
-          (v) =>
-            typeof v === 'object' &&
-            v?.videoId &&
-            missingVideoIds.includes(v.videoId),
-        );
-
-        if (videosToIngest.length > 0) {
-          await ingestTrackSources(supabase, videosToIngest);
-        }
-
-        const fetchedEntries = await fetchTrackCatalogByVideoIds(
-          supabase,
-          missingVideoIds,
-        );
-        const fetchedById = new Map(
-          fetchedEntries.map((entry) => [
-            entry.videoId,
-            {
-              videoId: entry.videoId,
-              trackId: entry.trackId,
-              gameTitle: entry.gameTitle,
-              trackTitle: entry.trackTitle,
-              displayTitle: entry.displayTitle,
-              sourceTitle: entry.sourceTitle,
-              sourceChannelTitle: entry.sourceChannelTitle,
-              sourceThumbnailUrl:
-                entry.sourceThumbnailUrl ||
-                getYouTubeThumbnailUrl(entry.videoId),
-              supportCount1: entry.supportCount1 || 0,
-              supportCount2: entry.supportCount2 || 0,
-              supportCount3: entry.supportCount3 || 0,
-              isRetired: entry.isRetired,
-              retiredByTournamentName: entry.retiredByTournamentName,
-            },
-          ]),
-        );
-
-        const fallbackEntries = missingVideoIds
-          .filter((videoId) => !fetchedById.has(videoId))
-          .map((videoId) => ({
-            videoId,
-            trackId: null,
-            gameTitle: '',
-            trackTitle: '',
-            displayTitle: '',
-            sourceTitle: '',
-            sourceChannelTitle: '',
-            sourceThumbnailUrl: getYouTubeThumbnailUrl(videoId),
-            supportCount1: 0,
-            supportCount2: 0,
-            supportCount3: 0,
-            isRetired: false,
-            retiredByTournamentName: '',
-          }));
-
-        const freshCatalog = {
-          ...knownEntries,
-          ...Object.fromEntries(fetchedById),
-          ...Object.fromEntries(fallbackEntries.map((e) => [e.videoId, e])),
-        };
-
-        mergeCatalogTrackSummaries([
-          ...fetchedById.values(),
-          ...fallbackEntries,
-        ]);
-
-        return freshCatalog;
-      } finally {
-        missingVideoIds.forEach((videoId) => {
-          catalogLookupPendingVideoIdsRef.current.delete(videoId);
-        });
-      }
+      await lookupPromise;
+      return catalogTrackByVideoIdRef.current;
     },
     [mergeCatalogTrackSummaries, supabase],
   );
@@ -2170,10 +2183,10 @@ export default function App() {
               trackTitle: catalogEntry.trackTitle ?? video.trackTitle ?? '',
               displayTitle:
                 catalogEntry.displayTitle ?? video.displayTitle ?? '',
-              isRetired:
-                typeof video.isRetired === 'boolean'
-                  ? video.isRetired
-                  : Boolean(catalogEntry.isRetired),
+              // See the identical comment in applyCatalogMetadataToVideo -
+              // always trust the catalog entry, never a stale isRetired
+              // already sitting on the stored playlist item.
+              isRetired: Boolean(catalogEntry.isRetired),
               retiredByTournamentName:
                 video.retiredByTournamentName ||
                 catalogEntry.retiredByTournamentName ||
@@ -3295,10 +3308,17 @@ export default function App() {
         gameTitle: catalogEntry.gameTitle ?? video.gameTitle ?? '',
         trackTitle: catalogEntry.trackTitle ?? video.trackTitle ?? '',
         displayTitle: catalogEntry.displayTitle ?? video.displayTitle ?? '',
-        isRetired:
-          typeof video.isRetired === 'boolean'
-            ? video.isRetired
-            : Boolean(catalogEntry.isRetired),
+        // Deliberately always trusts the catalog entry over whatever's
+        // already on `video` - this runs (via partitionRetiredVideos) right
+        // after ensureCatalogEntriesForVideoIds has just fetched a fresh,
+        // authoritative isRetired for this videoId, and it's the only thing
+        // stopping a retired track from being added to Support/Nominations.
+        // A track added to a list before its catalog lookup resolved gets
+        // isRetired: false stamped onto it as a placeholder (see
+        // ensureCatalogEntriesForVideoIds' fallbackEntries); preferring that
+        // stale value here would let it silently outlive the real answer
+        // forever, even after we've just re-checked and know better.
+        isRetired: Boolean(catalogEntry.isRetired),
         retiredByTournamentName:
           video.retiredByTournamentName ||
           catalogEntry.retiredByTournamentName ||
@@ -6770,7 +6790,11 @@ export default function App() {
               }}
               title={currentSupportTooltip}
               aria-label={currentSupportLabel}
-              disabled={!currentVideo || isCurrentVideoNominated}
+              disabled={
+                !currentVideo ||
+                isCurrentVideoNominated ||
+                isCurrentVideoRetired
+              }
             >
               {currentSupportGlyph}
             </button>

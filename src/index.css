@@ -6793,21 +6793,25 @@ button.playlist-search-indicator:hover {
 
 /* Bandcamp tracks can't be paused/seeked and have no reliable "ended"
    signal (see BandcampPlayer.jsx) - flag them in any track list so that's
-   not a surprise mid-playback. Light red at rest, deepening to maroon
-   while it's the active/playing track. */
+   not a surprise mid-playback. Amber rather than red/maroon - red is
+   already .playlist-item.retired's color for "blocked from
+   Support/Nominations", a different and more serious warning that a
+   retired Bandcamp track would otherwise share this class alongside and
+   become indistinguishable from. Light amber at rest, deepening while
+   it's the active/playing track. */
 .playlist-item.provider-bandcamp {
-  background: rgba(239, 68, 68, 0.1);
-  border-color: rgba(239, 68, 68, 0.22);
+  background: rgba(245, 158, 11, 0.1);
+  border-color: rgba(245, 158, 11, 0.28);
 }
 
 .playlist-item.provider-bandcamp:hover {
-  background: rgba(239, 68, 68, 0.16);
-  border-color: rgba(239, 68, 68, 0.32);
+  background: rgba(245, 158, 11, 0.18);
+  border-color: rgba(245, 158, 11, 0.4);
 }
 
 .playlist-item.provider-bandcamp.active {
-  background: rgba(128, 0, 32, 0.55);
-  border-color: rgba(176, 38, 68, 0.7);
+  background: rgba(120, 72, 0, 0.55);
+  border-color: rgba(245, 158, 11, 0.75);
 }
 
 .playlist-item.flash {

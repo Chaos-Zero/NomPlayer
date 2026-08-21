@@ -8,6 +8,7 @@ import {
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import App from '../App.jsx';
 import { fetchVgmcPlaylistTracks } from '../lib/vgmcStandings.js';
+import { fetchTrackCatalogByVideoIds } from '../lib/trackCatalog.js';
 
 const appTestState = vi.hoisted(() => ({
   topBarProps: null,
@@ -686,6 +687,78 @@ describe('App', () => {
         thumbnail: 'a.jpg',
         channelTitle: '',
         isRetired: true,
+      });
+    });
+
+    expect(appTestState.playlistSidebarProps.supportList).toEqual([]);
+    expect(screen.getByRole('status')).toHaveTextContent(
+      'This song is retired. It can still be added to the current playlist.',
+    );
+  });
+
+  it('does not let a stale isRetired:false on a track override a fresh catalog lookup that says it is retired', async () => {
+    // Simulates a track added to the queue before its catalog lookup had
+    // resolved, which stamps isRetired: false onto it as a placeholder (see
+    // ensureCatalogEntriesForVideoIds' fallbackEntries) - the fresh lookup
+    // below, resolving after the track is already queued, must still be
+    // able to block it from being supported. mockImplementation (rather
+    // than mockResolvedValueOnce) so this stays correct regardless of
+    // whatever unrelated catalog lookups App's other mount-time effects
+    // also fire off during this test.
+    // A real (11-char) videoId, unlike the 12-char 'alpha1234567' most other
+    // tests in this file use as an opaque placeholder - this test needs the
+    // id to actually pass ensureCatalogEntriesForVideoIds' videoId-format
+    // check so the mocked catalog lookup below is genuinely exercised.
+    const videoId = 'alpha123456';
+
+    vi.mocked(fetchTrackCatalogByVideoIds).mockImplementation(
+      async (_supabase, videoIds) =>
+        videoIds.includes(videoId)
+          ? [
+              {
+                videoId,
+                trackId: 't1',
+                gameTitle: 'Game',
+                trackTitle: 'Track',
+                displayTitle: 'Game - Track',
+                sourceTitle: 'Alpha',
+                sourceChannelTitle: '',
+                sourceThumbnailUrl: 'a.jpg',
+                supportCount1: 0,
+                supportCount2: 0,
+                supportCount3: 0,
+                isRetired: true,
+                retiredByTournamentName: 'Some Tournament',
+              },
+            ]
+          : [],
+    );
+
+    render(<App />);
+    openPlayerView();
+
+    act(() => {
+      appTestState.topBarProps.onLoad(
+        [
+          {
+            videoId,
+            title: 'Alpha',
+            thumbnail: 'a.jpg',
+            channelTitle: '',
+            isRetired: false,
+          },
+        ],
+        { mode: 'append', autoplay: true },
+      );
+    });
+
+    await act(async () => {
+      await appTestState.playlistSidebarProps.onToggleSupport({
+        videoId,
+        title: 'Alpha',
+        thumbnail: 'a.jpg',
+        channelTitle: '',
+        isRetired: false,
       });
     });
 
