@@ -12,6 +12,7 @@ function row(overrides) {
     nomination_song: overrides.nomination_song ?? 'Song',
     support_points: overrides.support_points ?? 0,
     support_voters: overrides.support_voters ?? 0,
+    is_dropped: overrides.is_dropped ?? false,
     order_index: overrides.order_index ?? 0,
   };
 }
@@ -43,9 +44,20 @@ describe('toPlaylistVideos', () => {
         channelTitle: '',
         trackId: 'track-uuid-1',
         supportPoints: 3,
+        isDropped: false,
         loadIndex: 2,
       },
     ]);
+  });
+
+  it('carries isDropped through from is_dropped', () => {
+    const [live, dropped] = toPlaylistVideos([
+      row({ external_id: 'aaaaaaaaaaa', is_dropped: false }),
+      row({ external_id: 'bbbbbbbbbbb', is_dropped: true }),
+    ]);
+
+    expect(live.isDropped).toBe(false);
+    expect(dropped.isDropped).toBe(true);
   });
 
   it('carries trackId through as null when the nomination has not been promoted to the catalog yet', () => {

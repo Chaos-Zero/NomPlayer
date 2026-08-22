@@ -146,6 +146,7 @@ export async function onRequestPost(context) {
   return jsonResponse({
     acceptedPosts: ingestResult.accepted,
     playlistSize: reconcileResult.playlistSize,
+    droppedCount: reconcileResult.droppedCount || 0,
     skippedVideoConflicts: reconcileResult.skippedVideoConflicts || 0,
     skippedRetired: reconcileResult.skippedRetired || 0,
     promotedToCatalog: reconcileResult.promotedToCatalog || 0,

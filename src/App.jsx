@@ -185,6 +185,7 @@ import {
   fetchUserHydratedState,
   upsertUserProfile,
   updateControlsBelowPlayerPreference,
+  updateShowDroppedVgmcTracksPreference,
   recordTrackHistory,
   getTrackHistory,
   clearTrackHistory,
@@ -763,6 +764,13 @@ export default function App() {
     useState(false);
   // handleToggleControlsPosition is declared further down, once authUser is
   // in scope (its persistence needs the logged-in user's id).
+  // Whether dropped VGMC nominations (owner dropped it, support points fell
+  // to zero) are shown in the VGMC playlist and spliced back into playback
+  // order - see the toggle in PlaylistSidebar's renderAddControl, bottom
+  // right of the sidebar, VGMC view only. Off by default.
+  const [showDroppedVgmcTracks, setShowDroppedVgmcTracks] = useState(false);
+  // handleToggleShowDroppedVgmcTracks is declared further down, same reason
+  // as handleToggleControlsPosition above.
   const isPlayingRef = useRef(false);
   const activePageRef = useRef('home');
   const [activePlaylistView, setActivePlaylistView] = useState(() => {
@@ -944,6 +952,14 @@ export default function App() {
     setIsPlaybackControlsBelowPlayer(
       Boolean(userProfile.controls_below_player),
     );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userProfile?.id]);
+  // Same reasoning as the controls-position seed above: once per login, not
+  // on every subsequent profile edit.
+  useEffect(() => {
+    if (!userProfile) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setShowDroppedVgmcTracks(Boolean(userProfile.show_dropped_vgmc_tracks));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userProfile?.id]);
   const [userFeedback, setUserFeedback] = useState({});
@@ -1195,6 +1211,27 @@ export default function App() {
         ).catch((error) => {
           console.error(
             'Failed to save playback controls position preference',
+            error,
+          );
+        });
+      }
+      return nextValue;
+    });
+  }, [supabase, authUser]);
+
+  const handleToggleShowDroppedVgmcTracks = useCallback(() => {
+    setShowDroppedVgmcTracks((previousValue) => {
+      const nextValue = !previousValue;
+      // Persist for logged-in users only - guests just get the session
+      // default (off) each visit, same as controls_below_player above.
+      if (supabase && authUser) {
+        updateShowDroppedVgmcTracksPreference(
+          supabase,
+          authUser.id,
+          nextValue,
+        ).catch((error) => {
+          console.error(
+            'Failed to save show-dropped-VGMC-tracks preference',
             error,
           );
         });
@@ -2359,7 +2396,16 @@ export default function App() {
       // catalogTrackByVideoId/userFeedback, so the user's own rating, what
       // the sidebar badge actually shows, not the community support count,
       // has to get attached here instead, same lookup the other views do.
-      tracks = (activePlaylistView.videos || []).map((video) => {
+      // Dropped nominations (video.isDropped, VGMC only - every other
+      // community playlist never sets it) stay in .videos unconditionally,
+      // see toPlaylistVideos; whether they're shown is this toggle's job,
+      // off by default, no-op for any non-VGMC community playlist.
+      const rawVideos = activePlaylistView.videos || [];
+      const visibleVideos =
+        activePlaylistView.id === VGMC_PLAYLIST_ID && !showDroppedVgmcTracks
+          ? rawVideos.filter((video) => !video.isDropped)
+          : rawVideos;
+      tracks = visibleVideos.map((video) => {
         const catalogEntry = catalogTrackByVideoId[video.videoId];
         const personalRating =
           (catalogEntry?.id && userFeedback[catalogEntry.id]?.rating) ||
@@ -2406,6 +2452,7 @@ export default function App() {
     displayPlaylist,
     customPlaylists,
     shuffleOrderIds,
+    showDroppedVgmcTracks,
   ]);
 
   const playingTracks = useMemo(() => {
@@ -2460,7 +2507,15 @@ export default function App() {
         []
       );
     } else if (playingPlaylistView.type === 'community-playlist') {
-      return playingPlaylistView.videos || [];
+      // Same isDropped filtering as sidebarTracks' community-playlist branch
+      // above, applied independently since playingPlaylistView can diverge
+      // from activePlaylistView (browsing one list while another keeps
+      // playing) - see showDroppedVgmcTracks.
+      const rawVideos = playingPlaylistView.videos || [];
+      return playingPlaylistView.id === VGMC_PLAYLIST_ID &&
+        !showDroppedVgmcTracks
+        ? rawVideos.filter((video) => !video.isDropped)
+        : rawVideos;
     }
     return displayPlaylist;
   }, [
@@ -2472,6 +2527,7 @@ export default function App() {
     enrichedSupportList,
     displayPlaylist,
     customPlaylists,
+    showDroppedVgmcTracks,
   ]);
 
   useEffect(() => {
@@ -7267,6 +7323,8 @@ export default function App() {
                   : null
               }
               retiredVideoIds={retiredVideoIds}
+              showDroppedVgmcTracks={showDroppedVgmcTracks}
+              onToggleShowDroppedVgmcTracks={handleToggleShowDroppedVgmcTracks}
               pendingMetadataCount={tracksNeedingMetadata.length}
               onOpenMetadataDialog={handleOpenMetadataBanner}
               onDismissMetadataBanner={handleDismissMetadataBanner}

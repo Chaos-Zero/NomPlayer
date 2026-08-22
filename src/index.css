@@ -6520,6 +6520,47 @@ body {
   margin-right: 0;
 }
 
+/* The "show dropped nominations" toggle - VGMC playlist only, sits at the
+   right edge (isVgmcPlaylistView is always isReadOnlyView, so the
+   add-to-queue control that would normally occupy this spot never renders
+   here). Same collapsed-button footprint as .collection-adder.compact, but
+   a plain static toggle, not a flip card. */
+.playlist-dropped-toggle {
+  margin-left: auto;
+  flex-shrink: 0;
+  width: 54px;
+  height: 54px;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-glass);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--transition);
+}
+
+.playlist-dropped-toggle:hover {
+  background: var(--bg-glass-hover);
+  border-color: var(--border-hover);
+  color: var(--text-primary);
+}
+
+.playlist-dropped-toggle.active {
+  background: var(--accent-dim);
+  border-color: var(--accent);
+  color: var(--accent-light);
+}
+
+.playlist-dropped-toggle-count {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1;
+  white-space: nowrap;
+}
+
 .playlist-search {
   position: relative;
   width: min(100%, 400px);
@@ -6812,6 +6853,43 @@ button.playlist-search-indicator:hover {
 .playlist-item.provider-bandcamp.active {
   background: rgba(120, 72, 0, 0.55);
   border-color: rgba(245, 158, 11, 0.75);
+}
+
+/* A dropped VGMC nomination, shown only behind the "show dropped
+   nominations" toggle (see isVgmcPlaylistView/showDroppedVgmcTracks in
+   App.jsx). Muted slate rather than retired's red or Bandcamp's amber -
+   this isn't a warning, it's just history that's no longer part of the
+   live playlist by default. */
+.playlist-item.dropped {
+  opacity: 0.65;
+  background: rgba(100, 116, 139, 0.1);
+  border-color: rgba(148, 163, 184, 0.22);
+}
+
+.playlist-item.dropped:hover {
+  opacity: 0.85;
+  background: rgba(100, 116, 139, 0.16);
+  border-color: rgba(148, 163, 184, 0.32);
+}
+
+.playlist-item.dropped.active {
+  opacity: 1;
+  background: rgba(100, 116, 139, 0.26);
+  border-color: rgba(148, 163, 184, 0.48);
+}
+
+.playlist-item-dropped-badge {
+  display: inline-block;
+  margin-top: 2px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: rgba(226, 232, 240, 0.75);
+  background: rgba(100, 116, 139, 0.28);
+  width: fit-content;
 }
 
 .playlist-item.flash {

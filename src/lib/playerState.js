@@ -485,7 +485,7 @@ export async function fetchUserProfile(supabase, userId) {
   const { data, error } = await supabase
     .from('profiles')
     .select(
-      'id, username, email, gamefaqs_username, avatar_url, vgmc_mode_enabled, controls_below_player',
+      'id, username, email, gamefaqs_username, avatar_url, vgmc_mode_enabled, controls_below_player, show_dropped_vgmc_tracks',
     )
     .eq('id', userId)
     .maybeSingle();
@@ -523,7 +523,7 @@ export async function upsertUserProfile(supabase, profile) {
       onConflict: 'id',
     })
     .select(
-      'id, username, email, gamefaqs_username, avatar_url, vgmc_mode_enabled, controls_below_player',
+      'id, username, email, gamefaqs_username, avatar_url, vgmc_mode_enabled, controls_below_player, show_dropped_vgmc_tracks',
     )
     .single();
 
@@ -546,6 +546,23 @@ export async function updateControlsBelowPlayerPreference(
   const { error } = await supabase
     .from('profiles')
     .update({ controls_below_player: Boolean(controlsBelowPlayer) })
+    .eq('id', userId);
+
+  if (error) {
+    throw error;
+  }
+}
+
+// Lightweight update for the VGMC "show dropped nominations" toggle, same
+// shape as updateControlsBelowPlayerPreference above.
+export async function updateShowDroppedVgmcTracksPreference(
+  supabase,
+  userId,
+  showDroppedVgmcTracks,
+) {
+  const { error } = await supabase
+    .from('profiles')
+    .update({ show_dropped_vgmc_tracks: Boolean(showDroppedVgmcTracks) })
     .eq('id', userId);
 
   if (error) {

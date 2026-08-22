@@ -170,6 +170,7 @@ const PlaylistItem = memo(function PlaylistItem({
   supportLevel,
   isNominated,
   isRetired,
+  isDropped = false,
   onToggleSupport,
   onOpenSupportDropdown,
   onOpenContextMenu,
@@ -220,7 +221,7 @@ const PlaylistItem = memo(function PlaylistItem({
 
   return (
     <div
-      className={`playlist-item${isActive ? ' active' : ''}${isFlashing ? ' flash' : ''}${isSelected ? ' selected' : ''}${isRetired ? ' retired' : ''}${video.provider === 'bandcamp' ? ' provider-bandcamp' : ''}`}
+      className={`playlist-item${isActive ? ' active' : ''}${isFlashing ? ' flash' : ''}${isSelected ? ' selected' : ''}${isRetired ? ' retired' : ''}${isDropped ? ' dropped' : ''}${video.provider === 'bandcamp' ? ' provider-bandcamp' : ''}`}
       onClick={() => {
         if (selectionMode) {
           onToggleSelected(video.videoId);
@@ -310,6 +311,14 @@ const PlaylistItem = memo(function PlaylistItem({
             className={`playlist-item-meta${hasCatalogMetadata ? ' metadata' : ''}`}
           >
             {truncateForDisplay(secondaryTitle)}
+          </div>
+        )}
+        {isDropped && (
+          <div
+            className="playlist-item-dropped-badge"
+            title="This nomination was dropped"
+          >
+            Dropped
           </div>
         )}
       </div>
@@ -407,6 +416,7 @@ const SortablePlaylistItem = memo(function SortablePlaylistItem({
   supportLevel,
   isNominated,
   isRetired,
+  isDropped = false,
   onToggleSupport,
   onOpenSupportDropdown,
   onOpenContextMenu,
@@ -453,6 +463,7 @@ const SortablePlaylistItem = memo(function SortablePlaylistItem({
         supportLevel={supportLevel}
         isNominated={isNominated}
         isRetired={isRetired}
+        isDropped={isDropped}
         onToggleSupport={onToggleSupport}
         onOpenSupportDropdown={onOpenSupportDropdown}
         onOpenContextMenu={onOpenContextMenu}
@@ -492,6 +503,8 @@ function PlaylistSidebar({
   onAddDirectItems = () => 0,
   onAddDirectToCustomPlaylist = null,
   retiredVideoIds = new Set(),
+  showDroppedVgmcTracks = false,
+  onToggleShowDroppedVgmcTracks = () => {},
   isDesktopOverlayPlaylistOpen = false,
   onToggleDesktopOverlay,
   pendingMetadataCount = 0,
@@ -1674,6 +1687,29 @@ function PlaylistSidebar({
             closeAriaLabel="Close playlist search"
           />
         )}
+        {isVgmcPlaylistView && (
+          // VGMC is always isReadOnlyView (community-playlist), so the
+          // add-to-queue CollectionAdder never renders here - this sits in
+          // its spot at the right edge instead, same overlay positioning.
+          <button
+            type="button"
+            className={`playlist-dropped-toggle${showDroppedVgmcTracks ? ' active' : ''}`}
+            onClick={onToggleShowDroppedVgmcTracks}
+            aria-pressed={showDroppedVgmcTracks}
+            title={
+              showDroppedVgmcTracks
+                ? 'Hide dropped nominations'
+                : 'Show dropped nominations'
+            }
+            aria-label={
+              showDroppedVgmcTracks
+                ? 'Hide dropped nominations'
+                : 'Show dropped nominations'
+            }
+          >
+            <span className="playlist-dropped-toggle-count">0/0</span>
+          </button>
+        )}
         {canModifyList && authUser && pendingMetadataCount > 0 && (
           <div className="metadata-banner">
             <div className="metadata-banner-text">
@@ -1990,6 +2026,7 @@ function PlaylistSidebar({
                       }
                       isNominated={nominationIds.has(video.videoId)}
                       isRetired={retiredVideoIds.has(video.videoId)}
+                      isDropped={Boolean(video.isDropped)}
                       onToggleSupport={onToggleSupport}
                       onOpenSupportDropdown={handleOpenSupportDropdown}
                       onOpenContextMenu={handleOpenContextMenu}
@@ -2073,6 +2110,7 @@ function PlaylistSidebar({
                           }
                           isNominated={nominationIds.has(video.videoId)}
                           isRetired={retiredVideoIds.has(video.videoId)}
+                          isDropped={Boolean(video.isDropped)}
                           onToggleSupport={onToggleSupport}
                           onOpenSupportDropdown={handleOpenSupportDropdown}
                           onOpenContextMenu={handleOpenContextMenu}
@@ -2133,6 +2171,7 @@ function PlaylistSidebar({
                       }
                       isNominated={nominationIds.has(video.videoId)}
                       isRetired={retiredVideoIds.has(video.videoId)}
+                      isDropped={Boolean(video.isDropped)}
                       onToggleSupport={onToggleSupport}
                       onOpenSupportDropdown={handleOpenSupportDropdown}
                       onOpenContextMenu={handleOpenContextMenu}

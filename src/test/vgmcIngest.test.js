@@ -175,6 +175,7 @@ describe('foldThread', () => {
         song: 'Song of Storms',
         support_points: 1,
         support_voters: 1,
+        is_active: true,
       },
     ]);
   });
@@ -197,11 +198,12 @@ describe('foldThread', () => {
         song: 'Song of Storms',
         support_points: 1,
         support_voters: 1,
+        is_active: true,
       },
     ]);
   });
 
-  it('lets the owning author remove their own nomination', () => {
+  it('lets the owning author remove their own nomination, but keeps it as a dropped entry', () => {
     const records = foldThread([
       {
         postId: '1',
@@ -211,7 +213,18 @@ describe('foldThread', () => {
       { postId: '2', author: 'alice', text: '- Zelda | Song of Storms | link' },
     ]);
 
-    expect(buildReconcileEntries(records)).toEqual([]);
+    // Alice's own '-' drops it (owner, magnitude 1) and her net vote nets to
+    // 0, so isRecordActive reads false - but the record still has a resolved
+    // videoId, so it's still emitted here, just flagged is_active: false
+    // rather than omitted. The RPC marks the row dropped instead of deleting
+    // it, so its history survives to be shown behind the toggle.
+    expect(buildReconcileEntries(records)).toEqual([
+      expect.objectContaining({
+        source_key: 'zelda|song of storms',
+        support_points: 0,
+        is_active: false,
+      }),
+    ]);
   });
 
   it('treats a non-owner "-" as a no-op, not a removal (authority rule)', () => {
@@ -290,7 +303,12 @@ describe('foldThread', () => {
       },
     ]);
 
-    expect(buildReconcileEntries(records)).toEqual([]);
+    // Replayed in post-id order, post 1's '+' creates the record, then post
+    // 5's '-' (owner, magnitude 1) drops it, nets her to 0 points. It's still
+    // emitted, just flagged dropped, not array order.
+    expect(buildReconcileEntries(records)).toEqual([
+      expect.objectContaining({ support_points: 0, is_active: false }),
+    ]);
   });
 
   it('ignores malformed and prose lines mixed in with real commands', () => {
@@ -559,7 +577,7 @@ describe('foldThread', () => {
     expect(buildReconcileEntries(records)).toHaveLength(1);
   });
 
-  it('a dropped-but-still-supported nomination drops out once later downvotes bring it to zero', () => {
+  it('a dropped-but-still-supported nomination becomes inactive once later downvotes bring it to zero, but is still reconciled as a dropped entry', () => {
     const records = foldThread([
       {
         postId: '1',
@@ -577,11 +595,15 @@ describe('foldThread', () => {
 
     // After alice's drop: alice 0, bob 1 -> total 1, still active. carol's
     // opposition vote (non-owner, so a vote only, not a second drop) brings it
-    // to 0, which finally excludes it.
+    // to 0, which finally excludes it from the live playlist - but it's still
+    // emitted here (is_active: false) so the RPC marks it dropped rather than
+    // deleting it.
     const record = records.get('game a|song a');
     expect(supportPoints(record)).toBe(0);
     expect(isRecordActive(record)).toBe(false);
-    expect(buildReconcileEntries(records)).toHaveLength(0);
+    expect(buildReconcileEntries(records)).toEqual([
+      expect.objectContaining({ support_points: 0, is_active: false }),
+    ]);
   });
 
   it('"--" never drops the nomination, only affects its score', () => {

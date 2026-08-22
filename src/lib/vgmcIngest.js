@@ -256,6 +256,14 @@ function activeVoterCount(record) {
 
 /** Maps a folded record set to the ordered payload reconcile_vgmc_playlist expects.
  *
+ * Every record with a resolved videoId is included here, active or not -
+ * `records` only ever grows (foldThread's map is append-only), so this list
+ * is stable across reruns. `is_active` (see isRecordActive) tells the RPC
+ * whether to mark the row dropped rather than to delete it: a dropped
+ * nomination's game/song/support history stays in user_playlist_tracks so it
+ * can be shown again behind the "show dropped nominations" toggle, it just
+ * stops counting toward the live playlist/standings by default.
+ *
  * `support_voters` is the count of distinct authors with a currently nonzero
  * running total in the record's vote map, see activeVoterCount. It's a
  * headcount, deliberately separate from `support_points`: a song with two ++'s
@@ -264,7 +272,7 @@ function activeVoterCount(record) {
  * displayed. */
 export function buildReconcileEntries(records) {
   return [...records.values()]
-    .filter((record) => isRecordActive(record) && record.videoId)
+    .filter((record) => record.videoId)
     .sort((a, b) => a.ordinal - b.ordinal)
     .map((record) => ({
       source_key: record.sourceKey,
@@ -274,5 +282,6 @@ export function buildReconcileEntries(records) {
       song: record.song,
       support_points: supportPoints(record),
       support_voters: activeVoterCount(record),
+      is_active: isRecordActive(record),
     }));
 }

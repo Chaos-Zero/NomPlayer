@@ -13,7 +13,7 @@ export async function fetchVgmcPlaylistTracks(supabase, playlistId) {
   const { data, error } = await supabase
     .from('user_playlist_tracks')
     .select(
-      'id, track_id, provider, external_id, cached_title, nomination_game, nomination_song, support_points, support_voters, order_index',
+      'id, track_id, provider, external_id, cached_title, nomination_game, nomination_song, support_points, support_voters, is_dropped, order_index',
     )
     .eq('playlist_id', playlistId)
     .order('order_index', { ascending: true });
@@ -51,7 +51,15 @@ function normalizeRow(row) {
  * only carry the combined `cached_title` display string and nothing else,
  * which is why every VGMC track showed up as "Metadata Needed" wherever
  * something (the sidebar, the GameFAQs export formatter) needed the game/song
- * split individually rather than the single display string. */
+ * split individually rather than the single display string.
+ *
+ * isDropped mirrors is_dropped, set server-side by reconcile_vgmc_playlist
+ * once a nomination's owner drops it and its support points fall to zero
+ * (see isRecordActive in src/lib/vgmcIngest.js). Dropped rows are included
+ * here unconditionally, same as every other row, whether they're actually
+ * shown/played is a display-time decision the caller makes (App.jsx's
+ * sidebarTracks/playingTracks, gated behind the "show dropped nominations"
+ * toggle), not something this mapping filters. */
 export function toPlaylistVideos(rows) {
   return (rows || [])
     .filter((row) => row && row.external_id)
@@ -74,6 +82,7 @@ export function toPlaylistVideos(rows) {
       supportPoints: Number.isFinite(row.support_points)
         ? row.support_points
         : 0,
+      isDropped: Boolean(row.is_dropped),
       loadIndex: Number.isFinite(row.order_index) ? row.order_index : 0,
     }));
 }

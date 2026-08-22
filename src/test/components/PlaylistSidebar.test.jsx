@@ -481,6 +481,20 @@ describe('PlaylistSidebar', () => {
     expect(screen.getByLabelText('Play Alpha')).toHaveClass('retired');
   });
 
+  it('flags a dropped VGMC nomination with the dropped style and badge', () => {
+    renderSidebar({ playlist: [{ ...video, isDropped: true }] });
+
+    expect(screen.getByLabelText('Play Alpha')).toHaveClass('dropped');
+    expect(screen.getByText('Dropped')).toBeInTheDocument();
+  });
+
+  it('does not flag a live playlist entry as dropped', () => {
+    renderSidebar({ playlist: [{ ...video, isDropped: false }] });
+
+    expect(screen.getByLabelText('Play Alpha')).not.toHaveClass('dropped');
+    expect(screen.queryByText('Dropped')).not.toBeInTheDocument();
+  });
+
   it('uses the scrolling title wrapper for the active playlist item', () => {
     const { container } = renderSidebar();
 
