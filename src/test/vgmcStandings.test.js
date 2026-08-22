@@ -14,6 +14,7 @@ function row(overrides) {
     support_voters: overrides.support_voters ?? 0,
     is_dropped: overrides.is_dropped ?? false,
     order_index: overrides.order_index ?? 0,
+    locked_order: overrides.locked_order ?? null,
   };
 }
 
@@ -141,6 +142,30 @@ describe('partitionStandings', () => {
     ]);
 
     expect(locked.map((r) => r.id)).toEqual(['c', 'b']);
+  });
+
+  it('sorts locked by locked_order (qualification order), not current points', () => {
+    // 'late' has more points now, but 'early' reached 7 points first - the
+    // Locked tab should read as a finishing order, not a leaderboard.
+    const { locked } = partitionStandings([
+      row({ id: 'late', support_points: 9, locked_order: 3 }),
+      row({ id: 'early', support_points: 7, locked_order: 0 }),
+      row({ id: 'middle', support_points: 8, locked_order: 1 }),
+    ]);
+
+    expect(locked.map((r) => r.id)).toEqual(['early', 'middle', 'late']);
+  });
+
+  it('falls back to points/nomination-order for locked rows missing locked_order', () => {
+    // Simulates a row synced before locked_order existed, not yet backfilled
+    // by its next thread sync - it shouldn't crash or sort ahead of rows
+    // that do have a real locked_order.
+    const { locked } = partitionStandings([
+      row({ id: 'has-order', support_points: 7, locked_order: 0 }),
+      row({ id: 'missing-order', support_points: 9, locked_order: null }),
+    ]);
+
+    expect(locked.map((r) => r.id)).toEqual(['has-order', 'missing-order']);
   });
 
   it('a locked song (7+) is removed from standings, not shown in both', () => {

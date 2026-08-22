@@ -13,7 +13,7 @@ export async function fetchVgmcPlaylistTracks(supabase, playlistId) {
   const { data, error } = await supabase
     .from('user_playlist_tracks')
     .select(
-      'id, track_id, provider, external_id, cached_title, nomination_game, nomination_song, support_points, support_voters, is_dropped, order_index',
+      'id, track_id, provider, external_id, cached_title, nomination_game, nomination_song, support_points, support_voters, is_dropped, order_index, locked_order',
     )
     .eq('playlist_id', playlistId)
     .order('order_index', { ascending: true });
@@ -39,6 +39,11 @@ function normalizeRow(row) {
     // that column existed read as 0 here rather than throwing the row out.
     supportVoters: Number.isFinite(row.support_voters) ? row.support_voters : 0,
     orderIndex: Number.isFinite(row.order_index) ? row.order_index : 0,
+    // Sequence number of when this song first reached the lock threshold
+    // (see foldThread in src/lib/vgmcIngest.js), null if it never has. Null
+    // also covers a row synced before locked_order existed, until its next
+    // thread sync backfills it - see the fallback sort in partitionStandings.
+    lockedOrder: Number.isFinite(row.locked_order) ? row.locked_order : null,
   };
 }
 
@@ -118,27 +123,42 @@ export function buildVgmcSupportPointsByVideoId(rows) {
  * `locked` is everything at 7+. Disjoint tabs, once a song locks in it moves
  * out of Current Standings entirely rather than continuing to show in both.
  *
- * Sort is points first (that's the section a song lands in, see
+ * `standings` sorts by points first (that's the section a song lands in, see
  * VgmcStandingsView's "N Supports" section headers), then, within a tied
  * point total, by supporterCount descending, since two songs can reach the
  * same point total from a different number of people (e.g. one ++ vs two
  * +'s), and the one more people backed should rank higher. Nomination order
  * is the final tiebreak, for songs tied on both.
+ *
+ * `locked` instead sorts by lockedOrder ascending - the order songs actually
+ * crossed the 7-point line, earliest first, not by their current (possibly
+ * since-changed) point total. The points/voters/nomination-order chain is
+ * kept as a fallback tiebreak for a null lockedOrder, which should only
+ * happen transiently for a row synced before locked_order existed, until its
+ * next thread sync backfills it.
  */
 export function partitionStandings(rows) {
   const qualifying = (rows || [])
     .filter((row) => row && row.external_id)
     .map(normalizeRow)
-    .filter((row) => row.supportPoints > 1)
+    .filter((row) => row.supportPoints > 1);
+
+  const byPointsThenNomination = (a, b) =>
+    b.supportPoints - a.supportPoints ||
+    b.supportVoters - a.supportVoters ||
+    a.orderIndex - b.orderIndex;
+
+  const standings = qualifying
+    .filter((row) => row.supportPoints < 7)
+    .sort(byPointsThenNomination);
+
+  const locked = qualifying
+    .filter((row) => row.supportPoints >= 7)
     .sort(
       (a, b) =>
-        b.supportPoints - a.supportPoints ||
-        b.supportVoters - a.supportVoters ||
-        a.orderIndex - b.orderIndex,
+        (a.lockedOrder ?? Infinity) - (b.lockedOrder ?? Infinity) ||
+        byPointsThenNomination(a, b),
     );
 
-  return {
-    standings: qualifying.filter((row) => row.supportPoints < 7),
-    locked: qualifying.filter((row) => row.supportPoints >= 7),
-  };
+  return { standings, locked };
 }

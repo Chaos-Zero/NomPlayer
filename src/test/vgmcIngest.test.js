@@ -189,6 +189,7 @@ describe('foldThread', () => {
         support_points: 1,
         support_voters: 1,
         is_active: true,
+        locked_order: null,
       },
     ]);
   });
@@ -212,6 +213,7 @@ describe('foldThread', () => {
         support_points: 1,
         support_voters: 1,
         is_active: true,
+        locked_order: null,
       },
     ]);
   });
@@ -703,6 +705,139 @@ describe('foldThread', () => {
     const entry = buildReconcileEntries(records)[0];
     expect(entry.support_points).toBe(1);
     expect(entry.support_voters).toBe(1);
+  });
+
+  it('assigns locked_order the first time a record reaches 7 support points', () => {
+    const records = foldThread([
+      {
+        postId: '1',
+        author: 'alice',
+        text: '++ Game A | Song A | https://youtu.be/aaaaaaaaaaa',
+      },
+      {
+        postId: '2',
+        author: 'bob',
+        text: '++ Game A | Song A | https://youtu.be/aaaaaaaaaaa',
+      },
+      {
+        postId: '3',
+        author: 'carol',
+        text: '++ Game A | Song A | https://youtu.be/aaaaaaaaaaa',
+      },
+      // 2+2+2 = 6, not locked yet.
+      {
+        postId: '4',
+        author: 'dave',
+        text: '+ Game A | Song A | https://youtu.be/aaaaaaaaaaa',
+      },
+      // 6+1 = 7, locks here.
+    ]);
+
+    const entry = buildReconcileEntries(records)[0];
+    expect(entry.support_points).toBe(7);
+    expect(entry.locked_order).toBe(0);
+  });
+
+  it('leaves locked_order null for a record still under the threshold', () => {
+    const records = foldThread([
+      {
+        postId: '1',
+        author: 'alice',
+        text: '++ Game A | Song A | https://youtu.be/aaaaaaaaaaa',
+      },
+    ]);
+
+    expect(buildReconcileEntries(records)[0].locked_order).toBeNull();
+  });
+
+  it('assigns locked_order in the chronological order songs qualified, not point-total order', () => {
+    const records = foldThread([
+      // Song B reaches 7 first even though it ends up with fewer total
+      // points than Song A, which locks in later - locked_order must
+      // reflect qualification order, not final score.
+      {
+        postId: '1',
+        author: 'alice',
+        text: '++ Game B | Song B | https://youtu.be/bbbbbbbbbbb',
+      },
+      {
+        postId: '2',
+        author: 'bob',
+        text: '++ Game B | Song B | https://youtu.be/bbbbbbbbbbb',
+      },
+      {
+        postId: '3',
+        author: 'carol',
+        text: '++ Game B | Song B | https://youtu.be/bbbbbbbbbbb',
+      },
+      {
+        postId: '4',
+        author: 'dave',
+        text: '+ Game B | Song B | https://youtu.be/bbbbbbbbbbb',
+      },
+      // Song B: 7 points, locks at post 4.
+      {
+        postId: '5',
+        author: 'erin',
+        text: '++ Game A | Song A | https://youtu.be/aaaaaaaaaaa',
+      },
+      {
+        postId: '6',
+        author: 'frank',
+        text: '++ Game A | Song A | https://youtu.be/aaaaaaaaaaa',
+      },
+      {
+        postId: '7',
+        author: 'grace',
+        text: '++ Game A | Song A | https://youtu.be/aaaaaaaaaaa',
+      },
+      {
+        postId: '8',
+        author: 'heidi',
+        text: '++ Game A | Song A | https://youtu.be/aaaaaaaaaaa',
+      },
+      // Song A: 8 points, locks at post 8, after Song B.
+    ]);
+
+    const entries = buildReconcileEntries(records);
+    const songA = entries.find((e) => e.source_key === 'game a|song a');
+    const songB = entries.find((e) => e.source_key === 'game b|song b');
+    expect(songA.support_points).toBe(8);
+    expect(songB.support_points).toBe(7);
+    expect(songB.locked_order).toBeLessThan(songA.locked_order);
+  });
+
+  it('keeps locked_order sticky even after points drop back below the threshold', () => {
+    const records = foldThread([
+      {
+        postId: '1',
+        author: 'alice',
+        text: '++ Game A | Song A | https://youtu.be/aaaaaaaaaaa',
+      },
+      {
+        postId: '2',
+        author: 'bob',
+        text: '++ Game A | Song A | https://youtu.be/aaaaaaaaaaa',
+      },
+      {
+        postId: '3',
+        author: 'carol',
+        text: '++ Game A | Song A | https://youtu.be/aaaaaaaaaaa',
+      },
+      {
+        postId: '4',
+        author: 'dave',
+        text: '+ Game A | Song A | https://youtu.be/aaaaaaaaaaa',
+      },
+      // 7 points, locks here.
+      { postId: '5', author: 'dave', text: '-- Game A | Song A | link' },
+      // Dave pulls his own support back down (-2), 7 -> 5, but locked_order
+      // must stay set, not clear.
+    ]);
+
+    const entry = buildReconcileEntries(records)[0];
+    expect(entry.support_points).toBe(5);
+    expect(entry.locked_order).toBe(0);
   });
 });
 

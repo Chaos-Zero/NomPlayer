@@ -99,6 +99,11 @@ export function parseCommandLine(line) {
   };
 }
 
+// Support points at which a nomination "locks in" - see partitionStandings
+// in src/lib/vgmcStandings.js, which must keep using this same threshold for
+// splitting Current Standings from Locked Noms.
+const LOCK_THRESHOLD = 7;
+
 const MAX_AUTHOR_MAGNITUDE = 2;
 
 /** Adds `value` onto `author`'s running total in `votes`, clamped to
@@ -160,6 +165,16 @@ export function isRecordActive(record) {
  *    across a drop/re-add too, for the same reason an inactive song keeps its
  *    slot: the record's identity doesn't reset just because it's temporarily
  *    inactive.
+ *  - Lock-order stability: like `ordinal`, a record's `lockedOrder` is assigned
+ *    once, the moment its running support total first reaches LOCK_THRESHOLD,
+ *    and is never reassigned or cleared, even if support later gets pulled and
+ *    its total drops back below the threshold. This is what lets the Locked
+ *    Noms tab (see partitionStandings in src/lib/vgmcStandings.js) sort by the
+ *    order songs actually qualified in, rather than by their current point
+ *    total. Because replay is always full and deterministic (see below), this
+ *    falls out naturally: rerunning the same history always finds the same
+ *    first-crossing point for a given record, nothing extra needs to persist
+ *    across runs to keep it sticky.
  *
  * Always replays from the full post set, never call this with a delta. Returns the
  * full record map (including inactive/dropped records); use buildReconcileEntries
@@ -168,6 +183,15 @@ export function isRecordActive(record) {
 export function foldThread(posts) {
   const records = new Map();
   let nextOrdinal = 0;
+  let nextLockSequence = 0;
+
+  // Called after every vote change; records are append-only, so this only
+  // ever assigns lockedOrder once, per the lock-order stability rule above.
+  function markLockOrder(record) {
+    if (record.lockedOrder == null && supportPoints(record) >= LOCK_THRESHOLD) {
+      record.lockedOrder = nextLockSequence++;
+    }
+  }
 
   const sortedPosts = [...(posts || [])]
     .filter((post) => post && typeof post.text === 'string' && post.author)
@@ -212,10 +236,11 @@ export function foldThread(posts) {
             existing.droppedByOwner = false;
           }
           applyVote(existing.votes, post.author, value);
+          markLockOrder(existing);
         } else {
           const votes = new Map();
           applyVote(votes, post.author, value);
-          records.set(sourceKey, {
+          const record = {
             sourceKey,
             game,
             song,
@@ -224,8 +249,14 @@ export function foldThread(posts) {
             droppedByOwner: false,
             owner: post.author,
             ordinal: nextOrdinal++,
+            lockedOrder: null,
             votes,
-          });
+          };
+          records.set(sourceKey, record);
+          // A single new nomination can only start at magnitude <=2, well
+          // under LOCK_THRESHOLD, but check anyway rather than assume - this
+          // stays correct even if the per-author cap ever changes.
+          markLockOrder(record);
         }
         continue;
       }
@@ -241,6 +272,9 @@ export function foldThread(posts) {
         existing.droppedByOwner = true;
       }
 
+      // No markLockOrder call here: '-'/'--' only ever subtracts, so it can
+      // never newly cross LOCK_THRESHOLD upward, only the '+' branch above
+      // can trigger a fresh lock.
       applyVote(existing.votes, post.author, value);
     }
   }
@@ -283,7 +317,13 @@ function activeVoterCount(record) {
  * headcount, deliberately separate from `support_points`: a song with two ++'s
  * and one + reads as 5 points from 3 people, not 5 points from some unknown
  * number of double-counted votes. See VgmcStandingsView for where this is
- * displayed. */
+ * displayed.
+ *
+ * `locked_order` is the record's lockedOrder from foldThread (null if it's
+ * never reached LOCK_THRESHOLD support points) - the sequence number of when
+ * it first qualified, sticky even if its points later dip back down. Lets
+ * the Locked Noms tab sort by qualification order instead of current points,
+ * see partitionStandings in src/lib/vgmcStandings.js. */
 export function buildReconcileEntries(records) {
   return [...records.values()]
     .filter((record) => record.videoId)
@@ -297,5 +337,6 @@ export function buildReconcileEntries(records) {
       support_points: supportPoints(record),
       support_voters: activeVoterCount(record),
       is_active: isRecordActive(record),
+      locked_order: record.lockedOrder,
     }));
 }

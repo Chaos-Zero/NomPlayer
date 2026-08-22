@@ -41,12 +41,26 @@ export default function VgmcStandingsView({
   const { standings, locked } = useMemo(() => partitionStandings(rows), [rows]);
   const visibleRows = activeSubTab === 'locked' ? locked : standings;
 
-  // Both standings/locked are already sorted highest-points-first (see
-  // partitionStandings), so a simple "points changed since the last row" scan
-  // is enough to break the list into point-value sections, no re-sorting or
-  // grouping-by-key needed. Rank numbering (#) stays continuous across
-  // sections, it reflects overall standing, not position within a section.
+  // Standings is sorted highest-points-first (see partitionStandings), so a
+  // simple "points changed since the last row" scan is enough to break it
+  // into point-value sections, no re-sorting or grouping-by-key needed.
+  // Locked isn't sorted by points at all (it's chronological, by when each
+  // song crossed the lock threshold - see partitionStandings), so the same
+  // scan would produce the same point-value header repeated wherever two
+  // non-adjacent songs share a point total: skip section headers there
+  // entirely and render a flat list instead. Rank numbering (#) stays
+  // continuous across sections either way, it reflects overall standing, not
+  // position within a section.
   const sections = useMemo(() => {
+    if (activeSubTab === 'locked') {
+      return visibleRows.map((row, index) => ({
+        type: 'row',
+        key: row.id,
+        row,
+        rank: index + 1,
+      }));
+    }
+
     const items = [];
     let lastPoints = null;
     visibleRows.forEach((row, index) => {
@@ -61,7 +75,7 @@ export default function VgmcStandingsView({
       items.push({ type: 'row', key: row.id, row, rank: index + 1 });
     });
     return items;
-  }, [visibleRows]);
+  }, [visibleRows, activeSubTab]);
 
   const normalizedSearchQuery = searchQuery.trim().toLowerCase();
 
