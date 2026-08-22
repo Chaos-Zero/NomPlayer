@@ -58,6 +58,7 @@ const POST_ID_ATTR_PATTERN = /^(?:msg|message_)?(\d+)$/;
 const AUTHOR_SELECTOR = '.msg_infobox a.name[data-username]';
 const BODY_SELECTOR = '.msg_text';
 const QUOTE_SELECTOR = 'cite, blockquote';
+const EMBED_SELECTOR = '.click_embed[data-src]';
 
 // --- Pagination ----------------------------------------------------------------
 // GameFAQs splits a topic's posts across multiple pages (`?page=N` on the same
@@ -150,6 +151,20 @@ function extractBodyText(element) {
   const node = element.querySelector(BODY_SELECTOR) || element;
   const clone = node.cloneNode(true);
   clone.querySelectorAll(QUOTE_SELECTOR).forEach((quote) => quote.remove());
+
+  // GameFAQs auto-embeds a link into `<span class="click_embed" data-src="...">
+  // <i class="plusbox ..."></i>&nbsp;<visible URL></span>`. `data-src` is the
+  // clean URL GameFAQs itself parsed out of the raw post; the visible text next
+  // to it is only for display and isn't guaranteed to survive round-tripping
+  // through .textContent unmangled (e.g. the leading `&nbsp;` before it, and
+  // there's no guarantee GameFAQs never truncates/wraps a long visible URL).
+  // Swap each embed's content for its data-src before reading textContent, so
+  // parsing rides on the same canonical URL GameFAQs resolved rather than
+  // whatever formatting happens to survive around the rendered copy.
+  clone.querySelectorAll(EMBED_SELECTOR).forEach((embed) => {
+    const src = embed.getAttribute('data-src');
+    if (src) embed.textContent = src;
+  });
 
   // Found live (2026-08-14): GameFAQs renders a poster's own line breaks as
   // literal `<br>` tags inside `.msg_text`, but `.textContent` drops element
