@@ -1,7 +1,70 @@
 {
-  "exportedAt": "2026-08-22T22:49:27.343Z",
+  "exportedAt": "2026-08-22T23:42:31.364Z",
   "totalCount": 11,
   "users": [
+    {
+      "user_id": "6452d560-7b18-4e7b-8a22-208e09bddc28",
+      "username": "dc:CalzoneB",
+      "avatar_url": "https://images-ext-1.discordapp.net/external/y2Co85kS3Mh3VsdtU2Ac44E2zDM5BfkXeE-zi-5a4FQ/%3Fsize%3D1024/https/cdn.discordapp.com/avatars/268487608680579072/783e089fb3fbb4d845543e17a35ada0e.webp?format=webp&width=745&height=745",
+      "gamefaqs_username": "-Chaos-Zero-",
+      "updated_at": "2026-08-22T23:20:24.480527+00:00",
+      "nominations": [
+        {
+          "title": "Astro Bot - Marine Serene",
+          "trackId": "1cd881cf-343e-4fa7-abcf-a00a78c885fa",
+          "videoId": "TZ9x6FP8BNw",
+          "gameTitle": "Astro Bot",
+          "trackTitle": "Marine Serene",
+          "channelTitle": "Scraic",
+          "displayTitle": "Astro Bot - Marine Serene"
+        },
+        {
+          "title": "Swarmlake - Swarmlake",
+          "trackId": "8335ba95-8aa6-404a-bc75-3206b1d130fa",
+          "videoId": "YljDiA_Rp1Q",
+          "gameTitle": "Swarmlake",
+          "trackTitle": "Swarmlake",
+          "channelTitle": "Singto Conley",
+          "displayTitle": "Swarmlake - Swarmlake"
+        },
+        {
+          "title": "Alpine Racer 3 - Sunset Rush",
+          "trackId": "cf28aae8-594e-45d9-aa93-c70b9dddf719",
+          "videoId": "KHzlU0GUCh4",
+          "gameTitle": "Alpine Racer 3",
+          "trackTitle": "Sunset Rush",
+          "channelTitle": null,
+          "displayTitle": "Alpine Racer 3 - Sunset Rush"
+        },
+        {
+          "title": "Ape Escape 3 - Mount Amazing 2",
+          "trackId": "dd089c59-8094-4879-8ea6-cce89f3c4ace",
+          "videoId": "XYi-zuFRGUE",
+          "gameTitle": "Ape Escape 3",
+          "trackTitle": "Mount Amazing 2",
+          "channelTitle": "Soichi Terada - Topic",
+          "displayTitle": "Ape Escape 3 - Mount Amazing 2"
+        },
+        {
+          "title": "Furi - You're Mine",
+          "trackId": "8d16c317-16b9-4922-a432-508463c54dce",
+          "videoId": "gQ5gtInauiI",
+          "gameTitle": "Furi",
+          "trackTitle": "You're Mine",
+          "channelTitle": null,
+          "displayTitle": "Furi - You're Mine"
+        },
+        {
+          "title": "Seaman - Something Really BAD",
+          "trackId": "01891482-cb29-4972-9b60-97b5d42364a6",
+          "videoId": "G4VdDJgPCnw",
+          "gameTitle": "Seaman",
+          "trackTitle": "Something Really BAD",
+          "channelTitle": null,
+          "displayTitle": "Seaman - Something Really BAD"
+        }
+      ]
+    },
     {
       "user_id": "e63d2f90-9be3-4f22-9f10-76cc496817b4",
       "username": "dc:Chaeix",
@@ -233,105 +296,6 @@
           "trackTitle": "Anchorhead Raid",
           "channelTitle": null,
           "displayTitle": "Ace Combat 7: Skies Unknown - Anchorhead Raid"
-        }
-      ]
-    },
-    {
-      "user_id": "6452d560-7b18-4e7b-8a22-208e09bddc28",
-      "username": "dc:CalzoneB",
-      "avatar_url": "https://images-ext-1.discordapp.net/external/y2Co85kS3Mh3VsdtU2Ac44E2zDM5BfkXeE-zi-5a4FQ/%3Fsize%3D1024/https/cdn.discordapp.com/avatars/268487608680579072/783e089fb3fbb4d845543e17a35ada0e.webp?format=webp&width=745&height=745",
-      "gamefaqs_username": "-Chaos-Zero-",
-      "updated_at": "2026-08-14T21:42:58.034675+00:00",
-      "nominations": [
-        {
-          "title": "Astro Bot - Marine Serene",
-          "trackId": "1cd881cf-343e-4fa7-abcf-a00a78c885fa",
-          "videoId": "TZ9x6FP8BNw",
-          "gameTitle": "Astro Bot",
-          "trackTitle": "Marine Serene",
-          "channelTitle": "Scraic",
-          "displayTitle": "Astro Bot - Marine Serene"
-        },
-        {
-          "title": "Tekken Tag Tournament 2 - School (After School Mix)",
-          "trackId": "9fbeb722-e4dc-444d-bf10-a9b3d96bcc7e",
-          "videoId": "1knbBEEPpig",
-          "gameTitle": "Tekken Tag Tournament 2",
-          "trackTitle": "School (After School Mix)",
-          "channelTitle": null,
-          "displayTitle": "Tekken Tag Tournament 2 - School (After School Mix)"
-        },
-        {
-          "title": "Swarmlake - Swarmlake",
-          "trackId": "8335ba95-8aa6-404a-bc75-3206b1d130fa",
-          "videoId": "YljDiA_Rp1Q",
-          "gameTitle": "Swarmlake",
-          "trackTitle": "Swarmlake",
-          "channelTitle": "Singto Conley",
-          "displayTitle": "Swarmlake - Swarmlake"
-        },
-        {
-          "title": "Alpine Racer 3 - Sunset Rush",
-          "trackId": "cf28aae8-594e-45d9-aa93-c70b9dddf719",
-          "videoId": "KHzlU0GUCh4",
-          "gameTitle": "Alpine Racer 3",
-          "trackTitle": "Sunset Rush",
-          "channelTitle": null,
-          "displayTitle": "Alpine Racer 3 - Sunset Rush"
-        },
-        {
-          "title": "Shovel Knight Dig - One Person's Trash (Magic Landfill)",
-          "trackId": "e7de51d3-a4e4-4eba-928c-c420f81bc110",
-          "videoId": "nNnp6KhYkvU",
-          "gameTitle": "Shovel Knight Dig",
-          "trackTitle": "One Person's Trash (Magic Landfill)",
-          "channelTitle": null,
-          "displayTitle": "Shovel Knight Dig - One Person's Trash (Magic Landfill)"
-        },
-        {
-          "title": "Hyper Light Breaker - Apocalyptic Blues Paean",
-          "trackId": "a35849f4-4482-4a2b-b7ed-e5b97a418717",
-          "videoId": "qfSRCzeiQ0I",
-          "gameTitle": "Hyper Light Breaker",
-          "trackTitle": "Apocalyptic Blues Paean",
-          "channelTitle": "Scraic",
-          "displayTitle": "Hyper Light Breaker - Apocalyptic Blues Paean"
-        },
-        {
-          "title": "Satisfactory - Nostalgium",
-          "trackId": "1af05484-738d-4e80-b046-b70393917613",
-          "videoId": "PPS7fiGA1iI",
-          "gameTitle": "Satisfactory",
-          "trackTitle": "Nostalgium",
-          "channelTitle": "Bartek888_888",
-          "displayTitle": "Satisfactory - Nostalgium"
-        },
-        {
-          "title": "Ape Escape 3 - Mount Amazing 2",
-          "trackId": "dd089c59-8094-4879-8ea6-cce89f3c4ace",
-          "videoId": "XYi-zuFRGUE",
-          "gameTitle": "Ape Escape 3",
-          "trackTitle": "Mount Amazing 2",
-          "channelTitle": "Soichi Terada - Topic",
-          "displayTitle": "Ape Escape 3 - Mount Amazing 2"
-        },
-        {
-          "title": "Dragon Ball Fighterz - West City",
-          "trackId": "b7bbe416-7fec-4cc7-9c08-cac40271c85d",
-          "videoId": "J3FE7YmiNYE",
-          "gameTitle": "Dragon Ball Fighterz",
-          "trackTitle": "West City",
-          "channelTitle": null,
-          "displayTitle": "Dragon Ball Fighterz - West City"
-        },
-        {
-          "title": "Furi - You're Mine",
-          "trackId": "8d16c317-16b9-4922-a432-508463c54dce",
-          "videoId": "gQ5gtInauiI",
-          "gameTitle": "Furi",
-          "trackTitle": "You're Mine",
-          "channelTitle": null,
-          "displayTitle": "Furi - You're Mine"
         }
       ]
     },
