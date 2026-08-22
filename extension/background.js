@@ -32,7 +32,17 @@ function maxWatermark(posts) {
   }, 0);
 }
 
-async function submitPosts(posts) {
+// `topicId` is the GameFAQs topic this batch was scraped from (see
+// content-script.js's runExtraction). It travels with the submission so the
+// server can track its staleness watermark per-topic rather than once per
+// thread_slug: GameFAQs message ids are global, not per-topic, so two
+// different topics feeding the same thread_slug (a thread + its "part 2"
+// continuation, see THREAD_SLUG's comment in config.js) don't have mutually
+// ordered post ids, an older topic's own max id can legitimately sit far
+// behind a newer, concurrently-active topic's. A single shared watermark
+// mistook that gap for staleness and rejected an otherwise-fine first sync
+// of the older topic with a 409 (confirmed live, thread 81182579, 2026-08-22).
+async function submitPosts(topicId, posts) {
   if (!Array.isArray(posts) || posts.length === 0) return;
 
   const accessToken = await getValidAccessToken();
@@ -57,6 +67,7 @@ async function submitPosts(posts) {
       body: JSON.stringify({
         access_token: accessToken,
         thread_slug: THREAD_SLUG,
+        topic_id: topicId,
         scraper_version: SCRAPER_VERSION,
         watermark: maxWatermark(normalizedPosts),
         posts: normalizedPosts,
@@ -240,7 +251,7 @@ browser.runtime.onMessage.addListener((message) => {
 
   switch (message.type) {
     case 'VGMC_POSTS':
-      return submitPosts(message.posts);
+      return submitPosts(message.topicId, message.posts);
 
     case 'VGMC_SIGN_IN':
       return NomplayerAuth.signInWithPassword(

@@ -247,6 +247,15 @@ function showTrackButton(meta) {
 
 // --- Orchestration --------------------------------------------------------------
 async function runExtraction() {
+  // Every call site only ever runs on an actual topic page (init()'s own
+  // meta check gates whether the track button/auto-run happen at all), so
+  // this is only re-derived here, cheaply, to travel with the submission -
+  // see the topicId comment on submitPosts in background.js for why it has
+  // to, now that more than one GameFAQs topic (e.g. a thread + its "part 2")
+  // can feed the same thread_slug.
+  const meta = extractTopicMeta();
+  if (!meta) return;
+
   const totalPages = discoverTotalPages(document);
   if (totalPages > 1) {
     showSyncBadge(`NomPlayer: crawling ${totalPages} pages…`);
@@ -258,7 +267,11 @@ async function runExtraction() {
   showSyncBadge(
     `NomPlayer: syncing ${posts.length} post${posts.length === 1 ? '' : 's'}…`,
   );
-  browser.runtime.sendMessage({ type: 'VGMC_POSTS', posts });
+  browser.runtime.sendMessage({
+    type: 'VGMC_POSTS',
+    topicId: meta.topicId,
+    posts,
+  });
 }
 
 async function init() {

@@ -63,6 +63,7 @@ export async function onRequestPost(context) {
   const {
     access_token: accessToken,
     thread_slug: threadSlug,
+    topic_id: topicId,
     scraper_version: scraperVersion,
     watermark,
     posts,
@@ -76,6 +77,13 @@ export async function onRequestPost(context) {
 
   if (typeof threadSlug !== 'string' || !threadSlug.trim()) {
     return jsonResponse({ error: 'thread_slug is required.' }, 400);
+  }
+
+  // Which GameFAQs topic this batch came from - required so the ingest RPC
+  // can track its staleness watermark per-topic, not once per thread_slug.
+  // See the topicId comment on submitPosts in extension/background.js.
+  if (typeof topicId !== 'string' || !topicId.trim()) {
+    return jsonResponse({ error: 'topic_id is required.' }, 400);
   }
 
   const sanitizedPosts = sanitizePosts(posts);
@@ -100,6 +108,7 @@ export async function onRequestPost(context) {
     'ingest_vgmc_thread_posts',
     {
       thread_slug_input: threadSlug,
+      topic_id_input: topicId.trim(),
       scraper_version_input: Number.isFinite(scraperVersion)
         ? scraperVersion
         : 0,

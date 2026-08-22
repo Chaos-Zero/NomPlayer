@@ -25,5 +25,7 @@ self.NOMPLAYER_VGMC_CONFIG = {
   // Bumped whenever the parsing convention on the server changes in a way that makes
   // old submissions unsafe to accept. The server rejects anything below its
   // configured minimum with a 409, the popup then tells the user to update.
-  SCRAPER_VERSION: 1,
+  // 2: submissions now carry topic_id (see submitPosts in background.js) -
+  // the server requires it once min_scraper_version is raised to match.
+  SCRAPER_VERSION: 2,
 };
