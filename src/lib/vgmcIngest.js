@@ -241,15 +241,27 @@ export function supportPoints(record) {
   return total;
 }
 
+/** Counts the authors currently contributing a nonzero vote to a record. An
+ * author who cast a vote but later cancelled it back out (e.g. supported then
+ * un-supported, or an owner whose own drop nets their running total to 0
+ * alongside an earlier '+') keeps a 0-value entry in `record.votes` (see
+ * applyVote), but isn't a current supporter and must not be counted as one. */
+function activeVoterCount(record) {
+  let count = 0;
+  for (const value of record.votes.values()) {
+    if (value !== 0) count += 1;
+  }
+  return count;
+}
+
 /** Maps a folded record set to the ordered payload reconcile_vgmc_playlist expects.
  *
- * `support_voters` is `record.votes.size`, the count of distinct authors with a
- * nonzero-history entry in the record's vote map (an author who ever cast a
- * +/++/-/-- on this song has an entry, even if their running total later nets to
- * 0). It's a headcount, deliberately separate from `support_points`: a song with
- * two ++'s and one + reads as 5 points from 3 people, not 5 points from some
- * unknown number of double-counted votes. See VgmcStandingsView for where this
- * is displayed. */
+ * `support_voters` is the count of distinct authors with a currently nonzero
+ * running total in the record's vote map, see activeVoterCount. It's a
+ * headcount, deliberately separate from `support_points`: a song with two ++'s
+ * and one + reads as 5 points from 3 people, not 5 points from some unknown
+ * number of double-counted votes. See VgmcStandingsView for where this is
+ * displayed. */
 export function buildReconcileEntries(records) {
   return [...records.values()]
     .filter((record) => isRecordActive(record) && record.videoId)
@@ -261,6 +273,6 @@ export function buildReconcileEntries(records) {
       game: record.game,
       song: record.song,
       support_points: supportPoints(record),
-      support_voters: record.votes.size,
+      support_voters: activeVoterCount(record),
     }));
 }

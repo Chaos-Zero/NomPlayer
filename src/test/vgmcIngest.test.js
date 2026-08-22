@@ -646,6 +646,29 @@ describe('foldThread', () => {
     expect(entry.support_points).toBe(2);
     expect(entry.support_voters).toBe(1);
   });
+
+  it('support_voters excludes an author whose own votes now net to zero', () => {
+    // alice nominates then drops her own nomination (+1, -1 -> nets to 0), but
+    // bob's support keeps it alive. Only bob is currently attributing points,
+    // so support_voters must read 1, not 2.
+    const records = foldThread([
+      {
+        postId: '1',
+        author: 'alice',
+        text: '+ Game A | Song A | https://youtu.be/aaaaaaaaaaa',
+      },
+      {
+        postId: '2',
+        author: 'bob',
+        text: '+ Game A | Song A | https://youtu.be/aaaaaaaaaaa',
+      },
+      { postId: '3', author: 'alice', text: '- Game A | Song A | link' },
+    ]);
+
+    const entry = buildReconcileEntries(records)[0];
+    expect(entry.support_points).toBe(1);
+    expect(entry.support_voters).toBe(1);
+  });
 });
 
 describe('supportPoints', () => {
