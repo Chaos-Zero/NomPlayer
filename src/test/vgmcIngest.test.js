@@ -15,6 +15,19 @@ describe('normalizeKey', () => {
       'zelda|song of storms',
     );
   });
+
+  it('folds curly quote variants onto their straight equivalents', () => {
+    // Regression test: a nomination typed with a straight apostrophe and a
+    // support line typed with a curly one (common with mobile keyboards/
+    // copy-paste) must key identically, or the support silently lands on a
+    // phantom duplicate record instead of the real nomination.
+    expect(normalizeKey('Furi', "You're Mine")).toBe(
+      normalizeKey('Furi', 'You’re Mine'),
+    );
+    expect(normalizeKey('Game', '“Quoted” Title')).toBe(
+      normalizeKey('Game', '"Quoted" Title'),
+    );
+  });
 });
 
 describe('extractVideoId', () => {

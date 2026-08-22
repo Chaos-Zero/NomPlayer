@@ -21,8 +21,22 @@ import { parseMediaInput } from '../utils/media.js';
 
 const COMMAND_LINE_PATTERN = /^\s*([+-]{1,2})\s*([^|]+)\|([^|]+)\|(.+)$/;
 
+// Curly/smart quote variants get folded onto their straight equivalents before
+// keying: GameFAQs posts mix them freely (mobile keyboards and copy-paste both
+// autocorrect apostrophes), and two posters typing the same song title with
+// different quote styles must still land on the same sourceKey - see the
+// "Furi - You're Mine" incident where a smart-quote '++' silently lost its
+// support points to a phantom duplicate record instead of merging.
+const SINGLE_QUOTE_VARIANTS = /[‘’‚‛′‵´`]/g;
+const DOUBLE_QUOTE_VARIANTS = /[“”„‟″‶]/g;
+
 function normalizeText(value) {
-  return (value || '').toLowerCase().trim().replace(/\s+/g, ' ');
+  return (value || '')
+    .toLowerCase()
+    .trim()
+    .replace(SINGLE_QUOTE_VARIANTS, "'")
+    .replace(DOUBLE_QUOTE_VARIANTS, '"')
+    .replace(/\s+/g, ' ');
 }
 
 export function normalizeKey(game, song) {
