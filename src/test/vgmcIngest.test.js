@@ -839,6 +839,140 @@ describe('foldThread', () => {
     expect(entry.support_points).toBe(5);
     expect(entry.locked_order).toBe(0);
   });
+
+  it('still locks a record that reaches the threshold at or before lockCutoffPostId', () => {
+    const posts = [
+      {
+        postId: '1',
+        author: 'alice',
+        text: '++ Game A | Song A | https://youtu.be/aaaaaaaaaaa',
+      },
+      {
+        postId: '2',
+        author: 'bob',
+        text: '++ Game A | Song A | https://youtu.be/aaaaaaaaaaa',
+      },
+      {
+        postId: '3',
+        author: 'carol',
+        text: '++ Game A | Song A | https://youtu.be/aaaaaaaaaaa',
+      },
+      {
+        postId: '4',
+        author: 'dave',
+        text: '+ Game A | Song A | https://youtu.be/aaaaaaaaaaa',
+      },
+      // 7 points, locks at post 4 - at the cutoff, not after it.
+    ];
+
+    const entry = buildReconcileEntries(
+      foldThread(posts, { lockCutoffPostId: '4' }),
+    )[0];
+    expect(entry.support_points).toBe(7);
+    expect(entry.locked_order).toBe(0);
+  });
+
+  it('never locks a record that only reaches the threshold after lockCutoffPostId', () => {
+    // Same history as the sticky-lock_order test above, but frozen as of
+    // post 3 - the request this exists for: "no more songs can move to
+    // locked, anything after this time stays in the other view".
+    const posts = [
+      {
+        postId: '1',
+        author: 'alice',
+        text: '++ Game A | Song A | https://youtu.be/aaaaaaaaaaa',
+      },
+      {
+        postId: '2',
+        author: 'bob',
+        text: '++ Game A | Song A | https://youtu.be/aaaaaaaaaaa',
+      },
+      {
+        postId: '3',
+        author: 'carol',
+        text: '++ Game A | Song A | https://youtu.be/aaaaaaaaaaa',
+      },
+      // 6 points as of the cutoff.
+      {
+        postId: '4',
+        author: 'dave',
+        text: '+ Game A | Song A | https://youtu.be/aaaaaaaaaaa',
+      },
+      // 7 points, but this post is after the cutoff - must not lock.
+    ];
+
+    const entry = buildReconcileEntries(
+      foldThread(posts, { lockCutoffPostId: '3' }),
+    )[0];
+    expect(entry.support_points).toBe(7);
+    expect(entry.locked_order).toBeNull();
+  });
+
+  it('a record blocked by lockCutoffPostId never locks later either, no matter how much more support it gets', () => {
+    const posts = [
+      {
+        postId: '1',
+        author: 'alice',
+        text: '++ Game A | Song A | https://youtu.be/aaaaaaaaaaa',
+      },
+      {
+        postId: '2',
+        author: 'bob',
+        text: '++ Game A | Song A | https://youtu.be/aaaaaaaaaaa',
+      },
+      // 4 points as of the cutoff.
+      {
+        postId: '3',
+        author: 'carol',
+        text: '++ Game A | Song A | https://youtu.be/aaaaaaaaaaa',
+      },
+      {
+        postId: '4',
+        author: 'dave',
+        text: '++ Game A | Song A | https://youtu.be/aaaaaaaaaaa',
+      },
+      // 8 points, well past LOCK_THRESHOLD, but every one of these posts is
+      // after the cutoff - the door stays shut regardless of how it's
+      // crossed.
+    ];
+
+    const entry = buildReconcileEntries(
+      foldThread(posts, { lockCutoffPostId: '2' }),
+    )[0];
+    expect(entry.support_points).toBe(8);
+    expect(entry.locked_order).toBeNull();
+  });
+
+  it('lockCutoffPostId does not affect a record that already locked before it', () => {
+    const posts = [
+      {
+        postId: '1',
+        author: 'alice',
+        text: '++ Game A | Song A | https://youtu.be/aaaaaaaaaaa',
+      },
+      {
+        postId: '2',
+        author: 'bob',
+        text: '++ Game A | Song A | https://youtu.be/aaaaaaaaaaa',
+      },
+      {
+        postId: '3',
+        author: 'carol',
+        text: '++ Game A | Song A | https://youtu.be/aaaaaaaaaaa',
+      },
+      {
+        postId: '4',
+        author: 'dave',
+        text: '+ Game A | Song A | https://youtu.be/aaaaaaaaaaa',
+      },
+      // 7 points, locks at post 4, well before the cutoff below.
+    ];
+
+    const entry = buildReconcileEntries(
+      foldThread(posts, { lockCutoffPostId: '100' }),
+    )[0];
+    expect(entry.locked_order).toBe(0);
+  });
 });
 
 describe('supportPoints', () => {

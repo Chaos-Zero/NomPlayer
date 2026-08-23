@@ -118,10 +118,21 @@ export function buildVgmcSupportPointsByVideoId(rows) {
 
 /**
  * Splits playlist-track rows into the two standings views: `standings` is
- * every song with more than 1 but fewer than 7 support points (this includes
- * a nomination submitted with `++`, which starts at 2), sorted highest-first;
- * `locked` is everything at 7+. Disjoint tabs, once a song locks in it moves
- * out of Current Standings entirely rather than continuing to show in both.
+ * every qualifying song (more than 1 support point, including a `++`
+ * nomination, which starts at 2) that hasn't locked in; `locked` is every
+ * song that has. Disjoint tabs, once a song locks in it moves out of Current
+ * Standings entirely rather than continuing to show in both.
+ *
+ * Membership is keyed on `lockedOrder` (set once, in foldThread, the moment
+ * a record's support first reaches LOCK_THRESHOLD - see the "lock cutoff"
+ * rule there), not on the row's current point total. That distinction only
+ * matters once a thread has a lock_cutoff_post_id set: a song whose points
+ * climb to 7+ *after* that cutoff never gets a lockedOrder at all, so it
+ * stays in `standings` by current point total same as always, however high
+ * that total climbs, rather than jumping to `locked` the moment it crosses
+ * 7. Before any cutoff exists, or for a row still under the threshold,
+ * lockedOrder being null and points being under 7 line up exactly like they
+ * always did.
  *
  * `standings` sorts by points first (that's the section a song lands in, see
  * VgmcStandingsView's "N Supports" section headers), then, within a tied
@@ -132,10 +143,11 @@ export function buildVgmcSupportPointsByVideoId(rows) {
  *
  * `locked` instead sorts by lockedOrder ascending - the order songs actually
  * crossed the 7-point line, earliest first, not by their current (possibly
- * since-changed) point total. The points/voters/nomination-order chain is
- * kept as a fallback tiebreak for a null lockedOrder, which should only
- * happen transiently for a row synced before locked_order existed, until its
- * next thread sync backfills it.
+ * since-changed) point total. Every row here is guaranteed a real
+ * lockedOrder by the filter above, so there's no null case to fall back on;
+ * the points/voters/nomination-order chain only breaks an exact lockedOrder
+ * tie, which shouldn't happen (it's a strictly incrementing sequence) but
+ * costs nothing to keep as a tiebreak anyway.
  */
 export function partitionStandings(rows) {
   const qualifying = (rows || [])
@@ -149,15 +161,13 @@ export function partitionStandings(rows) {
     a.orderIndex - b.orderIndex;
 
   const standings = qualifying
-    .filter((row) => row.supportPoints < 7)
+    .filter((row) => row.lockedOrder == null)
     .sort(byPointsThenNomination);
 
   const locked = qualifying
-    .filter((row) => row.supportPoints >= 7)
+    .filter((row) => row.lockedOrder != null)
     .sort(
-      (a, b) =>
-        (a.lockedOrder ?? Infinity) - (b.lockedOrder ?? Infinity) ||
-        byPointsThenNomination(a, b),
+      (a, b) => a.lockedOrder - b.lockedOrder || byPointsThenNomination(a, b),
     );
 
   return { standings, locked };

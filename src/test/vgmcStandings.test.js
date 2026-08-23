@@ -134,11 +134,15 @@ describe('partitionStandings', () => {
     expect(standings.map((r) => r.id)).toEqual(['first', 'second']);
   });
 
-  it('locked only includes songs at 7+ points', () => {
+  it('locked only includes songs with a locked_order', () => {
+    // In practice a row with 7+ points always has a locked_order too (see
+    // foldThread's markLockOrder) - this exercises the actual field
+    // partitionStandings keys membership on, not the point total that
+    // usually, but not always (see the lock-cutoff test below), comes with it.
     const { locked } = partitionStandings([
       row({ id: 'a', support_points: 6 }),
-      row({ id: 'b', support_points: 7 }),
-      row({ id: 'c', support_points: 8 }),
+      row({ id: 'b', support_points: 7, locked_order: 1 }),
+      row({ id: 'c', support_points: 8, locked_order: 0 }),
     ]);
 
     expect(locked.map((r) => r.id)).toEqual(['c', 'b']);
@@ -156,32 +160,35 @@ describe('partitionStandings', () => {
     expect(locked.map((r) => r.id)).toEqual(['early', 'middle', 'late']);
   });
 
-  it('falls back to points/nomination-order for locked rows missing locked_order', () => {
-    // Simulates a row synced before locked_order existed, not yet backfilled
-    // by its next thread sync - it shouldn't crash or sort ahead of rows
-    // that do have a real locked_order.
-    const { locked } = partitionStandings([
-      row({ id: 'has-order', support_points: 7, locked_order: 0 }),
+  it('a 7+ point row with no locked_order yet stays in standings, not locked', () => {
+    // Membership is keyed on locked_order, not the point total - covers both
+    // a row synced before locked_order existed and not yet backfilled by its
+    // next thread sync, and (the reason this distinction exists at all) a
+    // song that crossed 7 points only after its thread's lock cutoff, which
+    // never gets a locked_order at all. Either way it belongs here, however
+    // high its points climb, until/unless a real locked_order shows up.
+    const { standings, locked } = partitionStandings([
       row({ id: 'missing-order', support_points: 9, locked_order: null }),
     ]);
 
-    expect(locked.map((r) => r.id)).toEqual(['has-order', 'missing-order']);
+    expect(standings.map((r) => r.id)).toContain('missing-order');
+    expect(locked.map((r) => r.id)).not.toContain('missing-order');
   });
 
-  it('a locked song (7+) is removed from standings, not shown in both', () => {
+  it('a locked song (has locked_order) is removed from standings, not shown in both', () => {
     const { standings, locked } = partitionStandings([
-      row({ id: 'a', support_points: 9 }),
+      row({ id: 'a', support_points: 9, locked_order: 0 }),
     ]);
 
     expect(standings.map((r) => r.id)).not.toContain('a');
     expect(locked.map((r) => r.id)).toContain('a');
   });
 
-  it('standings only includes songs below the 7-point lock threshold', () => {
+  it('standings only includes songs without a locked_order', () => {
     const { standings } = partitionStandings([
       row({ id: 'a', support_points: 2 }),
       row({ id: 'b', support_points: 6 }),
-      row({ id: 'c', support_points: 7 }),
+      row({ id: 'c', support_points: 7, locked_order: 0 }),
     ]);
 
     expect(standings.map((r) => r.id)).toEqual(['b', 'a']);

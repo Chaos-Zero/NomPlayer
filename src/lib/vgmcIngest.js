@@ -175,22 +175,46 @@ export function isRecordActive(record) {
  *    falls out naturally: rerunning the same history always finds the same
  *    first-crossing point for a given record, nothing extra needs to persist
  *    across runs to keep it sticky.
+ *  - Lock cutoff: `lockCutoffPostId`, when set, closes the lock threshold
+ *    permanently as of that post - a record whose support first reaches
+ *    LOCK_THRESHOLD at a later post never gets a lockedOrder at all, not now,
+ *    not on any future replay, so it stays in Current Standings (see
+ *    partitionStandings, which now keys the split on lockedOrder rather than
+ *    raw points) no matter how many points it goes on to accumulate. A
+ *    record that already qualified at or before the cutoff is untouched -
+ *    this only closes the door for *new* locks, same as the "we now need to
+ *    stop songs moving to locked, anything after this time stays in the
+ *    other view" request it exists for. Comes from
+ *    vgmc_ingest_threads.lock_cutoff_post_id (null = no cutoff, locking
+ *    behaves exactly as before), see freeze_vgmc_lock_cutoff in
+ *    supabase/migrations for how a thread owner actually flips it.
  *
  * Always replays from the full post set, never call this with a delta. Returns the
  * full record map (including inactive/dropped records); use buildReconcileEntries
  * to get the desired playlist order plus each record's total support points.
  */
-export function foldThread(posts) {
+export function foldThread(posts, { lockCutoffPostId = null } = {}) {
   const records = new Map();
   let nextOrdinal = 0;
   let nextLockSequence = 0;
 
   // Called after every vote change; records are append-only, so this only
   // ever assigns lockedOrder once, per the lock-order stability rule above.
-  function markLockOrder(record) {
-    if (record.lockedOrder == null && supportPoints(record) >= LOCK_THRESHOLD) {
-      record.lockedOrder = nextLockSequence++;
+  // `postId` is the post that caused this particular crossing - compared
+  // against lockCutoffPostId (see the lock-cutoff rule above) using the same
+  // numeric-aware comparator sortedPosts itself is ordered by, so a cutoff
+  // expressed as a post id stays meaningful regardless of string length.
+  function markLockOrder(record, postId) {
+    if (record.lockedOrder != null || supportPoints(record) < LOCK_THRESHOLD) {
+      return;
     }
+    if (
+      lockCutoffPostId != null &&
+      comparePostIds(postId, lockCutoffPostId) > 0
+    ) {
+      return;
+    }
+    record.lockedOrder = nextLockSequence++;
   }
 
   const sortedPosts = [...(posts || [])]
@@ -236,7 +260,7 @@ export function foldThread(posts) {
             existing.droppedByOwner = false;
           }
           applyVote(existing.votes, post.author, value);
-          markLockOrder(existing);
+          markLockOrder(existing, post.postId);
         } else {
           const votes = new Map();
           applyVote(votes, post.author, value);
@@ -256,7 +280,7 @@ export function foldThread(posts) {
           // A single new nomination can only start at magnitude <=2, well
           // under LOCK_THRESHOLD, but check anyway rather than assume - this
           // stays correct even if the per-author cap ever changes.
-          markLockOrder(record);
+          markLockOrder(record, post.postId);
         }
         continue;
       }

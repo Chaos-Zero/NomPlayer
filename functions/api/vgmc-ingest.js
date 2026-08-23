@@ -133,12 +133,16 @@ export async function onRequestPost(context) {
     return jsonResponse({ error: fetchError.message }, 500);
   }
 
+  // null unless this thread has had its lock cutoff flipped (see
+  // freeze_vgmc_lock_cutoff in supabase/migrations) - foldThread treats null
+  // as "no cutoff, behave exactly as before".
   const records = foldThread(
     (threadPosts || []).map((row) => ({
       postId: row.post_id,
       author: row.author,
       text: row.raw_text,
     })),
+    { lockCutoffPostId: ingestResult.lockCutoffPostId ?? null },
   );
   const entries = buildReconcileEntries(records);
 
